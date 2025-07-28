@@ -52,20 +52,13 @@ async def run_agent_async(
     
     try:
         await run_agent(
-            agent_id=agent_id,
-            agent_run_id=agent_run_id,
-            user_id=user_id,
             thread_id=thread_id,
             project_id=project_id,
-            account_id=account_id,
-            prompt=prompt,
+            stream=False,
             model_name=model_name,
-            agent_config=agent_config,
             enable_thinking=enable_thinking,
             reasoning_effort=reasoning_effort,
-            message_id=message_id,
-            has_attachments=has_attachments,
-            agent_version_id=agent_version_id,
+            agent_config=agent_config,
         )
         
         logger.info(f"Successfully completed agent run {agent_run_id}")
