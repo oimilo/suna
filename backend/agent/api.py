@@ -20,7 +20,18 @@ from services.billing import check_billing_status, can_use_model
 from utils.config import config
 from sandbox.sandbox import create_sandbox, delete_sandbox, get_or_start_sandbox
 from services.llm import make_llm_api_call
-from run_agent_background import run_agent_background, _cleanup_redis_response_list, update_agent_run_status
+# Import based on environment
+from utils.config import config, EnvMode
+if config.ENV_MODE == EnvMode.PRODUCTION:
+    # Use simple version without RabbitMQ in production
+    from run_agent_background_simple import run_agent_async, check_health
+    run_agent_background = None
+    _cleanup_redis_response_list = None
+    update_agent_run_status = None
+else:
+    # Use full version with RabbitMQ in development
+    from run_agent_background import run_agent_background, _cleanup_redis_response_list, update_agent_run_status
+    run_agent_async = None
 from utils.constants import MODEL_NAME_ALIASES
 from flags.flags import is_enabled
 
@@ -447,17 +458,39 @@ async def start_agent(
     request_id = structlog.contextvars.get_contextvars().get('request_id')
 
     # Run the agent in the background
-    run_agent_background.send(
-        agent_run_id=agent_run_id, thread_id=thread_id, instance_id=instance_id,
-        project_id=project_id,
-        model_name=model_name,  # Already resolved above
-        enable_thinking=body.enable_thinking, reasoning_effort=body.reasoning_effort,
-        stream=body.stream, enable_context_manager=body.enable_context_manager,
-        agent_config=agent_config,  # Pass agent configuration
-        is_agent_builder=is_agent_builder,
-        target_agent_id=target_agent_id,
-        request_id=request_id,
-    )
+    if config.ENV_MODE == EnvMode.PRODUCTION:
+        # In production, run directly without RabbitMQ
+        asyncio.create_task(run_agent_async(
+            agent_id=agent_config['agent_id'] if agent_config else None,
+            agent_run_id=agent_run_id,
+            user_id=user_id,
+            thread_id=thread_id,
+            project_id=project_id,
+            account_id=account_id,
+            db_ref=db,
+            instance_id_ref=instance_id,
+            prompt=None,  # Will be fetched from thread
+            model_name=model_name,
+            agent_config=agent_config,
+            enable_thinking=body.enable_thinking,
+            reasoning_effort=body.reasoning_effort,
+            message_id=None,
+            has_attachments=False,
+            agent_version_id=agent_config.get('version_id') if agent_config else None,
+        ))
+    else:
+        # In development, use RabbitMQ
+        run_agent_background.send(
+            agent_run_id=agent_run_id, thread_id=thread_id, instance_id=instance_id,
+            project_id=project_id,
+            model_name=model_name,  # Already resolved above
+            enable_thinking=body.enable_thinking, reasoning_effort=body.reasoning_effort,
+            stream=body.stream, enable_context_manager=body.enable_context_manager,
+            agent_config=agent_config,  # Pass agent configuration
+            is_agent_builder=is_agent_builder,
+            target_agent_id=target_agent_id,
+            request_id=request_id,
+        )
 
     return {"agent_run_id": agent_run_id, "status": "running"}
 
@@ -904,7 +937,9 @@ async def initiate_agent_with_files(
 
     logger.info(f"[\033[91mDEBUG\033[0m] Initiating new agent with prompt and {len(files)} files (Instance: {instance_id}), model: {model_name}, enable_thinking: {enable_thinking}")
     client = await db.client
-    account_id = user_id # In Basejump, personal account_id is the same as user_id
+    # Get the correct account_id from account_utils
+    from utils.account_utils import get_account_id_from_user_id
+    account_id = await get_account_id_from_user_id(client, user_id)
     
     # Load agent configuration with version support (same as start_agent endpoint)
     agent_config = None
@@ -1175,17 +1210,39 @@ async def initiate_agent_with_files(
         request_id = structlog.contextvars.get_contextvars().get('request_id')
 
         # Run agent in background
-        run_agent_background.send(
-            agent_run_id=agent_run_id, thread_id=thread_id, instance_id=instance_id,
-            project_id=project_id,
-            model_name=model_name,  # Already resolved above
-            enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
-            stream=stream, enable_context_manager=enable_context_manager,
-            agent_config=agent_config,  # Pass agent configuration
-            is_agent_builder=is_agent_builder,
-            target_agent_id=target_agent_id,
-            request_id=request_id,
-        )
+        if config.ENV_MODE == EnvMode.PRODUCTION:
+            # In production, use simple async version
+            asyncio.create_task(run_agent_async(
+                agent_id=agent_id,
+                agent_run_id=agent_run_id,
+                user_id=user_id,
+                thread_id=thread_id,
+                project_id=project_id,
+                account_id=account_id,
+                db_ref=db,
+                instance_id_ref=instance_id,
+                prompt=prompt,  # We have the prompt in initiate
+                model_name=model_name,
+                agent_config=agent_config,
+                enable_thinking=enable_thinking,
+                reasoning_effort=reasoning_effort,
+                message_id=None,
+                has_attachments=len(files) > 0,
+                agent_version_id=agent_config.get('version_id') if agent_config else None,
+            ))
+        else:
+            # In development, use RabbitMQ
+            run_agent_background.send(
+                agent_run_id=agent_run_id, thread_id=thread_id, instance_id=instance_id,
+                project_id=project_id,
+                model_name=model_name,  # Already resolved above
+                enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
+                stream=stream, enable_context_manager=enable_context_manager,
+                agent_config=agent_config,  # Pass agent configuration
+                is_agent_builder=is_agent_builder,
+                target_agent_id=target_agent_id,
+                request_id=request_id,
+            )
 
         return {"thread_id": thread_id, "agent_run_id": agent_run_id}
 
