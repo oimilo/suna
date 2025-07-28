@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from './error-handler';
+import { getBackendModelName } from './model-mapping';
 
 // Get backend URL from environment variables
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
@@ -668,7 +669,7 @@ export const startAgent = async (
     );
 
     const defaultOptions = {
-      model_name: 'claude-3-7-sonnet-latest',
+      model_name: 'claude-sonnet-4',
       enable_thinking: false,
       reasoning_effort: 'low',
       stream: true,
@@ -677,7 +678,7 @@ export const startAgent = async (
     const finalOptions = { ...defaultOptions, ...options };
 
     const body: any = {
-      model_name: finalOptions.model_name,
+      model_name: getBackendModelName(finalOptions.model_name || 'claude-sonnet-4'),
       enable_thinking: finalOptions.enable_thinking,
       reasoning_effort: finalOptions.reasoning_effort,
       stream: finalOptions.stream,
