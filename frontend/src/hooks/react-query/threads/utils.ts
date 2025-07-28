@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
+import { getBackendUrl } from "@/lib/env-check";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = getBackendUrl();
 
 export type Thread = {
     thread_id: string;

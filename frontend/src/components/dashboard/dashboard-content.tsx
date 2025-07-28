@@ -32,6 +32,7 @@ import { Examples } from './examples';
 import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { KortixLogo } from '../sidebar/kortix-logo';
+import { checkEnvironmentVariables } from '@/lib/env-check';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -69,6 +70,11 @@ export function DashboardContent() {
   const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
+
+  // Check environment variables on mount
+  useEffect(() => {
+    checkEnvironmentVariables();
+  }, []);
 
   useEffect(() => {
     const agentIdFromUrl = searchParams.get('agent_id');
