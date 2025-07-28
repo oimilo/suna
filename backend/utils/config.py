@@ -195,7 +195,8 @@ class Configuration:
     SUPABASE_SERVICE_ROLE_KEY: str
     
     # Redis configuration
-    REDIS_HOST: str
+    REDIS_URL: Optional[str] = None
+    REDIS_HOST: Optional[str] = None
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: bool = True
@@ -302,6 +303,12 @@ class Configuration:
         
         if missing_fields:
             error_msg = f"Missing required configuration fields: {', '.join(missing_fields)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Validate Redis configuration - need either REDIS_URL or REDIS_HOST
+        if not self.REDIS_URL and not self.REDIS_HOST:
+            error_msg = "Either REDIS_URL or REDIS_HOST must be provided"
             logger.error(error_msg)
             raise ValueError(error_msg)
     
