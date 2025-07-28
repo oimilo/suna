@@ -54,7 +54,7 @@ async def run_agent_async(
         await run_agent(
             thread_id=thread_id,
             project_id=project_id,
-            stream=False,
+            stream=True,  # Changed to True for SSE streaming
             model_name=model_name,
             enable_thinking=enable_thinking,
             reasoning_effort=reasoning_effort,
