@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Brain, Clock, Crown, Sparkles, Zap } from 'lucide-react';
+import { BRANDING } from '@/lib/branding';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
   const handleUpgradeClick = () => {
     router.push('/settings/billing');
     onOpenChange(false);
-    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
+    localStorage.setItem('kortix_upgrade_dialog_displayed', 'true');
   };
 
   return (
@@ -32,10 +33,10 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Crown className="h-5 w-5 mr-2 text-primary" />
-            Unlock the Full Suna Experience
+            Unlock the Full {BRANDING.name} Experience
           </DialogTitle>
           <DialogDescription>
-            You're currently using Suna's free tier with limited capabilities.
+            You're currently using {BRANDING.name}'s free tier with limited capabilities.
             Upgrade now to access our most powerful AI model.
           </DialogDescription>
         </DialogHeader>

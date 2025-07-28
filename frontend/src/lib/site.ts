@@ -1,11 +1,15 @@
+import { BRANDING } from './branding';
+
 export const siteConfig = {
-  name: 'Kortix Suna',
-  url: 'https://suna.so/',
-  description: 'Kortix AI',
+  name: BRANDING.name,
+  url: BRANDING.url,
+  description: BRANDING.description,
   links: {
-    twitter: 'https://x.com/kortixai',
-    github: 'https://github.com/kortix-ai/',
-    linkedin: 'https://www.linkedin.com/company/kortix/',
+    twitter: BRANDING.social.twitter,
+    github: BRANDING.social.github,
+    linkedin: BRANDING.social.linkedin,
+    discord: BRANDING.social.discord,
+    instagram: BRANDING.social.instagram,
   },
 };
 

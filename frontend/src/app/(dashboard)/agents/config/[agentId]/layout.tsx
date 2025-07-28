@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
+import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
-  title: 'Create Agent | Kortix Suna',
+  title: `Create Agent | ${BRANDING.company} ${BRANDING.name}`,
   description: 'Create an agent',
   openGraph: {
-    title: 'Create Agent | Kortix Suna',
+    title: `Create Agent | ${BRANDING.company} ${BRANDING.name}`,
     description: 'Create an agent',
     type: 'website',
   },

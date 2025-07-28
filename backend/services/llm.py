@@ -19,6 +19,7 @@ import litellm
 from litellm.files.main import ModelResponse
 from utils.logger import logger
 from utils.config import config
+from services.llm_openrouter_only import force_openrouter_prefix
 
 # litellm.set_verbose=True
 litellm.modify_params=True
@@ -301,6 +302,12 @@ async def make_llm_api_call(
         LLMRetryError: If API call fails after retries
         LLMError: For other API-related errors
     """
+    # Force OpenRouter prefix on all models
+    original_model = model_name
+    model_name = force_openrouter_prefix(model_name)
+    if original_model != model_name:
+        logger.info(f"Forcing OpenRouter: {original_model} -> {model_name}")
+    
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
     logger.info(f"📡 API Call: Using model {model_name}")

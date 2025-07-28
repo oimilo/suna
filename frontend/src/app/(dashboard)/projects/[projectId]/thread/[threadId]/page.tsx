@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { BRANDING } from '@/lib/branding';
 import { BillingError } from '@/lib/api';
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
@@ -476,7 +477,7 @@ export default function ThreadPage({
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Kortix Suna`;
+      document.title = `${projectName} | ${BRANDING.company} ${BRANDING.name}`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -484,13 +485,13 @@ export default function ThreadPage({
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Kortix Suna`,
+          `${projectName} - Interactive agent conversation powered by ${BRANDING.company} ${BRANDING.name}`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Kortix Suna`);
+        ogTitle.setAttribute('content', `${projectName} | ${BRANDING.company} ${BRANDING.name}`);
       }
 
       const ogDescription = document.querySelector(
@@ -515,7 +516,7 @@ export default function ThreadPage({
   useEffect(() => {
     if (initialLoadCompleted && subscriptionData && !hasCheckedUpgradeDialog.current) {
       hasCheckedUpgradeDialog.current = true;
-      const hasSeenUpgradeDialog = localStorage.getItem('suna_upgrade_dialog_displayed');
+      const hasSeenUpgradeDialog = localStorage.getItem('kortix_upgrade_dialog_displayed');
       const isFreeTier = subscriptionStatus === 'no_subscription';
       if (!hasSeenUpgradeDialog && isFreeTier && !isLocalMode()) {
         setShowUpgradeDialog(true);
@@ -525,7 +526,7 @@ export default function ThreadPage({
 
   const handleDismissUpgradeDialog = () => {
     setShowUpgradeDialog(false);
-    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
+    localStorage.setItem('kortix_upgrade_dialog_displayed', 'true');
   };
 
   useEffect(() => {

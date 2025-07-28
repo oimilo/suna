@@ -2,8 +2,8 @@
 MODELS = {
     # Free tier models
 
-    "anthropic/claude-sonnet-4-20250514": {
-        "aliases": ["claude-sonnet-4"],
+    "openrouter/anthropic/claude-3.5-sonnet": {
+        "aliases": ["claude-sonnet-4", "anthropic/claude-sonnet-4-20250514"],
         "pricing": {
             "input_cost_per_million_tokens": 3.00,
             "output_cost_per_million_tokens": 15.00

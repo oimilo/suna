@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
+import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -30,8 +31,7 @@ export const metadata: Metadata = {
     default: siteConfig.name,
     template: `%s - ${siteConfig.name}`,
   },
-  description:
-    'Suna is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Suna becomes your digital companion for research, data analysis, and everyday challenges.',
+  description: BRANDING.description,
   keywords: [
     'AI',
     'artificial intelligence',
@@ -43,13 +43,11 @@ export const metadata: Metadata = {
     'research',
     'data analysis',
   ],
-  authors: [{ name: 'Kortix Team', url: 'https://suna.so' }],
-  creator:
-    'Kortix Team - Adam Cohen Hillel, Marko Kraemer, Domenico Gagliardi, and Quoc Dat Le',
-  publisher:
-    'Kortix Team - Adam Cohen Hillel, Marko Kraemer, Domenico Gagliardi, and Quoc Dat Le',
+  authors: [{ name: BRANDING.teamName, url: BRANDING.url }],
+  creator: BRANDING.teamName,
+  publisher: BRANDING.teamName,
   category: 'Technology',
-  applicationName: 'Suna',
+  applicationName: BRANDING.name,
   formatDetection: {
     telephone: false,
     email: false,
@@ -64,17 +62,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Suna - Open Source Generalist AI Agent',
-    description:
-      'Suna is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
+    title: `${BRANDING.name} - Open Source Generalist AI Agent`,
+    description: BRANDING.description,
     url: siteConfig.url,
-    siteName: 'Suna',
+    siteName: BRANDING.name,
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: 'Suna - Open Source Generalist AI Agent',
+        alt: `${BRANDING.name} - Open Source Generalist AI Agent`,
         type: 'image/png',
       },
     ],
@@ -83,23 +80,22 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Suna - Open Source Generalist AI Agent',
-    description:
-      'Suna is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
-    creator: '@kortixai',
-    site: '@kortixai',
+    title: `${BRANDING.name} - Open Source Generalist AI Agent`,
+    description: BRANDING.description,
+    creator: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,
+    site: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: 'Suna - Open Source Generalist AI Agent',
+        alt: `${BRANDING.name} - Open Source Generalist AI Agent`,
       },
     ],
   },
   icons: {
-    icon: [{ url: '/favicon.png', sizes: 'any' }],
-    shortcut: '/favicon.png',
+    icon: [{ url: BRANDING.logo.favicon || '/favicon.png', sizes: 'any' }],
+    shortcut: BRANDING.logo.favicon || '/favicon.png',
   },
   // manifest: "/manifest.json",
   alternates: {

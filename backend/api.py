@@ -16,6 +16,7 @@ from utils.logger import logger, structlog
 import time
 from collections import OrderedDict
 from typing import Dict, Any
+from branding_config import branding
 
 from pydantic import BaseModel
 import uuid
@@ -131,7 +132,9 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.suna.so", "https://suna.so"]
+allowed_origins = [branding.APP_URL]
+if branding.APP_URL.startswith("https://www."):
+    allowed_origins.append(branding.APP_URL.replace("https://www.", "https://"))
 allow_origin_regex = None
 
 # Add staging-specific origins
@@ -140,7 +143,7 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.suna.so")
+    allowed_origins.append(branding.STAGING_URL)
     allowed_origins.append("http://localhost:3000")
     allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
 

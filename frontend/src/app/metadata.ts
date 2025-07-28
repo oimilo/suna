@@ -1,17 +1,18 @@
 import { Metadata } from 'next';
 import { siteConfig } from '@/lib/site';
+import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
-  keywords: ['Kortix Suna', 'AI', 'Agent'],
+  keywords: [`${BRANDING.company} ${BRANDING.name}`, 'AI', 'Agent'],
   authors: [
     {
-      name: 'Kortix AI Corp',
-      url: 'https://kortix.ai',
+      name: `${BRANDING.company} AI Corp`,
+      url: BRANDING.companyUrl,
     },
   ],
-  creator: 'Kortix AI Corp',
+  creator: `${BRANDING.company} AI Corp`,
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteConfig.name,
     description: siteConfig.description,
-    creator: '@kortixai',
+    creator: BRANDING.social.twitter.replace('https://twitter.com/', '@'),
   },
   robots: {
     index: true,

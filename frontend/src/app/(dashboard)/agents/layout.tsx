@@ -2,13 +2,14 @@ import { agentPlaygroundFlagFrontend } from '@/flags';
 import { isFlagEnabled } from '@/lib/feature-flags';
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
-  title: 'Agent Conversation | Kortix Suna',
-  description: 'Interactive agent conversation powered by Kortix Suna',
+  title: `Agent Conversation | ${BRANDING.company} ${BRANDING.name}`,
+  description: `Interactive agent conversation powered by ${BRANDING.company} ${BRANDING.name}`,
   openGraph: {
-    title: 'Agent Conversation | Kortix Suna',
-    description: 'Interactive agent conversation powered by Kortix Suna',
+    title: `Agent Conversation | ${BRANDING.company} ${BRANDING.name}`,
+    description: `Interactive agent conversation powered by ${BRANDING.company} ${BRANDING.name}`,
     type: 'website',
   },
 };

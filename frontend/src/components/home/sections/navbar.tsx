@@ -1,6 +1,7 @@
 'use client';
 
 import { Icons } from '@/components/home/icons';
+import { BRANDING } from '@/lib/branding';
 import { NavMenu } from '@/components/home/nav-menu';
 import { ThemeToggle } from '@/components/home/theme-toggle';
 import { siteConfig } from '@/lib/home';
@@ -214,7 +215,7 @@ export function Navbar() {
                       priority
                     />
                     <span className="font-medium text-primary text-sm">
-                      / Suna
+                      / {BRANDING.name}
                     </span>
                   </Link>
                   <button
