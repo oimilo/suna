@@ -39,6 +39,12 @@ class FeatureFlagManager:
     
     async def is_enabled(self, key: str) -> bool:
         """Check if a feature flag is enabled"""
+        # In production, enable all features by default
+        from utils.config import config, EnvMode
+        if config.ENV_MODE == EnvMode.PRODUCTION:
+            logger.debug(f"Feature flag {key} enabled by default in production")
+            return True
+            
         try:
             flag_key = f"{self.flag_prefix}{key}"
             redis_client = await redis.get_client()
