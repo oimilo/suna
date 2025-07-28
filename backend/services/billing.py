@@ -447,6 +447,11 @@ async def can_use_model(client, user_id: str, model_name: str):
             "plan_name": "Local Development",
             "minutes_limit": "no limit"
         }
+    
+    # Special bypass for admin user
+    if user_id == '0fabc038-dab7-44d7-a3f3-fe0463180596':
+        logger.info("Admin user detected - granting full access")
+        return True, "Admin access granted", PAID_TIER_MODELS
         
     allowed_models = await get_allowed_models_for_user(client, user_id)
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
@@ -468,6 +473,15 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
             "price_id": "local_dev",
             "plan_name": "Local Development",
             "minutes_limit": "no limit"
+        }
+    
+    # Special bypass for admin user
+    if user_id == '0fabc038-dab7-44d7-a3f3-fe0463180596':
+        logger.info("Admin user detected - bypassing billing checks")
+        return True, "Admin access granted", {
+            "price_id": "admin_bypass",
+            "plan_name": "Admin Access",
+            "minutes_limit": "unlimited"
         }
     
     # Get current subscription
