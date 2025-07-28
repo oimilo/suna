@@ -188,11 +188,23 @@ export const getProjects = async (): Promise<Project[]> => {
       return [];
     }
 
-    // Query only projects where account_id matches the current user's ID
+    // First, get the user's account ID from the basejump.account_user table
+    const { data: accountData, error: accountError } = await supabase
+      .from('basejump.account_user')
+      .select('account_id')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (accountError || !accountData) {
+      console.error('Error getting user account:', accountError);
+      return [];
+    }
+
+    // Query only projects where account_id matches the user's actual account ID
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('account_id', userData.user.id);
+      .eq('account_id', accountData.account_id);
 
     if (error) {
       // Handle permission errors specifically
@@ -471,10 +483,22 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
     return [];
   }
 
+  // First, get the user's account ID from the basejump.account_user table
+  const { data: accountData, error: accountError } = await supabase
+    .from('basejump.account_user')
+    .select('account_id')
+    .eq('user_id', userData.user.id)
+    .single();
+
+  if (accountError || !accountData) {
+    console.error('Error getting user account:', accountError);
+    return [];
+  }
+
   let query = supabase.from('threads').select('*');
 
-  // Always filter by the current user's account ID
-  query = query.eq('account_id', userData.user.id);
+  // Always filter by the current user's actual account ID
+  query = query.eq('account_id', accountData.account_id);
 
   if (projectId) {
     console.log('[API] Filtering threads by project_id:', projectId);

@@ -36,10 +36,22 @@ export const projectsApi = {
           return { data: [], error: null };
         }
 
+        // First, get the user's account ID from the basejump.account_user table
+        const { data: accountData, error: accountError } = await supabase
+          .from('basejump.account_user')
+          .select('account_id')
+          .eq('user_id', userData.user.id)
+          .single();
+
+        if (accountError || !accountData) {
+          console.error('Error getting user account:', accountError);
+          return { data: [], error: null };
+        }
+
         const { data, error } = await supabase
           .from('projects')
           .select('*')
-          .eq('account_id', userData.user.id);
+          .eq('account_id', accountData.account_id);
 
         if (error) {
           if (error.code === '42501' && error.message.includes('has_role_on_account')) {
@@ -242,7 +254,19 @@ export const threadsApi = {
         if (userError) return { data: null, error: userError };
         if (!userData.user) return { data: [], error: null };
 
-        let query = supabase.from('threads').select('*').eq('account_id', userData.user.id);
+        // First, get the user's account ID from the basejump.account_user table
+        const { data: accountData, error: accountError } = await supabase
+          .from('basejump.account_user')
+          .select('account_id')
+          .eq('user_id', userData.user.id)
+          .single();
+
+        if (accountError || !accountData) {
+          console.error('Error getting user account:', accountError);
+          return { data: [], error: null };
+        }
+
+        let query = supabase.from('threads').select('*').eq('account_id', accountData.account_id);
         
         if (projectId) {
           query = query.eq('project_id', projectId);
