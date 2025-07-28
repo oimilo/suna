@@ -144,6 +144,11 @@ if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("http://localhost:3000")
     allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
 
+# Add production-specific origins
+if config.ENV_MODE == EnvMode.PRODUCTION:
+    allowed_origins.append("https://prophet-milo.vercel.app")
+    allowed_origins.append("http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
