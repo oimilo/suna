@@ -300,6 +300,12 @@ export const useModelSelection = () => {
     console.log('Initializing model selection from localStorage...');
     
     try {
+      // Skip localStorage during SSR/build
+      if (typeof window === 'undefined') {
+        console.log('Skipping localStorage during SSR');
+        return;
+      }
+      
       const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
       console.log('Saved model from localStorage:', savedModel);
       
