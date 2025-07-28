@@ -1,7 +1,7 @@
 'use client';
 import { BRANDING } from '@/lib/branding';
 import { HeroVideoSection } from '@/components/home/sections/hero-video-section';
-import { siteConfig } from '@/lib/home';
+import { siteConfig } from '@/lib/site';
 import { ArrowRight, Github, X, AlertCircle, Square } from 'lucide-react';
 import { FlickeringGrid } from '@/components/home/ui/flickering-grid';
 import { useMediaQuery } from '@/hooks/use-media-query';

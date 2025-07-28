@@ -3,7 +3,7 @@
 import { FlickeringGrid } from '@/components/home/ui/flickering-grid';
 import { BRANDING } from '@/lib/branding';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { siteConfig } from '@/lib/home';
+import { siteConfig } from '@/lib/site';
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -114,9 +114,9 @@ export function FooterSection() {
                 <li className="mb-2 text-sm font-semibold text-primary">
                   {column.title}
                 </li>
-                {column.links.map((link) => (
+                {column.links.map((link, linkIndex) => (
                   <li
-                    key={link.id}
+                    key={`${columnIndex}-${linkIndex}`}
                     className="group inline-flex cursor-pointer items-center justify-start gap-1 text-[15px]/snug text-muted-foreground"
                   >
                     <Link href={link.url}>{link.title}</Link>
