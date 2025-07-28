@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
+import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
-  title: 'App Profiles | Kortix Suna',
+  title: `App Profiles | ${BRANDING.company} ${BRANDING.name}`,
   description: 'Manage your connected app integrations',
   openGraph: {
-    title: 'App Profiles | Kortix Suna',
+    title: `App Profiles | ${BRANDING.company} ${BRANDING.name}`,
     description: 'Manage your connected app integrations',
     type: 'website',
   },

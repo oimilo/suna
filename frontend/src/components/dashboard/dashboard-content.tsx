@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense, useEffect, useRef } from 'react';
+import { BRANDING } from '@/lib/branding';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -65,7 +66,7 @@ export function DashboardContent() {
   const selectedAgent = selectedAgentId
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
-  const displayName = selectedAgent?.name || 'Suna';
+  const displayName = selectedAgent?.name || BRANDING.name;
   const agentAvatar = selectedAgent?.avatar;
   const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
 

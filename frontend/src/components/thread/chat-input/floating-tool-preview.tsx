@@ -4,6 +4,7 @@ import { CircleDashed, Maximize2 } from 'lucide-react';
 import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { BRANDING } from '@/lib/branding';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -159,7 +160,7 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
                   )} />
                   <span className="text-xs text-muted-foreground truncate">
                     {isStreaming
-                      ? `${agentName || 'Suna'} is working...`
+                      ? `${agentName || BRANDING.name} is working...`
                       : isSuccess
                         ? "Success"
                         : "Failed"

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Briefcase, ExternalLink } from 'lucide-react';
 import { KortixProcessModal } from '@/components/sidebar/kortix-enterprise-modal';
+import { BRANDING } from '@/lib/branding';
 
 export function CTACard() {
   return (
@@ -22,7 +23,7 @@ export function CTACard() {
 
         <div className="flex items-center pt-1 border-t border-blue-200/50 dark:border-blue-800/30 mt-1">
           <Link
-            href="https://www.kortix.ai/careers"
+            href={BRANDING.careersUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"

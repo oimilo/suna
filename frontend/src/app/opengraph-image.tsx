@@ -1,9 +1,10 @@
 import { headers } from 'next/headers';
 import { ImageResponse } from 'next/og';
+import { BRANDING } from '@/lib/branding';
 
 // Configuration exports
 export const runtime = 'edge';
-export const alt = 'Kortix Suna';
+export const alt = `${BRANDING.company} ${BRANDING.name}`;
 export const size = {
   width: 1200,
   height: 630,
