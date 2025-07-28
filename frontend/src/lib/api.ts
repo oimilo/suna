@@ -188,23 +188,25 @@ export const getProjects = async (): Promise<Project[]> => {
       return [];
     }
 
-    // First, get the user's account ID from the basejump.account_user table
-    const { data: accountData, error: accountError } = await supabase
-      .from('basejump.account_user')
-      .select('account_id')
-      .eq('user_id', userData.user.id)
-      .single();
-
-    if (accountError || !accountData) {
-      console.error('Error getting user account:', accountError);
-      return [];
-    }
-
-    // Query only projects where account_id matches the user's actual account ID
+    // Temporary fix: Try to get projects using user_id directly
+    // This matches the original Suna behavior
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('account_id', accountData.account_id);
+      .eq('account_id', userData.user.id);
+      
+    // If no projects found with user_id, try to find any project we have access to
+    if ((!data || data.length === 0) && !error) {
+      console.log('[API] No projects found with user_id, trying to fetch all accessible projects');
+      const { data: allProjects, error: allError } = await supabase
+        .from('projects')
+        .select('*');
+      
+      if (!allError && allProjects) {
+        console.log('[API] Found projects:', allProjects.length);
+        return allProjects;
+      }
+    }
 
     if (error) {
       // Handle permission errors specifically
@@ -356,19 +358,8 @@ export const createProject = async (
     if (!userData.user)
       throw new Error('You must be logged in to create a project');
 
-    // Get the correct account_id from basejump.account_user
-    const { data: accountData, error: accountError } = await supabase
-      .from('basejump.account_user')
-      .select('account_id')
-      .eq('user_id', userData.user.id)
-      .single();
-
-    if (accountError || !accountData) {
-      console.error('Error getting user account:', accountError);
-      throw new Error('Could not find user account');
-    }
-
-    accountId = accountData.account_id;
+    // Temporary: Use user_id as account_id (original Suna behavior)
+    accountId = userData.user.id;
   }
 
   const { data, error } = await supabase
@@ -566,23 +557,12 @@ export const createThread = async (projectId: string): Promise<Thread> => {
     throw new Error('You must be logged in to create a thread');
   }
 
-  // Get the correct account_id from basejump.account_user
-  const { data: accountData, error: accountError } = await supabase
-    .from('basejump.account_user')
-    .select('account_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (accountError || !accountData) {
-    console.error('Error getting user account:', accountError);
-    throw new Error('Could not find user account');
-  }
-
+  // Temporary: Use user_id as account_id (original Suna behavior)
   const { data, error } = await supabase
     .from('threads')
     .insert({
       project_id: projectId,
-      account_id: accountData.account_id,
+      account_id: user.id,
     })
     .select()
     .single();
