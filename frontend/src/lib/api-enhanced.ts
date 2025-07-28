@@ -140,7 +140,20 @@ export const projectsApi = {
           const { data: userData, error: userError } = await supabase.auth.getUser();
           if (userError) return { data: null, error: userError };
           if (!userData.user) return { data: null, error: new Error('You must be logged in to create a project') };
-          accountId = userData.user.id;
+          
+          // Get the correct account_id from basejump.account_user
+          const { data: accountData, error: accountError } = await supabase
+            .from('basejump.account_user')
+            .select('account_id')
+            .eq('user_id', userData.user.id)
+            .single();
+
+          if (accountError || !accountData) {
+            console.error('Error getting user account:', accountError);
+            return { data: null, error: new Error('Could not find user account') };
+          }
+
+          accountId = accountData.account_id;
         }
 
         const { data, error } = await supabase
@@ -320,11 +333,23 @@ export const threadsApi = {
           return { data: null, error: new Error('You must be logged in to create a thread') };
         }
 
+        // Get the correct account_id from basejump.account_user
+        const { data: accountData, error: accountError } = await supabase
+          .from('basejump.account_user')
+          .select('account_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (accountError || !accountData) {
+          console.error('Error getting user account:', accountError);
+          return { data: null, error: new Error('Could not find user account') };
+        }
+
         const { data, error } = await supabase
           .from('threads')
           .insert({
             project_id: projectId,
-            account_id: user.id,
+            account_id: accountData.account_id,
           })
           .select()
           .single();

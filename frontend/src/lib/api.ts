@@ -348,7 +348,7 @@ export const createProject = async (
 ): Promise<Project> => {
   const supabase = createClient();
 
-  // If accountId is not provided, we'll need to get the user's ID
+  // If accountId is not provided, we'll need to get the user's account
   if (!accountId) {
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
@@ -356,8 +356,19 @@ export const createProject = async (
     if (!userData.user)
       throw new Error('You must be logged in to create a project');
 
-    // In Basejump, the personal account ID is the same as the user ID
-    accountId = userData.user.id;
+    // Get the correct account_id from basejump.account_user
+    const { data: accountData, error: accountError } = await supabase
+      .from('basejump.account_user')
+      .select('account_id')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (accountError || !accountData) {
+      console.error('Error getting user account:', accountError);
+      throw new Error('Could not find user account');
+    }
+
+    accountId = accountData.account_id;
   }
 
   const { data, error } = await supabase
@@ -555,11 +566,23 @@ export const createThread = async (projectId: string): Promise<Thread> => {
     throw new Error('You must be logged in to create a thread');
   }
 
+  // Get the correct account_id from basejump.account_user
+  const { data: accountData, error: accountError } = await supabase
+    .from('basejump.account_user')
+    .select('account_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (accountError || !accountData) {
+    console.error('Error getting user account:', accountError);
+    throw new Error('Could not find user account');
+  }
+
   const { data, error } = await supabase
     .from('threads')
     .insert({
       project_id: projectId,
-      account_id: user.id, // Use the current user's ID as the account ID
+      account_id: accountData.account_id,
     })
     .select()
     .single();
