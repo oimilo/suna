@@ -485,22 +485,11 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
     return [];
   }
 
-  // First, get the user's account ID from the basejump.account_user table
-  const { data: accountData, error: accountError } = await supabase
-    .from('basejump.account_user')
-    .select('account_id')
-    .eq('user_id', userData.user.id)
-    .single();
-
-  if (accountError || !accountData) {
-    console.error('Error getting user account:', accountError);
-    return [];
-  }
-
+  // Use user_id as account_id (original Suna behavior)
   let query = supabase.from('threads').select('*');
 
-  // Always filter by the current user's actual account ID
-  query = query.eq('account_id', accountData.account_id);
+  // Always filter by the current user's ID
+  query = query.eq('account_id', userData.user.id);
 
   if (projectId) {
     console.log('[API] Filtering threads by project_id:', projectId);
