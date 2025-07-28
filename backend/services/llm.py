@@ -43,6 +43,8 @@ def setup_api_keys() -> None:
     for provider in providers:
         key = getattr(config, f'{provider}_API_KEY')
         if key:
+            # Set the key in environment for LiteLLM
+            os.environ[f'{provider}_API_KEY'] = key
             logger.debug(f"API key set for provider: {provider}")
         else:
             logger.warning(f"No API key found for provider: {provider}")
@@ -50,7 +52,9 @@ def setup_api_keys() -> None:
     # Set up OpenRouter API base if not already set
     if config.OPENROUTER_API_KEY and config.OPENROUTER_API_BASE:
         os.environ['OPENROUTER_API_BASE'] = config.OPENROUTER_API_BASE
+        os.environ['OPENROUTER_API_KEY'] = config.OPENROUTER_API_KEY
         logger.debug(f"Set OPENROUTER_API_BASE to {config.OPENROUTER_API_BASE}")
+        logger.debug(f"Set OPENROUTER_API_KEY in environment")
 
     # Set up AWS Bedrock credentials
     aws_access_key = config.AWS_ACCESS_KEY_ID
@@ -307,6 +311,13 @@ async def make_llm_api_call(
     model_name = force_openrouter_prefix(model_name)
     if original_model != model_name:
         logger.info(f"Forcing OpenRouter: {original_model} -> {model_name}")
+    
+    # Debug: Check if OpenRouter API key is available
+    if model_name.startswith("openrouter/"):
+        if not os.environ.get('OPENROUTER_API_KEY'):
+            logger.error("OPENROUTER_API_KEY not found in environment!")
+        else:
+            logger.debug(f"OPENROUTER_API_KEY is set: {os.environ.get('OPENROUTER_API_KEY')[:10]}...")
     
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
