@@ -23,10 +23,6 @@ export const getBackendUrl = () => {
   const url = process.env.NEXT_PUBLIC_BACKEND_URL;
   if (!url) {
     console.error('NEXT_PUBLIC_BACKEND_URL is not defined, API calls will fail');
-    // In production, this should be the actual backend URL
-    if (typeof window !== 'undefined' && window.location.hostname === 'prophet-milo.vercel.app') {
-      return 'https://prophet-milo-f3hr5.ondigitalocean.app/api';
-    }
   }
   return url || '';
 };

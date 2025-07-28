@@ -18,6 +18,7 @@ def force_openrouter_prefix(model_name: str) -> str:
         # Claude models
         "claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
         "claude-sonnet-4": "openrouter/anthropic/claude-3.5-sonnet",
+        "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-3.5-sonnet",
         "claude-3-opus": "openrouter/anthropic/claude-3-opus",
         
         # GPT models
