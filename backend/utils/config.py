@@ -170,13 +170,13 @@ class Configuration:
         return self.STRIPE_TIER_200_1000_YEARLY_ID_PROD
     
     # LLM API keys
-    ANTHROPIC_API_KEY: Optional[str] = None
-    OPENAI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
-    OPENROUTER_API_KEY: Optional[str] = None
-    XAI_API_KEY: Optional[str] = None
-    MORPH_API_KEY: Optional[str] = None
-    GEMINI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
+    OPENAI_API_KEY: Optional[str] = os.getenv('OPENAI_API_KEY')
+    GROQ_API_KEY: Optional[str] = os.getenv('GROQ_API_KEY')
+    OPENROUTER_API_KEY: Optional[str] = os.getenv('OPENROUTER_API_KEY')
+    XAI_API_KEY: Optional[str] = os.getenv('XAI_API_KEY')
+    MORPH_API_KEY: Optional[str] = os.getenv('MORPH_API_KEY')
+    GEMINI_API_KEY: Optional[str] = os.getenv('GEMINI_API_KEY')
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OR_SITE_URL: Optional[str] = os.getenv('OR_SITE_URL', os.getenv('COMPANY_URL', 'https://kortix.ai'))
     OR_APP_NAME: Optional[str] = os.getenv('OR_APP_NAME', f"{os.getenv('COMPANY_NAME', 'Kortix')} AI")    
