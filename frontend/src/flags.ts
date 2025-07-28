@@ -1,6 +1,7 @@
 import { isLocalMode } from './lib/config';
 
-export const agentPlaygroundFlagFrontend = isLocalMode();
-export const marketplaceFlagFrontend = isLocalMode();
-export const agentPlaygroundEnabled = isLocalMode();
-export const marketplaceEnabled = isLocalMode();
+// Enable all features in production for Suna
+export const agentPlaygroundFlagFrontend = true;
+export const marketplaceFlagFrontend = true;
+export const agentPlaygroundEnabled = true;
+export const marketplaceEnabled = true;
