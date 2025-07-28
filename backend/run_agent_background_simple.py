@@ -7,7 +7,7 @@ import json
 import traceback
 from datetime import datetime, timezone
 from typing import Optional
-from services import redis
+from services.redis import get_client as get_redis_client
 from agent.run import run_agent
 from utils.logger import logger
 import uuid
@@ -23,7 +23,7 @@ async def initialize():
     
     if not instance_id:
         instance_id = str(uuid.uuid4())[:8]
-    await redis.initialize_async()
+    # Redis is initialized by the main app
     await db.initialize()
     
     logger.info(f"Initialized simple agent API with instance ID: {instance_id}")
@@ -51,15 +51,38 @@ async def run_agent_async(
     logger.info(f"Starting agent run {agent_run_id} for thread {thread_id}")
     
     try:
-        await run_agent(
+        # Initialize the response streaming for this agent run
+        response_list_key = f"agent_run:{agent_run_id}:responses"
+        response_channel = f"agent_run:{agent_run_id}:new_response"
+        control_channel = f"agent_run:{agent_run_id}:control"
+        
+        # Run the agent with streaming
+        agent_gen = run_agent(
             thread_id=thread_id,
             project_id=project_id,
-            stream=True,  # Changed to True for SSE streaming
+            stream=True,  # Enable SSE streaming
             model_name=model_name,
             enable_thinking=enable_thinking,
             reasoning_effort=reasoning_effort,
             agent_config=agent_config,
         )
+        
+        # Process the streaming responses
+        async for response in agent_gen:
+            try:
+                # Store response in Redis for SSE streaming
+                redis = await get_redis_client()
+                response_json = json.dumps(response)
+                await redis.rpush(response_list_key, response_json)
+                await redis.publish(response_channel, "new")
+                
+                # Log important events
+                if response.get('type') == 'status' and response.get('status') == 'completed':
+                    logger.info(f"Agent run {agent_run_id} completed successfully")
+                    
+            except Exception as e:
+                logger.error(f"Error processing response: {e}")
+                continue
         
         logger.info(f"Successfully completed agent run {agent_run_id}")
         
