@@ -13,9 +13,8 @@ JOIN auth.users u ON u.id = au.user_id
 WHERE u.email = 'admin@oimilo.com';
 
 -- Check if there are any agents for this account
-SELECT a.*, av.version_number
+SELECT a.*
 FROM public.agents a
-LEFT JOIN public.agent_versions av ON av.agent_id = a.id AND av.is_current = true
 WHERE a.account_id IN (
     SELECT account_id 
     FROM basejump.account_user au
@@ -29,18 +28,18 @@ WHERE a.account_id IN (
 INSERT INTO public.agents (
     name,
     description,
-    instructions,
+    system_prompt,
     account_id,
-    is_public,
-    is_template,
-    avatar_url
+    is_default,
+    avatar,
+    avatar_color
 ) VALUES (
     'Assistant',
     'A helpful AI assistant',
     'You are a helpful AI assistant. Be concise and clear in your responses.',
     'YOUR_ACCOUNT_ID', -- Replace this!
-    false,
-    false,
-    null
-) RETURNING id;
+    true,
+    '🤖',
+    '#6366f1'
+) RETURNING agent_id;
 */
