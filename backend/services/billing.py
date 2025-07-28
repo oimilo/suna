@@ -120,31 +120,6 @@ async def create_stripe_customer(client, user_id: str, email: str) -> str:
 async def get_user_subscription(user_id: str) -> Optional[Dict]:
     """Get the current subscription for a user from Stripe."""
     try:
-        # Special case for admin user - return fake subscription
-        if user_id == '0fabc038-dab7-44d7-a3f3-fe0463180596':
-            return {
-                'id': 'sub_admin_special',
-                'customer': 'cus_admin_special',
-                'status': 'active',
-                'items': {
-                    'data': [{
-                        'id': 'si_admin_special',
-                        'price': {
-                            'id': config.STRIPE_TIER_200_1000_ID,
-                            'product': config.STRIPE_PRODUCT_ID
-                        },
-                        'quantity': 1,
-                        'current_period_end': int((datetime.now(timezone.utc) + timedelta(days=3650)).timestamp())
-                    }]
-                },
-                'current_period_end': int((datetime.now(timezone.utc) + timedelta(days=3650)).timestamp()),
-                'cancel_at_period_end': False,
-                'created': int(datetime.now(timezone.utc).timestamp()),
-                'plan': {
-                    'nickname': 'Ultra'
-                }
-            }
-        
         # Get customer ID
         db = DBConnection()
         client = await db.client
