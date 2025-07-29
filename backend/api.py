@@ -149,7 +149,8 @@ if config.ENV_MODE == EnvMode.STAGING:
 
 # Add production-specific origins
 if config.ENV_MODE == EnvMode.PRODUCTION:
-    allowed_origins.append("https://prophet-milo.vercel.app")
+    allowed_origins.append("https://prophet.build")
+    allowed_origins.append("https://prophet-milo.vercel.app")  # Manter temporariamente
     allowed_origins.append("http://localhost:3000")
 
 app.add_middleware(
