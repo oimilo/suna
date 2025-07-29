@@ -46,6 +46,7 @@ MAX_CONCURRENT_IPS = 25
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting up FastAPI application with instance ID: {instance_id} in {config.ENV_MODE.value} mode")
+    logger.info(f"APP_URL configured as: {branding.APP_URL}")
     try:
         await db.initialize()
         
