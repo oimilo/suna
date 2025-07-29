@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui/page-header';
 
 export const AgentsPageHeader = () => {
   return (
-    <PageHeader icon={Bot}>
+    <PageHeader icon={Bot} transparent>
       <div className="space-y-4">
         <div className="text-4xl font-semibold tracking-tight">
           <span className="text-primary">Agentes IA</span> = <span className="text-primary">Funcionários IA</span>
