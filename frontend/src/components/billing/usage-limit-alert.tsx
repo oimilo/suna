@@ -36,7 +36,7 @@ export function BillingErrorAlert({
           <div className="flex-1">
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-sm font-semibold text-destructive">
-                Usage Limit Reached
+                Limite de Uso Atingido
               </h3>
               <Button
                 variant="ghost"
@@ -56,7 +56,7 @@ export function BillingErrorAlert({
                 onClick={onDismiss}
                 className="text-xs"
               >
-                Dismiss
+                Dispensar
               </Button>
               <Button
                 size="sm"
@@ -65,7 +65,7 @@ export function BillingErrorAlert({
                 }
                 className="text-xs bg-destructive hover:bg-destructive/90"
               >
-                Upgrade Plan
+                Fazer Upgrade
               </Button>
             </div>
           </div>

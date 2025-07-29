@@ -221,7 +221,7 @@ export default function AgentConfigurationPage() {
       <div className="flex items-center justify-center h-screen">
         <Alert variant="destructive" className="max-w-md">
           <AlertDescription>
-            {error.message || 'Failed to load agent configuration'}
+            {error.message || 'Falha ao carregar configuração do agente'}
           </AlertDescription>
         </Alert>
       </div>
@@ -233,7 +233,7 @@ export default function AgentConfigurationPage() {
       <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading agent configuration...</p>
+          <p className="text-sm text-muted-foreground">Carregando configuração do agente...</p>
         </div>
       </div>
     );
@@ -243,7 +243,7 @@ export default function AgentConfigurationPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <Alert className="max-w-md">
-          <AlertDescription>Agent not found</AlertDescription>
+          <AlertDescription>Agente não encontrado</AlertDescription>
         </Alert>
       </div>
     );
@@ -321,7 +321,7 @@ export default function AgentConfigurationPage() {
                           ) : (
                             <Save className="h-3 w-3" />
                           )}
-                          Save
+                          Salvar
                         </Button>
                       )}
                     </div>

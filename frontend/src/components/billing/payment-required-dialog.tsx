@@ -21,10 +21,10 @@ export const PaymentRequiredDialog = () => {
         <DialogContent className="w-[95vw] max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col p-0">
             <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 flex-shrink-0">
               <DialogTitle>
-                Upgrade Required
+                Upgrade Necessário
               </DialogTitle>
               <DialogDescription>
-                You've reached your plan's usage limit. Upgrade to continue enjoying our premium features.
+                Você atingiu o limite de uso do seu plano. Faça upgrade para continuar aproveitando nossos recursos premium.
               </DialogDescription>
             </DialogHeader>
             
@@ -36,9 +36,9 @@ export const PaymentRequiredDialog = () => {
                       <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                     </div>
                     <div className="text-xs sm:text-sm min-w-0">
-                      <p className="font-medium text-destructive">Usage Limit Reached</p>
+                      <p className="font-medium text-destructive">Limite de Uso Atingido</p>
                       <p className="text-destructive break-words">
-                        Your current plan has been exhausted for this billing period.
+                        Seu plano atual foi esgotado para este período de faturamento.
                       </p>
                     </div>
                   </div>

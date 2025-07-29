@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CTASection } from '@/components/home/sections/cta-section';
-// import { FAQSection } from "@/components/sections/faq-section";
+import { FAQSection } from '@/components/home/sections/faq-section';
 import { FooterSection } from '@/components/home/sections/footer-section';
 import { HeroSection } from '@/components/home/sections/hero-section';
 import { PricingSection } from '@/components/home/sections/pricing-section';
@@ -32,7 +32,7 @@ export default function Home() {
             </div>
             <SocialProofSection />
             {/* <TestimonialSection /> */}
-            {/* <FAQSection /> */}
+            <FAQSection />
             <CTASection />
             <FooterSection />
           </div>

@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { isLocalMode } from '@/lib/config';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 export default function PersonalAccountSettingsPage({
   children,
@@ -11,12 +12,14 @@ export default function PersonalAccountSettingsPage({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = usePtTranslations();
+  
   const items = [
-    // { name: "Profile", href: "/settings" },
-    // { name: "Teams", href: "/settings/teams" },
-    { name: 'Billing', href: '/settings/billing' },
-    { name: 'Usage Logs', href: '/settings/usage-logs' },
-    ...(isLocalMode() ? [{ name: 'Local .Env Manager', href: '/settings/env-manager' }] : []),
+    { name: 'Perfil', href: '/settings' },
+    { name: 'Equipes', href: '/settings/teams' },
+    { name: t('settings.billing'), href: '/settings/billing' },
+    { name: t('settings.usageLogs'), href: '/settings/usage-logs' },
+    ...(isLocalMode() ? [{ name: t('settings.localEnvManager'), href: '/settings/env-manager' }] : []),
   ];
   return (
     <>

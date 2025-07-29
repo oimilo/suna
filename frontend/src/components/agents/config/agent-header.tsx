@@ -49,8 +49,8 @@ export function AgentHeader({
   
   const handleNameChange = (value: string) => {
     if (!isNameEditable && isSunaAgent) {
-      toast.error("Name cannot be edited", {
-        description: `${BRANDING.name}'s name is managed centrally and cannot be changed.`,
+      toast.error("Nome não pode ser editado", {
+        description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
       });
       return;
     }
@@ -88,7 +88,7 @@ export function AgentHeader({
               "text-lg font-semibold bg-transparent text-foreground placeholder:text-muted-foreground",
               !isNameEditable && isSunaAgent && "cursor-not-allowed opacity-75"
             )}
-            placeholder="Agent name..."
+            placeholder="Nome do agente..."
             disabled={!isNameEditable}
           />
         </div>
@@ -105,14 +105,14 @@ export function AgentHeader({
             )}
           >
             <Sparkles className="h-3 w-3" />
-            Prompt to Build
+            Prompt para Construir
           </TabsTrigger>
           <TabsTrigger 
             value="configuration"
             className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Settings className="h-3 w-3" />
-            Manual Config
+            Config Manual
           </TabsTrigger>
         </TabsList>
       </Tabs>

@@ -36,6 +36,7 @@ import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { createQueryHook } from '@/hooks/use-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { getAgents } from '@/hooks/react-query/agents/utils';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
@@ -63,6 +64,7 @@ export function HeroSection() {
   const [initiatedThreadId, setInitiatedThreadId] = useState<string | null>(null);
   const threadQuery = useThreadQuery(initiatedThreadId || '');
   const chatInputRef = useRef<ChatInputHandles>(null);
+  const { t } = usePtTranslations();
 
   // Fetch agents for selection
   const { data: agentsResponse } = createQueryHook(
@@ -231,7 +233,7 @@ export function HeroSection() {
               <span className="text-primary font-dancing">{BRANDING.name}</span>
             </h1>
             <p className="text-xl md:text-2xl text-center text-foreground font-medium text-balance leading-relaxed tracking-tight">
-              Conecte todos os seus apps. Automatize qualquer tarefa.
+              {t('landing.hero.title')}
             </p>
           </div>
 
@@ -241,7 +243,7 @@ export function HeroSection() {
                 <ChatInput
                   ref={chatInputRef}
                   onSubmit={handleChatInputSubmit}
-                  placeholder="Ex: 'Me avise no WhatsApp quando receber emails importantes'"
+                  placeholder={t('landing.hero.placeholder')}
                   loading={isSubmitting}
                   disabled={isSubmitting}
                   value={inputValue}

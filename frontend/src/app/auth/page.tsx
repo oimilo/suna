@@ -230,11 +230,11 @@ function LoginContent() {
             </div>
 
             <h1 className="text-3xl font-semibold text-foreground mb-4">
-              Check your email
+              Verifique seu email
             </h1>
 
             <p className="text-muted-foreground mb-2">
-              We've sent a confirmation link to:
+              Enviamos um link de confirmação para:
             </p>
 
             <p className="text-lg font-medium mb-6">
@@ -243,7 +243,7 @@ function LoginContent() {
 
             <div className="bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/50 rounded-lg p-4 mb-8">
               <p className="text-sm text-green-800 dark:text-green-400">
-                Click the link in the email to activate your account. If you don't see the email, check your spam folder.
+                Clique no link no email para ativar sua conta. Se não vir o email, verifique sua pasta de spam.
               </p>
             </div>
 
@@ -252,13 +252,13 @@ function LoginContent() {
                 href="/"
                 className="flex h-11 items-center justify-center px-6 text-center rounded-lg border border-border bg-background hover:bg-accent transition-colors"
               >
-                Return to home
+                Voltar ao início
               </Link>
               <button
                 onClick={resetRegistrationSuccess}
                 className="flex h-11 items-center justify-center px-6 text-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Back to sign in
+                Voltar para login
               </button>
             </div>
           </div>
@@ -282,14 +282,14 @@ function LoginContent() {
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to home
+                Voltar ao início
               </Link>
             </div>
             <div className="w-full max-w-sm">
               <div className="mb-4 flex items-center flex-col gap-4 justify-center">
                 {customAgentsEnabled && <ReleaseBadge className='mb-4' text="Custom Agents, Workflows, and more!" link="/changelog" />}
                 <h1 className="text-2xl font-semibold text-foreground">
-                  {isSignUp ? 'Create your account' : 'Log into your account'}
+                  {isSignUp ? 'Crie sua conta' : 'Entre na sua conta'}
                 </h1>
               </div>
             <div className="space-y-3 mb-4">
@@ -302,7 +302,7 @@ function LoginContent() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-background text-muted-foreground">
-                  or email
+                  ou email
                 </span>
               </div>
             </div>
@@ -311,7 +311,7 @@ function LoginContent() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="Email address"
+                placeholder="Endereço de email"
                 className="h-10 rounded-lg"
                 required
               />
@@ -319,7 +319,7 @@ function LoginContent() {
                 id="password"
                 name="password"
                 type="password"
-                placeholder="Password"
+                placeholder="Senha"
                 className="h-10 rounded-lg"
                 required
               />
@@ -328,7 +328,7 @@ function LoginContent() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
-                  placeholder="Confirm password"
+                  placeholder="Confirmar senha"
                   className="h-10 rounded-lg"
                   required
                 />
@@ -338,9 +338,9 @@ function LoginContent() {
                   <SubmitButton
                     formAction={isSignUp ? handleSignUp : handleSignIn}
                     className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-lg"
-                    pendingText={isSignUp ? "Creating account..." : "Signing in..."}
+                    pendingText={isSignUp ? "Criando conta..." : "Entrando..."}
                   >
-                    {isSignUp ? 'Create account' : 'Sign in'}
+                    {isSignUp ? 'Criar conta' : 'Entrar'}
                   </SubmitButton>
                   {wasEmailLastMethod && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background shadow-sm">
@@ -358,7 +358,7 @@ function LoginContent() {
                   onClick={() => setForgotPasswordOpen(true)}
                   className="text-primary hover:underline"
                 >
-                  Forgot password?
+                  Esqueceu a senha?
                 </button>
               )}
               
@@ -371,8 +371,8 @@ function LoginContent() {
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {isSignUp 
-                    ? 'Already have an account? Sign in' 
-                    : "Don't have an account? Sign up"
+                    ? 'Já tem uma conta? Entre' 
+                    : "Não tem uma conta? Cadastre-se"
                   }
                 </Link>
               </div>
@@ -389,17 +389,17 @@ function LoginContent() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Reset Password</DialogTitle>
+              <DialogTitle>Redefinir Senha</DialogTitle>
             </div>
             <DialogDescription>
-              Enter your email address and we'll send you a link to reset your password.
+              Digite seu endereço de email e enviaremos um link para redefinir sua senha.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <Input
               id="forgot-password-email"
               type="email"
-              placeholder="Email address"
+              placeholder="Endereço de email"
               value={forgotPasswordEmail}
               onChange={(e) => setForgotPasswordEmail(e.target.value)}
               className="h-11 rounded-xl"
@@ -427,13 +427,13 @@ function LoginContent() {
                 onClick={() => setForgotPasswordOpen(false)}
                 className="h-10 px-4 border border-border bg-background hover:bg-accent transition-colors rounded-md"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 className="h-10 px-4 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-md"
               >
-                Send Reset Link
+                Enviar Link de Redefinição
               </button>
             </DialogFooter>
           </form>

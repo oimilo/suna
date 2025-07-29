@@ -51,7 +51,7 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
         <FcGoogle className="w-4 h-4 mr-2" />
       )}
       <span className="font-medium">
-        {isLoading ? 'Signing in...' : 'Continue with Google'}
+        {isLoading ? 'Entrando...' : 'Continuar com Google'}
       </span>
     </button>
   );

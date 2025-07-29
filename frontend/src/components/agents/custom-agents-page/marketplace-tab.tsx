@@ -8,6 +8,7 @@ import { MarketplaceSectionHeader } from './marketplace-section-header';
 import { AgentCard } from './agent-card';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 import { BRANDING } from '@/lib/branding';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface MarketplaceTabProps {
   marketplaceSearchQuery: string;
@@ -36,22 +37,24 @@ export const MarketplaceTab = ({
   onInstallClick,
   getItemStyling
 }: MarketplaceTabProps) => {
+  const { t } = usePtTranslations();
+  
   return (
     <div className="space-y-6 mt-8 flex flex-col min-h-full">
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <SearchBar
-          placeholder="Search agents..."
+          placeholder={t('marketplace.searchPlaceholder')}
           value={marketplaceSearchQuery}
           onChange={setMarketplaceSearchQuery}
         />
         <Select value={marketplaceFilter} onValueChange={(value: 'all' | 'kortix' | 'community') => setMarketplaceFilter(value)}>
           <SelectTrigger className="w-[180px] h-12 rounded-xl">
-            <SelectValue placeholder="Filter agents" />
+            <SelectValue placeholder={t('marketplace.filterPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Agents</SelectItem>
-            <SelectItem value="kortix">{BRANDING.company} Verified</SelectItem>
-            <SelectItem value="community">Community</SelectItem>
+            <SelectItem value="all">{t('marketplace.allAgents')}</SelectItem>
+            <SelectItem value="kortix">{BRANDING.company} {t('marketplace.verified')}</SelectItem>
+            <SelectItem value="community">{t('marketplace.community')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -77,8 +80,8 @@ export const MarketplaceTab = ({
           <div className="text-center py-12">
             <p className="text-muted-foreground">
               {marketplaceSearchQuery 
-                ? "No templates found matching your criteria. Try adjusting your search or filters."
-                : "No agent templates are currently available in the marketplace."}
+                ? t('marketplace.noAgentsFound')
+                : t('marketplace.noAgentsAvailable')}
             </p>
           </div>
         ) : (
@@ -88,8 +91,8 @@ export const MarketplaceTab = ({
                 {kortixTeamItems.length > 0 && (
                   <div className="space-y-6">
                     <MarketplaceSectionHeader
-                      title={`Verified by ${BRANDING.company}`}
-                      subtitle="Official agents, maintained and supported"
+                      title={`${t('marketplace.verifiedByCompany')} ${BRANDING.company}`}
+                      subtitle={t('marketplace.officialAgents')}
                     />
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {kortixTeamItems.map((item) => (

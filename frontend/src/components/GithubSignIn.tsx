@@ -151,7 +151,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
         disabled={isLoading}
         className="w-full h-12 flex items-center justify-center text-sm font-medium tracking-wide rounded-full bg-background text-foreground border border-border hover:bg-accent/30 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed font-sans"
         aria-label={
-          isLoading ? 'Signing in with GitHub...' : 'Sign in with GitHub'
+          isLoading ? 'Entrando com GitHub...' : 'Entrar com GitHub'
         }
         type="button"
       >
@@ -161,7 +161,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
           <FaGithub className="w-4 h-4 mr-2" />
         )}
         <span className="font-medium">
-          {isLoading ? 'Signing in...' : 'Continue with GitHub'}
+          {isLoading ? 'Entrando...' : 'Continuar com GitHub'}
         </span>
       </button>
       

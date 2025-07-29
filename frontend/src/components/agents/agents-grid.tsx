@@ -10,6 +10,7 @@ import { useCreateTemplate, useUnpublishTemplate } from '@/hooks/react-query/sec
 import { toast } from 'sonner';
 import { AgentCard } from './custom-agents-page/agent-card';
 import { KortixLogo } from '../sidebar/kortix-logo';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface Agent {
   agent_id: string;
@@ -80,6 +81,8 @@ const AgentModal: React.FC<AgentModalProps> = ({
   isPublishing, 
   isUnpublishing 
 }) => {
+  const { t } = usePtTranslations();
+  
   if (!agent) return null;
 
   const getAgentStyling = (agent: Agent) => {
@@ -96,7 +99,7 @@ const AgentModal: React.FC<AgentModalProps> = ({
   const isSunaAgent = agent.metadata?.is_suna_default || false;
   
   const truncateDescription = (text?: string, maxLength = 120) => {
-    if (!text || text.length <= maxLength) return text || 'Try out this agent';
+    if (!text || text.length <= maxLength) return text || t('agents.tryOut');
     return text.substring(0, maxLength) + '...';
   };
 
@@ -148,14 +151,14 @@ const AgentModal: React.FC<AgentModalProps> = ({
                 className="flex-1 gap-2"
               >
                 <Wrench className="h-4 w-4" />
-                Customize
+                {t('agents.customize')}
               </Button>
               <Button
                 onClick={() => onChat(agent.agent_id)}
                 className="flex-1 gap-2 bg-primary hover:bg-primary/90"
               >
                 <MessageCircle className="h-4 w-4" />
-                Chat
+                {t('agents.chat')}
               </Button>
             </div>
             {!isSunaAgent && (
@@ -198,12 +201,12 @@ const AgentModal: React.FC<AgentModalProps> = ({
                     {isPublishing ? (
                       <>
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        Publishing...
+                        {t('agents.publishing')}
                       </>
                     ) : (
                       <>
                         <Shield className="h-4 w-4" />
-                        Publish as Template
+                        {t('agents.publish')}
                       </>
                     )}
                   </Button>
@@ -229,6 +232,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   const router = useRouter();
+  const { t } = usePtTranslations();
   
   const unpublishAgentMutation = useUnpublishTemplate();
 
@@ -258,10 +262,10 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
     try {
       setUnpublishingId(agentId);
       await unpublishAgentMutation.mutateAsync(agentId);
-      toast.success('Agente tornou-se privado');
+      toast.success(t('agents.becamePrivate'));
       setSelectedAgent(null);
     } catch (error: any) {
-      toast.error('Falha ao tornar o agente privado');
+      toast.error(t('agents.failedToMakePrivate'));
     } finally {
       setUnpublishingId(null);
     }
@@ -305,7 +309,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
                         disabled={deleteAgentMutation.isPending}
-                        title="Delete agent"
+                        title={t('agents.delete')}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -313,9 +317,9 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                     </AlertDialogTrigger>
                     <AlertDialogContent className="max-w-md">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl">Delete Agent</AlertDialogTitle>
+                        <AlertDialogTitle className="text-xl">{t('agents.deleteConfirmation.title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
+                          {t('agents.deleteConfirmation.description')} &quot;{agent.name}&quot;? {t('agents.deleteConfirmation.warning')}
                           {agent.is_public && (
                             <span className="block mt-2 text-amber-600 dark:text-amber-400">
                               Note: This agent is currently published to the marketplace and will be removed from there as well.
@@ -325,7 +329,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
-                          Cancel
+                          {t('common.cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                           onClick={(e) => {
@@ -335,7 +339,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                           disabled={deleteAgentMutation.isPending}
                           className="bg-destructive hover:bg-destructive/90 text-white"
                         >
-                          {deleteAgentMutation.isPending ? 'Deleting...' : 'Delete'}
+                          {deleteAgentMutation.isPending ? t('thread.deleteConfirmation.deleting') : t('common.delete')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

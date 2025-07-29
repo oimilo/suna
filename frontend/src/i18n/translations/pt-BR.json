@@ -34,7 +34,24 @@
     "title": "Agentes",
     "create": "Criar Agente",
     "configure": "Configurar",
-    "select": "Selecionar Agente"
+    "select": "Selecionar Agente",
+    "delete": "Excluir Agente",
+    "deleteConfirmation": {
+      "title": "Excluir Agente",
+      "description": "Tem certeza de que deseja excluir",
+      "warning": "Esta ação não pode ser desfeita.",
+      "marketplaceWarning": "Este agente será removido do marketplace."
+    },
+    "customize": "Personalizar",
+    "chat": "Conversar",
+    "publish": "Publicar",
+    "unpublish": "Despublicar",
+    "publishing": "Publicando...",
+    "unpublishing": "Despublicando...",
+    "tryOut": "Experimente este agente",
+    "viewMore": "Ver mais",
+    "becamePrivate": "Agente tornou-se privado",
+    "failedToMakePrivate": "Falha ao tornar o agente privado"
   },
   "chat": {
     "thinking": "Pensando...",
@@ -72,7 +89,13 @@
     "security": "Segurança",
     "logout": "Sair",
     "darkMode": "Modo escuro",
-    "lightMode": "Modo claro"
+    "lightMode": "Modo claro",
+    "name": "Nome",
+    "saveChanges": "Salvar alterações",
+    "updating": "Atualizando...",
+    "personalAccount": "Conta pessoal",
+    "usageLogs": "Logs de Uso",
+    "localEnvManager": "Gerenciador de .Env Local"
   },
   "pricing": {
     "free": "Gratuito",
@@ -106,6 +129,19 @@
     "newProject": "Novo projeto",
     "recentChats": "Conversas recentes",
     "favorites": "Favoritos"
+  },
+  "marketplace": {
+    "searchPlaceholder": "Buscar agentes...",
+    "filterPlaceholder": "Filtrar agentes",
+    "allAgents": "Todos os Agentes",
+    "verified": "Verificados",
+    "community": "Comunidade",
+    "verifiedByCompany": "Verificados por",
+    "officialAgents": "Agentes oficiais, mantidos e suportados",
+    "noAgentsFound": "Nenhum modelo encontrado com seus critérios. Tente ajustar sua pesquisa ou filtros.",
+    "noAgentsAvailable": "Nenhum modelo de agente está disponível no marketplace no momento.",
+    "install": "Instalar",
+    "installing": "Instalando..."
   },
   "auth": {
     "signIn": "Entrar",
@@ -144,7 +180,13 @@
     "archive": "Arquivar",
     "unarchive": "Desarquivar",
     "noMessages": "Nenhuma mensagem ainda",
-    "startConversation": "Comece uma conversa"
+    "startConversation": "Comece uma conversa",
+    "deleteConfirmation": {
+      "title": "Excluir conversa",
+      "description": "Tem certeza de que deseja excluir a conversa",
+      "warning": "Esta ação não pode ser desfeita.",
+      "deleting": "Excluindo..."
+    }
   },
   "files": {
     "upload": "Fazer upload",
@@ -181,6 +223,124 @@
     "back": "Voltar",
     "next": "Próximo",
     "previous": "Anterior",
-    "finish": "Finalizar"
+    "finish": "Finalizar",
+    "close": "Fechar",
+    "open": "Abrir",
+    "view": "Visualizar",
+    "share": "Compartilhar",
+    "download": "Baixar",
+    "upload": "Enviar",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "update": "Atualizar",
+    "install": "Instalar",
+    "uninstall": "Desinstalar"
+  },
+  "landing": {
+    "hero": {
+      "title": "Conecte todos os seus apps. Automatize qualquer tarefa.",
+      "subtitle": "Agentes IA que trabalham para você 24/7",
+      "cta": "Começar grátis",
+      "placeholder": "Ex: 'Me avise no WhatsApp quando receber emails importantes'",
+      "badge": "100% OPEN SOURCE"
+    },
+    "features": {
+      "title": "Por que escolher o Prophet?",
+      "integration": {
+        "title": "2700+ Integrações",
+        "description": "Conecte com WhatsApp, Gmail, Slack, Notion e muito mais"
+      },
+      "automation": {
+        "title": "Automação Inteligente",
+        "description": "Agentes IA que entendem contexto e tomam decisões"
+      },
+      "customization": {
+        "title": "100% Personalizável",
+        "description": "Crie agentes e fluxos adaptados ao seu negócio"
+      },
+      "security": {
+        "title": "Seguro e Privado",
+        "description": "Seus dados protegidos com criptografia de ponta"
+      }
+    },
+    "howItWorks": {
+      "title": "Como funciona",
+      "step1": {
+        "title": "Descreva sua necessidade",
+        "description": "Diga ao Prophet o que você precisa em linguagem natural"
+      },
+      "step2": {
+        "title": "Agente IA cria a automação",
+        "description": "Nossa IA conecta os apps e cria o fluxo automaticamente"
+      },
+      "step3": {
+        "title": "Relaxe enquanto tudo funciona",
+        "description": "Seu agente trabalha 24/7 executando suas tarefas"
+      }
+    },
+    "cta": {
+      "title": "Pronto para automatizar seu trabalho?",
+      "subtitle": "Comece grátis, sem cartão de crédito",
+      "button": "Criar conta gratuita"
+    },
+    "footer": {
+      "product": "Produto",
+      "company": "Empresa",
+      "resources": "Recursos",
+      "legal": "Legal",
+      "features": "Funcionalidades",
+      "pricing": "Preços",
+      "about": "Sobre",
+      "blog": "Blog",
+      "contact": "Contato",
+      "documentation": "Documentação",
+      "support": "Suporte",
+      "privacy": "Privacidade",
+      "terms": "Termos de uso",
+      "copyright": "Todos os direitos reservados"
+    }
+  },
+  "workflows": {
+    "title": "Fluxos de Trabalho",
+    "create": "Criar fluxo",
+    "edit": "Editar fluxo",
+    "delete": "Excluir fluxo",
+    "run": "Executar",
+    "stop": "Parar",
+    "schedule": "Agendar",
+    "status": {
+      "running": "Em execução",
+      "completed": "Concluído",
+      "failed": "Falhou",
+      "pending": "Pendente",
+      "stopped": "Parado"
+    },
+    "nodes": {
+      "trigger": "Gatilho",
+      "action": "Ação",
+      "condition": "Condição",
+      "loop": "Loop",
+      "delay": "Atraso"
+    }
+  },
+  "integrations": {
+    "title": "Integrações",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "configure": "Configurar",
+    "test": "Testar conexão",
+    "status": {
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "error": "Erro na conexão"
+    },
+    "categories": {
+      "communication": "Comunicação",
+      "productivity": "Produtividade",
+      "crm": "CRM",
+      "marketing": "Marketing",
+      "finance": "Finanças",
+      "development": "Desenvolvimento"
+    }
   }
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 import {
   AlertDialog,
@@ -32,6 +33,8 @@ export function DeleteConfirmationDialog({
   threadName,
   isDeleting,
 }: DeleteConfirmationDialogProps) {
+  const { t } = usePtTranslations();
+  
   // Reset pointer events when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -43,16 +46,16 @@ export function DeleteConfirmationDialog({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete conversation</AlertDialogTitle>
+          <AlertDialogTitle>{t('thread.deleteConfirmation.title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the conversation{' '}
+            {t('thread.deleteConfirmation.description')}{' '}
             <span className="font-semibold">"{threadName}"</span>?
             <br />
-            This action cannot be undone.
+            {t('thread.deleteConfirmation.warning')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
@@ -64,10 +67,10 @@ export function DeleteConfirmationDialog({
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
+                {t('thread.deleteConfirmation.deleting')}
               </>
             ) : (
-              'Delete'
+              t('common.delete')
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

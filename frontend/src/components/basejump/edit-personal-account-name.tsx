@@ -3,12 +3,15 @@ import { SubmitButton } from '../ui/submit-button';
 import { Label } from '../ui/label';
 import { GetAccountResponse } from '@usebasejump/shared';
 import { editPersonalAccountName } from '@/lib/actions/personal-account';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 type Props = {
   account: GetAccountResponse;
 };
 
 export default function EditPersonalAccountName({ account }: Props) {
+  const { t } = usePtTranslations();
+  
   return (
     <form className="animate-in">
       <input type="hidden" name="accountId" value={account.account_id} />
@@ -18,7 +21,7 @@ export default function EditPersonalAccountName({ account }: Props) {
             htmlFor="name"
             className="text-sm font-medium text-foreground/90"
           >
-            Name
+            {t('settings.name')}
           </Label>
           <Input
             defaultValue={account.name}
@@ -32,10 +35,10 @@ export default function EditPersonalAccountName({ account }: Props) {
         <div className="flex justify-end mt-2">
           <SubmitButton
             formAction={editPersonalAccountName}
-            pendingText="Updating..."
+            pendingText={t('settings.updating')}
             className="rounded-lg bg-primary hover:bg-primary/90 text-white h-10"
           >
-            Save Changes
+            {t('settings.saveChanges')}
           </SubmitButton>
         </div>
       </div>

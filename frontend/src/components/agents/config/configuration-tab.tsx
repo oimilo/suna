@@ -85,8 +85,8 @@ export function ConfigurationTab({
   
   const handleSystemPromptChange = (value: string) => {
     if (!isSystemPromptEditable && isSunaAgent) {
-      toast.error("System prompt cannot be edited", {
-        description: `${BRANDING.name}'s system prompt is managed centrally and cannot be changed.`,
+      toast.error("Prompt do sistema não pode ser editado", {
+        description: `O prompt do sistema do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
       });
       return;
     }
@@ -101,11 +101,11 @@ export function ConfigurationTab({
             <div className="text-primary-600">
               <KortixLogo size={20} />
             </div>
-            <span className="font-semibold text-primary-800">{BRANDING.name} Default Agent</span>
+            <span className="font-semibold text-primary-800">Agente Padrão {BRANDING.name}</span>
           </div>
           <p className="text-sm text-primary-700">
-            This is {BRANDING.name}'s default agent with centrally managed system prompt and tools. 
-            You can customize integrations, knowledge base, workflows, and triggers to personalize your experience.
+            Este é o agente padrão do {BRANDING.name} com prompt de sistema e ferramentas gerenciados centralmente. 
+            Você pode personalizar integrações, base de conhecimento, fluxos de trabalho e gatilhos para personalizar sua experiência.
           </p>
         </div>
       )}
@@ -122,8 +122,8 @@ export function ConfigurationTab({
                   <Settings className="h-4 w-4" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">System Prompt</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Define agent behavior and goals</p>
+                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Prompt do Sistema</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Defina o comportamento e objetivos do agente</p>
                 </div>
               </div>
             </AccordionTrigger>
@@ -131,8 +131,8 @@ export function ConfigurationTab({
               <ExpandableMarkdownEditor
                 value={displayData.system_prompt}
                 onSave={handleSystemPromptChange}
-                placeholder="Click to set system instructions..."
-                title="System Instructions"
+                placeholder="Clique para definir instruções do sistema..."
+                title="Instruções do Sistema"
                 disabled={!isSystemPromptEditable}
               />
             </AccordionContent>
@@ -149,8 +149,8 @@ export function ConfigurationTab({
                   <Wrench className="h-4 w-4" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Default Tools</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Configure default agentpress tools</p>
+                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Ferramentas Padrão</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Configure as ferramentas padrão do agentpress</p>
                 </div>
               </div>
             </AccordionTrigger>
@@ -174,8 +174,8 @@ export function ConfigurationTab({
                 <Server className="h-4 w-4" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Integrations</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Connect external services via MCPs</p>
+                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Integrações</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Conecte serviços externos via MCPs</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -206,8 +206,8 @@ export function ConfigurationTab({
                 <BookOpen className="h-4 w-4" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Knowledge Base</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Upload and manage knowledge for the agent</p>
+                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Base de Conhecimento</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Envie e gerencie conhecimento para o agente</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -228,8 +228,8 @@ export function ConfigurationTab({
                 <Workflow className="h-4 w-4" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Workflows</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Automate complex processes</p>
+                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Fluxos de Trabalho</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Automatize processos complexos</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -250,8 +250,8 @@ export function ConfigurationTab({
                 <Zap className="h-4 w-4" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Triggers</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Set up automated agent runs</p>
+                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Gatilhos</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Configure execuções automáticas do agente</p>
               </div>
             </div>
           </AccordionTrigger>
