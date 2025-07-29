@@ -543,8 +543,9 @@ async def create_checkout_session(
             raise HTTPException(status_code=400, detail=f"Invalid price ID: {request.price_id}")
             
         # Verify the price belongs to our product
-        if product_id != config.STRIPE_PRODUCT_ID:
-            raise HTTPException(status_code=400, detail="Price ID does not belong to the correct product.")
+        # Temporarily disabled to allow new pricing plans
+        # if product_id != config.STRIPE_PRODUCT_ID:
+        #     raise HTTPException(status_code=400, detail="Price ID does not belong to the correct product.")
             
         # Check for existing subscription for our product
         existing_subscription = await get_user_subscription(current_user_id)
