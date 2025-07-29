@@ -224,7 +224,7 @@ export default function ThreadPage({
       !errorMessage.toLowerCase().includes('not found') &&
       !errorMessage.toLowerCase().includes('agent run is not running')
     ) {
-      toast.error(`Stream Error: ${errorMessage}`);
+      toast.error(`Erro de Stream: ${errorMessage}`);
     }
   }, []);
 
@@ -327,7 +327,7 @@ export default function ThreadPage({
       } catch (err) {
         console.error('Error sending message or starting agent:', err);
         if (!(err instanceof BillingError)) {
-          toast.error(err instanceof Error ? err.message : 'Operation failed');
+          toast.error(err instanceof Error ? err.message : 'Operação falhou');
         }
         setMessages((prev) =>
           prev.filter((m) => m.message_id !== optimisticUserMessage.message_id),

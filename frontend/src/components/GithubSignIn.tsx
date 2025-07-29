@@ -45,7 +45,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
   const handleError = useCallback(
     (data: AuthMessage) => {
       cleanupAuthState();
-      toast.error(data.message || 'GitHub sign-in failed. Please try again.');
+      toast.error(data.message || 'Falha no login com GitHub. Por favor, tente novamente.');
     },
     [cleanupAuthState],
   );
@@ -125,7 +125,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
           setTimeout(() => {
             if (sessionStorage.getItem('isGitHubAuthInProgress')) {
               cleanupAuthState();
-              toast.error('GitHub sign-in was cancelled or not completed.');
+              toast.error('Login com GitHub foi cancelado ou não foi concluído.');
             }
           }, 500);
         }
@@ -139,7 +139,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Failed to start GitHub sign-in',
+          : 'Falha ao iniciar login com GitHub',
       );
     }
   };

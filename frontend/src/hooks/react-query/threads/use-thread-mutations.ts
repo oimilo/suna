@@ -11,7 +11,7 @@ export const useCreateThread = createMutationHook(
   ({ projectId }: { projectId: string }) => createThread(projectId),
   {
     onSuccess: () => {
-      toast.success('Thread created successfully');
+      toast.success('Conversa criada com sucesso');
     },
     errorContext: {
       operation: 'create thread',

@@ -106,11 +106,11 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
         
         // Invalidate queries to refresh the UI
         // Note: We'll need to import queryClient for this to work
-        toast.success(`Added ${selectedTools.length} tools from ${appName}!`);
+        toast.success(`${selectedTools.length} ferramentas do ${appName} adicionadas!`);
         return;
       } catch (error) {
         console.error('Error updating tools via backend:', error);
-        toast.error('Failed to add tools. Please try again.');
+        toast.error('Falha ao adicionar ferramentas. Por favor, tente novamente.');
         return;
       }
     }

@@ -130,22 +130,22 @@ export const handleApiError = (error: any, context?: ErrorContext): void => {
 
   if (error?.status >= 500) {
     toast.error(formattedMessage, {
-      description: 'Our team has been notified and is working on a fix.',
+      description: 'Nossa equipe foi notificada e está trabalhando em uma correção.',
       duration: 6000,
     });
   } else if (error?.status === 401) {
     toast.error(formattedMessage, {
-      description: 'Please refresh the page and sign in again.',
+      description: 'Por favor, atualize a página e faça login novamente.',
       duration: 8000,
     });
   } else if (error?.status === 403) {
     toast.error(formattedMessage, {
-      description: 'Contact support if you believe this is an error.',
+      description: 'Entre em contato com o suporte se você acredita que isso é um erro.',
       duration: 6000,
     });
   } else if (error?.status === 429) {
     toast.warning(formattedMessage, {
-      description: 'Please wait a moment before trying again.',
+      description: 'Por favor, aguarde um momento antes de tentar novamente.',
       duration: 5000,
     });
   } else {
@@ -164,8 +164,8 @@ export const handleNetworkError = (error: any, context?: ErrorContext): void => 
     !navigator.onLine;
 
   if (isNetworkError) {
-    toast.error('Connection error', {
-      description: 'Please check your internet connection and try again.',
+    toast.error('Erro de conexão', {
+      description: 'Por favor, verifique sua conexão com a internet e tente novamente.',
       duration: 6000,
     });
   } else {

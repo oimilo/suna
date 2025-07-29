@@ -78,7 +78,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
 
   const handleCreateProfile = useCallback(async () => {
     if (!newProfileName.trim()) {
-      toast.error('Please enter a profile name');
+      toast.error('Por favor, insira um nome de perfil');
       return;
     }
 
@@ -93,7 +93,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
       };
 
       const response = await createProfileMutation.mutateAsync(request);
-      toast.success('Profile created successfully!');
+      toast.success('Perfil criado com sucesso!');
       
       onProfileSelect(step.qualified_name, response.profile_id || 'new-profile');
       setProfileStep('select');
@@ -101,7 +101,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
       setConfig({});
       onComplete?.();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create profile');
+      toast.error(error.message || 'Falha ao criar perfil');
     } finally {
       setIsCreatingProfile(false);
     }
@@ -343,7 +343,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
           onComplete={(profileId, selectedTools, appName, appSlug) => {
             onProfileSelect(step.qualified_name, profileId);
             setShowPipedreamConnector(false);
-            toast.success(`Connected to ${appName} successfully!`);
+            toast.success(`Conectado ao ${appName} com sucesso!`);
             onComplete?.();
           }}
         />

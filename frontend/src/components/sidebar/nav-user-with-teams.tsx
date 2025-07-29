@@ -209,7 +209,7 @@ export function NavUserWithTeams({
               {personalAccount && (
                 <>
                   <DropdownMenuLabel className="text-muted-foreground text-xs">
-                    Personal Account
+                    Conta Pessoal
                   </DropdownMenuLabel>
                   <DropdownMenuItem
                     key={personalAccount.account_id}
@@ -237,7 +237,7 @@ export function NavUserWithTeams({
               {teamAccounts?.length > 0 && (
                 <>
                   <DropdownMenuLabel className="text-muted-foreground text-xs mt-2">
-                    Teams
+                    Times
                   </DropdownMenuLabel>
                   {teamAccounts.map((team, index) => (
                     <DropdownMenuItem
@@ -275,7 +275,7 @@ export function NavUserWithTeams({
                   <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                     <Plus className="size-4" />
                   </div>
-                  <div className="text-muted-foreground font-medium">Add team</div>
+                  <div className="text-muted-foreground font-medium">Adicionar time</div>
                 </DropdownMenuItem>
               </DialogTrigger> */}
               <DropdownMenuSeparator />
@@ -285,19 +285,19 @@ export function NavUserWithTeams({
                 <DropdownMenuItem asChild>
                   <Link href="/settings/billing">
                     <CreditCard className="h-4 w-4" />
-                    Billing
+                    Cobrança
                   </Link>
                 </DropdownMenuItem>
                 {isLocalMode() && <DropdownMenuItem asChild>
                   <Link href="/settings/env-manager">
                     <KeyRound className="h-4 w-4" />
-                    Local .Env Manager
+                    Gerenciador .Env Local
                   </Link>
                 </DropdownMenuItem>}
                 {/* <DropdownMenuItem asChild>
                   <Link href="/settings">
                     <Settings className="mr-2 h-4 w-4" />
-                    Settings
+                    Configurações
                   </Link>
                 </DropdownMenuItem> */}
                 <DropdownMenuItem
@@ -306,14 +306,14 @@ export function NavUserWithTeams({
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span>Theme</span>
+                    <span>Tema</span>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10' onClick={handleLogout}>
                 <LogOut className="h-4 w-4 text-destructive" />
-                Log out
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -323,10 +323,10 @@ export function NavUserWithTeams({
       <DialogContent className="sm:max-w-[425px] border-subtle dark:border-white/10 bg-card-bg dark:bg-background-secondary rounded-2xl shadow-custom">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            Create a new team
+            Criar um novo time
           </DialogTitle>
           <DialogDescription className="text-foreground/70">
-            Create a team to collaborate with others.
+            Crie um time para colaborar com outros.
           </DialogDescription>
         </DialogHeader>
         <NewTeamForm />

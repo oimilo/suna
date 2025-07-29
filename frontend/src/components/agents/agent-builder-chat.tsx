@@ -174,7 +174,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const handleStreamError = useCallback((errorMessage: string) => {
     if (!errorMessage.toLowerCase().includes('not found') &&
       !errorMessage.toLowerCase().includes('agent run is not running')) {
-      toast.error(`Stream Error: ${errorMessage}`);
+      toast.error(`Erro de Stream: ${errorMessage}`);
     }
   }, []);
 
@@ -269,9 +269,9 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
       setInputValue('');
     } catch (error: any) {
       if (error instanceof BillingError) {
-        toast.error('Billing limit reached. Please upgrade your plan.');
+        toast.error('Limite de faturamento atingido. Por favor, atualize seu plano.');
       } else {
-        toast.error('Failed to start agent builder session');
+        toast.error('Falha ao iniciar sessão do construtor de agentes');
       }
       setHasStartedConversation(false);
       setSaveStatus('idle');
@@ -323,7 +323,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
         if (results[1].status === 'rejected') {
           const error = results[1].reason;
           if (error instanceof BillingError) {
-            toast.error('Billing limit reached. Please upgrade your plan.');
+            toast.error('Limite de faturamento atingido. Por favor, atualize seu plano.');
             setMessages(prev => prev.filter(m => m.message_id !== optimisticUserMessage.message_id));
             return;
           }
@@ -332,7 +332,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
         const agentResult = results[1].value;
         setAgentRunId(agentResult.agent_run_id);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Operation failed');
+        toast.error(err instanceof Error ? err.message : 'Operação falhou');
         setMessages((prev) => prev.map((m) =>
           m.message_id === optimisticUserMessage.message_id
             ? { ...m, message_id: `user-error-${Date.now()}` }

@@ -83,7 +83,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
   (
     {
       onSubmit,
-      placeholder = 'Describe what you need help with...',
+      placeholder = 'Descreva com o que precisa de ajuda...',
       loading = false,
       disabled = false,
       isAgentRunning = false,

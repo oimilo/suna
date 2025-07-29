@@ -70,7 +70,7 @@ export const useCreateAgentVersion = () => {
       // The component will handle its own state updates
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create version');
+      toast.error(error.message || 'Falha ao criar versão');
     },
   });
 };
@@ -86,10 +86,10 @@ export const useActivateAgentVersion = () => {
       queryClient.invalidateQueries({ queryKey: versionKeys.list(agentId) });
       queryClient.invalidateQueries({ queryKey: ['agent', agentId] });
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Version activated successfully');
+      toast.success('Versão ativada com sucesso');
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to activate version');
+      toast.error(error.message || 'Falha ao ativar versão');
     },
   });
 };
@@ -114,10 +114,10 @@ export const useUpdateVersionDetails = () => {
       queryClient.invalidateQueries({ queryKey: versionKeys.detail(agentId, versionId) });
       queryClient.invalidateQueries({ queryKey: ['agent', agentId] });
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Version details updated successfully');
+      toast.success('Detalhes da versão atualizados com sucesso');
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update version details');
+      toast.error(error.message || 'Falha ao atualizar detalhes da versão');
     },
   });
 }; 

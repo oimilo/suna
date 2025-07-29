@@ -208,7 +208,7 @@ export function useAgentStream(
               err,
             );
             // Optionally notify the user via toast or callback
-            toast.error(`Failed to refresh messages: ${err.message}`);
+            toast.error(`Falha ao atualizar mensagens: ${err.message}`);
           });
       } else {
         console.log(
@@ -472,7 +472,7 @@ export function useAgentStream(
           );
           setError('Stream closed unexpectedly while agent was running.');
           finalizeStream('error', runId); // Finalize as error for now
-          toast.warning('Stream disconnected. Agent might still be running.');
+          toast.warning('Stream desconectado. O agente pode ainda estar em execução.');
         } else {
           // Map backend terminal status to hook terminal status
           const finalStatus = mapAgentStatus(agentStatus.status);
@@ -625,7 +625,7 @@ export function useAgentStream(
 
     try {
       await stopAgent(runIdToStop);
-      toast.success('Agent stopped.');
+      toast.success('Agente parado.');
       // finalizeStream already called getAgentStatus implicitly if needed
     } catch (err) {
       // Don't revert status here, as the user intended to stop. Just log error.
@@ -633,7 +633,7 @@ export function useAgentStream(
       console.error(
         `[useAgentStream] Error sending stop request for ${runIdToStop}: ${errorMessage}`,
       );
-      toast.error(`Failed to stop agent: ${errorMessage}`);
+      toast.error(`Falha ao parar o agente: ${errorMessage}`);
     }
   }, [agentRunId, finalizeStream]); // Add dependencies
 

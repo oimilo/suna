@@ -258,10 +258,10 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
     try {
       setUnpublishingId(agentId);
       await unpublishAgentMutation.mutateAsync(agentId);
-      toast.success('Agent made private');
+      toast.success('Agente tornou-se privado');
       setSelectedAgent(null);
     } catch (error: any) {
-      toast.error('Failed to make agent private');
+      toast.error('Falha ao tornar o agente privado');
     } finally {
       setUnpublishingId(null);
     }

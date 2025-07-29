@@ -285,7 +285,7 @@ export default function WorkflowPage() {
         setSteps(treeSteps);
         setIsLoading(false);
       } else if (!isLoadingWorkflows) {
-        toast.error('Workflow not found');
+        toast.error('Workflow não encontrado');
       }
     } else if (!isEditing) {
       setIsLoading(false);
@@ -294,7 +294,7 @@ export default function WorkflowPage() {
 
   const handleSave = useCallback(async () => {
     if (!workflowName.trim()) {
-      toast.error('Please enter a workflow name');
+      toast.error('Por favor, insira um nome para o workflow');
       return;
     }
     
@@ -315,7 +315,7 @@ export default function WorkflowPage() {
           steps: nestedSteps
         };
         await updateWorkflowMutation.mutateAsync({ agentId, workflowId, workflow: updateRequest });
-        toast.success('Workflow updated successfully');
+        toast.success('Workflow atualizado com sucesso');
       } else {
         const createRequest: CreateWorkflowRequest = {
           name: workflowName,
@@ -335,10 +335,10 @@ export default function WorkflowPage() {
           console.warn('Failed to auto-activate workflow:', activationError);
         }
         
-        toast.success('Workflow created and activated successfully');
+        toast.success('Workflow criado e ativado com sucesso');
       }
     } catch (error) {
-      toast.error(`Failed to ${isEditing ? 'update' : 'create'} workflow`);
+      toast.error(`Falha ao ${isEditing ? 'atualizar' : 'criar'} workflow`);
     }
   }, [workflowName, workflowDescription, triggerPhrase, isDefault, steps, agentId, workflowId, isEditing, createWorkflowMutation, updateWorkflowMutation, router]);
 

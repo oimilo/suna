@@ -109,20 +109,20 @@ export default function AgentConfigurationPage() {
     
     if (isSunaAgent) {
       if (restrictions.name_editable === false && formData.name !== originalData.name) {
-        toast.error("Cannot save changes", {
-          description: `${BRANDING.name}'s name cannot be modified.`,
+        toast.error("Não é possível salvar alterações", {
+          description: `O nome de ${BRANDING.name} não pode ser modificado.`,
         });
         return;
       }
       if (restrictions.system_prompt_editable === false && formData.system_prompt !== originalData.system_prompt) {
-        toast.error("Cannot save changes", {
-          description: `${BRANDING.name}'s system prompt cannot be modified.`,
+        toast.error("Não é possível salvar alterações", {
+          description: `O prompt do sistema de ${BRANDING.name} não pode ser modificado.`,
         });
         return;
       }
       if (restrictions.tools_editable === false && JSON.stringify(formData.agentpress_tools) !== JSON.stringify(originalData.agentpress_tools)) {
-        toast.error("Cannot save changes", {
-          description: `${BRANDING.name}'s default tools cannot be modified.`,
+        toast.error("Não é possível salvar alterações", {
+          description: `As ferramentas padrão de ${BRANDING.name} não podem ser modificadas.`,
         });
         return;
       }
@@ -161,10 +161,10 @@ export default function AgentConfigurationPage() {
       });
       
       setOriginalData(formData);
-      toast.success('Changes saved successfully');
+      toast.success('Alterações salvas com sucesso');
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('Failed to save changes');
+      toast.error('Falha ao salvar alterações');
     } finally {
       setIsSaving(false);
     }
@@ -172,7 +172,7 @@ export default function AgentConfigurationPage() {
 
   const handleFieldChange = useCallback((field: keyof FormData, value: any) => {
     if (isViewingOldVersion) {
-      toast.error('Cannot edit old versions. Please activate this version first to make changes.');
+      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -180,7 +180,7 @@ export default function AgentConfigurationPage() {
 
   const handleMCPChange = useCallback((updates: { configured_mcps: any[]; custom_mcps: any[] }) => {
     if (isViewingOldVersion) {
-      toast.error('Cannot edit old versions. Please activate this version first to make changes.');
+      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
       return;
     }
     setFormData(prev => ({
@@ -192,7 +192,7 @@ export default function AgentConfigurationPage() {
 
   const handleStyleChange = useCallback((emoji: string, color: string) => {
     if (isViewingOldVersion) {
-      toast.error('Cannot edit old versions. Please activate this version first to make changes.');
+      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
       return;
     }
     setFormData(prev => ({
@@ -206,7 +206,7 @@ export default function AgentConfigurationPage() {
     try {
       await activateVersionMutation.mutateAsync({ agentId, versionId });
     } catch (error) {
-      toast.error('Failed to activate version');
+      toast.error('Falha ao ativar versão');
     }
   }, [agentId, activateVersionMutation]);
 

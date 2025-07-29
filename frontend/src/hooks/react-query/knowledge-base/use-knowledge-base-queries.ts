@@ -80,10 +80,10 @@ export function useUpdateKnowledgeBaseEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.all });
-      toast.success('Knowledge base entry updated successfully');
+      toast.success('Entrada da base de conhecimento atualizada com sucesso');
     },
     onError: (error) => {
-      toast.error(`Failed to update knowledge base entry: ${error.message}`);
+      toast.error(`Falha ao atualizar entrada da base de conhecimento: ${error.message}`);
     },
   });
 }
@@ -109,10 +109,10 @@ export function useDeleteKnowledgeBaseEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.all });
-      toast.success('Knowledge base entry deleted successfully');
+      toast.success('Entrada da base de conhecimento excluída com sucesso');
     },
     onError: (error) => {
-      toast.error(`Failed to delete knowledge base entry: ${error.message}`);
+      toast.error(`Falha ao excluir entrada da base de conhecimento: ${error.message}`);
     },
   });
 }
@@ -166,10 +166,10 @@ export function useCreateAgentKnowledgeBaseEntry() {
     onSuccess: (_, { agentId }) => {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agent(agentId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agentContext(agentId) });
-      toast.success('Agent knowledge entry created successfully');
+      toast.success('Entrada de conhecimento do agente criada com sucesso');
     },
     onError: (error) => {
-      toast.error(`Failed to create agent knowledge entry: ${error.message}`);
+      toast.error(`Falha ao criar entrada de conhecimento do agente: ${error.message}`);
     },
   });
 }
@@ -232,10 +232,10 @@ export function useUploadAgentFiles() {
     onSuccess: (data, { agentId }) => {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agent(agentId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.processingJobs(agentId) });
-      toast.success('File uploaded successfully. Processing in background.');
+      toast.success('Arquivo enviado com sucesso. Processando em segundo plano.');
     },
     onError: (error) => {
-      toast.error(`Failed to upload file: ${error.message}`);
+      toast.error(`Falha ao enviar arquivo: ${error.message}`);
     },
   });
 }
@@ -263,10 +263,10 @@ export function useCloneGitRepository() {
     onSuccess: (data, { agentId }) => {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agent(agentId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.processingJobs(agentId) });
-      toast.success('Repository cloning started. Processing in background.');
+      toast.success('Clonagem do repositório iniciada. Processando em segundo plano.');
     },
     onError: (error) => {
-      toast.error(`Failed to clone repository: ${error.message}`);
+      toast.error(`Falha ao clonar repositório: ${error.message}`);
     },
   });
 }

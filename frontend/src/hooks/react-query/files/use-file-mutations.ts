@@ -80,11 +80,11 @@ export function useFileUpload() {
         queryKey: fileQueryKeys.directories(),
       });
 
-      toast.success(`Uploaded: ${variables.file.name}`);
+      toast.success(`Enviado: ${variables.file.name}`);
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Upload failed: ${message}`);
+      toast.error(`Falha no envio: ${message}`);
     },
   });
 }
@@ -187,7 +187,7 @@ export function useFileDelete() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Delete failed: ${message}`);
+      toast.error(`Falha ao excluir: ${message}`);
     },
   });
 }
@@ -239,11 +239,11 @@ export function useFileCreate() {
         queryKey: fileQueryKeys.directory(variables.sandboxId, directoryPath),
       });
 
-      toast.success('File created successfully');
+      toast.success('Arquivo criado com sucesso');
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Create failed: ${message}`);
+      toast.error(`Falha ao criar: ${message}`);
     },
   });
 } 

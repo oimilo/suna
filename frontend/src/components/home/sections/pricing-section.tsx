@@ -207,14 +207,14 @@ function PricingTier({
             console.error(
               "Error: Received status 'checkout_created' but no checkout URL.",
             );
-            toast.error('Failed to initiate subscription. Please try again.');
+            toast.error('Falha ao iniciar assinatura. Por favor, tente novamente.');
           }
           break;
         case 'upgraded':
         case 'updated':
           const upgradeMessage = response.details?.is_upgrade
-            ? `Subscription upgraded from $${response.details.current_price} to $${response.details.new_price}`
-            : 'Subscription updated successfully';
+            ? `Assinatura atualizada de $${response.details.current_price} para $${response.details.new_price}`
+            : 'Assinatura atualizada com sucesso';
           toast.success(upgradeMessage);
           if (onSubscriptionUpdate) onSubscriptionUpdate();
           break;
@@ -224,34 +224,34 @@ function PricingTier({
             ? new Date(response.effective_date).toLocaleDateString()
             : 'the end of your billing period';
 
-          const statusChangeMessage = 'Subscription change scheduled';
+          const statusChangeMessage = 'Alteração de assinatura agendada';
 
           toast.success(
             <div>
               <p>{statusChangeMessage}</p>
               <p className="text-sm mt-1">
-                Your plan will change on {effectiveDate}.
+                Seu plano será alterado em {effectiveDate}.
               </p>
             </div>,
           );
           if (onSubscriptionUpdate) onSubscriptionUpdate();
           break;
         case 'no_change':
-          toast.info(response.message || 'You are already on this plan.');
+          toast.info(response.message || 'Você já está neste plano.');
           break;
         default:
           console.warn(
             'Received unexpected status from createCheckoutSession:',
             response.status,
           );
-          toast.error('An unexpected error occurred. Please try again.');
+          toast.error('Ocorreu um erro inesperado. Por favor, tente novamente.');
       }
     } catch (error: any) {
       console.error('Error processing subscription:', error);
       const errorMessage =
         error?.response?.data?.detail ||
         error?.message ||
-        'Failed to process subscription. Please try again.';
+        'Falha ao processar assinatura. Por favor, tente novamente.';
       toast.error(errorMessage);
     }
   };

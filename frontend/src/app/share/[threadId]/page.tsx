@@ -531,7 +531,7 @@ export default function ThreadPage({
         console.warn(
           'Clicked assistant message ID is null. Cannot open side panel.',
         );
-        toast.warning('Cannot view details: Assistant message ID is missing.');
+        toast.warning('Não é possível visualizar detalhes: ID da mensagem do assistente está ausente.');
         return;
       }
 
@@ -584,7 +584,7 @@ export default function ThreadPage({
         console.warn(
           `[PAGE] Could not find matching tool call in toolCalls array for assistant message ID: ${clickedAssistantMessageId}`,
         );
-        toast.info('Could not find details for this tool call.');
+        toast.info('Não foi possível encontrar detalhes para esta chamada de ferramenta.');
       }
     },
     [messages, toolCalls],

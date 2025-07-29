@@ -105,7 +105,7 @@ function LoginContent() {
     }
 
     if (result && typeof result === 'object' && 'message' in result) {
-      toast.error('Login failed', {
+      toast.error('Falha no login', {
         description: result.message as string,
         duration: 5000,
       });
@@ -161,7 +161,7 @@ function LoginContent() {
 
         return result;
       } else {
-        toast.error('Sign up failed', {
+        toast.error('Falha no cadastro', {
           description: resultMessage,
           duration: 5000,
         });

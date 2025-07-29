@@ -9,15 +9,15 @@ export const AgentsPageHeader = () => {
     <PageHeader icon={Bot}>
       <div className="space-y-4">
         <div className="text-4xl font-semibold tracking-tight">
-          <span className="text-primary">AI Agents</span> = <span className="text-primary">AI Employees</span>
+          <span className="text-primary">Agentes IA</span> = <span className="text-primary">Funcionários IA</span>
         </div>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Explore and create your own custom agents that combine{' '}
-          <span className="text-foreground font-medium">integrations</span>,{' '}
-          <span className="text-foreground font-medium">instructions</span>,{' '}
-          <span className="text-foreground font-medium">knowledge</span>,{' '}
-          <span className="text-foreground font-medium">triggers</span> and{' '}
-          <span className="text-foreground font-medium">workflows</span>.
+          Explore e crie seus próprios agentes personalizados que combinam{' '}
+          <span className="text-foreground font-medium">integrações</span>,{' '}
+          <span className="text-foreground font-medium">instruções</span>,{' '}
+          <span className="text-foreground font-medium">conhecimento</span>,{' '}
+          <span className="text-foreground font-medium">gatilhos</span> e{' '}
+          <span className="text-foreground font-medium">fluxos de trabalho</span>.
         </p>
       </div>
     </PageHeader>

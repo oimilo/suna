@@ -15,7 +15,7 @@ export const useCreateSandboxFile = createMutationHook(
   }) => createSandboxFile(sandboxId, filePath, content),
   {
     onSuccess: () => {
-      toast.success('File created successfully');
+      toast.success('Arquivo criado com sucesso');
     },
     errorContext: {
       operation: 'create file',
@@ -32,7 +32,7 @@ export const useCreateSandboxFileJson = createMutationHook(
   }) => createSandboxFileJson(sandboxId, filePath, content),
   {
     onSuccess: () => {
-      toast.success('File created successfully');
+      toast.success('Arquivo criado com sucesso');
     },
     errorContext: {
       operation: 'create file',

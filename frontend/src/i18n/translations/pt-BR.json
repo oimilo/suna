@@ -1,0 +1,186 @@
+{
+  "dashboard": {
+    "greeting": "O que você gostaria de fazer hoje?",
+    "inputPlaceholder": "Descreva com o que precisa de ajuda...",
+    "openMenu": "Abrir menu",
+    "selectAgent": "Selecionar agente",
+    "newChat": "Nova conversa",
+    "examples": {
+      "title": "Exemplos de uso",
+      "example1": "Crie um dashboard de vendas",
+      "example2": "Analise dados de marketing",
+      "example3": "Automatize tarefas repetitivas",
+      "example4": "Gere relatórios personalizados"
+    }
+  },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Buscar"
+  },
+  "billing": {
+    "limitReached": "Limite de uso atingido",
+    "upgrade": "Fazer upgrade",
+    "currentUsage": "Uso atual",
+    "limit": "Limite"
+  },
+  "agents": {
+    "title": "Agentes",
+    "create": "Criar Agente",
+    "configure": "Configurar",
+    "select": "Selecionar Agente"
+  },
+  "chat": {
+    "thinking": "Pensando...",
+    "newConversation": "Nova conversa",
+    "sendMessage": "Enviar mensagem",
+    "attachFile": "Anexar arquivo",
+    "loader": {
+      "analyzing": "Analisando sua solicitação...",
+      "collecting": "Coletando informações relevantes...",
+      "processing": "Processando dados disponíveis...",
+      "accessing": "Acessando bases de conhecimento...",
+      "evaluating": "Avaliando diferentes abordagens...",
+      "synthesizing": "Sintetizando insights...",
+      "building": "Construindo resposta completa...",
+      "optimizing": "Otimizando precisão da solução...",
+      "crossReferencing": "Cruzando referências...",
+      "structuring": "Estruturando framework lógico...",
+      "integrating": "Integrando elementos contextuais...",
+      "refining": "Refinando análise...",
+      "validating": "Validando coerência da resposta...",
+      "assembling": "Montando insights finais...",
+      "preparing": "Preparando análise detalhada...",
+      "finalizing": "Finalizando estrutura da resposta..."
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "language": "Idioma",
+    "theme": "Tema",
+    "account": "Conta",
+    "billing": "Cobrança",
+    "profile": "Perfil",
+    "notifications": "Notificações",
+    "privacy": "Privacidade",
+    "security": "Segurança",
+    "logout": "Sair",
+    "darkMode": "Modo escuro",
+    "lightMode": "Modo claro"
+  },
+  "pricing": {
+    "free": "Gratuito",
+    "starter": "Iniciante",
+    "pro": "Profissional",
+    "business": "Empresarial",
+    "perMonth": "/mês",
+    "perYear": "/ano",
+    "choosePlan": "Escolher plano",
+    "currentPlan": "Plano atual",
+    "upgrade": "Fazer upgrade",
+    "downgrade": "Fazer downgrade",
+    "features": {
+      "messages": "mensagens",
+      "agents": "agentes personalizados",
+      "integrations": "integrações",
+      "support": "Suporte",
+      "priority": "prioritário",
+      "unlimited": "ilimitado"
+    }
+  },
+  "sidebar": {
+    "home": "Início",
+    "agents": "Agentes",
+    "marketplace": "Marketplace",
+    "projects": "Projetos",
+    "threads": "Conversas",
+    "settings": "Configurações",
+    "help": "Ajuda",
+    "feedback": "Feedback",
+    "newProject": "Novo projeto",
+    "recentChats": "Conversas recentes",
+    "favorites": "Favoritos"
+  },
+  "auth": {
+    "signIn": "Entrar",
+    "signUp": "Cadastrar",
+    "signOut": "Sair",
+    "email": "E-mail",
+    "password": "Senha",
+    "confirmPassword": "Confirmar senha",
+    "forgotPassword": "Esqueceu a senha?",
+    "resetPassword": "Redefinir senha",
+    "continueWithGoogle": "Continuar com Google",
+    "continueWithGitHub": "Continuar com GitHub",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "dontHaveAccount": "Não tem uma conta?",
+    "termsAndConditions": "Termos e Condições",
+    "privacyPolicy": "Política de Privacidade"
+  },
+  "errors": {
+    "generic": "Algo deu errado. Por favor, tente novamente.",
+    "network": "Erro de conexão. Verifique sua internet.",
+    "unauthorized": "Não autorizado. Faça login novamente.",
+    "notFound": "Página não encontrada.",
+    "serverError": "Erro no servidor. Tente novamente mais tarde.",
+    "invalidInput": "Entrada inválida. Verifique os dados.",
+    "emailRequired": "E-mail é obrigatório",
+    "passwordRequired": "Senha é obrigatória",
+    "passwordMismatch": "As senhas não coincidem"
+  },
+  "thread": {
+    "title": "Conversa",
+    "newThread": "Nova conversa",
+    "deleteThread": "Excluir conversa",
+    "shareThread": "Compartilhar conversa",
+    "copyLink": "Copiar link",
+    "rename": "Renomear",
+    "archive": "Arquivar",
+    "unarchive": "Desarquivar",
+    "noMessages": "Nenhuma mensagem ainda",
+    "startConversation": "Comece uma conversa"
+  },
+  "files": {
+    "upload": "Fazer upload",
+    "download": "Baixar",
+    "delete": "Excluir",
+    "preview": "Visualizar",
+    "dropzone": "Arraste arquivos aqui ou clique para selecionar",
+    "maxSize": "Tamanho máximo",
+    "supportedFormats": "Formatos suportados",
+    "uploading": "Enviando...",
+    "uploaded": "Enviado",
+    "failed": "Falha no envio"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "markAsRead": "Marcar como lida",
+    "markAllAsRead": "Marcar todas como lidas",
+    "clear": "Limpar",
+    "empty": "Nenhuma notificação",
+    "new": "Nova notificação"
+  },
+  "actions": {
+    "copy": "Copiar",
+    "paste": "Colar",
+    "cut": "Recortar",
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "selectAll": "Selecionar tudo",
+    "export": "Exportar",
+    "import": "Importar",
+    "refresh": "Atualizar",
+    "retry": "Tentar novamente",
+    "continue": "Continuar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "finish": "Finalizar"
+  }
+}

@@ -284,7 +284,7 @@ export default function AgentsPage() {
     
     try {
       if (!instanceName || instanceName.trim() === '') {
-        toast.error('Please provide a name for the agent');
+        toast.error('Por favor, forneça um nome para o agente');
         return;
       }
 
@@ -297,7 +297,7 @@ export default function AgentsPage() {
       
       if (missingProfiles.length > 0) {
         const missingNames = missingProfiles.map(req => req.display_name).join(', ');
-        toast.error(`Please select credential profiles for: ${missingNames}`);
+        toast.error(`Por favor, selecione perfis de credenciais para: ${missingNames}`);
         return;
       }
 
@@ -311,7 +311,7 @@ export default function AgentsPage() {
       
       if (missingCustomConfigs.length > 0) {
         const missingNames = missingCustomConfigs.map(req => req.display_name).join(', ');
-        toast.error(`Please provide all required configuration for: ${missingNames}`);
+        toast.error(`Por favor, forneça toda a configuração necessária para: ${missingNames}`);
         return;
       }
 
@@ -325,7 +325,7 @@ export default function AgentsPage() {
       
       if (missingPipedreamConfigs.length > 0) {
         const missingNames = missingPipedreamConfigs.map(req => req.display_name).join(', ');
-        toast.error(`Please select Pipedream profiles for: ${missingNames}`);
+        toast.error(`Por favor, selecione perfis do Pipedream para: ${missingNames}`);
         return;
       }
 
@@ -337,35 +337,35 @@ export default function AgentsPage() {
       });
 
       if (result.status === 'installed') {
-        toast.success(`Agent "${instanceName}" installed successfully!`);
+        toast.success(`Agente "${instanceName}" instalado com sucesso!`);
         setShowInstallDialog(false);
         handleTabChange('my-agents');
       } else if (result.status === 'configs_required') {
-        toast.error('Please provide all required configurations');
+        toast.error('Por favor, forneça todas as configurações necessárias');
         return;
       } else {
-        toast.error('Unexpected response from server. Please try again.');
+        toast.error('Resposta inesperada do servidor. Por favor, tente novamente.');
         return;
       }
     } catch (error: any) {
       console.error('Installation error:', error);
 
       if (error.message?.includes('already in your library')) {
-        toast.error('This agent is already in your library');
+        toast.error('Este agente já está em sua biblioteca');
       } else if (error.message?.includes('Credential profile not found')) {
-        toast.error('One or more selected credential profiles could not be found. Please refresh and try again.');
+        toast.error('Um ou mais perfis de credenciais selecionados não foram encontrados. Por favor, atualize e tente novamente.');
       } else if (error.message?.includes('Missing credential profile')) {
-        toast.error('Please select credential profiles for all required services');
+        toast.error('Por favor, selecione perfis de credenciais para todos os serviços necessários');
       } else if (error.message?.includes('Invalid credential profile')) {
-        toast.error('One or more selected credential profiles are invalid. Please select valid profiles.');
+        toast.error('Um ou mais perfis de credenciais selecionados são inválidos. Por favor, selecione perfis válidos.');
       } else if (error.message?.includes('inactive')) {
-        toast.error('One or more selected credential profiles are inactive. Please select active profiles.');
+        toast.error('Um ou mais perfis de credenciais selecionados estão inativos. Por favor, selecione perfis ativos.');
       } else if (error.message?.includes('Template not found')) {
-        toast.error('This agent template is no longer available');
+        toast.error('Este modelo de agente não está mais disponível');
       } else if (error.message?.includes('Access denied')) {
-        toast.error('You do not have permission to install this agent');
+        toast.error('Você não tem permissão para instalar este agente');
       } else {
-        toast.error(error.message || 'Failed to install agent. Please try again.');
+        toast.error(error.message || 'Falha ao instalar o agente. Por favor, tente novamente.');
       }
     } finally {
       setInstallingItemId(null);
@@ -386,9 +386,9 @@ export default function AgentsPage() {
     try {
       setTemplatesActioningId(templateId);
       await unpublishMutation.mutateAsync(templateId);
-      toast.success(`${templateName} has been unpublished from the marketplace`);
+      toast.success(`${templateName} foi removido do marketplace`);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to unpublish template');
+      toast.error(error.message || 'Falha ao remover modelo do marketplace');
     } finally {
       setTemplatesActioningId(null);
     }
@@ -428,7 +428,7 @@ export default function AgentsPage() {
           tags: tags.length > 0 ? tags : undefined
         });
         
-        toast.success(`${publishDialog.templateName} has been published to the marketplace`);
+        toast.success(`${publishDialog.templateName} foi publicado no marketplace`);
       } else {
         // Publishing an existing template
         setTemplatesActioningId(publishDialog.templateId);
@@ -438,13 +438,13 @@ export default function AgentsPage() {
           tags: tags.length > 0 ? tags : undefined
         });
         
-        toast.success(`${publishDialog.templateName} has been published to the marketplace`);
+        toast.success(`${publishDialog.templateName} foi publicado no marketplace`);
       }
       
       setPublishDialog(null);
       setPublishTags([]);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to publish template');
+      toast.error(error.message || 'Falha ao publicar modelo');
     } finally {
       setTemplatesActioningId(null);
       setPublishingAgentId(null);

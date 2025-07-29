@@ -248,7 +248,7 @@ export function NavAgents() {
               onSuccess: () => {
                 // Invalidate queries to refresh the list
                 queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
-                toast.success('Conversation deleted successfully');
+                toast.success('Conversa excluída com sucesso');
               },
               onSettled: () => {
                 setThreadToDelete(null);
@@ -269,7 +269,7 @@ export function NavAgents() {
       const isActiveThreadIncluded = threadIdsToDelete.some(id => pathname?.includes(id));
 
       // Show initial toast
-      toast.info(`Deleting ${threadIdsToDelete.length} conversations...`);
+      toast.info(`Excluindo ${threadIdsToDelete.length} conversas...`);
 
       try {
         // If the active thread is included, handle navigation first
@@ -302,11 +302,11 @@ export function NavAgents() {
               queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
 
               // Show success message
-              toast.success(`Successfully deleted ${data.successful.length} conversations`);
+              toast.success(`${data.successful.length} conversas excluídas com sucesso`);
 
               // If some deletions failed, show warning
               if (data.failed.length > 0) {
-                toast.warning(`Failed to delete ${data.failed.length} conversations`);
+                toast.warning(`Falha ao excluir ${data.failed.length} conversas`);
               }
 
               // Reset states
@@ -316,7 +316,7 @@ export function NavAgents() {
             },
             onError: (error) => {
               console.error('Error in bulk deletion:', error);
-              toast.error('Error deleting conversations');
+              toast.error('Erro ao excluir conversas');
             },
             onSettled: () => {
               setThreadToDelete(null);
@@ -328,7 +328,7 @@ export function NavAgents() {
         );
       } catch (err) {
         console.error('Error initiating bulk deletion:', err);
-        toast.error('Error initiating deletion process');
+        toast.error('Erro ao iniciar processo de exclusão');
 
         // Reset states
         setSelectedThreads(new Set());

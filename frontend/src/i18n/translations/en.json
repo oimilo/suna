@@ -1,0 +1,59 @@
+{
+  "dashboard": {
+    "greeting": "What would you like to do today?",
+    "inputPlaceholder": "Describe what you need help with...",
+    "openMenu": "Open menu",
+    "selectAgent": "Select agent",
+    "newChat": "New chat",
+    "examples": {
+      "title": "Usage examples",
+      "example1": "Create a sales dashboard",
+      "example2": "Analyze marketing data",
+      "example3": "Automate repetitive tasks",
+      "example4": "Generate custom reports"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search"
+  },
+  "billing": {
+    "limitReached": "Usage limit reached",
+    "upgrade": "Upgrade",
+    "currentUsage": "Current usage",
+    "limit": "Limit"
+  },
+  "agents": {
+    "title": "Agents",
+    "create": "Create Agent",
+    "configure": "Configure",
+    "select": "Select Agent"
+  },
+  "chat": {
+    "thinking": "Thinking...",
+    "newConversation": "New conversation",
+    "sendMessage": "Send message",
+    "attachFile": "Attach file"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "account": "Account",
+    "billing": "Billing"
+  },
+  "pricing": {
+    "free": "Free",
+    "starter": "Starter",
+    "pro": "Professional",
+    "business": "Business",
+    "perMonth": "/month"
+  }
+}

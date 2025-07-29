@@ -178,7 +178,7 @@ export function HeroSection() {
           error.message.includes('Failed to fetch');
         if (!isLocalMode() || isConnectionError) {
           toast.error(
-            error.message || 'Failed to create agent. Please try again.',
+            error.message || 'Falha ao criar agente. Por favor, tente novamente.',
           );
         }
       }

@@ -64,7 +64,7 @@ export function AgentVersionSwitcher({
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     router.push(newUrl);
     if (version.versionId.value !== currentVersionId) {
-      toast.success(`Viewing ${version.versionName} (read-only)`);
+      toast.success(`Visualizando ${version.versionName} (somente leitura)`);
     }
   };
 
@@ -94,10 +94,10 @@ export function AgentVersionSwitcher({
       router.push(newUrl);
 
       setShowRollbackDialog(false);
-      toast.success(`Rolled back to ${selectedVersion.versionName} configuration`);
+      toast.success(`Revertido para a configuração ${selectedVersion.versionName}`);
     } catch (error) {
       console.error('Failed to rollback:', error);
-      toast.error('Failed to rollback version');
+      toast.error('Falha ao reverter versão');
     } finally {
       setIsRollingBack(false);
     }

@@ -95,10 +95,10 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
       await updatePublicStatus(true)
       const generatedLink = generateShareLink()
       setShareLink(generatedLink)
-      toast.success("Shareable link created successfully")
+      toast.success("Link compartilhável criado com sucesso")
     } catch (error) {
       console.error("Error creating share link:", error)
-      toast.error("Failed to create shareable link")
+      toast.error("Falha ao criar link compartilhável")
     } finally {
       setIsLoading(false)
     }
@@ -112,10 +112,10 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
     try {
       await updatePublicStatus(false)
       setShareLink(null)
-      toast.success("Shareable link removed")
+      toast.success("Link compartilhável removido")
     } catch (error) {
       console.error("Error removing share link:", error)
-      toast.error("Failed to remove shareable link")
+      toast.error("Falha ao remover link compartilhável")
     } finally {
       setIsLoading(false)
     }
@@ -139,7 +139,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
     if (shareLink) {
       setIsCopying(true)
       navigator.clipboard.writeText(shareLink)
-      toast.success("Link copied to clipboard")
+      toast.success("Link copiado para a área de transferência")
       setTimeout(() => {
         setIsCopying(false)
       }, 500)

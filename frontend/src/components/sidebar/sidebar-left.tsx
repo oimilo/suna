@@ -141,7 +141,7 @@ export function SidebarLeft({
                 <TooltipTrigger asChild>
                   <SidebarTrigger className="h-8 w-8" />
                 </TooltipTrigger>
-                <TooltipContent>Toggle sidebar (CMD+B)</TooltipContent>
+                <TooltipContent>Alternar barra lateral (CMD+B)</TooltipContent>
               </Tooltip>
             )}
             {isMobile && (
@@ -154,7 +154,7 @@ export function SidebarLeft({
                     <Menu className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Open menu</TooltipContent>
+                <TooltipContent>Abrir menu</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -168,7 +168,7 @@ export function SidebarLeft({
             })}>
               <Plus className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
-                New Task
+                Nova Tarefa
               </span>
             </SidebarMenuButton>
           </Link>
@@ -184,7 +184,7 @@ export function SidebarLeft({
                       tooltip="Agents"
                     >
                       <Bot className="h-4 w-4 mr-1" />
-                      <span>Agents</span>
+                      <span>Agentes</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
@@ -195,7 +195,7 @@ export function SidebarLeft({
                           'bg-accent text-accent-foreground font-medium': pathname === '/agents' && searchParams.get('tab') === 'marketplace',
                         })} asChild>
                           <Link href="/agents?tab=marketplace">
-                            <span>Explore</span>
+                            <span>Explorar</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -204,7 +204,7 @@ export function SidebarLeft({
                           'bg-accent text-accent-foreground font-medium': pathname === '/agents' && (searchParams.get('tab') === 'my-agents' || searchParams.get('tab') === null),
                         })} asChild>
                           <Link href="/agents?tab=my-agents">
-                            <span>My Agents</span>
+                            <span>Meus Agentes</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -213,7 +213,7 @@ export function SidebarLeft({
                           onClick={() => setShowNewAgentDialog(true)}
                           className="cursor-pointer pl-3"
                         >
-                          <span>New Agent</span>
+                          <span>Novo Agente</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
@@ -229,7 +229,7 @@ export function SidebarLeft({
               })}>
                 <Plug className="h-4 w-4 mr-1" />
                 <span className="flex items-center justify-between w-full">
-                  Integrations
+                  Integrações
                 </span>
               </SidebarMenuButton>
             </Link>
@@ -249,7 +249,7 @@ export function SidebarLeft({
               <TooltipTrigger asChild>
                 <SidebarTrigger className="h-8 w-8" />
               </TooltipTrigger>
-              <TooltipContent>Expand sidebar (CMD+B)</TooltipContent>
+              <TooltipContent>Expandir barra lateral (CMD+B)</TooltipContent>
             </Tooltip>
           </div>
         )}
@@ -259,14 +259,14 @@ export function SidebarLeft({
       <AlertDialog open={showNewAgentDialog} onOpenChange={setShowNewAgentDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Create New Agent</AlertDialogTitle>
+            <AlertDialogTitle>Criar Novo Agente</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a new agent with a default name and description.
+              Isso criará um novo agente com nome e descrição padrão.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCreateNewAgent}>Create</AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreateNewAgent}>Criar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
