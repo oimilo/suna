@@ -289,7 +289,12 @@ function PricingTier({
   let statusBadge = null;
   let buttonClassName = '';
 
-  if (isAuthenticated) {
+  // Special handling for Enterprise plan
+  if (tier.isContactSales) {
+    buttonText = 'Entre em contato';
+    buttonVariant = 'default';
+    buttonClassName = 'bg-primary hover:bg-primary/90 text-primary-foreground';
+  } else if (isAuthenticated) {
     if (isCurrentActivePlan) {
       buttonText = 'Current Plan';
       buttonDisabled = true;
@@ -476,7 +481,7 @@ function PricingTier({
           ) : (
             <div className="flex items-baseline">
               <PriceDisplay price={displayPrice} isCompact={insideDialog} />
-              <span className="ml-2">{displayPrice !== '$0' ? '/month' : ''}</span>
+              <span className="ml-2">{displayPrice !== '$0' && !tier.isContactSales ? '/month' : ''}</span>
             </div>
           )}
         </div>
