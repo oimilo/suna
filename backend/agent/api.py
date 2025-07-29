@@ -194,6 +194,54 @@ async def cleanup():
     await redis.close()
     logger.info("Completed cleanup of agent API resources")
 
+async def _update_agent_run_status_direct(
+    client,
+    agent_run_id: str,
+    status: str,
+    error: Optional[str] = None,
+    responses: Optional[list] = None
+) -> bool:
+    """
+    Direct database update for agent run status (production-friendly version).
+    Returns True if update was successful.
+    """
+    try:
+        update_data = {
+            "status": status,
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        if error:
+            update_data["error"] = error
+
+        if responses:
+            update_data["responses"] = responses
+
+        # Simple update with single retry
+        for retry in range(2):
+            try:
+                update_result = await client.table('agent_runs').update(update_data).eq("id", agent_run_id).execute()
+                
+                if hasattr(update_result, 'data') and update_result.data:
+                    logger.info(f"Successfully updated agent run {agent_run_id} status to '{status}'")
+                    return True
+                else:
+                    logger.warning(f"Database update returned no data for agent run {agent_run_id}")
+                    if retry == 1:  # Last retry
+                        return False
+            except Exception as e:
+                logger.error(f"Database error updating status for {agent_run_id}: {str(e)}")
+                if retry == 0:
+                    await asyncio.sleep(0.5)
+                else:
+                    return False
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Failed to update agent run status: {str(e)}", exc_info=True)
+        return False
+
 async def stop_agent_run(agent_run_id: str, error_message: Optional[str] = None):
     """Update database and publish stop signal to Redis."""
     logger.info(f"Stopping agent run: {agent_run_id}")
@@ -212,9 +260,16 @@ async def stop_agent_run(agent_run_id: str, error_message: Optional[str] = None)
         # Try fetching from DB as a fallback? Or proceed without responses? Proceeding without for now.
 
     # Update the agent run status in the database
-    update_success = await update_agent_run_status(
-        client, agent_run_id, final_status, error=error_message, responses=all_responses
-    )
+    # Use the imported function in development, or do it directly in production
+    if update_agent_run_status is not None:
+        update_success = await update_agent_run_status(
+            client, agent_run_id, final_status, error=error_message, responses=all_responses
+        )
+    else:
+        # Direct database update for production
+        update_success = await _update_agent_run_status_direct(
+            client, agent_run_id, final_status, error=error_message, responses=all_responses
+        )
 
     if not update_success:
         logger.error(f"Failed to update database status for stopped/failed run {agent_run_id}")
