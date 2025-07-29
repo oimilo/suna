@@ -23,6 +23,7 @@ from services.llm_openrouter_only import force_openrouter_prefix
 
 litellm.set_verbose=True  # Enable verbose logging to debug OpenRouter issue
 litellm.modify_params=True
+litellm._turn_on_debug()  # Enable debug mode for detailed error information
 
 # Constants
 MAX_RETRIES = 2
@@ -175,14 +176,22 @@ def prepare_params(
         
         # Ensure OpenRouter API key is passed directly
         if config.OPENROUTER_API_KEY:
+            # Try both ways - as api_key and openrouter_api_key
             params["api_key"] = config.OPENROUTER_API_KEY
+            params["openrouter_api_key"] = config.OPENROUTER_API_KEY
             logger.info(f"Added OpenRouter API key to params: {config.OPENROUTER_API_KEY[:10]}...")
+            
+            # Also ensure it's in the environment
+            if not os.environ.get('OPENROUTER_API_KEY'):
+                os.environ['OPENROUTER_API_KEY'] = config.OPENROUTER_API_KEY
+                logger.info("Set OPENROUTER_API_KEY in environment")
         else:
             logger.error("NO OPENROUTER_API_KEY found in config!")
         
         # Set API base for OpenRouter
         if config.OPENROUTER_API_BASE:
             params["api_base"] = config.OPENROUTER_API_BASE
+            params["openrouter_api_base"] = config.OPENROUTER_API_BASE
             logger.info(f"Added OpenRouter API base: {config.OPENROUTER_API_BASE}")
         else:
             logger.warning("No OPENROUTER_API_BASE found, using default")
@@ -328,10 +337,17 @@ async def make_llm_api_call(
     
     # Debug: Check if OpenRouter API key is available
     if model_name.startswith("openrouter/"):
-        if not os.environ.get('OPENROUTER_API_KEY'):
+        env_key = os.environ.get('OPENROUTER_API_KEY')
+        config_key = config.OPENROUTER_API_KEY
+        if not env_key:
             logger.error("OPENROUTER_API_KEY not found in environment!")
         else:
-            logger.debug(f"OPENROUTER_API_KEY is set: {os.environ.get('OPENROUTER_API_KEY')[:10]}...")
+            logger.info(f"OPENROUTER_API_KEY in env: {env_key[:10]}...")
+        
+        if not config_key:
+            logger.error("OPENROUTER_API_KEY not found in config!")
+        else:
+            logger.info(f"OPENROUTER_API_KEY in config: {config_key[:10]}...")
     
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
