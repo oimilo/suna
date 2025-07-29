@@ -138,8 +138,7 @@ if branding.APP_URL.startswith("https://www."):
     allowed_origins.append(branding.APP_URL.replace("https://www.", "https://"))
 allow_origin_regex = None
 
-# Log initial allowed origins
-logger.info(f"Initial allowed_origins: {allowed_origins}")
+# Log initial allowed origins (moved to after app creation)
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
@@ -157,10 +156,6 @@ if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("https://prophet-milo.vercel.app")  # Manter temporariamente
     allowed_origins.append("http://localhost:3000")
 
-# Log final allowed origins before middleware
-logger.info(f"Final allowed_origins for CORS: {allowed_origins}")
-logger.info(f"Environment mode: {config.ENV_MODE}")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -172,6 +167,15 @@ app.add_middleware(
 
 # Create a main API router
 api_router = APIRouter()
+
+# Debug endpoint to check CORS configuration
+@app.get("/api/debug/cors")
+async def debug_cors():
+    return {
+        "allowed_origins": allowed_origins,
+        "environment": config.ENV_MODE.value,
+        "app_url": branding.APP_URL
+    }
 
 # Include all API routers without individual prefixes
 api_router.include_router(agent_api.router)
