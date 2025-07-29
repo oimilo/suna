@@ -138,6 +138,9 @@ if branding.APP_URL.startswith("https://www."):
     allowed_origins.append(branding.APP_URL.replace("https://www.", "https://"))
 allow_origin_regex = None
 
+# Log initial allowed origins
+logger.info(f"Initial allowed_origins: {allowed_origins}")
+
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
@@ -153,6 +156,10 @@ if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("https://prophet.build")
     allowed_origins.append("https://prophet-milo.vercel.app")  # Manter temporariamente
     allowed_origins.append("http://localhost:3000")
+
+# Log final allowed origins before middleware
+logger.info(f"Final allowed_origins for CORS: {allowed_origins}")
+logger.info(f"Environment mode: {config.ENV_MODE}")
 
 app.add_middleware(
     CORSMiddleware,
