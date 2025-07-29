@@ -6,7 +6,7 @@ import os
 
 class BrandingConfig:
     # App branding
-    APP_NAME = os.getenv('APP_NAME', 'Suna')
+    APP_NAME = os.getenv('APP_NAME', 'Prophet')
     APP_DESCRIPTION = os.getenv('APP_DESCRIPTION', 'AI assistant that helps you get real work done')
     APP_URL = os.getenv('APP_URL', 'https://suna.so')
     
