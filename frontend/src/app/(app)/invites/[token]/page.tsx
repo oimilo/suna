@@ -6,8 +6,9 @@ import Link from 'next/link';
 export default async function AcceptInvitePage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
+  const resolvedParams = await params;
   const supabase = await createClient();
   
   // Check if user is authenticated
@@ -15,12 +16,12 @@ export default async function AcceptInvitePage({
   
   if (!user) {
     // Redirect to login with return URL
-    redirect(`/auth?returnUrl=/invites/${params.token}`);
+    redirect(`/auth?returnUrl=/invites/${resolvedParams.token}`);
   }
   
   // Get invitation details
   const { data: inviteInfo, error: lookupError } = await supabase
-    .rpc('lookup_invitation', { lookup_invitation_token: params.token });
+    .rpc('lookup_invitation', { lookup_invitation_token: resolvedParams.token });
     
   if (lookupError || !inviteInfo?.active) {
     return (
@@ -42,7 +43,7 @@ export default async function AcceptInvitePage({
   
   // Accept the invitation
   const { data: acceptResult, error: acceptError } = await supabase
-    .rpc('accept_invitation', { lookup_invitation_token: params.token });
+    .rpc('accept_invitation', { lookup_invitation_token: resolvedParams.token });
     
   if (acceptError) {
     return (
