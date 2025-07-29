@@ -51,6 +51,14 @@ export const MODELS = {
   //   lowQuality: false
   // },
 
+  // DeepSeek V3 - excellent coding model at low cost
+  'deepseek/deepseek-chat': {
+    tier: 'free',
+    priority: 98,
+    recommended: true,
+    lowQuality: false
+  },
+
   // Premium/Paid tier models (require subscription) - except specific free models
   'moonshotai/kimi-k2': { 
     tier: 'free', 

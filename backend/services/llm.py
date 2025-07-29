@@ -83,6 +83,7 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
         "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",
         "xai/grok-4": "openrouter/x-ai/grok-4",
         "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "deepseek/deepseek-chat": "openrouter/deepseek/deepseek-chat",
     }
     
     # Check for exact match first
