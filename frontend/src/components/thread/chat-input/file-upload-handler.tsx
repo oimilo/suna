@@ -180,6 +180,7 @@ interface FileUploadHandlerProps {
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>;
   messages?: any[]; // Add messages prop
   isLoggedIn?: boolean;
+  isFocused?: boolean;
 }
 
 export const FileUploadHandler = forwardRef<
@@ -198,6 +199,7 @@ export const FileUploadHandler = forwardRef<
       setIsUploading,
       messages = [],
       isLoggedIn = true,
+      isFocused = false,
     },
     ref,
   ) => {
@@ -254,7 +256,7 @@ export const FileUploadHandler = forwardRef<
                   onClick={handleFileUpload}
                   variant="outline"
                   size="sm"
-                  className="h-8 px-3 py-2 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2"
+                  className={`h-8 px-3 py-2 bg-transparent border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-all duration-300 ${!isFocused ? 'opacity-20 border-transparent' : 'opacity-100 border-border'}`}
                   disabled={
                     !isLoggedIn || loading || (disabled && !isAgentRunning) || isUploading
                   }

@@ -54,13 +54,15 @@ interface AgentSelectorProps {
   onAgentSelect?: (agentId: string | undefined) => void;
   disabled?: boolean;
   isSunaAgent?: boolean;
+  isFocused?: boolean;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = ({
   selectedAgentId,
   onAgentSelect,
   disabled = false,
-  isSunaAgent
+  isSunaAgent,
+  isFocused = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -268,7 +270,8 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                   className={cn(
                     "px-2.5 py-1.5 text-sm font-normal hover:bg-accent/40 transition-all duration-200 rounded-xl",
                     "focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:outline-none",
-                    isOpen && "bg-accent/40"
+                    isOpen && "bg-accent/40",
+                    !isFocused && "opacity-20"
                   )}
                   disabled={disabled}
                 >

@@ -10,7 +10,11 @@ import {
 import Image from 'next/image'
 import { BRANDING } from '@/lib/branding'
 
-const ChatDropdown = () => {
+interface ChatDropdownProps {
+    isFocused?: boolean;
+}
+
+const ChatDropdown: React.FC<ChatDropdownProps> = ({ isFocused = false }) => {
     const [isOpen, setIsOpen] = useState(false)
 
     return (
@@ -19,7 +23,7 @@ const ChatDropdown = () => {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="px-3 py-2 text-sm font-medium hover:bg-accent"
+                    className={`px-3 py-2 text-sm font-medium hover:bg-accent transition-all duration-300 ${!isFocused ? 'opacity-20' : 'opacity-100'}`}
                     style={{
                         borderRadius: '12px'
                     }}

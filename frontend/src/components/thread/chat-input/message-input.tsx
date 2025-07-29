@@ -53,6 +53,9 @@ interface MessageInputProps {
   enableAdvancedConfig?: boolean;
   hideAgentSelection?: boolean;
   isSunaAgent?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  isFocused?: boolean;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -92,6 +95,9 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       enableAdvancedConfig = false,
       hideAgentSelection = false,
       isSunaAgent,
+      onFocus,
+      onBlur,
+      isFocused = false,
     },
     ref,
   ) => {
@@ -168,6 +174,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 onAgentSelect={onAgentSelect}
                 disabled={loading || (disabled && !isAgentRunning)}
                 isSunaAgent={isSunaAgent}
+                isFocused={isFocused}
               />
             )}
             <ModelSelector
@@ -179,11 +186,12 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
               refreshCustomModels={refreshCustomModels}
               billingModalOpen={billingModalOpen}
               setBillingModalOpen={setBillingModalOpen}
+              isFocused={isFocused}
             />
           </div>
         );
       }
-      return <ChatDropdown />;
+      return <ChatDropdown isFocused={isFocused} />;
     }
 
     return (
@@ -203,6 +211,8 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             )}
             disabled={loading || (disabled && !isAgentRunning)}
             rows={1}
+            onFocus={onFocus}
+            onBlur={onBlur}
           />
         </div>
 
@@ -222,6 +232,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 setIsUploading={setIsUploading}
                 messages={messages}
                 isLoggedIn={isLoggedIn}
+                isFocused={isFocused}
               />
             )}
 
@@ -251,6 +262,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             {isLoggedIn && <VoiceRecorder
               onTranscription={onTranscription}
               disabled={loading || (disabled && !isAgentRunning)}
+              isFocused={isFocused}
             />}
 
             <Button
@@ -258,12 +270,13 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
               onClick={isAgentRunning && onStopAgent ? onStopAgent : onSubmit}
               size="sm"
               className={cn(
-                'w-8 h-8 flex-shrink-0 self-end rounded-xl',
+                'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-all duration-300',
                 (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                   loading ||
                   (disabled && !isAgentRunning)
                   ? 'opacity-50'
                   : '',
+                !isFocused ? 'opacity-20 bg-muted/30' : 'opacity-100'
               )}
               disabled={
                 (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||

@@ -133,6 +133,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
     const [billingModalOpen, setBillingModalOpen] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
     const {
       selectedModel,
@@ -375,7 +376,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             isVisible={showToolPreview || !!showSnackbar}
           />
           <Card
-            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative`}
+            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative transition-all duration-300 ${
+              isFocused 
+                ? 'bg-background/50 backdrop-blur-sm border-border/50' 
+                : 'bg-transparent border-transparent'
+            }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {
@@ -399,7 +404,20 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
 
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg">
-              <CardContent className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${bgColor} border ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-3xl' : 'rounded-3xl'}`}>
+              <CardContent 
+                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} border transition-all duration-300 ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-3xl' : 'rounded-3xl'} ${
+                  isFocused 
+                    ? `${bgColor} border-border/30` 
+                    : 'bg-transparent border-transparent'
+                }`}
+                onFocus={() => setIsFocused(true)}
+                onBlur={(e) => {
+                  // Check if the new focus target is still within the card
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setIsFocused(false);
+                  }
+                }}
+              >
                 <AttachmentGroup
                   files={uploadedFiles || []}
                   sandboxId={sandboxId}
@@ -421,6 +439,9 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   onStopAgent={onStopAgent}
                   isDraggingOver={isDraggingOver}
                   uploadedFiles={uploadedFiles}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  isFocused={isFocused}
 
                   fileInputRef={fileInputRef}
                   isUploading={isUploading}

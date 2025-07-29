@@ -12,6 +12,7 @@ import { useTranscription } from '@/hooks/react-query/transcription/use-transcri
 interface VoiceRecorderProps {
     onTranscription: (text: string) => void;
     disabled?: boolean;
+    isFocused?: boolean;
 }
 
 const MAX_RECORDING_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -19,6 +20,7 @@ const MAX_RECORDING_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     onTranscription,
     disabled = false,
+    isFocused = false,
 }) => {
     const [state, setState] = useState<'idle' | 'recording' | 'processing'>('idle');
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -172,7 +174,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                         onClick={handleClick}
                         onContextMenu={handleRightClick}
                         disabled={disabled || state === 'processing'}
-                        className={`h-8 px-2 py-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-colors ${getButtonClass()}`}
+                        className={`h-8 px-2 py-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-all duration-300 ${getButtonClass()} ${!isFocused ? 'opacity-20' : 'opacity-100'}`}
                     >
                         {getIcon()}
                     </Button>
