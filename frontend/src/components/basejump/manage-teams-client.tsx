@@ -75,8 +75,8 @@ export function ManageTeamsClient({ teams }: ManageTeamsClientProps) {
                       }
                     >
                       {team.is_primary_owner
-                        ? 'Primary Owner'
-                        : team.account_role}
+                        ? 'Dono Principal'
+                        : team.account_role === 'owner' ? 'Dono' : 'Membro'}
                     </Badge>
                   </div>
                 </TableCell>

@@ -9,11 +9,9 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Command,
-  CreditCard,
   LogOut,
   Plus,
   Settings,
-  User,
   AudioWaveform,
   Sun,
   Moon,
@@ -130,7 +128,7 @@ export function NavUserWithTeams({
   }, [accounts, activeTeam.account_id]);
 
   // Handle team selection
-  const handleTeamSelect = (team) => {
+  const handleTeamSelect = (team: any) => {
     setActiveTeam(team);
 
     // Navigate to the appropriate dashboard
@@ -283,9 +281,9 @@ export function NavUserWithTeams({
               {/* User Settings Section */}
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/billing">
-                    <CreditCard className="h-4 w-4" />
-                    Cobrança
+                  <Link href="/settings">
+                    <Settings className="h-4 w-4" />
+                    Configurações
                   </Link>
                 </DropdownMenuItem>
                 {isLocalMode() && <DropdownMenuItem asChild>
@@ -294,12 +292,6 @@ export function NavUserWithTeams({
                     Gerenciador .Env Local
                   </Link>
                 </DropdownMenuItem>}
-                {/* <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configurações
-                  </Link>
-                </DropdownMenuItem> */}
                 <DropdownMenuItem
                   onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                 >
