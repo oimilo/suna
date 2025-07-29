@@ -380,6 +380,8 @@ async def run_agent(
         if trace:
             trace.update(input=data['content'])
 
+    has_error_occurred = False
+    
     while continue_execution and iteration_count < max_iterations:
         iteration_count += 1
         logger.info(f"🔄 Running iteration {iteration_count} of {max_iterations}...")
@@ -553,6 +555,7 @@ async def run_agent(
                 if trace:
                     trace.event(name="error_response_from_run_thread", level="ERROR", status_message=(f"{response.get('message', 'Unknown error')}"))
                 yield response
+                has_error_occurred = True
                 break
 
             # Track if we see ask, complete, or web-browser-takeover tool calls
@@ -689,9 +692,19 @@ async def run_agent(
                 "status": "error",
                 "message": error_msg
             }
+            has_error_occurred = True
             # Stop execution immediately on any error
             break
         if generation:
             generation.end(output=full_response)
+    
+    # Send completion signal if we exited the loop normally (not due to error)
+    if not has_error_occurred:
+        logger.info(f"Agent run completed successfully after {iteration_count} iterations")
+        yield {
+            "type": "status",
+            "status": "completed",
+            "message": "Agent run completed successfully"
+        }
 
     asyncio.create_task(asyncio.to_thread(lambda: langfuse.flush()))
