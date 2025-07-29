@@ -38,18 +38,9 @@ export function ManageTeamsClient({ teams }: ManageTeamsClientProps) {
 
       {teams.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground">
             Você ainda não faz parte de nenhuma equipe.
           </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2"
-            onClick={() => setIsCreateDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Criar sua primeira equipe
-          </Button>
         </div>
       ) : (
         <Table>

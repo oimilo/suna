@@ -203,8 +203,8 @@ export function NavUserWithTeams({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
 
-              {/* Teams Section */}
-              {personalAccount && (
+              {/* Teams Section - Only show if user has teams */}
+              {teamAccounts?.length > 0 && (
                 <>
                   <DropdownMenuLabel className="text-muted-foreground text-xs">
                     Conta Pessoal
@@ -229,11 +229,7 @@ export function NavUserWithTeams({
                     {personalAccount.name}
                     <DropdownMenuShortcut>⌘1</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                </>
-              )}
-
-              {teamAccounts?.length > 0 && (
-                <>
+                  
                   <DropdownMenuLabel className="text-muted-foreground text-xs mt-2">
                     Times
                   </DropdownMenuLabel>
@@ -262,20 +258,6 @@ export function NavUserWithTeams({
                 </>
               )}
 
-              <DropdownMenuSeparator />
-              <DialogTrigger asChild>
-                <DropdownMenuItem 
-                  className="gap-2 p-2"
-                  onClick={() => {
-                    setShowNewTeamDialog(true)
-                  }}
-                >
-                  <div className="bg-background flex size-6 items-center justify-center rounded-md border">
-                    <Plus className="size-4" />
-                  </div>
-                  <div className="text-muted-foreground font-medium">Adicionar time</div>
-                </DropdownMenuItem>
-              </DialogTrigger>
               <DropdownMenuSeparator />
 
               {/* User Settings Section */}
