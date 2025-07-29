@@ -45,7 +45,7 @@ def setup_api_keys() -> None:
         if key:
             # Set the key in environment for LiteLLM
             os.environ[f'{provider}_API_KEY'] = key
-            logger.debug(f"API key set for provider: {provider}")
+            logger.info(f"API key set for provider: {provider}, key starts with: {key[:10]}...")
         else:
             logger.warning(f"No API key found for provider: {provider}")
 
@@ -171,17 +171,21 @@ def prepare_params(
 
     # Add OpenRouter-specific parameters
     if model_name.startswith("openrouter/"):
-        logger.debug(f"Preparing OpenRouter parameters for model: {model_name}")
+        logger.info(f"Preparing OpenRouter parameters for model: {model_name}")
         
-        # Ensure OpenRouter API key is passed directly if not using environment
-        if config.OPENROUTER_API_KEY and not api_key:
+        # Ensure OpenRouter API key is passed directly
+        if config.OPENROUTER_API_KEY:
             params["api_key"] = config.OPENROUTER_API_KEY
-            logger.debug("Added OpenRouter API key to params")
+            logger.info(f"Added OpenRouter API key to params: {config.OPENROUTER_API_KEY[:10]}...")
+        else:
+            logger.error("NO OPENROUTER_API_KEY found in config!")
         
         # Set API base for OpenRouter
-        if not api_base and config.OPENROUTER_API_BASE:
+        if config.OPENROUTER_API_BASE:
             params["api_base"] = config.OPENROUTER_API_BASE
-            logger.debug(f"Added OpenRouter API base: {config.OPENROUTER_API_BASE}")
+            logger.info(f"Added OpenRouter API base: {config.OPENROUTER_API_BASE}")
+        else:
+            logger.warning("No OPENROUTER_API_BASE found, using default")
 
         # Add optional site URL and app name from config
         site_url = config.OR_SITE_URL
@@ -351,15 +355,15 @@ async def make_llm_api_call(
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
-            logger.debug(f"Attempt {attempt + 1}/{MAX_RETRIES}")
-            logger.debug(f"Final params being sent to litellm: model={params.get('model')}, api_key={'***' if params.get('api_key') else 'None'}")
+            logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES}")
+            logger.info(f"Final params being sent to litellm: model={params.get('model')}, api_key={'***' + params.get('api_key', '')[-10:] if params.get('api_key') else 'None'}, api_base={params.get('api_base', 'default')}")
             
             # Debug: Check all params
             debug_params = {k: v for k, v in params.items() if k != 'api_key' and k != 'messages'}
-            logger.debug(f"Other params: {json.dumps(debug_params, indent=2)}")
+            logger.info(f"Other params: {json.dumps(debug_params, indent=2)}")
 
             response = await litellm.acompletion(**params)
-            logger.debug(f"Successfully received API response from {model_name}")
+            logger.info(f"Successfully received API response from {model_name}")
             # logger.debug(f"Response: {response}")
             return response
 
