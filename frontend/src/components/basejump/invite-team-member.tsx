@@ -59,7 +59,7 @@ export function InviteTeamMember({ teamId, teamName }: InviteTeamMemberProps) {
         <DialogHeader>
           <DialogTitle>{t('teams.inviteToTeam')}</DialogTitle>
           <DialogDescription>
-            {t('teams.inviteDescription', { teamName })}
+            Envie um convite por email para adicionar um novo membro à {teamName}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
