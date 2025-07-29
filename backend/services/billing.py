@@ -44,6 +44,14 @@ def get_model_pricing(model: str) -> tuple[float, float] | None:
 
 SUBSCRIPTION_TIERS = {
     config.STRIPE_FREE_TIER_ID: {'name': 'free', 'minutes': 60, 'cost': 5},
+    
+    # New Prophet Plans
+    config.STRIPE_PRO_MONTHLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 150},  # R$99 = ~150 credits
+    config.STRIPE_PRO_YEARLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 150},  # Same limits, yearly billing
+    config.STRIPE_PRO_MAX_MONTHLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 500},  # R$249 = ~500 credits
+    config.STRIPE_PRO_MAX_YEARLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 500},  # Same limits, yearly billing
+    
+    # Legacy tiers (kept for backwards compatibility)
     config.STRIPE_TIER_2_20_ID: {'name': 'tier_2_20', 'minutes': 120, 'cost': 20 + 5},  # 2 hours
     config.STRIPE_TIER_6_50_ID: {'name': 'tier_6_50', 'minutes': 360, 'cost': 50 + 5},  # 6 hours
     config.STRIPE_TIER_12_100_ID: {'name': 'tier_12_100', 'minutes': 720, 'cost': 100 + 5},  # 12 hours

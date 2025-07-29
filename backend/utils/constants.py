@@ -172,6 +172,8 @@ FREE_TIER_MODELS, PAID_TIER_MODELS, MODEL_NAME_ALIASES, HARDCODED_MODEL_PRICES =
 
 MODEL_ACCESS_TIERS = {
     "free": FREE_TIER_MODELS,
+    "pro": PAID_TIER_MODELS,  # New Pro plan
+    "pro_max": PAID_TIER_MODELS,  # New Pro Max plan (could add GPT-4.1 later)
     "tier_2_20": PAID_TIER_MODELS,
     "tier_6_50": PAID_TIER_MODELS,
     "tier_12_100": PAID_TIER_MODELS,

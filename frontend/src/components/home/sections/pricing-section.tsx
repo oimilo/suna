@@ -177,6 +177,13 @@ function PricingTier({
 }: PricingTierProps) {
   // Auto-select the correct plan only on initial load - simplified since no more Custom tier
   const handleSubscribe = async (planStripePriceId: string) => {
+    // Check if this is the Enterprise plan (no price ID)
+    if (!planStripePriceId || tier.isContactSales) {
+      // Open contact form or redirect to contact page
+      window.location.href = 'mailto:vendas@prophet.build?subject=Interesse%20no%20Plano%20Enterprise';
+      return;
+    }
+    
     if (!isAuthenticated) {
       window.location.href = '/auth?mode=signup';
       return;

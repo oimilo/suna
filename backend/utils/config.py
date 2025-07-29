@@ -43,6 +43,12 @@ class Configuration:
     STRIPE_FREE_TIER_ID_PROD: str = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
     STRIPE_TIER_2_20_ID_PROD: str = 'price_1RILb4G6l1KZGqIrhomjgDnO'
     STRIPE_TIER_6_50_ID_PROD: str = 'price_1RILb4G6l1KZGqIr5q0sybWn'
+    
+    # New Prophet Plans
+    STRIPE_PRO_MONTHLY_ID_PROD: str = 'price_1RqK0hFNfWjTbEjsaAFuY7Cb'  # R$99/month
+    STRIPE_PRO_YEARLY_ID_PROD: str = 'price_1RqK0hFNfWjTbEjsN9XCGLA4'  # R$990/year
+    STRIPE_PRO_MAX_MONTHLY_ID_PROD: str = 'price_1RqK4xFNfWjTbEjsCrjfvJVL'  # R$249/month
+    STRIPE_PRO_MAX_YEARLY_ID_PROD: str = 'price_1RqK6cFNfWjTbEjs75UPIgif'  # R$2490/year
     STRIPE_TIER_12_100_ID_PROD: str = 'price_1RILb4G6l1KZGqIr5Y20ZLHm'
     STRIPE_TIER_25_200_ID_PROD: str = 'price_1RILb4G6l1KZGqIrGAD8rNjb'
     STRIPE_TIER_50_400_ID_PROD: str = 'price_1RILb4G6l1KZGqIruNBUMTF1'
@@ -168,6 +174,24 @@ class Configuration:
         if self.ENV_MODE == EnvMode.STAGING:
             return self.STRIPE_TIER_200_1000_YEARLY_ID_STAGING
         return self.STRIPE_TIER_200_1000_YEARLY_ID_PROD
+    
+    # New Prophet Plans Properties
+    @property
+    def STRIPE_PRO_MONTHLY_ID(self) -> str:
+        # For now, only production IDs exist
+        return self.STRIPE_PRO_MONTHLY_ID_PROD
+    
+    @property
+    def STRIPE_PRO_YEARLY_ID(self) -> str:
+        return self.STRIPE_PRO_YEARLY_ID_PROD
+    
+    @property
+    def STRIPE_PRO_MAX_MONTHLY_ID(self) -> str:
+        return self.STRIPE_PRO_MAX_MONTHLY_ID_PROD
+    
+    @property
+    def STRIPE_PRO_MAX_YEARLY_ID(self) -> str:
+        return self.STRIPE_PRO_MAX_YEARLY_ID_PROD
     
     # LLM API keys
     ANTHROPIC_API_KEY: Optional[str] = os.getenv('ANTHROPIC_API_KEY')

@@ -46,15 +46,16 @@ export interface PricingTier {
   buttonColor: string;
   isPopular: boolean;
   /** @deprecated */
-  hours: string;
+  hours?: string;
   features: string[];
-  stripePriceId: string;
-  yearlyStripePriceId?: string; // Add yearly price ID support
+  stripePriceId: string | null;
+  yearlyStripePriceId?: string | null; // Add yearly price ID support
   upgradePlans: UpgradePlan[];
   hidden?: boolean; // Optional property to hide plans from display while keeping them in code
   billingPeriod?: 'monthly' | 'yearly'; // Add billing period support
   originalYearlyPrice?: string; // For showing crossed-out price
   discountPercentage?: number; // For showing discount badge
+  isContactSales?: boolean; // Flag for Enterprise plan
 }
 
 export const siteConfig = {
@@ -115,18 +116,17 @@ export const siteConfig = {
   cloudPricingItems: [
     {
       name: 'Free',
-      price: '$0',
-      description: 'Perfect for getting started',
-      buttonText: 'Start Free',
+      price: 'R$ 0',
+      description: 'Para experimentar o Prophet',
+      buttonText: 'Começar Grátis',
       buttonColor: 'bg-secondary text-white',
       isPopular: false,
-      /** @deprecated */
-      hours: '60 min',
       features: [
-        '$5 free AI tokens included',
-        'Public projects',
-        'Basic Models',
-        'Community support',
+        '5 créditos de IA/mês',
+        'Projetos públicos',
+        'Modelos básicos (DeepSeek, Kimi)',
+        '1 agente customizado',
+        'Suporte comunitário',
       ],
       stripePriceId: config.SUBSCRIPTION_TIERS.FREE.priceId,
       upgradePlans: [],
@@ -195,27 +195,27 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100_YEARLY.priceId,
       upgradePlans: [],
-      hidden: true,
+      hidden: true,  // Legacy plan
     },
     {
-      name: 'Ultra',
-      price: '$200',
-      yearlyPrice: '$2040',
-      originalYearlyPrice: '$2400',
-      discountPercentage: 15,
-      description: 'For power users and teams',
-      buttonText: 'Start Free',
+      name: 'Enterprise',
+      price: 'Customizado',
+      description: 'Para grandes organizações',
+      buttonText: 'Falar com Vendas',
       buttonColor: 'bg-primary text-white dark:text-black',
       isPopular: false,
-      hours: '25 hours',
+      isContactSales: true,  // Flag to show contact form instead of checkout
       features: [
-        '$200 AI token credits/month',
-        'Private projects',
-        'Premium AI Models',
-        'Priority support',
+        'Créditos customizados',
+        'White-label',
+        'SLA 99.9%',
+        'Suporte dedicado',
+        'SSO/SAML',
+        'Treinamento personalizado',
+        'Contrato anual',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_25_200.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_25_200_YEARLY.priceId,
+      stripePriceId: null,  // No Stripe price for Enterprise
+      yearlyStripePriceId: null,
       upgradePlans: [],
     },
     {
@@ -241,7 +241,7 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400_YEARLY.priceId,
       upgradePlans: [],
-      hidden: true,
+      hidden: true,  // Legacy plan
     },
     {
       name: 'Scale',
@@ -267,7 +267,7 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800_YEARLY.priceId,
       upgradePlans: [],
-      hidden: true,
+      hidden: true,  // Legacy plan
     },
     {
       name: 'Premium',
@@ -294,7 +294,7 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000_YEARLY.priceId,
       upgradePlans: [],
-      hidden: true,
+      hidden: true,  // Legacy plan
     },
   ],
   companyShowcase: {
