@@ -21,7 +21,7 @@ from utils.logger import logger
 from utils.config import config
 from services.llm_openrouter_only import force_openrouter_prefix
 
-# litellm.set_verbose=True
+litellm.set_verbose=True  # Enable verbose logging to debug OpenRouter issue
 litellm.modify_params=True
 
 # Constants
@@ -172,6 +172,16 @@ def prepare_params(
     # Add OpenRouter-specific parameters
     if model_name.startswith("openrouter/"):
         logger.debug(f"Preparing OpenRouter parameters for model: {model_name}")
+        
+        # Ensure OpenRouter API key is passed directly if not using environment
+        if config.OPENROUTER_API_KEY and not api_key:
+            params["api_key"] = config.OPENROUTER_API_KEY
+            logger.debug("Added OpenRouter API key to params")
+        
+        # Set API base for OpenRouter
+        if not api_base and config.OPENROUTER_API_BASE:
+            params["api_base"] = config.OPENROUTER_API_BASE
+            logger.debug(f"Added OpenRouter API base: {config.OPENROUTER_API_BASE}")
 
         # Add optional site URL and app name from config
         site_url = config.OR_SITE_URL
@@ -342,7 +352,11 @@ async def make_llm_api_call(
     for attempt in range(MAX_RETRIES):
         try:
             logger.debug(f"Attempt {attempt + 1}/{MAX_RETRIES}")
-            # logger.debug(f"API request parameters: {json.dumps(params, indent=2)}")
+            logger.debug(f"Final params being sent to litellm: model={params.get('model')}, api_key={'***' if params.get('api_key') else 'None'}")
+            
+            # Debug: Check all params
+            debug_params = {k: v for k, v in params.items() if k != 'api_key' and k != 'messages'}
+            logger.debug(f"Other params: {json.dumps(debug_params, indent=2)}")
 
             response = await litellm.acompletion(**params)
             logger.debug(f"Successfully received API response from {model_name}")
