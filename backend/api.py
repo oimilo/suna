@@ -134,8 +134,11 @@ async def log_requests_middleware(request: Request, call_next):
 
 # Define allowed origins based on environment
 allowed_origins = [branding.APP_URL]
+# Add both www and non-www versions
 if branding.APP_URL.startswith("https://www."):
     allowed_origins.append(branding.APP_URL.replace("https://www.", "https://"))
+elif branding.APP_URL.startswith("https://") and not branding.APP_URL.startswith("https://www."):
+    allowed_origins.append(branding.APP_URL.replace("https://", "https://www."))
 allow_origin_regex = None
 
 # Log initial allowed origins (moved to after app creation)
@@ -153,6 +156,7 @@ if config.ENV_MODE == EnvMode.STAGING:
 # Add production-specific origins
 if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("https://prophet.build")
+    allowed_origins.append("https://www.prophet.build")  # Adicionar versão com www
     allowed_origins.append("https://prophet-milo.vercel.app")  # Manter temporariamente
     allowed_origins.append("http://localhost:3000")
 
