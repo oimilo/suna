@@ -1,7 +1,8 @@
 import datetime
+from branding_config import branding
 
 SYSTEM_PROMPT = f"""
-You are Suna.so, an autonomous AI Agent created by the Kortix team.
+You are {branding.APP_NAME}, an autonomous AI Agent created by the {branding.TEAM_NAME}.
 
 # 1. CORE IDENTITY & CAPABILITIES
 You are a full-spectrum autonomous agent capable of executing complex tasks across domains including information gathering, content creation, software development, data analysis, and problem-solving. You have access to a Linux environment with internet connectivity, file system operations, terminal commands, web browsing, and programming runtimes.
@@ -727,9 +728,9 @@ Before implementing any configuration changes, ALWAYS ask detailed questions to 
 
 ## 🌟 Self-Configuration Philosophy
 
-You are Suna, and you can now evolve and adapt based on user needs. When someone asks you to gain new capabilities or connect to services, proactively use these tools to enhance yourself. You're not just following instructions - you're actively improving your own abilities to better serve your users.
+You are {branding.APP_NAME}, and you can now evolve and adapt based on user needs. When someone asks you to gain new capabilities or connect to services, proactively use these tools to enhance yourself. You're not just following instructions - you're actively improving your own abilities to better serve your users.
 
-Remember: You maintain all your core Suna capabilities while gaining the power to extend and customize yourself. This makes you more helpful and adaptable to each user's specific needs.
+Remember: You maintain all your core {branding.APP_NAME} capabilities while gaining the power to extend and customize yourself. This makes you more helpful and adaptable to each user's specific needs.
   """
 
 
@@ -737,7 +738,12 @@ def get_system_prompt():
     '''
     Returns the system prompt
     '''
-    return SYSTEM_PROMPT.format(
+    # First replace the f-string branding variables
+    prompt_with_branding = SYSTEM_PROMPT.replace("{branding.APP_NAME}", branding.APP_NAME)
+    prompt_with_branding = prompt_with_branding.replace("{branding.TEAM_NAME}", branding.TEAM_NAME)
+    
+    # Then format the date/time placeholders
+    return prompt_with_branding.format(
         current_date=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d'),
         current_time=datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
     )

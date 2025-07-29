@@ -7,6 +7,7 @@ from ..repositories.template_repository import TemplateRepository
 from ..repositories.agent_repository import AgentRepository
 from ..support.validator import TemplateValidator
 from ..protocols import Logger
+from branding_config import branding
 
 
 class MarketplaceService:
@@ -111,7 +112,7 @@ class MarketplaceService:
             'download_count': template.download_count,
             'marketplace_published_at': template.marketplace_published_at,
             'created_at': template.created_at,
-            'creator_name': 'Kortix Team' if is_kortix else 'Community',
+            'creator_name': branding.TEAM_NAME if is_kortix else 'Community',
             'avatar': template.avatar,
             'avatar_color': template.avatar_color,
             'is_kortix_team': is_kortix

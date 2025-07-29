@@ -1,10 +1,11 @@
 import datetime
 from typing import Dict, Any, List
 from agent.prompt import SYSTEM_PROMPT
+from branding_config import branding
 
 class SunaConfig:
-    NAME = "Suna"
-    DESCRIPTION = "Suna is your AI assistant with access to various tools and integrations to help you with tasks across domains."
+    NAME = branding.APP_NAME
+    DESCRIPTION = f"{branding.APP_NAME} is your AI assistant with access to various tools and integrations to help you with tasks across domains."
     AVATAR = "🌞"
     AVATAR_COLOR = "#F59E0B"
     SYSTEM_PROMPT = SYSTEM_PROMPT

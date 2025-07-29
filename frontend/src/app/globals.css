@@ -356,6 +356,10 @@
       'Noto Sans Mono CJK JP', 'Noto Sans Mono CJK KR', 'Noto Sans Mono CJK SC',
       'Noto Sans Mono CJK TC';
   }
+  
+  .font-dancing {
+    font-family: var(--font-dancing-script), cursive;
+  }
 }
 
 /* Custom styles for Markdown chat content */

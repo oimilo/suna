@@ -1221,13 +1221,13 @@ export const siteConfig = {
   },
   ctaSection: {
     id: 'cta',
-    title: `Start Using ${BRANDING.company} ${BRANDING.name} Today`,
+    title: 'Comece a automatizar hoje',
     backgroundImage: '/holo.png',
     button: {
-      text: 'Get Started for free',
+      text: 'Testar gratuitamente',
       href: '/auth',
     },
-    subtext: 'The generalist AI Agent that acts on your behalf',
+    subtext: 'Sem cartão de crédito. Configure em minutos.',
   },
   footerLinks: [
     {

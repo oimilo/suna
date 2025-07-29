@@ -18,35 +18,35 @@ export const siteConfig = {
   },
   footerLinks: [
     {
-      title: 'Product',
+      title: 'Produto',
       links: [
-        { title: 'Features', url: '/#features' },
-        { title: 'Pricing', url: '/#pricing' },
-        { title: 'Enterprise', url: BRANDING.contactEmail ? `mailto:${BRANDING.contactEmail}` : '#' },
+        { title: 'Integrações', url: '/#integrations' },
+        { title: 'Preços', url: '/#pricing' },
+        { title: 'Empresas', url: BRANDING.contactEmail ? `mailto:${BRANDING.contactEmail}` : '#' },
       ],
     },
     {
-      title: 'Resources',
+      title: 'Recursos',
       links: [
-        { title: 'Documentation', url: 'https://docs.suna.so' },
-        { title: 'Community', url: BRANDING.social.discord },
-        { title: 'Support', url: BRANDING.supportEmail ? `mailto:${BRANDING.supportEmail}` : '#' },
+        { title: 'Como funciona', url: '/#how-it-works' },
+        { title: 'Suporte', url: BRANDING.supportEmail ? `mailto:${BRANDING.supportEmail}` : '#' },
+        { title: 'Status', url: '#' },
       ],
     },
     {
-      title: 'Company',
+      title: 'Empresa',
       links: [
-        { title: 'About', url: BRANDING.companyUrl },
+        { title: 'Sobre', url: BRANDING.companyUrl },
         { title: 'Blog', url: `${BRANDING.companyUrl}/blog` },
-        { title: 'Careers', url: BRANDING.careersUrl },
+        { title: 'Contato', url: BRANDING.contactEmail ? `mailto:${BRANDING.contactEmail}` : '#' },
       ],
     },
     {
       title: 'Legal',
       links: [
-        { title: 'Privacy', url: BRANDING.legal.privacy },
-        { title: 'Terms', url: BRANDING.legal.terms },
-        { title: 'License', url: BRANDING.legal.license },
+        { title: 'Privacidade', url: BRANDING.legal.privacy },
+        { title: 'Termos', url: BRANDING.legal.terms },
+        { title: 'Segurança', url: '#' },
       ],
     },
   ],

@@ -3,10 +3,8 @@ import { BRANDING } from '@/lib/branding';
 import { HeroVideoSection } from '@/components/home/sections/hero-video-section';
 import { siteConfig } from '@/lib/site';
 import { ArrowRight, Github, X, AlertCircle, Square } from 'lucide-react';
-import { FlickeringGrid } from '@/components/home/ui/flickering-grid';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { useScroll } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
@@ -51,10 +49,7 @@ export function HeroSection() {
   const { hero } = siteConfig;
   const tablet = useMediaQuery('(max-width: 1024px)');
   const [mounted, setMounted] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
-  const { scrollY } = useScroll();
   const [inputValue, setInputValue] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
   const router = useRouter();
@@ -97,29 +92,6 @@ export function HeroSection() {
     setMounted(true);
   }, []);
 
-  // Detect when scrolling is active to reduce animation complexity
-  useEffect(() => {
-    const unsubscribe = scrollY.on('change', () => {
-      setIsScrolling(true);
-
-      // Clear any existing timeout
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
-      }
-
-      // Set a new timeout
-      scrollTimeout.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 300); // Wait 300ms after scroll stops
-    });
-
-    return () => {
-      unsubscribe();
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
-      }
-    };
-  }, [scrollY]);
 
   useEffect(() => {
     if (authDialogOpen && inputValue.trim()) {
@@ -218,52 +190,8 @@ export function HeroSection() {
   return (
     <section id="hero" className="w-full relative overflow-hidden">
       <div className="relative flex flex-col items-center w-full px-6">
-        {/* Left side flickering grid with gradient fades */}
-        <div className="absolute left-0 top-0 h-[600px] md:h-[800px] w-1/3 -z-10 overflow-hidden">
-          {/* Horizontal fade from left to right */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-background z-10" />
 
-          {/* Vertical fade from top */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background via-background/90 to-transparent z-10" />
-
-          {/* Vertical fade to bottom */}
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background via-background/90 to-transparent z-10" />
-
-          <FlickeringGrid
-            className="h-full w-full"
-            squareSize={mounted && tablet ? 2 : 2.5}
-            gridGap={mounted && tablet ? 2 : 2.5}
-            color="var(--secondary)"
-            maxOpacity={0.4}
-            flickerChance={isScrolling ? 0.01 : 0.03} // Low flickering when not scrolling
-          />
-        </div>
-
-        {/* Right side flickering grid with gradient fades */}
-        <div className="absolute right-0 top-0 h-[600px] md:h-[800px] w-1/3 -z-10 overflow-hidden">
-          {/* Horizontal fade from right to left */}
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background z-10" />
-
-          {/* Vertical fade from top */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background via-background/90 to-transparent z-10" />
-
-          {/* Vertical fade to bottom */}
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background via-background/90 to-transparent z-10" />
-
-          <FlickeringGrid
-            className="h-full w-full"
-            squareSize={mounted && tablet ? 2 : 2.5}
-            gridGap={mounted && tablet ? 2 : 2.5}
-            color="var(--secondary)"
-            maxOpacity={0.4}
-            flickerChance={isScrolling ? 0.01 : 0.03} // Low flickering when not scrolling
-          />
-        </div>
-
-        {/* Center content background with rounded bottom */}
-        <div className="absolute inset-x-1/4 top-0 h-[600px] md:h-[800px] -z-20 bg-background rounded-b-xl"></div>
-
-        <div className="relative z-10 pt-32 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
+        <div className="relative z-10 pt-20 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
           {/* <p className="border border-border bg-accent rounded-full text-sm h-8 px-3 flex items-center gap-2">
             {hero.badgeIcon}
             {hero.badge}
@@ -298,23 +226,22 @@ export function HeroSection() {
               </svg>
             </span>
           </Link> */}
-          <div className="flex flex-col items-center justify-center gap-5 pt-16">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-medium tracking-tighter text-balance text-center">
-              <span className="text-secondary">{BRANDING.name}</span>
-              <span className="text-primary">, your AI Employee.</span>
+          <div className="flex flex-col items-center justify-center gap-5 pt-8">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal text-balance text-center">
+              <span className="text-primary font-dancing">{BRANDING.name}</span>
             </h1>
-            <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight">
-              {hero.description}
+            <p className="text-xl md:text-2xl text-center text-foreground font-medium text-balance leading-relaxed tracking-tight">
+              Conecte todos os seus apps. Automatize qualquer tarefa.
             </p>
           </div>
 
-          <div className="flex items-center w-full max-w-4xl gap-2 flex-wrap justify-center">
+          <div className="flex flex-col items-center w-full max-w-4xl gap-8">
             <div className="w-full relative">
               <div className="relative z-10">
                 <ChatInput
                   ref={chatInputRef}
                   onSubmit={handleChatInputSubmit}
-                  placeholder="Describe what you need help with..."
+                  placeholder="Ex: 'Me avise no WhatsApp quando receber emails importantes'"
                   loading={isSubmitting}
                   disabled={isSubmitting}
                   value={inputValue}
@@ -327,6 +254,19 @@ export function HeroSection() {
               </div>
               {/* Subtle glow effect */}
               <div className="absolute -bottom-4 inset-x-0 h-6 bg-secondary/20 blur-xl rounded-full -z-10 opacity-70"></div>
+            </div>
+            
+            {/* App logos showcase */}
+            <div className="flex items-center gap-4 opacity-60">
+              <span className="text-sm text-muted-foreground">Funciona com:</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center text-white font-bold">W</div>
+                <div className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold">G</div>
+                <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold">S</div>
+                <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-bold">N</div>
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">I</div>
+                <span className="text-sm text-muted-foreground">+100</span>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,8 @@
 import datetime
+from branding_config import branding
 
 SYSTEM_PROMPT = f"""
-You are Suna.so, an autonomous AI Agent created by the Kortix team.
+You are {branding.APP_NAME}, an autonomous AI Agent created by the {branding.TEAM_NAME}.
 
 # 1. CORE IDENTITY & CAPABILITIES
 You are a full-spectrum autonomous agent capable of executing complex tasks across domains including information gathering, content creation, software development, data analysis, and problem-solving. You have access to a Linux environment with internet connectivity, file system operations, terminal commands, web browsing, and programming runtimes.
@@ -1775,7 +1776,12 @@ Is there anything specific you'd like me to adjust or explain in more detail abo
 
 
 def get_gemini_system_prompt():
-  return SYSTEM_PROMPT.format(
+  # First replace the f-string branding variables
+  prompt_with_branding = SYSTEM_PROMPT.replace("{branding.APP_NAME}", branding.APP_NAME)
+  prompt_with_branding = prompt_with_branding.replace("{branding.TEAM_NAME}", branding.TEAM_NAME)
+  
+  # Then format the date/time placeholders
+  return prompt_with_branding.format(
         current_date=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d'),
         current_time=datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
     ) + EXAMPLE
