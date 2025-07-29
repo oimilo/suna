@@ -3,22 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
 
 const items = [
-    { id: 1, content: "Initializing neural pathways..." },
-    { id: 2, content: "Analyzing query complexity..." },
-    { id: 3, content: "Assembling cognitive framework..." },
-    { id: 4, content: "Orchestrating thought processes..." },
-    { id: 5, content: "Synthesizing contextual understanding..." },
-    { id: 6, content: "Calibrating response parameters..." },
-    { id: 7, content: "Engaging reasoning algorithms..." },
-    { id: 8, content: "Processing semantic structures..." },
-    { id: 9, content: "Formulating strategic approach..." },
-    { id: 10, content: "Optimizing solution pathways..." },
-    { id: 11, content: "Harmonizing data streams..." },
-    { id: 12, content: "Architecting intelligent response..." },
-    { id: 13, content: "Fine-tuning cognitive models..." },
-    { id: 14, content: "Weaving narrative threads..." },
-    { id: 15, content: "Crystallizing insights..." },
-    { id: 16, content: "Preparing comprehensive analysis..." }
+    { id: 1, content: "Analisando sua solicitação..." },
+    { id: 2, content: "Coletando informações relevantes..." },
+    { id: 3, content: "Processando dados disponíveis..." },
+    { id: 4, content: "Acessando bases de conhecimento..." },
+    { id: 5, content: "Avaliando diferentes abordagens..." },
+    { id: 6, content: "Sintetizando insights..." },
+    { id: 7, content: "Construindo resposta completa..." },
+    { id: 8, content: "Otimizando precisão da solução..." },
+    { id: 9, content: "Cruzando referências..." },
+    { id: 10, content: "Estruturando framework lógico..." },
+    { id: 11, content: "Integrando elementos contextuais..." },
+    { id: 12, content: "Refinando análise..." },
+    { id: 13, content: "Validando coerência da resposta..." },
+    { id: 14, content: "Montando insights finais..." },
+    { id: 15, content: "Preparando análise detalhada..." },
+    { id: 16, content: "Finalizando estrutura da resposta..." }
   ];
 
 export const AgentLoader = () => {
@@ -35,20 +35,18 @@ export const AgentLoader = () => {
 
   return (
     <div className="flex py-2 items-center w-full">
-      <div>✨</div>
-            <AnimatePresence>
-            <motion.div
-                key={items[index].id}
-                initial={{ y: 20, opacity: 0, filter: "blur(8px)" }}
-                animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                exit={{ y: -20, opacity: 0, filter: "blur(8px)" }}
-                transition={{ ease: "easeInOut" }}
-                style={{ position: "absolute" }}
-                className='ml-7'
-            >
-                <AnimatedShinyText>{items[index].content}</AnimatedShinyText>
-            </motion.div>
-            </AnimatePresence>
-        </div>
+      <AnimatePresence>
+        <motion.div
+          key={items[index].id}
+          initial={{ y: 20, opacity: 0, filter: "blur(8px)" }}
+          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+          exit={{ y: -20, opacity: 0, filter: "blur(8px)" }}
+          transition={{ ease: "easeInOut" }}
+          style={{ position: "absolute" }}
+        >
+          <AnimatedShinyText>{items[index].content}</AnimatedShinyText>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
