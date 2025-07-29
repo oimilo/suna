@@ -86,6 +86,21 @@ async def run_agent_async(
         
         logger.info(f"Successfully completed agent run {agent_run_id}")
         
+        # Update agent run status to completed and send END_STREAM signal
+        try:
+            client = await db.client
+            await client.table('agent_runs').update({
+                'status': 'completed',
+                'completed_at': datetime.now(timezone.utc).isoformat()
+            }).eq('id', agent_run_id).execute()
+            
+            # Send END_STREAM signal to control channel
+            redis = await get_redis_client()
+            await redis.publish(control_channel, "END_STREAM")
+            logger.debug(f"Published END_STREAM signal to {control_channel}")
+        except Exception as completion_error:
+            logger.error(f"Failed to update completion status or send END_STREAM: {completion_error}")
+        
     except Exception as e:
         error_msg = f"Error in agent run {agent_run_id}: {str(e)}\n{traceback.format_exc()}"
         logger.error(error_msg)
@@ -98,8 +113,13 @@ async def run_agent_async(
                 'error': str(e),
                 'completed_at': datetime.now(timezone.utc).isoformat()
             }).eq('id', agent_run_id).execute()
+            
+            # Send ERROR signal to control channel
+            redis = await get_redis_client()
+            await redis.publish(control_channel, "ERROR")
+            logger.debug(f"Published ERROR signal to {control_channel}")
         except Exception as update_error:
-            logger.error(f"Failed to update agent run status: {update_error}")
+            logger.error(f"Failed to update agent run status or send ERROR signal: {update_error}")
 
 # No dramatiq decorator - this is just a regular async function
 check_health = None
