@@ -4,6 +4,7 @@ import React from 'react';
 import { createClient } from '@/lib/supabase/server';
 import ManageTeamMembers from '@/components/basejump/manage-team-members';
 import ManageTeamInvitations from '@/components/basejump/manage-team-invitations';
+import { InviteTeamMember } from '@/components/basejump/invite-team-member';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   Card,
@@ -90,10 +91,18 @@ export default function TeamMembersPage({
 
       <Card className="border-subtle dark:border-white/10 bg-white dark:bg-background-secondary shadow-none">
         <CardHeader>
-          <CardTitle className="text-base text-card-title">
-            Invitations
-          </CardTitle>
-          <CardDescription>Invite new members to your team.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base text-card-title">
+                Invitations
+              </CardTitle>
+              <CardDescription>Invite new members to your team.</CardDescription>
+            </div>
+            <InviteTeamMember 
+              teamId={teamAccount.account_id} 
+              teamName={teamAccount.name} 
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <ManageTeamInvitations accountId={teamAccount.account_id} />

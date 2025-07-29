@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { BRANDING } from '@/lib/branding';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface AgentHeaderProps {
   agentId: string;
@@ -42,6 +43,7 @@ export function AgentHeader({
   onTabChange,
   agentMetadata,
 }: AgentHeaderProps) {
+  const { t } = usePtTranslations();
   const isSunaAgent = agentMetadata?.is_suna_default || false;
   console.log('isSunaAgent', isSunaAgent);
   const restrictions = agentMetadata?.restrictions || {};
@@ -105,14 +107,14 @@ export function AgentHeader({
             )}
           >
             <Sparkles className="h-3 w-3" />
-            Prompt para Construir
+            {t('agents.promptToConfig')}
           </TabsTrigger>
           <TabsTrigger 
             value="configuration"
             className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Settings className="h-3 w-3" />
-            Config Manual
+            {t('agents.manualConfig')}
           </TabsTrigger>
         </TabsList>
       </Tabs>

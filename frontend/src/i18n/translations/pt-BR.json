@@ -51,7 +51,19 @@
     "tryOut": "Experimente este agente",
     "viewMore": "Ver mais",
     "becamePrivate": "Agente tornou-se privado",
-    "failedToMakePrivate": "Falha ao tornar o agente privado"
+    "failedToMakePrivate": "Falha ao tornar o agente privado",
+    "newAgent": "Novo Agente",
+    "promptToConfig": "Prompt para Construir",
+    "manualConfig": "Config Manual",
+    "previewMode": "Preview Mode",
+    "builder": {
+      "title": "Agent Builder",
+      "intro": "Sou seu",
+      "description": "Descreva os fluxos de trabalho e tarefas exatos que você deseja automatizar, e eu configurarei seu agente para lidar com eles.",
+      "placeholder": "Me diga como você gostaria de configurar seu agente...",
+      "startConversation": "Iniciar conversa com",
+      "testDescription": "Teste a configuração do seu agente e converse para ver como ele se comporta com suas configurações, ferramentas e base de conhecimento atuais."
+    }
   },
   "chat": {
     "thinking": "Pensando...",
@@ -342,5 +354,27 @@
       "finance": "Finanças",
       "development": "Desenvolvimento"
     }
+  },
+  "teams": {
+    "title": "Equipes",
+    "description": "Gerencie suas equipes e convide colaboradores",
+    "yourTeams": "Suas Equipes",
+    "yourTeamsDescription": "Equipes que você pertence ou é dono",
+    "createTeam": "Criar Equipe",
+    "noTeams": "Você ainda não faz parte de nenhuma equipe",
+    "createFirstTeam": "Crie sua primeira equipe para começar a colaborar",
+    "teamName": "Nome da Equipe",
+    "teamNamePlaceholder": "Ex: Minha Equipe Incrível",
+    "creating": "Criando...",
+    "create": "Criar",
+    "teamSettings": "Configurações da Equipe",
+    "inviteMember": "Convidar Membro",
+    "inviteToTeam": "Convidar para a Equipe",
+    "inviteDescription": "Envie um convite por email para adicionar um novo membro à {teamName}",
+    "email": "Email",
+    "name": "Nome",
+    "sendInvite": "Enviar Convite",
+    "inviteSent": "Convite enviado com sucesso!",
+    "inviteError": "Erro ao enviar convite. Tente novamente."
   }
 }

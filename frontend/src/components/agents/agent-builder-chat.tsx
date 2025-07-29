@@ -14,6 +14,7 @@ import { BillingError } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface AgentBuilderChatProps {
   agentId: string;
@@ -30,6 +31,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   handleStyleChange,
   currentStyle
 }: AgentBuilderChatProps) {
+  const { t } = usePtTranslations();
   const [threadId, setThreadId] = useState<string | null>(null);
   const [agentRunId, setAgentRunId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
@@ -375,14 +377,14 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
             handleToolClick={() => { }}
             handleOpenFileViewer={handleOpenFileViewer}
             streamHookStatus={streamHookStatus}
-            agentName="Agent Builder"
+            agentName={t('agents.builder.title')}
             agentAvatar={'🤖'}
             emptyStateComponent={
               <div className="mt-6 flex flex-col items-center text-center text-muted-foreground/80">
                 <div className="flex w-20 aspect-square items-center justify-center rounded-2xl bg-muted-foreground/10 p-4 mb-4">
                   <div className="text-4xl">🤖</div>
                 </div>
-                <p className='w-[60%] text-2xl'>I'm your <span className='text-primary/80 font-semibold'>Agent Builder</span>. Describe the exact workflows and tasks you want to automate, and I'll configure your agent to handle them.</p>
+                <p className='w-[60%] text-2xl'>{t('agents.builder.intro')} <span className='text-primary/80 font-semibold'>{t('agents.builder.title')}</span>. {t('agents.builder.description')}</p>
               </div>
             }
           />
@@ -394,7 +396,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
           ref={chatInputRef}
           onSubmit={threadId ? handleSubmitMessage : handleSubmitFirstMessage}
           loading={isSubmitting}
-          placeholder="Tell me how you'd like to configure your agent..."
+          placeholder={t('agents.builder.placeholder')}
           value={inputValue}
           onChange={setInputValue}
           disabled={isSubmitting}

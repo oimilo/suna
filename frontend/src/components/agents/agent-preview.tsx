@@ -16,6 +16,7 @@ import { useStartAgentMutation, useStopAgentMutation } from '@/hooks/react-query
 import { BillingError } from '@/lib/api';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { KortixLogo } from '../sidebar/kortix-logo';
+import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface Agent {
   agent_id: string;
@@ -37,6 +38,7 @@ interface AgentPreviewProps {
 }
 
 export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
+  const { t } = usePtTranslations();
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -351,7 +353,7 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
         <div className="flex-1">
           <h3 className="font-semibold">{agent.name || 'Unnamed Agent'}</h3>
         </div>
-        <Badge variant="highlight" className="text-sm">Preview Mode</Badge>
+        <Badge variant="highlight" className="text-sm">{t('agents.previewMode')}</Badge>
       </div>
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto scrollbar-hide">
@@ -375,8 +377,8 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
                     <div className="text-4xl">{avatar}</div>
                   )}
                 </div>
-                <p className='w-[60%] text-2xl mb-3'>Start conversation with <span className='text-primary/80 font-semibold'>{agent.name}</span></p>
-                <p className='w-[70%] text-sm text-muted-foreground/60'>Test your agent's configuration and chat back and forth to see how it performs with your current settings, tools, and knowledge base.</p>
+                <p className='w-[60%] text-2xl mb-3'>{t('agents.builder.startConversation')} <span className='text-primary/80 font-semibold'>{agent.name}</span></p>
+                <p className='w-[70%] text-sm text-muted-foreground/60'>{t('agents.builder.testDescription')}</p>
               </div>
             }
           />

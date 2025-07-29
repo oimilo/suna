@@ -23,10 +23,10 @@ export function CreateTeamDialog({
       <DialogContent className="sm:max-w-[425px] border-subtle dark:border-white/10 bg-white dark:bg-gray-900 rounded-2xl shadow-custom">
         <DialogHeader>
           <DialogTitle className="text-gray-900 dark:text-white">
-            Create a new team
+            Criar nova equipe
           </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-300">
-            Create a team to collaborate with others.
+            Crie uma equipe para colaborar com outras pessoas.
           </DialogDescription>
         </DialogHeader>
         <NewTeamForm />

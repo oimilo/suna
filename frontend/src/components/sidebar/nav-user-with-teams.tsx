@@ -264,7 +264,7 @@ export function NavUserWithTeams({
                 </>
               )}
 
-              {/* <DropdownMenuSeparator />
+              <DropdownMenuSeparator />
               <DialogTrigger asChild>
                 <DropdownMenuItem 
                   className="gap-2 p-2"
@@ -277,7 +277,7 @@ export function NavUserWithTeams({
                   </div>
                   <div className="text-muted-foreground font-medium">Adicionar time</div>
                 </DropdownMenuItem>
-              </DialogTrigger> */}
+              </DialogTrigger>
               <DropdownMenuSeparator />
 
               {/* User Settings Section */}

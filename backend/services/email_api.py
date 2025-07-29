@@ -12,6 +12,13 @@ class SendWelcomeEmailRequest(BaseModel):
     email: EmailStr
     name: Optional[str] = None
 
+class SendTeamInviteEmailRequest(BaseModel):
+    invitee_email: EmailStr
+    invitee_name: Optional[str] = None
+    team_name: str
+    inviter_name: str
+    invite_link: str
+
 class EmailResponse(BaseModel):
     success: bool
     message: str
@@ -43,4 +50,35 @@ async def send_welcome_email(
         raise HTTPException(
             status_code=500,
             detail="Internal server error while sending welcome email"
+        )
+
+@router.post("/send-team-invite-email", response_model=EmailResponse)
+async def send_team_invite_email(
+    request: SendTeamInviteEmailRequest,
+    _: bool = Depends(verify_admin_api_key)
+):
+    try:
+        def send_email():
+            return email_service.send_team_invite_email(
+                invitee_email=request.invitee_email,
+                invitee_name=request.invitee_name,
+                team_name=request.team_name,
+                inviter_name=request.inviter_name,
+                invite_link=request.invite_link
+            )
+        
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(send_email)
+        
+        return EmailResponse(
+            success=True,
+            message="Team invite email sent"
+        )
+            
+    except Exception as e:
+        logger.error(f"Error sending team invite email for {request.invitee_email}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while sending team invite email"
         ) 
