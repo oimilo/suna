@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { changeLogData } from "../data/changelog";
+import { BRANDING } from '@/lib/branding';
 
 export type ChangelogData = {
   version: string;
@@ -28,7 +29,7 @@ export interface Changelog1Props {
 
 export const Changelog = ({
   title = "Changelog",
-  description = "The latest updates and improvements to Suna.",
+  description = `The latest updates and improvements to ${BRANDING.name}.`,
   data = changeLogData,
 }: Changelog1Props) => {
   return (

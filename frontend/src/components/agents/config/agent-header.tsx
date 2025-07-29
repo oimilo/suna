@@ -5,6 +5,7 @@ import { EditableText } from '@/components/ui/editable';
 import { StylePicker } from '../style-picker';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { BRANDING } from '@/lib/branding';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 
 interface AgentHeaderProps {
@@ -49,7 +50,7 @@ export function AgentHeader({
   const handleNameChange = (value: string) => {
     if (!isNameEditable && isSunaAgent) {
       toast.error("Name cannot be edited", {
-        description: "Suna's name is managed centrally and cannot be changed.",
+        description: `${BRANDING.name}'s name is managed centrally and cannot be changed.`,
       });
       return;
     }

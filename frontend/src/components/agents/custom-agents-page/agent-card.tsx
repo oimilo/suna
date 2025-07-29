@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { BRANDING } from '@/lib/branding';
 
 export type AgentCardMode = 'marketplace' | 'template' | 'agent';
 
@@ -76,7 +77,7 @@ const MarketplaceBadge: React.FC<{ isKortixTeam?: boolean }> = ({ isKortixTeam }
     return (
       <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-950 dark:text-blue-300">
         <CheckCircle className="h-3 w-3" />
-        Kortix
+        {BRANDING.company}
       </Badge>
     );
   }

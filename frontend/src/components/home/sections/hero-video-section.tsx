@@ -1,5 +1,6 @@
 import { HeroVideoDialog } from '@/components/home/ui/hero-video-dialog';
 import { SectionHeader } from '@/components/home/section-header';
+import { BRANDING } from '@/lib/branding';
 
 export function HeroVideoSection() {
   return (
@@ -12,7 +13,7 @@ export function HeroVideoSection() {
           Watch Intelligence in Motion
         </h2>
         <p className="text-muted-foreground text-center text-balance font-medium">
-          Watch how Suna executes complex workflows with precision and autonomy
+          Watch how {BRANDING.name} executes complex workflows with precision and autonomy
         </p>
       </SectionHeader>
 

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Settings2, Brain, Database, Zap, Workflow, Bot } from 'lucide-react';
+import { BRANDING } from '@/lib/branding';
 import { AgentMCPConfiguration } from './agent-mcp-configuration';
 import { AgentTriggersConfiguration } from './triggers/agent-triggers-configuration';
 import { AgentWorkflowsConfiguration } from './workflows/agent-workflows-configuration';
@@ -107,7 +108,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
     }
   };
 
-  const displayName = agent?.name || 'Suna';
+  const displayName = agent?.name || BRANDING.name;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

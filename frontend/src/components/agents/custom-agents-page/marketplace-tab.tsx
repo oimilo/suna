@@ -7,6 +7,7 @@ import { SearchBar } from './search-bar';
 import { MarketplaceSectionHeader } from './marketplace-section-header';
 import { AgentCard } from './agent-card';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
+import { BRANDING } from '@/lib/branding';
 
 interface MarketplaceTabProps {
   marketplaceSearchQuery: string;
@@ -49,7 +50,7 @@ export const MarketplaceTab = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Agents</SelectItem>
-            <SelectItem value="kortix">Kortix Verified</SelectItem>
+            <SelectItem value="kortix">{BRANDING.company} Verified</SelectItem>
             <SelectItem value="community">Community</SelectItem>
           </SelectContent>
         </Select>
@@ -87,7 +88,7 @@ export const MarketplaceTab = ({
                 {kortixTeamItems.length > 0 && (
                   <div className="space-y-6">
                     <MarketplaceSectionHeader
-                      title="Verified by Kortix"
+                      title={`Verified by ${BRANDING.company}`}
                       subtitle="Official agents, maintained and supported"
                     />
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

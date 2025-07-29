@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DEFAULT_AGENTPRESS_TOOLS, getToolDisplayName } from './tools';
 import { toast } from 'sonner';
+import { BRANDING } from '@/lib/branding';
 import { cn } from '@/lib/utils';
 
 interface AgentToolsConfigurationProps {
@@ -20,7 +21,7 @@ export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false
   const handleToolToggle = (toolName: string, enabled: boolean) => {
     if (disabled && isSunaAgent) {
       toast.error("Tools cannot be modified", {
-        description: "Suna's default tools are managed centrally and cannot be changed.",
+        description: `${BRANDING.name}'s default tools are managed centrally and cannot be changed.`,
       });
       return;
     }

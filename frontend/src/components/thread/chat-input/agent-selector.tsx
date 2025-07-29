@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Settings, ChevronRight, Bot, Presentation, FileSpreadsheet, Search, Plus, User, Check, ChevronDown } from 'lucide-react';
+import { BRANDING } from '@/lib/branding';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -125,19 +126,19 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     }
     
     if (selectedAgentId !== undefined) {
-      console.warn('Agent with ID', selectedAgentId, 'not found, falling back to Suna');
+      console.warn('Agent with ID', selectedAgentId, 'not found, falling back to', BRANDING.name);
     }
     
     const defaultAgent = allAgents[0];
     const isDefaultAgentSuna = defaultAgent?.metadata?.is_suna_default || false;
     return {
-      name: defaultAgent?.name || 'Suna',
+      name: defaultAgent?.name || BRANDING.name,
       icon: isDefaultAgentSuna ? <KortixLogo size={16} /> : (defaultAgent?.icon || <KortixLogo size={16} />)
     };
   };
 
   const handleAgentSelect = (agentId: string | undefined) => {
-    console.log('Agent selected:', agentId === undefined ? 'Suna (default)' : agentId);
+    console.log('Agent selected:', agentId === undefined ? `${BRANDING.name} (default)` : agentId);
     onAgentSelect?.(agentId);
     setIsOpen(false);
   };
