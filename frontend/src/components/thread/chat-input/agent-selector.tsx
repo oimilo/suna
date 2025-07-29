@@ -75,6 +75,14 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   const agents = agentsResponse?.agents || [];
   const createNewAgentMutation = useCreateNewAgent();
 
+  // Debug: Log agents to see what we're getting
+  useEffect(() => {
+    if (agents.length > 0) {
+      console.log('Available agents:', agents);
+      console.log('Prophet agent:', agents.find((a: any) => a.metadata?.is_suna_default));
+    }
+  }, [agents]);
+
   const allAgents = [
     ...PREDEFINED_AGENTS.map(agent => ({
       ...agent,
