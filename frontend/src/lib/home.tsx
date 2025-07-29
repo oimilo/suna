@@ -152,6 +152,7 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20_YEARLY.priceId,
       upgradePlans: [],
+      hidden: true,  // Legacy plan - replaced by new Pro plan
     },
     {
       name: 'Pro',
@@ -174,6 +175,7 @@ export const siteConfig = {
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50.priceId,
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50_YEARLY.priceId,
       upgradePlans: [],
+      hidden: true,  // Legacy plan - replaced by new Pro Max plan
     },
     {
       name: 'Business',
@@ -196,6 +198,49 @@ export const siteConfig = {
       yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100_YEARLY.priceId,
       upgradePlans: [],
       hidden: true,  // Legacy plan
+    },
+    {
+      name: 'Pro',
+      price: 'R$ 99',
+      yearlyPrice: 'R$ 990',
+      originalYearlyPrice: 'R$ 1188',
+      discountPercentage: 15,
+      description: 'Para profissionais e pequenas equipes',
+      buttonText: 'Começar Grátis',
+      buttonColor: 'bg-primary text-white dark:text-black',
+      isPopular: true,
+      features: [
+        '150 créditos de IA/mês',
+        '5 agentes customizados',
+        'Projetos privados',
+        'Modelos Premium de IA',
+        'Suporte da comunidade',
+      ],
+      stripePriceId: 'price_1RqK0hFNfWjTbEjsaAFuY7Cb',  // Monthly
+      yearlyStripePriceId: 'price_1RqK0hFNfWjTbEjsN9XCGLA4',  // Yearly
+      upgradePlans: [],
+    },
+    {
+      name: 'Pro Max',
+      price: 'R$ 249',
+      yearlyPrice: 'R$ 2490',
+      originalYearlyPrice: 'R$ 2988',
+      discountPercentage: 15,
+      description: 'Para equipes em crescimento',
+      buttonText: 'Começar Grátis',
+      buttonColor: 'bg-secondary text-white',
+      isPopular: false,
+      features: [
+        '500 créditos de IA/mês',
+        '20 agentes customizados',
+        'Projetos privados ilimitados',
+        'Todos os modelos de IA',
+        'Suporte prioritário',
+        'Integrações customizadas',
+      ],
+      stripePriceId: 'price_1RqK4xFNfWjTbEjsCrjfvJVL',  // Monthly
+      yearlyStripePriceId: 'price_1RqK6cFNfWjTbEjs75UPIgif',  // Yearly
+      upgradePlans: [],
     },
     {
       name: 'Enterprise',
