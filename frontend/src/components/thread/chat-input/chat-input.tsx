@@ -9,7 +9,6 @@ import React, {
 } from 'react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
 
-import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles } from './file-upload-handler';
 import { MessageInput } from './message-input';
 import { AttachmentGroup } from '../attachment-group';
@@ -375,12 +374,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             onOpenUpgrade={() => setBillingModalOpen(true)}
             isVisible={showToolPreview || !!showSnackbar}
           />
-          <Card
-            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative transition-all duration-300 ${
-              isFocused 
-                ? 'bg-background/50 backdrop-blur-sm border-border/50' 
-                : 'bg-transparent border-transparent'
-            }`}
+          <div
+            className={`-mb-2 w-full max-w-4xl mx-auto overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {
@@ -404,11 +399,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
 
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg">
-              <CardContent 
-                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} border transition-all duration-300 ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-3xl' : 'rounded-3xl'} ${
+              <div 
+                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-3xl' : 'rounded-3xl'} transition-all duration-300 ${
                   isFocused 
-                    ? `${bgColor} border-border/30` 
-                    : 'bg-transparent border-transparent'
+                    ? 'bg-transparent border border-gray-200/50 dark:border-gray-800/50' 
+                    : 'bg-transparent border border-transparent'
                 }`}
                 onFocus={() => setIsFocused(true)}
                 onBlur={(e) => {
@@ -464,7 +459,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   onAgentSelect={onAgentSelect}
                   hideAgentSelection={hideAgentSelection}
                 />
-              </CardContent>
+              </div>
 
               {enableAdvancedConfig && selectedAgentId && (
               <div className="w-full border-t border-border/30 bg-muted/20 px-4 py-1.5 rounded-b-3xl border-l border-r border-b border-border">
@@ -532,7 +527,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
               </div>
             )}
             </div>
-          </Card>
+          </div>
           <AgentConfigModal
             isOpen={configModalOpen}
             onOpenChange={setConfigModalOpen}
