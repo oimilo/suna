@@ -87,10 +87,6 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
     );
   }
 
-  const isPlan = (planId?: string) => {
-    return subscriptionData?.plan_name === planId;
-  };
-
   const proPriceIds = [
     'price_1RqK0hFNfWjTbEjsaAFuY7Cb', // Pro Monthly
     'price_1RqK0hFNfWjTbEjsN9XCGLA4', // Pro Yearly
@@ -102,30 +98,55 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
   ];
 
   const getPlanName = () => {
-    if (!subscriptionData?.price_id) return 'Free';
+    // Debug log to see what we're receiving
+    console.log('Subscription data:', {
+      price_id: subscriptionData?.price_id,
+      plan_name: subscriptionData?.plan_name,
+      status: subscriptionData?.status,
+      cost_limit: subscriptionData?.cost_limit
+    });
     
-    // Check new price IDs
-    if (proPriceIds.includes(subscriptionData.price_id)) return 'Pro';
-    if (proMaxPriceIds.includes(subscriptionData.price_id)) return 'Pro Max';
+    // Check new price IDs first
+    if (subscriptionData?.price_id) {
+      if (proPriceIds.includes(subscriptionData.price_id)) return 'Pro';
+      if (proMaxPriceIds.includes(subscriptionData.price_id)) return 'Pro Max';
+    }
     
-    // Legacy plan names
-    if (isPlan('free')) return 'Free';
-    if (isPlan('base')) return 'Pro';
-    if (isPlan('extra')) return 'Enterprise';
+    // Check legacy plan names
+    if (subscriptionData?.plan_name) {
+      if (subscriptionData.plan_name === 'base') return 'Pro';
+      if (subscriptionData.plan_name === 'extra') return 'Pro Max';
+      if (subscriptionData.plan_name === 'enterprise') return 'Enterprise';
+    }
     
-    return 'Unknown';
+    // Check if there's an active subscription even without price_id (manual assignment case)
+    if (subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing') {
+      // If we have a cost limit > 5, it's likely a paid plan
+      const costLimit = subscriptionData.cost_limit || 0;
+      if (costLimit > 5) return 'Pro';
+    }
+    
+    return 'Gratuito';
   };
 
   const planName = getPlanName();
 
   return (
     <div className="rounded-xl border shadow-sm bg-card p-6">
-      <h2 className="text-xl font-semibold mb-4">Billing Status</h2>
+      <h2 className="text-xl font-semibold mb-4">Status de Cobrança</h2>
 
       {subscriptionData ? (
         <>
           <div className="mb-6">
-            <div className="rounded-lg border bg-background p-4">
+            <div className="rounded-lg border bg-background p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-foreground/90">
+                  Plano Atual
+                </span>
+                <span className="text-sm font-medium text-card-title">
+                  {planName}
+                </span>
+              </div>
               <div className="flex justify-between items-center gap-4">
                 <span className="text-sm font-medium text-foreground/90">
                   Uso de Agentes Este Mês
