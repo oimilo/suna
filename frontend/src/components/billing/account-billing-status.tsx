@@ -119,11 +119,22 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
       if (subscriptionData.plan_name === 'enterprise') return 'Enterprise';
     }
     
-    // Check if there's an active subscription even without price_id (manual assignment case)
+    // Check if there's an active subscription even without matching price_id (manual assignment case)
     if (subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing') {
       // If we have a cost limit > 5, it's likely a paid plan
       const costLimit = subscriptionData.cost_limit || 0;
       if (costLimit > 5) return 'Pro';
+    }
+    
+    // Fallback: If there's ANY price_id set (even custom ones) and it's not a known free plan
+    // This handles cases where plans are assigned via CLI with custom price IDs
+    if (subscriptionData?.price_id && subscriptionData?.price_id !== '') {
+      // If it's not in any of our known lists, check by plan_name or cost_limit
+      if (subscriptionData.plan_name === 'free' && (subscriptionData.cost_limit || 0) <= 5) {
+        return 'Gratuito';
+      }
+      // Assume it's at least Pro if it has a price_id but isn't explicitly free
+      return 'Pro';
     }
     
     return 'Gratuito';

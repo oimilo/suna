@@ -227,6 +227,17 @@ export const useModelSelection = () => {
       return true;
     }
     
+    // Fallback: If there's ANY price_id set (even custom ones from CLI assignments)
+    // and it's not explicitly a free plan, consider it as having subscription
+    if (subscriptionData.price_id && subscriptionData.price_id !== '') {
+      // Only return false if we're sure it's a free plan
+      if (subscriptionData.plan_name === 'free' && (subscriptionData.cost_limit || 0) <= 5) {
+        return false;
+      }
+      // Otherwise assume they have access
+      return true;
+    }
+    
     return false;
   };
 
