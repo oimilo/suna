@@ -15,6 +15,7 @@ class SandboxDeployTool(SandboxToolsBase):
         super().__init__(project_id, thread_manager)
         self.workspace_path = "/workspace"  # Ensure we're always operating in /workspace
         self.cloudflare_api_token = os.getenv("CLOUDFLARE_API_TOKEN")
+        self.deploy_domain = os.getenv("DEPLOY_DOMAIN", "pages.dev")  # Default to Cloudflare Pages domain
 
     def clean_path(self, path: str) -> str:
         """Clean and normalize a path to be relative to /workspace"""
@@ -24,13 +25,13 @@ class SandboxDeployTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "deploy",
-            "description": "Deploy a static website (HTML+CSS+JS) from a directory in the sandbox to Cloudflare Pages. Only use this tool when permanent deployment to a production environment is needed. The directory path must be relative to /workspace. The website will be deployed to {name}.kortix.cloud.",
+            "description": "Deploy a static website (HTML+CSS+JS) from a directory in the sandbox to Cloudflare Pages. Only use this tool when permanent deployment to a production environment is needed. The directory path must be relative to /workspace. The deployment URL will depend on your Cloudflare Pages configuration.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "Name for the deployment, will be used in the URL as {name}.kortix.cloud"
+                        "description": "Name for the deployment project in Cloudflare Pages"
                     },
                     "directory_path": {
                         "type": "string",
@@ -70,7 +71,7 @@ class SandboxDeployTool(SandboxToolsBase):
         Only use this tool when permanent deployment to a production environment is needed.
         
         Args:
-            name: Name for the deployment, will be used in the URL as {name}.kortix.cloud
+            name: Name for the deployment project in Cloudflare Pages
             directory_path: Path to the directory to deploy, relative to /workspace
             
         Returns:

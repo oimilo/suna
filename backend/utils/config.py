@@ -234,6 +234,7 @@ class Configuration:
     TAVILY_API_KEY: Optional[str] = None
     RAPID_API_KEY: Optional[str] = None
     CLOUDFLARE_API_TOKEN: Optional[str] = None
+    DEPLOY_DOMAIN: Optional[str] = "pages.dev"  # Default Cloudflare Pages domain, can be customized
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_URL: Optional[str] = "https://api.firecrawl.dev"
     
