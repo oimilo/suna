@@ -143,14 +143,14 @@ function BillingPeriodToggle({
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground'
           )}>
-            Monthly
+            Mensal
           </div>
           <div className={cn("px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
             billingPeriod === 'yearly'
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground'
           )}>
-            Yearly
+            Anual
             <span className="bg-green-600 text-green-50 dark:bg-green-500 dark:text-green-50 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
               15% off
             </span>
@@ -372,7 +372,7 @@ function PricingTier({
             buttonClassName =
               'opacity-50 cursor-not-allowed bg-muted text-muted-foreground';
           } else if (currentIsMonthly && targetIsYearly && targetAmount === currentAmount) {
-            buttonText = 'Switch to Yearly';
+            buttonText = 'Mudar para Anual';
             buttonVariant = 'default';
             buttonClassName = 'bg-green-600 hover:bg-green-700 text-white';
           } else {
@@ -389,7 +389,7 @@ function PricingTier({
         } else if (isSameTierDifferentBilling) {
           // Allow switching between monthly and yearly for same tier
           if (currentIsMonthly && targetIsYearly) {
-            buttonText = 'Switch to Yearly';
+            buttonText = 'Mudar para Anual';
             buttonVariant = 'default';
             buttonClassName = 'bg-green-600 hover:bg-green-700 text-white';
           } else if (currentIsYearly && targetIsMonthly) {
@@ -474,14 +474,14 @@ function PricingTier({
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground">/month</span>
-                <span className="text-xs text-muted-foreground">billed yearly</span>
+                <span className="text-xs text-muted-foreground">/mês</span>
+                <span className="text-xs text-muted-foreground">cobrado anualmente</span>
               </div>
             </div>
           ) : (
             <div className="flex items-baseline">
               <PriceDisplay price={displayPrice} isCompact={insideDialog} />
-              <span className="ml-2">{displayPrice !== '$0' && !tier.isContactSales ? '/month' : ''}</span>
+              <span className="ml-2">{displayPrice !== '$0' && !tier.isContactSales ? '/mês' : ''}</span>
             </div>
           )}
         </div>
@@ -489,13 +489,13 @@ function PricingTier({
 
         {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage ? (
           <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-50 border-green-200 text-green-700 w-fit">
-            Save R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} per year
+            Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} por ano
           </div>
         ) : (
           <div className="hidden items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 border-primary/20 text-primary w-fit">
             {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0'
-              ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/month (billed yearly)`
-              : `${displayPrice}/month`
+              ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/mês (cobrado anualmente)`
+              : `${displayPrice}/mês`
             }
           </div>
         )}

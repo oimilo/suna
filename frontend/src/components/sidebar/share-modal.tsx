@@ -193,7 +193,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5" />
-            Share Chat
+            Compartilhar Conversa
           </DialogTitle>
         </DialogHeader>
 
@@ -205,23 +205,23 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
               <Alert>
                 <Globe className="h-4 w-4" />
                 <AlertDescription>
-                  This chat is publicly accessible. Anyone with the link can view this conversation.
+                  Esta conversa é publicamente acessível. Qualquer pessoa com o link pode visualizar esta conversa.
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-2">
-                <Label htmlFor="share-link">Share link</Label>
+                <Label htmlFor="share-link">Link de compartilhamento</Label>
                 <div className="flex space-x-2">
                   <Input id="share-link" value={shareLink} readOnly className="font-mono text-sm" />
                   <Button variant="outline" size="icon" onClick={copyToClipboard} disabled={isCopying}>
                     {isCopying ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    <span className="sr-only">Copy link</span>
+                    <span className="sr-only">Copiar link</span>
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label>Share on social</Label>
+                <Label>Compartilhar nas redes sociais</Label>
                 <div className="flex space-x-2">
                   {socialOptions.map((option, index) => (
                     <Button
@@ -244,7 +244,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
                 disabled={isLoading}
               >
                 <Link2Off className="h-4 w-4" />
-                {isLoading ? "Removing..." : "Remove link"}
+                {isLoading ? "Removendo..." : "Remover link"}
               </Button>
             </>
           ) : (
@@ -253,21 +253,21 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
                 <Share2 className="h-6 w-6" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Share this chat</h3>
+                <h3 className="text-xl font-semibold">Compartilhar esta conversa</h3>
                 <p className="text-sm text-muted-foreground">
-                  Create a shareable link that allows others to view this conversation publicly.
+                  Crie um link compartilhável que permite que outros visualizem esta conversa publicamente.
                 </p>
               </div>
               <Button onClick={createShareLink} disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
+                    Criando...
                   </>
                 ) : (
                   <>
                     <Link className="h-4 w-4" />
-                    Create shareable link
+                    Criar link compartilhável
                   </>
                 )}
               </Button>

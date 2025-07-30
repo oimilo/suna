@@ -205,13 +205,13 @@ export default function UsageLogs({ accountId }: Props) {
       {/* Usage Logs Accordion */}
       <Card>
         <CardHeader>
-          <CardTitle>Daily Usage Logs</CardTitle>
+          <CardTitle>Logs de Uso Diário</CardTitle>
           <CardDescription>
             <div className='flex justify-between items-center'>
-              Your token usage organized by day, sorted by most recent.{" "}
+              Seu uso de tokens organizado por dia, ordenado do mais recente.{" "}
               <Button variant='outline' asChild className='text-sm ml-4'>
                 <Link href="/model-pricing">
-                  View Model Pricing <OpenInNewWindowIcon className='w-4 h-4' />
+                  Ver Preços dos Modelos <OpenInNewWindowIcon className='w-4 h-4' />
                 </Link>
               </Button>
             </div>
