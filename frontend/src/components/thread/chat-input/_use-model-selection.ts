@@ -184,7 +184,53 @@ export const useModelSelection = () => {
     refetchOnMount: false,
   });
   
-  const subscriptionStatus: SubscriptionStatus = subscriptionData?.status === 'active' 
+  // Define Pro and Pro Max price IDs
+  const proPriceIds = [
+    'price_1RqK0hFNfWjTbEjsaAFuY7Cb', // Pro Monthly
+    'price_1RqK0hFNfWjTbEjsN9XCGLA4', // Pro Yearly
+  ];
+  
+  const proMaxPriceIds = [
+    'price_1RqK4xFNfWjTbEjsCrjfvJVL', // Pro Max Monthly  
+    'price_1RqK6cFNfWjTbEjs75UPIgif', // Pro Max Yearly
+  ];
+
+  // Check if user has an active subscription based on status or price_id
+  const hasActiveSubscription = () => {
+    if (!subscriptionData) return false;
+    
+    console.log('Checking subscription in model selection:', {
+      status: subscriptionData.status,
+      price_id: subscriptionData.price_id,
+      plan_name: subscriptionData.plan_name,
+      cost_limit: subscriptionData.cost_limit
+    });
+    
+    // Check if status is active
+    if (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') {
+      return true;
+    }
+    
+    // Check if has a Pro or Pro Max price_id (manual assignment case)
+    if (subscriptionData.price_id) {
+      return proPriceIds.includes(subscriptionData.price_id) || 
+             proMaxPriceIds.includes(subscriptionData.price_id);
+    }
+    
+    // Check legacy plan names
+    if (subscriptionData.plan_name === 'base' || subscriptionData.plan_name === 'extra') {
+      return true;
+    }
+    
+    // Check cost limit as fallback for manual assignments
+    if (subscriptionData.cost_limit && subscriptionData.cost_limit > 5) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const subscriptionStatus: SubscriptionStatus = hasActiveSubscription() 
     ? 'active' 
     : 'no_subscription';
 
