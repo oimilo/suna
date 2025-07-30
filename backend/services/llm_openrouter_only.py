@@ -29,10 +29,14 @@ def force_openrouter_prefix(model_name: str) -> str:
         # GPT models
         "gpt-4o": "openrouter/openai/gpt-4o",
         "openai/gpt-4o": "openrouter/openai/gpt-4o",
-        "gpt-4.1": "openrouter/openai/gpt-4",  # Mapear 4.1 para 4
-        "openai/gpt-4.1": "openrouter/openai/gpt-4",
-        "gpt-4.1-mini": "openrouter/openai/gpt-4o-mini",
-        "openai/gpt-4.1-mini": "openrouter/openai/gpt-4o-mini",
+        "gpt-4.1": "openrouter/openai/gpt-4.1",
+        "openai/gpt-4.1": "openrouter/openai/gpt-4.1",
+        "gpt-4.1-mini": "openrouter/openai/gpt-4.1-mini",
+        "openai/gpt-4.1-mini": "openrouter/openai/gpt-4.1-mini",
+        "gpt-4.1-nano": "openrouter/openai/gpt-4.1-nano",
+        "openai/gpt-4.1-nano": "openrouter/openai/gpt-4.1-nano",
+        "gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
+        "openai/gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
         "gpt-4": "openrouter/openai/gpt-4",
         "openai/gpt-4": "openrouter/openai/gpt-4",
         "gpt-3.5-turbo": "openrouter/openai/gpt-3.5-turbo",
