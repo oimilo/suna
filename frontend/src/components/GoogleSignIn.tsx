@@ -33,7 +33,7 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
       }
     } catch (error: any) {
       console.error('Google sign-in error:', error);
-      toast.error(error.message || 'Failed to sign in with Google');
+      toast.error(error.message || 'Falha ao fazer login com Google');
       setIsLoading(false);
     }
   };

@@ -109,7 +109,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
 
       if (!popup) {
         throw new Error(
-          'Popup was blocked. Please enable popups and try again.',
+          'Popup foi bloqueado. Por favor, habilite popups e tente novamente.',
         );
       }
 
