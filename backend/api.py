@@ -213,6 +213,9 @@ api_router.include_router(pipedream_api.router)
 from admin import api as admin_api
 api_router.include_router(admin_api.router)
 
+from admin import billing_admin
+api_router.include_router(billing_admin.router)
+
 @api_router.get("/health")
 async def health_check():
     logger.info("Health check endpoint called")

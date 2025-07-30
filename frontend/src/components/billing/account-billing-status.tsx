@@ -91,13 +91,32 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
     return subscriptionData?.plan_name === planId;
   };
 
-  const planName = isPlan('free')
-    ? 'Free'
-    : isPlan('base')
-      ? 'Pro'
-      : isPlan('extra')
-        ? 'Enterprise'
-        : 'Unknown';
+  const proPriceIds = [
+    'price_1RqK0hFNfWjTbEjsaAFuY7Cb', // Pro Monthly
+    'price_1RqK0hFNfWjTbEjsN9XCGLA4', // Pro Yearly
+  ];
+  
+  const proMaxPriceIds = [
+    'price_1RqK4xFNfWjTbEjsCrjfvJVL', // Pro Max Monthly
+    'price_1RqK6cFNfWjTbEjs75UPIgif', // Pro Max Yearly
+  ];
+
+  const getPlanName = () => {
+    if (!subscriptionData?.price_id) return 'Free';
+    
+    // Check new price IDs
+    if (proPriceIds.includes(subscriptionData.price_id)) return 'Pro';
+    if (proMaxPriceIds.includes(subscriptionData.price_id)) return 'Pro Max';
+    
+    // Legacy plan names
+    if (isPlan('free')) return 'Free';
+    if (isPlan('base')) return 'Pro';
+    if (isPlan('extra')) return 'Enterprise';
+    
+    return 'Unknown';
+  };
+
+  const planName = getPlanName();
 
   return (
     <div className="rounded-xl border shadow-sm bg-card p-6">

@@ -455,7 +455,7 @@ function PricingTier({
           {!tier.isPopular && isAuthenticated && currentSubscription && billingPeriod === 'yearly' &&
             currentTier && currentSubscription.price_id === currentTier.stripePriceId &&
             tier.yearlyStripePriceId && (currentTier.name === tier.name ||
-              parseFloat(tier.price.slice(1)) >= parseFloat(currentTier.price.slice(1))) && (
+              parseFloat(tier.price.replace('R$', '').trim()) >= parseFloat(currentTier.price.replace('R$', '').trim())) && (
               <span className="bg-green-500/10 text-green-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
                 Recommended
               </span>
@@ -466,10 +466,10 @@ function PricingTier({
           {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0' ? (
             <div className="flex flex-col">
               <div className="flex items-baseline gap-2">
-                <PriceDisplay price={`$${Math.round(parseFloat(tier.yearlyPrice.slice(1)) / 12)}`} isCompact={insideDialog} />
+                <PriceDisplay price={`R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}`} isCompact={insideDialog} />
                 {tier.discountPercentage && (
                   <span className="text-xs line-through text-muted-foreground">
-                    ${Math.round(parseFloat(tier.originalYearlyPrice?.slice(1) || '0') / 12)}
+                    R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') / 12)}
                   </span>
                 )}
               </div>
@@ -489,12 +489,12 @@ function PricingTier({
 
         {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage ? (
           <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-50 border-green-200 text-green-700 w-fit">
-            Save ${Math.round(parseFloat(tier.originalYearlyPrice?.slice(1) || '0') - parseFloat(tier.yearlyPrice.slice(1)))} per year
+            Save R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} per year
           </div>
         ) : (
           <div className="hidden items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 border-primary/20 text-primary w-fit">
             {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0'
-              ? `$${Math.round(parseFloat(tier.yearlyPrice.slice(1)) / 12)}/month (billed yearly)`
+              ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/month (billed yearly)`
               : `${displayPrice}/month`
             }
           </div>
