@@ -275,8 +275,25 @@ function PricingTier({
     (p) => p.stripePriceId === currentSubscription?.price_id || p.yearlyStripePriceId === currentSubscription?.price_id,
   );
 
-  const isCurrentActivePlan =
-    isAuthenticated && currentSubscription?.price_id === tierPriceId;
+  // Enhanced logic to detect current plan including 100% discount cases
+  const isCurrentActivePlan = (() => {
+    if (!isAuthenticated || !currentSubscription) return false;
+    
+    // Direct price ID match
+    if (currentSubscription.price_id === tierPriceId) return true;
+    
+    // Check for Pro plan with 100% discount
+    const proPriceIds = ['price_1RqK0hFNfWjTbEjsaAFuY7Cb', 'price_1RqK0hFNfWjTbEjsN9XCGLA4'];
+    if (tier.name === 'Pro' && proPriceIds.includes(currentSubscription.price_id)) return true;
+    
+    // Check by plan name for manual assignments
+    if (tier.name === 'Free' && !currentSubscription.price_id && currentSubscription.status !== 'active') return true;
+    if (tier.name === 'Pro' && currentSubscription.plan_name === 'base') return true;
+    if (tier.name === 'Pro Max' && currentSubscription.plan_name === 'extra') return true;
+    if (tier.name === 'Enterprise' && currentSubscription.plan_name === 'enterprise') return true;
+    
+    return false;
+  })();
   const isScheduled = isAuthenticated && currentSubscription?.has_schedule;
   const isScheduledTargetPlan =
     isScheduled && currentSubscription?.scheduled_price_id === tierPriceId;
@@ -296,18 +313,18 @@ function PricingTier({
     buttonClassName = 'bg-primary hover:bg-primary/90 text-primary-foreground';
   } else if (isAuthenticated) {
     if (isCurrentActivePlan) {
-      buttonText = 'Current Plan';
+      buttonText = 'Plano Atual';
       buttonDisabled = true;
       buttonVariant = 'secondary';
       ringClass = isCompact ? 'ring-1 ring-primary' : 'ring-2 ring-primary';
       buttonClassName = 'bg-primary/5 hover:bg-primary/10 text-primary';
       statusBadge = (
         <span className="bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-          Current
+          Atual
         </span>
       );
     } else if (isScheduledTargetPlan) {
-      buttonText = 'Scheduled';
+      buttonText = 'Agendado';
       buttonDisabled = true;
       buttonVariant = 'outline';
       ringClass = isCompact
@@ -317,17 +334,17 @@ function PricingTier({
         'bg-yellow-500/5 hover:bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
       statusBadge = (
         <span className="bg-yellow-500/10 text-yellow-600 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-          Scheduled
+          Agendado
         </span>
       );
     } else if (isScheduled && currentSubscription?.price_id === tierPriceId) {
-      buttonText = 'Change Scheduled';
+      buttonText = 'Alteração Agendada';
       buttonVariant = 'secondary';
       ringClass = isCompact ? 'ring-1 ring-primary' : 'ring-2 ring-primary';
       buttonClassName = 'bg-primary/5 hover:bg-primary/10 text-primary';
       statusBadge = (
         <span className="bg-yellow-500/10 text-yellow-600 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-          Downgrade Pending
+          Downgrade Pendente
         </span>
       );
     } else {
