@@ -39,8 +39,8 @@ const allPrompts: PromptExample[] = [
     icon: <BarChart3 className="text-green-700 dark:text-green-400" size={16} />,
   },
   {
-    title: 'Recommendation engine',
-    query: 'Develop a recommendation engine for personalized product suggestions. Include collaborative filtering, content-based filtering, and hybrid approaches with evaluation metrics.',
+    title: 'Motor de recomendação',
+    query: 'Desenvolva um motor de recomendação para sugestões personalizadas de produtos. Inclua filtragem colaborativa, filtragem baseada em conteúdo e abordagens híbridas com métricas de avaliação.',
     icon: <Bot className="text-blue-700 dark:text-blue-400" size={16} />,
   },
   {
@@ -69,8 +69,8 @@ const allPrompts: PromptExample[] = [
     icon: <DollarSign className="text-emerald-700 dark:text-emerald-400" size={16} />,
   },
   {
-    title: 'Customer journey map',
-    query: 'Map the complete customer journey from awareness to advocacy. Include touchpoints, pain points, emotions, and optimization opportunities at each stage.',
+    title: 'Mapa da jornada do cliente',
+    query: 'Mapeie a jornada completa do cliente desde a conscientização até a defesa da marca. Inclua pontos de contato, pontos de dor, emoções e oportunidades de otimização em cada etapa.',
     icon: <Users className="text-cyan-700 dark:text-cyan-400" size={16} />,
   },
   {
@@ -104,8 +104,8 @@ const allPrompts: PromptExample[] = [
     icon: <Heart className="text-red-600 dark:text-red-300" size={16} />,
   },
   {
-    title: 'Project automation',
-    query: 'Create an intelligent project management system with automatic task assignment, deadline tracking, resource allocation, and team communication integration.',
+    title: 'Automação de projetos',
+    query: 'Crie um sistema inteligente de gerenciamento de projetos com atribuição automática de tarefas, acompanhamento de prazos, alocação de recursos e integração de comunicação da equipe.',
     icon: <Calendar className="text-amber-700 dark:text-amber-400" size={16} />,
   },
   {

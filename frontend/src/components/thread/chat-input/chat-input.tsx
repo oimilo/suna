@@ -480,7 +480,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                           <SiNotion className="w-3 h-3" />
                         </div>
                       </div>
-                      <span className="text-xs font-medium">Integrations</span>
+                      <span className="text-xs font-medium">Integrações</span>
                     </button>
                     
                     <div className="w-px h-4 bg-border/60" />
@@ -490,7 +490,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Brain className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="text-xs font-medium">Instructions</span>
+                      <span className="text-xs font-medium">Instruções</span>
                     </button>
                     
                     <div className="w-px h-4 bg-border/60" />
@@ -500,7 +500,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Database className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="text-xs font-medium">Knowledge</span>
+                      <span className="text-xs font-medium">Conhecimento</span>
                     </button>
                     
                     <div className="w-px h-4 bg-border/60" />
@@ -510,7 +510,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Zap className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="text-xs font-medium">Triggers</span>
+                      <span className="text-xs font-medium">Gatilhos</span>
                     </button>
                     
                     <div className="w-px h-4 bg-border/60" />
@@ -520,7 +520,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Workflow className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="text-xs font-medium">Workflows</span>
+                      <span className="text-xs font-medium">Fluxos de trabalho</span>
                     </button>
                   </div>
                 </div>
@@ -538,7 +538,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
           <Dialog open={registryDialogOpen} onOpenChange={setRegistryDialogOpen}>
             <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader className="sr-only">
-                <DialogTitle>Integrations</DialogTitle>
+                <DialogTitle>Integrações</DialogTitle>
               </DialogHeader>
               <PipedreamRegistry
                 showAgentSelector={true}
