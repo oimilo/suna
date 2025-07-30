@@ -19,7 +19,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/lib/stores/auth-tracking';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '@/lib/feature-flags';
+// import { useFeatureFlag } from '@/lib/feature-flags';
 
 import {
   Dialog,
@@ -31,8 +31,8 @@ import {
 } from '@/components/ui/dialog';
 import GitHubSignIn from '@/components/GithubSignIn';
 import { BrandLogo } from '@/components/sidebar/brand-logo';
-import { Ripple } from '@/components/ui/ripple';
-import { ReleaseBadge } from '@/components/auth/release-badge';
+// import { Ripple } from '@/components/ui/ripple';
+// import { ReleaseBadge } from '@/components/auth/release-badge';
 
 function LoginContent() {
   const router = useRouter();
@@ -41,7 +41,7 @@ function LoginContent() {
   const mode = searchParams.get('mode');
   const returnUrl = searchParams.get('returnUrl');
   const message = searchParams.get('message');
-  const { enabled: customAgentsEnabled } = useFeatureFlag("custom_agents");
+  // const { enabled: customAgentsEnabled } = useFeatureFlag("custom_agents");
 
   const isSignUp = mode === 'signup';
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -287,7 +287,6 @@ function LoginContent() {
             </div>
             <div className="w-full max-w-sm">
               <div className="mb-4 flex items-center flex-col gap-4 justify-center">
-                {customAgentsEnabled && <ReleaseBadge className='mb-4' text="Custom Agents, Workflows, and more!" link="/changelog" />}
                 <h1 className="text-2xl font-semibold text-foreground">
                   {isSignUp ? 'Crie sua conta' : 'Entre na sua conta'}
                 </h1>
@@ -379,11 +378,7 @@ function LoginContent() {
             </div>
           </div>
         </div>
-        <div className="hidden lg:flex flex-1 items-center justify-center bg-sidebar relative overflow-hidden">
-          <div className="absolute inset-0">
-            <Ripple />
-          </div>
-        </div>
+        {/* Lado direito removido - agora é apenas branco */}
       </div>
       <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
         <DialogContent className="sm:max-w-md">
