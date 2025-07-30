@@ -371,23 +371,15 @@ class SandboxFilesTool(SandboxToolsBase):
         """Call Morph API to apply edits to file content"""
         try:
             morph_api_key = getattr(config, 'MORPH_API_KEY', None) or os.getenv('MORPH_API_KEY')
-            openrouter_key = getattr(config, 'OPENROUTER_API_KEY', None) or os.getenv('OPENROUTER_API_KEY')
             
-            api_key = None
-            base_url = None
-            
-            if morph_api_key:
-                api_key = morph_api_key
-                base_url = "https://api.morphllm.com/v1"
-                logger.debug("Using Morph API for file editing.")
-            elif openrouter_key:
-                api_key = openrouter_key
-                base_url = "https://openrouter.ai/api/v1"
-                logger.debug("Morph API key not set, falling back to OpenRouter for file editing.")
-            
-            if not api_key:
-                logger.warning("No Morph or OpenRouter API key found, falling back to traditional editing")
+            # Only use Morph API, no fallback to OpenRouter
+            if not morph_api_key:
+                logger.warning("No Morph API key found. Edit file functionality requires MORPH_API_KEY to be set.")
                 return None
+            
+            api_key = morph_api_key
+            base_url = "https://api.morphllm.com/v1"
+            logger.debug("Using Morph API for file editing.")
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -542,8 +534,12 @@ def authenticate_user(username, password):
                 return self.success_response(message)
             
             else:
-                # No changes could be made
-                return self.fail_response(f"AI editing was unable to apply the requested changes. The edit may be unclear or the file content may not match the expected format.")
+                # Check if it failed due to missing API key or other reason
+                morph_api_key = getattr(config, 'MORPH_API_KEY', None) or os.getenv('MORPH_API_KEY')
+                if not morph_api_key:
+                    return self.fail_response(f"Edit file functionality requires MORPH_API_KEY to be configured. Please set MORPH_API_KEY in your environment variables or use 'full_file_rewrite' instead.")
+                else:
+                    return self.fail_response(f"AI editing was unable to apply the requested changes. The edit may be unclear or the file content may not match the expected format.")
                     
         except Exception as e:
             return self.fail_response(f"Error editing file: {str(e)}")
