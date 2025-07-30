@@ -30,6 +30,7 @@ import { usePipedreamProfiles, useCreatePipedreamProfile, useUpdatePipedreamProf
 import { usePipedreamApps, usePipedreamAppIcon } from '@/hooks/react-query/pipedream/use-pipedream';
 import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
 import { PipedreamConnector } from '@/components/agents/pipedream/pipedream-connector';
+import { PipedreamAccountStatus } from '@/components/agents/pipedream/pipedream-account-status';
 import { useQueryClient } from '@tanstack/react-query';
 import { pipedreamKeys } from '@/hooks/react-query/pipedream/keys';
 import {
@@ -629,6 +630,11 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
   if (totalProfiles === 0) {
     return (
       <>
+        {/* Pipedream Account Status */}
+        <div className="mb-4">
+          <PipedreamAccountStatus />
+        </div>
+        
         <Card className="border-dashed">
           <CardContent className="p-8 text-center">
             <div className="space-y-4">
@@ -636,16 +642,16 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-foreground">No credential profiles yet</h3>
+                <h3 className="font-semibold text-foreground">Nenhum perfil de credencial ainda</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Connect your favorite apps to create credential profiles for your agents
+                  Conecte seus aplicativos favoritos para criar perfis de credencial para seus agentes
                 </p>
               </div>
               <Button 
                 onClick={() => setShowAppBrowser(true)}
               >
                 <Plus className="h-4 w-4" />
-                Connect App
+                Conectar App
               </Button>
             </div>
           </CardContent>
@@ -671,6 +677,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
 
   return (
     <div className="space-y-6">
+      {/* Pipedream Account Status - Only show if not connected */}
+      <PipedreamAccountStatus />
+      
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">

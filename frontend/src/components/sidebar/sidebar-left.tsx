@@ -48,6 +48,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { OnboardingProgress } from '@/components/onboarding';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFeatureFlags } from '@/lib/feature-flags';
 import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
@@ -233,6 +234,9 @@ export function SidebarLeft({
               </SidebarMenuButton>
             </Link>
           )}
+        </SidebarGroup>
+        <SidebarGroup>
+          <OnboardingProgress />
         </SidebarGroup>
         <NavAgents />
       </SidebarContent>

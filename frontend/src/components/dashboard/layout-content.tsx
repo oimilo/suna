@@ -16,6 +16,12 @@ import { StatusOverlay } from '@/components/ui/status-overlay';
 import type { IMaintenanceNotice } from '@/lib/edge-flags';
 import { MaintenanceNotice } from './maintenance-notice';
 import { MaintenanceBanner } from './maintenance-banner';
+import { 
+  OnboardingTour, 
+  WelcomeAnnouncement, 
+  OnboardingDevControls 
+} from '@/components/onboarding';
+import { AnnouncementDialog } from '@/components/ui/announcement-dialog';
 
 interface DashboardLayoutContentProps {
   children: React.ReactNode;
@@ -118,6 +124,12 @@ export default function DashboardLayoutContent({
 
         {/* Status overlay for deletion operations */}
         <StatusOverlay />
+        
+        {/* Onboarding components */}
+        <WelcomeAnnouncement />
+        <OnboardingTour />
+        <OnboardingDevControls />
+        <AnnouncementDialog />
       </SidebarProvider>
     </DeleteOperationProvider>
   );

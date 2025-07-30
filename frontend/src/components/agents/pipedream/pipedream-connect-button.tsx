@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Zap } from 'lucide-react';
 import { pipedreamApi } from '@/hooks/react-query/pipedream/utils';
 import { toast } from 'sonner';
+import { PipedreamIntroDialog } from './pipedream-intro-dialog';
 
 interface PipedreamConnectButtonProps {
   app?: string;
@@ -18,8 +19,25 @@ export const PipedreamConnectButton: React.FC<PipedreamConnectButtonProps> = ({
   className
 }) => {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showIntroDialog, setShowIntroDialog] = useState(false);
+  const [skipIntro, setSkipIntro] = useState(false);
+
+  useEffect(() => {
+    // Check if user has already seen the intro
+    const hasSeenIntro = localStorage.getItem('pipedream-intro-seen');
+    setSkipIntro(hasSeenIntro === 'true');
+  }, []);
+
+  const handleConnectClick = () => {
+    if (skipIntro) {
+      handleConnect();
+    } else {
+      setShowIntroDialog(true);
+    }
+  };
 
   const handleConnect = async () => {
+    setShowIntroDialog(false);
     setIsConnecting(true);
     try {
       const response = await pipedreamApi.createConnectionToken({ app });
@@ -58,23 +76,32 @@ export const PipedreamConnectButton: React.FC<PipedreamConnectButtonProps> = ({
   };
 
   return (
-    <Button
-      onClick={handleConnect}
-      disabled={isConnecting}
-      className={className}
-      size="sm"
-    >
-      {isConnecting ? (
-        <>
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Connecting...
-        </>
-      ) : (
-        <>
-          <Zap className="h-3 w-3" />
-          {app ? 'Connect' : 'Connect Apps'}
-        </>
-      )}
-    </Button>
+    <>
+      <Button
+        onClick={handleConnectClick}
+        disabled={isConnecting}
+        className={className}
+        size="sm"
+      >
+        {isConnecting ? (
+          <>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Conectando...
+          </>
+        ) : (
+          <>
+            <Zap className="h-3 w-3" />
+            {app ? 'Conectar' : 'Conectar Apps'}
+          </>
+        )}
+      </Button>
+
+      <PipedreamIntroDialog
+        open={showIntroDialog}
+        onOpenChange={setShowIntroDialog}
+        onContinue={handleConnect}
+        appName={app}
+      />
+    </>
   );
 }; 
