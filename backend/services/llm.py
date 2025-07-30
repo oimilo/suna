@@ -80,9 +80,11 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     # Map models to their OpenRouter equivalents
     fallback_mapping = {
         "anthropic/claude-3-7-sonnet-latest": "openrouter/anthropic/claude-3.7-sonnet",
-        "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",
-        "xai/grok-4": "openrouter/x-ai/grok-4",
-        "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3-5-sonnet-latest": "openrouter/anthropic/claude-3.5-sonnet",
+        "xai/grok-4": "openrouter/x-ai/grok-beta",
+        "gemini/gemini-2.5-pro": "openrouter/google/gemini-pro-1.5",
         "deepseek/deepseek-chat": "openrouter/deepseek/deepseek-chat",
     }
     
@@ -97,9 +99,9 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     
     # Default fallbacks by provider
     if "claude" in model_name.lower() or "anthropic" in model_name.lower():
-        return "openrouter/anthropic/claude-sonnet-4"
+        return "openrouter/anthropic/claude-3.5-sonnet"
     elif "xai" in model_name.lower() or "grok" in model_name.lower():
-        return "openrouter/x-ai/grok-4"
+        return "openrouter/x-ai/grok-beta"
     
     return None
 
