@@ -536,7 +536,7 @@ async def can_use_model(client, user_id: str, model_name: str):
     allowed_models = await get_allowed_models_for_user(client, user_id)
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
     if resolved_model in allowed_models:
-        return True, "Model access allowed", allowed_models
+        return True, "Model access allowed", [resolved_model]  # Return only the requested model
     
     return False, f"Your current subscription plan does not include access to {model_name}. Please upgrade your subscription or choose from your available models: {', '.join(allowed_models)}", allowed_models
 
