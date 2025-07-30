@@ -206,7 +206,7 @@ export const siteConfig = {
       description: 'Para profissionais e pequenas equipes',
       buttonText: 'Começar Grátis',
       buttonColor: 'bg-primary text-white dark:text-black',
-      isPopular: false,
+      isPopular: true,
       features: [
         '150 créditos de IA/mês',
         '5 agentes customizados',

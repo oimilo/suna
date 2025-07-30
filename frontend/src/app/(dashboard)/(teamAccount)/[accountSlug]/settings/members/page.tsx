@@ -34,16 +34,26 @@ export default function TeamMembersPage({
   React.useEffect(() => {
     async function loadData() {
       try {
+        console.log('Loading team data for slug:', accountSlug);
         const supabaseClient = await createClient();
-        const { data } = await supabaseClient.rpc('get_account_by_slug', {
+        const { data, error } = await supabaseClient.rpc('get_account_by_slug', {
           slug: accountSlug,
         });
+        
+        if (error) {
+          console.error('RPC error:', error);
+          setError(`Failed to load team data: ${error.message}`);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Team data received:', data);
         setTeamAccount(data);
         setLoading(false);
       } catch (err) {
+        console.error('Unexpected error:', err);
         setError('Failed to load team data');
         setLoading(false);
-        console.error(err);
       }
     }
 
