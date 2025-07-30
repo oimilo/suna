@@ -170,7 +170,7 @@ def dar_plano_gratis(email: str, price_id: str, meses: int = 1):
                 percent_off=100,
                 duration="repeating",
                 duration_in_months=meses,
-                name=f"Plano gratuito para {email}",
+                name=f"Grátis - {email[:20]}",
                 metadata={
                     "manual_assignment": "true",
                     "assigned_by": "dar_plano_gratis.py"
@@ -181,7 +181,7 @@ def dar_plano_gratis(email: str, price_id: str, meses: int = 1):
             coupon = stripe.Coupon.create(
                 percent_off=100,
                 duration="forever",
-                name=f"Plano gratuito permanente para {email}",
+                name=f"Permanente - {email[:20]}",
                 metadata={
                     "manual_assignment": "true",
                     "assigned_by": "dar_plano_gratis.py"
