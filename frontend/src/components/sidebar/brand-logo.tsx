@@ -5,10 +5,10 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { BRANDING } from '@/lib/branding';
 
-interface KortixLogoProps {
+interface BrandLogoProps {
   size?: number;
 }
-export function KortixLogo({ size = 24 }: KortixLogoProps) {
+export function BrandLogo({ size = 24 }: BrandLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -23,7 +23,7 @@ export function KortixLogo({ size = 24 }: KortixLogoProps) {
 
   return (
     <Image
-        src={BRANDING.logo.favicon || "/kortix-symbol.svg"}
+        src={BRANDING.logo.favicon || "/prophet-symbol.svg"}
         alt={BRANDING.company}
         width={size}
         height={size}
@@ -31,3 +31,6 @@ export function KortixLogo({ size = 24 }: KortixLogoProps) {
       />
   );
 }
+
+// Keep KortixLogo export for backward compatibility
+export const KortixLogo = BrandLogo;

@@ -9,7 +9,7 @@ import { getAgentAvatar } from '../../lib/utils/get-agent-style';
 import { useCreateTemplate, useUnpublishTemplate } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
 import { toast } from 'sonner';
 import { AgentCard } from './custom-agents-page/agent-card';
-import { KortixLogo } from '../sidebar/kortix-logo';
+import { BrandLogo } from '../sidebar/brand-logo';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface Agent {
@@ -111,7 +111,7 @@ const AgentModal: React.FC<AgentModalProps> = ({
           <div className={`h-32 flex items-center justify-center relative bg-gradient-to-br from-opacity-90 to-opacity-100`} style={{ backgroundColor: isSunaAgent ? '' : color }}>
             {isSunaAgent ? (
               <div className="p-6">
-                <KortixLogo size={48} />
+                <BrandLogo size={48} />
               </div>
             ) : (
               <div className="text-6xl drop-shadow-sm">

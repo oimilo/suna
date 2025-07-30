@@ -9,7 +9,7 @@ import { AgentWorkflowsConfiguration } from '../workflows/agent-workflows-config
 import { AgentTriggersConfiguration } from '../triggers/agent-triggers-configuration';
 import { toast } from 'sonner';
 import { BRANDING } from '@/lib/branding';
-import { KortixLogo } from '../../sidebar/kortix-logo';
+import { BrandLogo } from '../../sidebar/brand-logo';
 
 interface ConfigurationTabProps {
   agentId: string;
@@ -99,7 +99,7 @@ export function ConfigurationTab({
         <div className="mb-4 p-4 bg-primary/10 border border-primary-200 rounded-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="text-primary-600">
-              <KortixLogo size={20} />
+              <BrandLogo size={20} />
             </div>
             <span className="font-semibold text-primary-800">Agente Padrão {BRANDING.name}</span>
           </div>

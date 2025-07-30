@@ -6,7 +6,7 @@ import { StylePicker } from '../style-picker';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { BRANDING } from '@/lib/branding';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { BrandLogo } from '@/components/sidebar/brand-logo';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
 
 interface AgentHeaderProps {
@@ -64,7 +64,7 @@ export function AgentHeader({
         <div className="relative">
           {isSunaAgent ? (
             <div className="h-9 w-9 bg-background rounded-lg bg-muted border border flex items-center justify-center">
-              <KortixLogo size={16} />
+              <BrandLogo size={16} />
             </div>
           ) : (
             <StylePicker

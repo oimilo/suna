@@ -29,7 +29,7 @@ const ChatDropdown: React.FC<ChatDropdownProps> = ({ isFocused = false }) => {
                     }}
                 >
                     <div className="flex items-center gap-2">
-                        <Image src="/kortix-symbol.svg" alt={BRANDING.name} width={16} height={16} className="h-4 w-4 dark:invert" />
+                        <Image src="/prophet-symbol.svg" alt={BRANDING.name} width={16} height={16} className="h-4 w-4 dark:invert" />
                         <span>{BRANDING.name}</span>
                         <ChevronDown size={14} className="opacity-50" />
                     </div>

@@ -5,53 +5,53 @@
 
 export const BRANDING = {
   // App name
-  name: process.env.NEXT_PUBLIC_APP_NAME || "Suna",
+  name: process.env.NEXT_PUBLIC_APP_NAME || "Prophet",
   
   // App description
-  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "AI assistant that helps you get real work done",
+  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Seu funcionário AI",
   
   // App URL
-  url: process.env.NEXT_PUBLIC_APP_URL || "https://suna.so",
+  url: process.env.NEXT_PUBLIC_APP_URL || "https://prophet.build",
   
   // Company/organization
-  company: process.env.NEXT_PUBLIC_COMPANY_NAME || "Kortix",
+  company: process.env.NEXT_PUBLIC_COMPANY_NAME || "Milo",
   
-  // Team name (for credits like "Kortix Team")
-  teamName: process.env.NEXT_PUBLIC_TEAM_NAME || "Kortix Team",
+  // Team name (for credits like "Milo Team")
+  teamName: process.env.NEXT_PUBLIC_TEAM_NAME || "Milo Team",
   
   // Support email
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@suna.so",
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@milo.com",
   
   // Company URL (separate from app URL)
-  companyUrl: process.env.NEXT_PUBLIC_COMPANY_URL || "https://kortix.ai",
+  companyUrl: process.env.NEXT_PUBLIC_COMPANY_URL || "https://oimilo.com",
   
   // Contact email (can be different from support email)
-  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "hey@kortix.ai",
+  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contato@oimilo.com",
   
   // Careers URL
-  careersUrl: process.env.NEXT_PUBLIC_CAREERS_URL || "https://kortix.ai/careers",
+  careersUrl: process.env.NEXT_PUBLIC_CAREERS_URL || "https://oimilo.com/careers",
   
   // Logo paths
   logo: {
-    light: process.env.NEXT_PUBLIC_LOGO_LIGHT || "/logo-light.svg",
-    dark: process.env.NEXT_PUBLIC_LOGO_DARK || "/logo-dark.svg",
-    favicon: process.env.NEXT_PUBLIC_FAVICON || "/favicon.ico"
+    light: process.env.NEXT_PUBLIC_LOGO_LIGHT || "/prophet-logo.svg",
+    dark: process.env.NEXT_PUBLIC_LOGO_DARK || "/prophet-logo-white.svg",
+    favicon: process.env.NEXT_PUBLIC_FAVICON || "/prophet-symbol.svg"
   },
   
   // Social links
   social: {
-    twitter: process.env.NEXT_PUBLIC_TWITTER_URL || "https://twitter.com/kortixai",
-    github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/kortix-ai/suna",
-    discord: process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/kortixai",
-    linkedin: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/kortix/",
-    instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://instagram.com/kortixai"
+    twitter: process.env.NEXT_PUBLIC_TWITTER_URL || "https://twitter.com/oimilo",
+    github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/oimilo/suna",
+    discord: process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/milo",
+    linkedin: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/milo/",
+    instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://instagram.com/oimilo"
   },
   
   // Legal pages
   legal: {
-    privacy: process.env.NEXT_PUBLIC_PRIVACY_URL || "https://suna.so/legal?tab=privacy",
-    terms: process.env.NEXT_PUBLIC_TERMS_URL || "https://suna.so/legal?tab=terms",
-    license: process.env.NEXT_PUBLIC_LICENSE_URL || "https://github.com/kortix-ai/suna/blob/main/LICENSE"
+    privacy: process.env.NEXT_PUBLIC_PRIVACY_URL || "https://prophet.build/legal?tab=privacy",
+    terms: process.env.NEXT_PUBLIC_TERMS_URL || "https://prophet.build/legal?tab=terms",
+    license: process.env.NEXT_PUBLIC_LICENSE_URL || "https://github.com/oimilo/suna/blob/main/LICENSE"
   },
   
   // Feature flags
@@ -62,13 +62,13 @@ export const BRANDING = {
   },
   
   // Calendar/Demo booking
-  calendarLink: process.env.NEXT_PUBLIC_CALENDAR_LINK || "team/kortix/enterprise-demo",
+  calendarLink: process.env.NEXT_PUBLIC_CALENDAR_LINK || "team/milo/demo",
   
   // Legal entity information
   legalEntity: {
-    name: process.env.NEXT_PUBLIC_LEGAL_ENTITY_NAME || "Kortix AI Corp",
-    address: process.env.NEXT_PUBLIC_LEGAL_ADDRESS || "701 Tillery Street Unit 12-2521 Austin, Texas 78702, United States",
-    email: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "legal@kortix.ai"
+    name: process.env.NEXT_PUBLIC_LEGAL_ENTITY_NAME || "Milo Corp",
+    address: process.env.NEXT_PUBLIC_LEGAL_ADDRESS || "São Paulo, SP, Brasil",
+    email: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "legal@oimilo.com"
   }
 };
 

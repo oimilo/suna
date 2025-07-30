@@ -6,7 +6,7 @@ import { Bot, Menu, Store, Plus, Zap, Plug, ChevronRight, Loader2 } from 'lucide
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { BrandLogo } from '@/components/sidebar/brand-logo';
 import {
   Sidebar,
   SidebarContent,
@@ -128,7 +128,7 @@ export function SidebarLeft({
       <SidebarHeader className="px-2 py-2">
         <div className="flex h-[40px] items-center px-1 relative">
           <Link href="/dashboard">
-            <KortixLogo />
+            <BrandLogo />
           </Link>
           {state !== 'collapsed' && (
             <div className="ml-2 transition-all duration-200 ease-in-out whitespace-nowrap">

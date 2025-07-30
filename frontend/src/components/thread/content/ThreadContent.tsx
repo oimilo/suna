@@ -14,7 +14,7 @@ import {
     safeJsonParse,
 } from '@/components/thread/utils';
 import { formatMCPToolDisplayName } from '@/components/thread/tool-views/mcp-tool/_utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { BrandLogo } from '@/components/sidebar/brand-logo';
 import { AgentLoader } from './loader';
 import { parseXmlToolCalls, isNewXmlFormat, extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { parseToolResult } from '@/components/thread/tool-views/tool-result-parser';
@@ -355,7 +355,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     debugMode = false,
     isPreviewMode = false,
     agentName = BRANDING.name,
-    agentAvatar = <KortixLogo size={16} />,
+    agentAvatar = <BrandLogo size={16} />,
     emptyStateComponent,
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -661,7 +661,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         <>
                                                                             {isSunaAgent ? (
                                                                                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                                                                                    <KortixLogo size={16} />
+                                                                                    <BrandLogo size={16} />
                                                                                 </div>
                                                                             ) : (
                                                                                 <div
@@ -673,7 +673,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         </>
                                                                     );
                                                                 }
-                                                                return <KortixLogo size={16} />;
+                                                                return <BrandLogo size={16} />;
                                                             })()}
                                                         </div>
                                                         <p className='ml-2 text-sm text-muted-foreground'>

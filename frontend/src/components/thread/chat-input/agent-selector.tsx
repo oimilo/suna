@@ -22,7 +22,7 @@ import { useAgents, useCreateNewAgent } from '@/hooks/react-query/agents/use-age
 
 import { useRouter } from 'next/navigation';
 import { cn, truncateString } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { BrandLogo } from '@/components/sidebar/brand-logo';
 
 interface PredefinedAgent {
   id: string;
@@ -131,7 +131,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
       const isSelectedAgentSuna = selectedAgent.metadata?.is_suna_default || false;
       return {
         name: selectedAgent.name,
-        icon: isSelectedAgentSuna ? <KortixLogo size={16} /> : selectedAgent.icon
+        icon: isSelectedAgentSuna ? <BrandLogo size={16} /> : selectedAgent.icon
       };
     }
     
@@ -143,7 +143,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     const isDefaultAgentSuna = defaultAgent?.metadata?.is_suna_default || false;
     return {
       name: defaultAgent?.name || BRANDING.name,
-      icon: isDefaultAgentSuna ? <KortixLogo size={16} /> : (defaultAgent?.icon || <KortixLogo size={16} />)
+      icon: isDefaultAgentSuna ? <BrandLogo size={16} /> : (defaultAgent?.icon || <BrandLogo size={16} />)
     };
   };
 
@@ -221,7 +221,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
             >
               <div className="flex-shrink-0">
                 {isThisAgentSuna ? (
-                  <KortixLogo size={16} />
+                  <BrandLogo size={16} />
                 ) : (
                   agent.icon
                 )}
