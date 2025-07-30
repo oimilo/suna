@@ -96,6 +96,57 @@ class SubscriptionStatus(BaseModel):
     scheduled_change_date: Optional[datetime] = None
 
 # Helper functions
+def get_tier_info_from_price(price_id: str, price_data: Optional[Dict] = None) -> Dict:
+    """
+    Get tier info from price_id, with fallback for custom/CLI-assigned prices.
+    
+    Args:
+        price_id: The Stripe price ID
+        price_data: Optional price data from Stripe (contains unit_amount, etc)
+        
+    Returns:
+        Dict with 'name', 'minutes', and 'cost' keys
+    """
+    # First try to get from known tiers
+    tier_info = SUBSCRIPTION_TIERS.get(price_id)
+    if tier_info:
+        return tier_info
+        
+    # Fallback for unknown price IDs
+    logger.warning(f"Unknown price_id: {price_id}, inferring tier from price data")
+    
+    # If we have price data, try to infer from amount
+    if price_data:
+        price_amount = price_data.get('unit_amount', 0) / 100  # Convert from cents
+        
+        # Infer tier based on price amount
+        if price_amount == 0:
+            # Free or 100% discounted - default to Pro for CLI assignments
+            logger.info(f"Zero-amount subscription detected (price_id: {price_id}), defaulting to Pro tier")
+            return {
+                'name': 'pro',
+                'minutes': 900,
+                'cost': 150
+            }
+        elif price_amount <= 20:
+            return {'name': 'tier_2_20', 'minutes': 120, 'cost': 25}
+        elif price_amount <= 50:
+            return {'name': 'tier_6_50', 'minutes': 360, 'cost': 55}
+        elif price_amount <= 100:
+            return {'name': 'pro', 'minutes': 900, 'cost': 150}
+        elif price_amount <= 250:
+            return {'name': 'pro_max', 'minutes': 3000, 'cost': 500}
+        else:
+            return {'name': 'tier_200_1000', 'minutes': 12000, 'cost': 1005}
+    
+    # Final fallback - default to Pro tier for unknown custom assignments
+    logger.info(f"No price data available for {price_id}, defaulting to Pro tier")
+    return {
+        'name': 'pro',
+        'minutes': 900,
+        'cost': 150
+    }
+
 async def get_stripe_customer_id(client, user_id: str) -> Optional[str]:
     """Get the Stripe customer ID for a user."""
     result = await client.schema('basejump').from_('billing_customers') \
@@ -147,31 +198,52 @@ async def get_user_subscription(user_id: str) -> Optional[Dict]:
         if not subscriptions or not subscriptions.get('data'):
             return None
             
+        # Known price IDs for our products
+        known_price_ids = [
+            config.STRIPE_FREE_TIER_ID,
+            # Prophet Plans
+            config.STRIPE_PRO_MONTHLY_ID,
+            config.STRIPE_PRO_YEARLY_ID,
+            config.STRIPE_PRO_MAX_MONTHLY_ID,
+            config.STRIPE_PRO_MAX_YEARLY_ID,
+            # Legacy tiers
+            config.STRIPE_TIER_2_20_ID,
+            config.STRIPE_TIER_6_50_ID,
+            config.STRIPE_TIER_12_100_ID,
+            config.STRIPE_TIER_25_200_ID,
+            config.STRIPE_TIER_50_400_ID,
+            config.STRIPE_TIER_125_800_ID,
+            config.STRIPE_TIER_200_1000_ID,
+            # Yearly tiers
+            config.STRIPE_TIER_2_20_YEARLY_ID,
+            config.STRIPE_TIER_6_50_YEARLY_ID,
+            config.STRIPE_TIER_12_100_YEARLY_ID,
+            config.STRIPE_TIER_25_200_YEARLY_ID,
+            config.STRIPE_TIER_50_400_YEARLY_ID,
+            config.STRIPE_TIER_125_800_YEARLY_ID,
+            config.STRIPE_TIER_200_1000_YEARLY_ID
+        ]
+        
         # Filter subscriptions to only include our product's subscriptions
         our_subscriptions = []
+        custom_subscriptions = []  # For CLI-assigned or unknown price IDs
+        
         for sub in subscriptions['data']:
             # Get the first subscription item
             if sub.get('items') and sub['items'].get('data') and len(sub['items']['data']) > 0:
                 item = sub['items']['data'][0]
-                if item.get('price') and item['price'].get('id') in [
-                    config.STRIPE_FREE_TIER_ID,
-                    config.STRIPE_TIER_2_20_ID,
-                    config.STRIPE_TIER_6_50_ID,
-                    config.STRIPE_TIER_12_100_ID,
-                    config.STRIPE_TIER_25_200_ID,
-                    config.STRIPE_TIER_50_400_ID,
-                    config.STRIPE_TIER_125_800_ID,
-                    config.STRIPE_TIER_200_1000_ID,
-                    # Yearly tiers
-                    config.STRIPE_TIER_2_20_YEARLY_ID,
-                    config.STRIPE_TIER_6_50_YEARLY_ID,
-                    config.STRIPE_TIER_12_100_YEARLY_ID,
-                    config.STRIPE_TIER_25_200_YEARLY_ID,
-                    config.STRIPE_TIER_50_400_YEARLY_ID,
-                    config.STRIPE_TIER_125_800_YEARLY_ID,
-                    config.STRIPE_TIER_200_1000_YEARLY_ID
-                ]:
-                    our_subscriptions.append(sub)
+                if item.get('price') and item['price'].get('id'):
+                    price_id = item['price']['id']
+                    if price_id in known_price_ids:
+                        our_subscriptions.append(sub)
+                    else:
+                        # Keep track of active subscriptions with unknown price IDs (CLI-assigned)
+                        custom_subscriptions.append(sub)
+        
+        # Prioritize known subscriptions, but fall back to custom ones if none found
+        if not our_subscriptions and custom_subscriptions:
+            logger.info(f"User {user_id} has custom/CLI-assigned subscription with price_id: {custom_subscriptions[0]['items']['data'][0]['price']['id']}")
+            our_subscriptions = custom_subscriptions
         
         if not our_subscriptions:
             return None
@@ -439,9 +511,13 @@ async def get_allowed_models_for_user(client, user_id: str):
             price_id = subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
         
         # Get tier info for this price_id
-        tier_info = SUBSCRIPTION_TIERS.get(price_id)
-        if tier_info:
-            tier_name = tier_info['name']
+        # Try to get price data from subscription for better inference
+        price_data = None
+        if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+            price_data = subscription['items']['data'][0].get('price')
+        
+        tier_info = get_tier_info_from_price(price_id, price_data)
+        tier_name = tier_info['name']
     
     # Return allowed models for this tier
     return MODEL_ACCESS_TIERS.get(tier_name, MODEL_ACCESS_TIERS['free'])  # Default to free tier if unknown
@@ -498,11 +574,8 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
     else:
         price_id = subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
     
-    # Get tier info - default to free tier if not found
-    tier_info = SUBSCRIPTION_TIERS.get(price_id)
-    if not tier_info:
-        logger.warning(f"Unknown subscription tier: {price_id}, defaulting to free tier")
-        tier_info = SUBSCRIPTION_TIERS[config.STRIPE_FREE_TIER_ID]
+    # Get tier info - use helper function with fallback
+    tier_info = get_tier_info_from_price(price_id, subscription['items']['data'][0].get('price') if subscription.get('items') and subscription['items'].get('data') else None)
     
     # Calculate current month's usage
     current_usage = await calculate_monthly_usage(client, user_id)
@@ -933,11 +1006,7 @@ async def get_subscription(
         # Extract current plan details
         current_item = subscription['items']['data'][0]
         current_price_id = current_item['price']['id']
-        current_tier_info = SUBSCRIPTION_TIERS.get(current_price_id)
-        if not current_tier_info:
-            # Fallback if somehow subscribed to an unknown price within our product
-             logger.warning(f"User {current_user_id} subscribed to unknown price {current_price_id}. Defaulting info.")
-             current_tier_info = {'name': 'unknown', 'minutes': 0}
+        current_tier_info = get_tier_info_from_price(current_price_id, current_item.get('price'))
         
         status_response = SubscriptionStatus(
             status=subscription['status'], # 'active', 'trialing', etc.
@@ -1142,9 +1211,12 @@ async def get_available_models(
                 price_id = subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
             
             # Get tier info for this price_id
-            tier_info = SUBSCRIPTION_TIERS.get(price_id)
-            if tier_info:
-                tier_name = tier_info['name']
+            price_data = None
+            if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+                price_data = subscription['items']['data'][0].get('price')
+            
+            tier_info = get_tier_info_from_price(price_id, price_data)
+            tier_name = tier_info['name']
         
         # Get all unique full model names from MODEL_NAME_ALIASES
         all_models = set()
