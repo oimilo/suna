@@ -8,7 +8,7 @@ import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscrip
 
 export const STORAGE_KEY_MODEL = 'suna-preferred-model-v3';
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4';
+export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4'; // Claude 4 Sonnet (mais avançado)
 export const DEFAULT_FREE_MODEL_ID = 'moonshotai/kimi-k2';
 // export const DEFAULT_FREE_MODEL_ID = 'deepseek/deepseek-chat';
 
@@ -31,9 +31,9 @@ export interface CustomModel {
 
 // SINGLE SOURCE OF TRUTH for all model data - aligned with backend constants
 export const MODELS = {
-  // Free tier models (available to all users)
+  // Premium tier models
   'claude-sonnet-4': { 
-    tier: 'free',
+    tier: 'premium',
     priority: 100, 
     recommended: true,
     lowQuality: false
