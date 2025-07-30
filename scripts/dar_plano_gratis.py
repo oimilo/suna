@@ -33,6 +33,8 @@ load_dotenv(env_path)
 
 # Import after loading env
 from utils.config import config
+from services.supabase import DBConnection
+import asyncio
 
 # Planos disponíveis com descrições amigáveis
 PLANOS = {
@@ -139,6 +141,57 @@ def get_user_input():
     
     return email, plano['id'], meses
 
+async def vincular_customer_supabase(email: str, customer_id: str):
+    """Vincula o customer do Stripe no Supabase"""
+    try:
+        db = DBConnection()
+        client = await db.client
+        
+        # Buscar user_id pelo email
+        user_result = await client.auth.admin.list_users()
+        user_id = None
+        
+        for user in user_result:
+            if user.email == email:
+                user_id = user.id
+                break
+        
+        if not user_id:
+            print_error(f"Usuário não encontrado no Supabase: {email}")
+            return False
+        
+        # Verificar se já existe
+        existing = await client.schema('basejump').from_('billing_customers') \
+            .select('id') \
+            .eq('account_id', user_id) \
+            .execute()
+        
+        if existing.data:
+            # Atualizar
+            await client.schema('basejump').from_('billing_customers') \
+                .update({'id': customer_id, 'active': True}) \
+                .eq('account_id', user_id) \
+                .execute()
+            print_info("Customer atualizado no Supabase")
+        else:
+            # Inserir
+            await client.schema('basejump').from_('billing_customers') \
+                .insert({
+                    'id': customer_id,
+                    'account_id': user_id,
+                    'email': email,
+                    'provider': 'stripe',
+                    'active': True
+                }) \
+                .execute()
+            print_info("Customer vinculado no Supabase")
+        
+        return True
+        
+    except Exception as e:
+        print_error(f"Erro ao vincular no Supabase: {str(e)}")
+        return False
+
 def dar_plano_gratis(email: str, price_id: str, meses: int = 1):
     """Cria assinatura com 100% de desconto"""
     # Initialize Stripe
@@ -153,6 +206,8 @@ def dar_plano_gratis(email: str, price_id: str, meses: int = 1):
         if customers.data:
             customer = customers.data[0]
             print_success(f"Cliente encontrado: {customer.id}")
+            # Vincular no Supabase (caso não esteja vinculado)
+            asyncio.run(vincular_customer_supabase(email, customer.id))
         else:
             # Criar novo cliente
             customer = stripe.Customer.create(
@@ -163,6 +218,9 @@ def dar_plano_gratis(email: str, price_id: str, meses: int = 1):
                 }
             )
             print_success(f"Cliente criado: {customer.id}")
+        
+        # Vincular no Supabase
+        asyncio.run(vincular_customer_supabase(email, customer.id))
         
         # Criar cupom de 100% de desconto
         if meses > 0:
