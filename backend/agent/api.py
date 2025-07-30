@@ -909,8 +909,7 @@ async def stream_agent_run(
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache, no-transform", "Connection": "keep-alive",
-        "X-Accel-Buffering": "no", "Content-Type": "text/event-stream",
-        "Access-Control-Allow-Origin": "*"
+        "X-Accel-Buffering": "no", "Content-Type": "text/event-stream"
     })
 
 async def generate_and_update_project_name(project_id: str, prompt: str):
