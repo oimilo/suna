@@ -258,7 +258,7 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Toggle Computer Preview (CMD+I)</p>
+                  <p>Alternar Visualização da Área de Trabalho (CMD+I)</p>
                 </TooltipContent>
               </Tooltip> */}
             </TooltipProvider>

@@ -438,7 +438,7 @@ export function ToolCallSidePanel({
                   <div className="flex items-center justify-between">
                     <div className="ml-2 flex items-center gap-2">
                       <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                        {agentName ? `${agentName}'s Computer` : `${BRANDING.name}'s Computer`}
+                        {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
                       </h2>
                     </div>
                     <Button
@@ -446,7 +446,7 @@ export function ToolCallSidePanel({
                       size="icon"
                       onClick={handleClose}
                       className="h-8 w-8"
-                      title="Minimize to floating preview"
+                      title="Minimizar para visualização flutuante"
                     >
                       <Minimize2 className="h-4 w-4" />
                     </Button>
@@ -476,7 +476,7 @@ export function ToolCallSidePanel({
             <div className="flex items-center justify-between">
               <div className="ml-2 flex items-center gap-2">
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  {agentName ? `${agentName}'s Computer` : `${BRANDING.name}'s Computer`}
+                  {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
                 </h2>
               </div>
               <Button
@@ -522,7 +522,7 @@ export function ToolCallSidePanel({
               <div className="flex items-center justify-between">
                 <div className="ml-2 flex items-center gap-2">
                   <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                    {agentName ? `${agentName}'s Computer` : `${BRANDING.name}'s Computer`}
+                    {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
@@ -568,7 +568,7 @@ export function ToolCallSidePanel({
             <div className="flex items-center justify-between">
               <div className="ml-2 flex items-center gap-2">
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  {agentName ? `${agentName}'s Computer` : `${BRANDING.name}'s Computer`}
+                  {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
                 </h2>
               </div>
               <Button
@@ -618,7 +618,7 @@ export function ToolCallSidePanel({
           <div className="flex items-center justify-between">
             <motion.div layoutId="tool-icon" className="ml-2 flex items-center gap-2">
               <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {agentName ? `${agentName}'s Computer` : `${BRANDING.name}'s Computer`}
+                {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
               </h2>
             </motion.div>
 
@@ -629,7 +629,7 @@ export function ToolCallSidePanel({
                   size="icon"
                   onClick={handleClose}
                   className="h-8 w-8 ml-1"
-                  title="Minimize to floating preview"
+                  title="Minimizar para visualização flutuante"
                 >
                   <Minimize2 className="h-4 w-4" />
                 </Button>
@@ -647,7 +647,7 @@ export function ToolCallSidePanel({
                   size="icon"
                   onClick={handleClose}
                   className="h-8 w-8 ml-1"
-                  title="Minimize to floating preview"
+                  title="Minimizar para visualização flutuante"
                 >
                   <Minimize2 className="h-4 w-4" />
                 </Button>
@@ -660,7 +660,7 @@ export function ToolCallSidePanel({
                 size="icon"
                 onClick={handleClose}
                 className="h-8 w-8"
-                title="Minimize to floating preview"
+                title="Minimizar para visualização flutuante"
               >
                 <Minimize2 className="h-4 w-4" />
               </Button>

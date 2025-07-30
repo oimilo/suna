@@ -65,13 +65,13 @@ export function WebSearchToolView({
     const { url, title } = result;
 
     if (url.includes('news') || url.includes('article') || title.includes('News')) {
-      return { icon: FileText, label: 'Article' };
+      return { icon: FileText, label: 'Artigo' };
     } else if (url.includes('wiki')) {
       return { icon: BookOpen, label: 'Wiki' };
     } else if (url.includes('blog')) {
       return { icon: CalendarDays, label: 'Blog' };
     } else {
-      return { icon: Globe, label: 'Website' };
+      return { icon: Globe, label: 'Site' };
     }
   };
 
@@ -104,7 +104,7 @@ export function WebSearchToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5" />
               )}
-              {actualIsSuccess ? 'Search completed successfully' : 'Search failed'}
+              {actualIsSuccess ? 'Busca concluída com sucesso' : 'Falha na busca'}
             </Badge>
           )}
         </div>
@@ -116,7 +116,7 @@ export function WebSearchToolView({
             icon={Search}
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
-            title="Searching the web"
+            title="Pesquisando na web"
             filePath={query}
             showProgress={true}
           />
@@ -127,7 +127,7 @@ export function WebSearchToolView({
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3 flex items-center">
                     <ImageIcon className="h-4 w-4 mr-2 opacity-70" />
-                    Images
+                    Imagens
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-1">
                     {images.slice(0, 6).map((image, idx) => (
@@ -158,7 +158,7 @@ export function WebSearchToolView({
                   </div>
                   {images.length > 6 && (
                     <Button variant="outline" size="sm" className="mt-2 text-xs">
-                      View {images.length - 6} more images
+                      Ver mais {images.length - 6} imagens
                     </Button>
                   )}
                 </div>
@@ -166,7 +166,7 @@ export function WebSearchToolView({
 
               {searchResults.length > 0 && (
                 <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-4 flex items-center justify-between">
-                  <span>Search Results ({searchResults.length})</span>
+                  <span>Resultados da Busca ({searchResults.length})</span>
                   <Badge variant="outline" className="text-xs font-normal">
                     <Clock className="h-3 w-3 mr-1.5 opacity-70" />
                     {new Date().toLocaleDateString()}
@@ -230,7 +230,7 @@ export function WebSearchToolView({
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{isExpanded ? 'Show less' : 'Show more'}</p>
+                                <p>{isExpanded ? 'Mostrar menos' : 'Mostrar mais'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider> */}
@@ -303,7 +303,7 @@ export function WebSearchToolView({
               <Search className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              No Results Found
+              Nenhum Resultado Encontrado
             </h3>
             <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
               <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
@@ -311,7 +311,7 @@ export function WebSearchToolView({
               </code>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Try refining your search query for better results
+              Tente refinar sua busca para obter melhores resultados
             </p>
           </div>
         )}
@@ -322,7 +322,7 @@ export function WebSearchToolView({
           {!isStreaming && searchResults.length > 0 && (
             <Badge variant="outline" className="h-6 py-0.5">
               <Globe className="h-3 w-3" />
-              {searchResults.length} results
+              {searchResults.length} resultados
             </Badge>
           )}
         </div>

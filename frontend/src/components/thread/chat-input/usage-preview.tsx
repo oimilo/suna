@@ -35,18 +35,18 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     const getUsageDisplay = () => {
-        if (!subscriptionData) return 'Loading usage...';
+        if (!subscriptionData) return 'Carregando uso...';
 
         const current = subscriptionData.current_usage || 0;
         const limit = subscriptionData.cost_limit || 0;
 
-        if (limit === 0) return 'No usage limit set';
+        if (limit === 0) return 'Sem limite de uso definido';
 
         const isOverLimit = current > limit;
         const usageText = `${formatCurrency(current)} / ${formatCurrency(limit)}`;
 
         if (isOverLimit) {
-            return `${usageText} (over limit)`;
+            return `${usageText} (acima do limite)`;
         }
 
         return usageText;
@@ -84,7 +84,7 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
             <div className="flex-1 min-w-0">
                 <motion.div className="flex items-center gap-2 mb-1">
                     <h4 className="text-sm font-medium text-foreground truncate">
-                        Upgrade for more usage & better AI Models
+                        Faça upgrade para mais uso e melhores modelos de IA
                     </h4>
                 </motion.div>
 
