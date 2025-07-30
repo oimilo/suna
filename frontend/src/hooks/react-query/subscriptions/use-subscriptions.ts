@@ -9,6 +9,7 @@ import {
 import { subscriptionKeys } from './keys';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { hasPlan as checkHasPlan } from '@/lib/subscription-utils';
 
 export const useSubscription = createQueryHook(
   subscriptionKeys.details(),
@@ -67,6 +68,12 @@ export const isPlan = (
   subscriptionData: SubscriptionStatus | null | undefined,
   planId?: string,
 ): boolean => {
-  if (!subscriptionData) return planId === 'free';
-  return subscriptionData.plan_name === planId;
+  if (!planId) return false;
+  
+  // Map planId to the format expected by checkHasPlan
+  const mappedPlanId = planId === 'base' ? 'pro' : 
+                       planId === 'extra' ? 'pro_max' : 
+                       planId as 'free' | 'pro' | 'pro_max' | 'enterprise';
+  
+  return checkHasPlan(subscriptionData, mappedPlanId);
 };

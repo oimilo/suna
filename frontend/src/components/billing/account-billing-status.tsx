@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSubscription } from '@/hooks/react-query';
 import Link from 'next/link';
 import { OpenInNewWindowIcon } from '@radix-ui/react-icons';
+import { getPlanDisplayName } from '@/lib/subscription-utils';
 
 type Props = {
   accountId: string;
@@ -87,60 +88,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
     );
   }
 
-  const proPriceIds = [
-    'price_1RqK0hFNfWjTbEjsaAFuY7Cb', // Pro Monthly
-    'price_1RqK0hFNfWjTbEjsN9XCGLA4', // Pro Yearly
-  ];
-  
-  const proMaxPriceIds = [
-    'price_1RqK4xFNfWjTbEjsCrjfvJVL', // Pro Max Monthly
-    'price_1RqK6cFNfWjTbEjs75UPIgif', // Pro Max Yearly
-  ];
-
-  const getPlanName = () => {
-    // Debug log to see what we're receiving
-    console.log('Subscription data:', {
-      price_id: subscriptionData?.price_id,
-      plan_name: subscriptionData?.plan_name,
-      status: subscriptionData?.status,
-      cost_limit: subscriptionData?.cost_limit
-    });
-    
-    // Check new price IDs first
-    if (subscriptionData?.price_id) {
-      if (proPriceIds.includes(subscriptionData.price_id)) return 'Pro';
-      if (proMaxPriceIds.includes(subscriptionData.price_id)) return 'Pro Max';
-    }
-    
-    // Check legacy plan names
-    if (subscriptionData?.plan_name) {
-      if (subscriptionData.plan_name === 'base') return 'Pro';
-      if (subscriptionData.plan_name === 'extra') return 'Pro Max';
-      if (subscriptionData.plan_name === 'enterprise') return 'Enterprise';
-    }
-    
-    // Check if there's an active subscription even without matching price_id (manual assignment case)
-    if (subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing') {
-      // If we have a cost limit > 5, it's likely a paid plan
-      const costLimit = subscriptionData.cost_limit || 0;
-      if (costLimit > 5) return 'Pro';
-    }
-    
-    // Fallback: If there's ANY price_id set (even custom ones) and it's not a known free plan
-    // This handles cases where plans are assigned via CLI with custom price IDs
-    if (subscriptionData?.price_id && subscriptionData?.price_id !== '') {
-      // If it's not in any of our known lists, check by plan_name or cost_limit
-      if (subscriptionData.plan_name === 'free' && (subscriptionData.cost_limit || 0) <= 5) {
-        return 'Gratuito';
-      }
-      // Assume it's at least Pro if it has a price_id but isn't explicitly free
-      return 'Pro';
-    }
-    
-    return 'Gratuito';
-  };
-
-  const planName = getPlanName();
+  const planName = getPlanDisplayName(subscriptionData);
 
   return (
     <div className="rounded-xl border shadow-sm bg-card p-6">

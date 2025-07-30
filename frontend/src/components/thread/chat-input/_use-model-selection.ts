@@ -4,6 +4,7 @@ import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscript
 import { useState, useEffect, useMemo } from 'react';
 import { isLocalMode } from '@/lib/config';
 import { useAvailableModels } from '@/hooks/react-query/subscriptions/use-model';
+import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscription-utils';
 
 export const STORAGE_KEY_MODEL = 'suna-preferred-model-v3';
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
@@ -183,65 +184,8 @@ export const useModelSelection = () => {
   const { data: modelsData, isLoading: isLoadingModels } = useAvailableModels({
     refetchOnMount: false,
   });
-  
-  // Define Pro and Pro Max price IDs
-  const proPriceIds = [
-    'price_1RqK0hFNfWjTbEjsaAFuY7Cb', // Pro Monthly
-    'price_1RqK0hFNfWjTbEjsN9XCGLA4', // Pro Yearly
-  ];
-  
-  const proMaxPriceIds = [
-    'price_1RqK4xFNfWjTbEjsCrjfvJVL', // Pro Max Monthly  
-    'price_1RqK6cFNfWjTbEjs75UPIgif', // Pro Max Yearly
-  ];
 
-  // Check if user has an active subscription based on status or price_id
-  const hasActiveSubscription = () => {
-    if (!subscriptionData) return false;
-    
-    console.log('Checking subscription in model selection:', {
-      status: subscriptionData.status,
-      price_id: subscriptionData.price_id,
-      plan_name: subscriptionData.plan_name,
-      cost_limit: subscriptionData.cost_limit
-    });
-    
-    // Check if status is active
-    if (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') {
-      return true;
-    }
-    
-    // Check if has a Pro or Pro Max price_id (manual assignment case)
-    if (subscriptionData.price_id) {
-      return proPriceIds.includes(subscriptionData.price_id) || 
-             proMaxPriceIds.includes(subscriptionData.price_id);
-    }
-    
-    // Check legacy plan names
-    if (subscriptionData.plan_name === 'base' || subscriptionData.plan_name === 'extra') {
-      return true;
-    }
-    
-    // Check cost limit as fallback for manual assignments
-    if (subscriptionData.cost_limit && subscriptionData.cost_limit > 5) {
-      return true;
-    }
-    
-    // Fallback: If there's ANY price_id set (even custom ones from CLI assignments)
-    // and it's not explicitly a free plan, consider it as having subscription
-    if (subscriptionData.price_id && subscriptionData.price_id !== '') {
-      // Only return false if we're sure it's a free plan
-      if (subscriptionData.plan_name === 'free' && (subscriptionData.cost_limit || 0) <= 5) {
-        return false;
-      }
-      // Otherwise assume they have access
-      return true;
-    }
-    
-    return false;
-  };
-
-  const subscriptionStatus: SubscriptionStatus = hasActiveSubscription() 
+  const subscriptionStatus: SubscriptionStatus = checkActiveSubscription(subscriptionData) 
     ? 'active' 
     : 'no_subscription';
 
