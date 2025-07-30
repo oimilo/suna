@@ -125,7 +125,7 @@ export function DataProviderEndpointsToolView({
               ) : (
                 <AlertTriangle className="h-3 w-3 mr-1" />
               )}
-              {actualIsSuccess ? 'Loaded' : 'Failed'}
+              {actualIsSuccess ? 'Carregado' : 'Falhou'}
             </Badge>
           )}
         </div>
@@ -139,10 +139,10 @@ export function DataProviderEndpointsToolView({
                 <Loader2 className="h-8 w-8 animate-spin text-zinc-500 dark:text-zinc-400" />
               </div>
               <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-                Loading provider...
+                Carregando provedor...
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Connecting to data source
+                Conectando à fonte de dados
               </p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export function DataProviderEndpointsToolView({
                   {providerConfig.name}
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {endpointCount > 0 ? `${endpointCount} endpoints loaded and ready` : 'Endpoints loaded and ready'}
+                  {endpointCount > 0 ? `${endpointCount} endpoints carregados e prontos` : 'Endpoints carregados e prontos'}
                 </p>
               </div>
 
@@ -180,13 +180,13 @@ export function DataProviderEndpointsToolView({
                 ) : (
                   <AlertTriangle className="h-3 w-3 mr-1" />
                 )}
-                {actualIsSuccess ? 'Connected' : 'Failed'}
+                {actualIsSuccess ? 'Conectado' : 'Falhou'}
               </Badge>
             </div>
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 <Database className="h-4 w-4" />
-                <span>Provider Status</span>
+                <span>Status do Provedor</span>
                 <ChevronRight className="h-3 w-3 text-zinc-400" />
               </div>
               <div className="grid gap-3">
@@ -194,7 +194,7 @@ export function DataProviderEndpointsToolView({
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                     <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      Connection Status
+                      Status da Conexão
                     </span>
                   </div>
                   <Badge

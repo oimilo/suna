@@ -312,14 +312,14 @@ export function ToolCallSidePanel({
         return (
           <div className={`${baseClasses} bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800`}>
             <div className={`${dotClasses} bg-green-500 animate-pulse`} />
-            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Live Updates</span>
+            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Atualizações ao Vivo</span>
           </div>
         );
       } else {
         return (
           <div className={`${baseClasses} bg-neutral-50 dark:bg-neutral-900/20 border border-neutral-200 dark:border-neutral-800`}>
             <div className={`${dotClasses} bg-neutral-500`} />
-            <span className={`${textClasses} text-neutral-700 dark:text-neutral-400`}>Latest Tool</span>
+            <span className={`${textClasses} text-neutral-700 dark:text-neutral-400`}>Última Ferramenta</span>
           </div>
         );
       }
@@ -331,7 +331,7 @@ export function ToolCallSidePanel({
             onClick={jumpToLive}
           >
             <div className={`${dotClasses} bg-green-500 animate-pulse`} />
-            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Jump to Live</span>
+            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Ir para Ao Vivo</span>
           </div>
         );
       } else {
@@ -501,10 +501,10 @@ export function ToolCallSidePanel({
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  No tool activity
+                  Sem atividade de ferramentas
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Tool calls and computer interactions will appear here when they're being executed.
+                  Chamadas de ferramentas e interações do computador aparecerão aqui quando estiverem sendo executadas.
                 </p>
               </div>
             </div>
@@ -528,7 +528,7 @@ export function ToolCallSidePanel({
                 <div className="flex items-center gap-2">
                   <div className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
                     <CircleDashed className="h-3 w-3 animate-spin" />
-                    <span>Running</span>
+                    <span>Executando</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -550,10 +550,10 @@ export function ToolCallSidePanel({
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                    Tool is running
+                    Ferramenta em execução
                   </h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    {getUserFriendlyToolName(firstStreamingTool.toolCall.assistantCall.name || 'Tool')} is currently executing. Results will appear here when complete.
+                    {getUserFriendlyToolName(firstStreamingTool.toolCall.assistantCall.name || 'Tool')} está em execução. Os resultados aparecerão aqui quando concluído.
                   </p>
                 </div>
               </div>
@@ -640,7 +640,7 @@ export function ToolCallSidePanel({
               <div className="flex items-center gap-2">
                 <div className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
                   <CircleDashed className="h-3 w-3 animate-spin" />
-                  <span>Running</span>
+                  <span>Executando</span>
                 </div>
                 <Button
                   variant="ghost"
@@ -722,7 +722,7 @@ export function ToolCallSidePanel({
                     className="h-8 px-2.5 text-xs"
                   >
                     <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                    <span>Prev</span>
+                    <span>Anterior</span>
                   </Button>
 
                   <div className="flex items-center gap-1.5">
@@ -739,7 +739,7 @@ export function ToolCallSidePanel({
                     disabled={displayIndex >= displayTotalCalls - 1}
                     className="h-8 px-2.5 text-xs"
                   >
-                    <span>Next</span>
+                    <span>Próximo</span>
                     <ChevronRight className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </div>

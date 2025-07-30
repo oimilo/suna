@@ -185,14 +185,14 @@ export function CompleteToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              {actualIsSuccess ? 'Completed' : 'Failed'}
+              {actualIsSuccess ? 'Concluída' : 'Falhou'}
             </Badge>
           )}
 
           {isStreaming && (
             <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-              Completing
+              Completando
             </Badge>
           )}
         </div>
@@ -231,7 +231,7 @@ export function CompleteToolView({
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Paperclip className="h-4 w-4" />
-                  Files ({attachments.length})
+                  Arquivos ({attachments.length})
                 </div>
 
                 <div className={cn(
@@ -307,7 +307,7 @@ export function CompleteToolView({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Paperclip className="h-4 w-4" />
-                  Files ({completeData.attachments.length})
+                  Arquivos ({completeData.attachments.length})
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   {completeData.attachments.map((attachment, index) => {
@@ -354,7 +354,7 @@ export function CompleteToolView({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <ListChecks className="h-4 w-4" />
-                  Tasks Completed
+                  Tarefas Concluídas
                 </div>
                 <div className="space-y-2">
                   {completeData.tasksCompleted.map((task, index) => (
@@ -381,7 +381,7 @@ export function CompleteToolView({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Completing task...
+                    Completando tarefa...
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {progress}%
@@ -398,10 +398,10 @@ export function CompleteToolView({
                   <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Task Completed
+                  Tarefa Concluída
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  No additional details provided
+                  Sem detalhes adicionais fornecidos
                 </p>
               </div>
             )}
@@ -414,7 +414,7 @@ export function CompleteToolView({
         <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           <Badge className="h-6 py-0.5" variant="outline">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Task Completion
+            Conclusão da Tarefa
           </Badge>
         </div>
 

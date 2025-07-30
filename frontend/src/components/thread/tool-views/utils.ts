@@ -34,37 +34,37 @@ export function getToolTitle(toolName: string): string {
 
   // Map of tool names to their display titles
   const toolTitles: Record<string, string> = {
-    'execute-command': 'Execute Command',
-    'check-command-output': 'Check Command Output',
-    'str-replace': 'String Replace',
-    'create-file': 'Create File',
-    'full-file-rewrite': 'Rewrite File',
-    'delete-file': 'Delete File',
-    'web-search': 'Web Search',
-    'crawl-webpage': 'Web Crawl',
-    'scrape-webpage': 'Web Scrape',
-    'browser-navigate': 'Browser Navigate',
-    'browser-click': 'Browser Click',
-    'browser-extract': 'Browser Extract',
-    'browser-fill': 'Browser Fill',
-    'browser-wait': 'Browser Wait',
-    'see-image': 'View Image',
-    'ask': 'Ask',
-    'complete': 'Task Complete',
-    'execute-data-provider-call': 'Data Provider Call',
-    'get-data-provider-endpoints': 'Data Endpoints',
-    'search-mcp-servers': 'Search MCP Servers',
-    'get-app-details': 'Get App Details',
-    'create-credential-profile': 'Create Credential Profile',
-    'connect-credential-profile': 'Connect Credential Profile',
-    'check-profile-connection': 'Check Profile Connection',
-    'configure-profile-for-agent': 'Configure Profile For Agent',
-    'get-credential-profiles': 'Get Credential Profiles',
-    'get-current-agent-config': 'Get Current Agent Config',
-    'deploy': 'Deploy',
+    'execute-command': 'Executar Comando',
+    'check-command-output': 'Verificar Saída do Comando',
+    'str-replace': 'Substituir String',
+    'create-file': 'Criar Arquivo',
+    'full-file-rewrite': 'Reescrever Arquivo',
+    'delete-file': 'Deletar Arquivo',
+    'web-search': 'Busca na Web',
+    'crawl-webpage': 'Explorar Página Web',
+    'scrape-webpage': 'Extrair Dados da Web',
+    'browser-navigate': 'Navegar no Browser',
+    'browser-click': 'Clicar no Browser',
+    'browser-extract': 'Extrair do Browser',
+    'browser-fill': 'Preencher no Browser',
+    'browser-wait': 'Aguardar no Browser',
+    'see-image': 'Ver Imagem',
+    'ask': 'Perguntar',
+    'complete': 'Tarefa Concluída',
+    'execute-data-provider-call': 'Chamar Provedor de Dados',
+    'get-data-provider-endpoints': 'Obter Endpoints de Dados',
+    'search-mcp-servers': 'Buscar Servidores MCP',
+    'get-app-details': 'Obter Detalhes do App',
+    'create-credential-profile': 'Criar Perfil de Credenciais',
+    'connect-credential-profile': 'Conectar Perfil de Credenciais',
+    'check-profile-connection': 'Verificar Conexão do Perfil',
+    'configure-profile-for-agent': 'Configurar Perfil para Agente',
+    'get-credential-profiles': 'Obter Perfis de Credenciais',
+    'get-current-agent-config': 'Obter Configuração do Agente',
+    'deploy': 'Implantar',
 
-    'generic-tool': 'Tool',
-    'default': 'Tool',
+    'generic-tool': 'Ferramenta',
+    'default': 'Ferramenta',
   };
 
   // Return the mapped title or a formatted version of the name
@@ -75,7 +75,7 @@ export function getToolTitle(toolName: string): string {
   // For browser tools not explicitly mapped
   if (normalizedName.startsWith('browser-')) {
     const operation = normalizedName.replace('browser-', '').replace(/-/g, ' ');
-    return 'Browser ' + operation.charAt(0).toUpperCase() + operation.slice(1);
+    return 'Navegador ' + operation.charAt(0).toUpperCase() + operation.slice(1);
   }
 
   // Format any other tool name

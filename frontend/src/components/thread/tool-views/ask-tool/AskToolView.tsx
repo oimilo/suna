@@ -98,14 +98,14 @@ export function AskToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              {actualIsSuccess ? 'Success' : 'Failed'}
+              {actualIsSuccess ? 'Sucesso' : 'Falhou'}
             </Badge>
           )}
 
           {isStreaming && (
             <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-              Asking user
+              Perguntando ao usuário
             </Badge>
           )}
         </div>
@@ -118,7 +118,7 @@ export function AskToolView({
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Paperclip className="h-4 w-4" />
-                  Files ({attachments.length})
+                  Arquivos ({attachments.length})
                 </div>
 
                 <div className={cn(

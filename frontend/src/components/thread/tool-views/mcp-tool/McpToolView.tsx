@@ -116,7 +116,7 @@ export function McpToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5" />
               )}
-              {isSuccess && result && !result.isError ? 'Completed successfully' : 'Execution failed'}
+              {isSuccess && result && !result.isError ? 'Concluído com sucesso' : 'Execução falhou'}
             </Badge>
           )}
         </div>
@@ -134,7 +134,7 @@ export function McpToolView({
                 </div>
               </div>
               <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-                Executing MCP Tool
+                Executando Ferramenta MCP
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">
                 <span className="font-medium">{displayName}</span>
@@ -154,25 +154,25 @@ export function McpToolView({
               <div className="bg-zinc-50/70 dark:bg-zinc-900/30 p-4 rounded-lg border border-zinc-100 dark:border-zinc-800">
                 <div className="flex items-center gap-2 mb-3">
                   <Settings className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                  <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Tool Details</h3>
+                  <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Detalhes da Ferramenta</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-zinc-500 dark:text-zinc-400">Server:</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">Servidor:</span>
                     <span className="ml-2 font-medium text-zinc-700 dark:text-zinc-300">
                       {serverName}
                     </span>
                   </div>
                   <div>
-                    <span className="text-zinc-500 dark:text-zinc-400">Tool:</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">Ferramenta:</span>
                     <span className="ml-2 font-medium text-zinc-700 dark:text-zinc-300">
                       {toolName}
                     </span>
                   </div>
                   <div>
-                    <span className="text-zinc-500 dark:text-zinc-400">Arguments:</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">Argumentos:</span>
                     <span className="ml-2 font-medium text-zinc-700 dark:text-zinc-300">
-                      {argumentsCount} parameter{argumentsCount !== 1 ? 's' : ''}
+                      {argumentsCount} parâmetro{argumentsCount !== 1 ? 's' : ''}
                     </span>
                   </div>
                   <div>
@@ -183,7 +183,7 @@ export function McpToolView({
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-red-600 dark:text-red-400"
                     )}>
-                      {isSuccess && result && !result.isError ? 'Success' : 'Failed'}
+                      {isSuccess && result && !result.isError ? 'Sucesso' : 'Falhou'}
                     </span>
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export function McpToolView({
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-red-500" />
                       <span className="text-sm text-red-600 dark:text-red-400">
-                        Error Type: {result.error_type}
+                        Tipo de Erro: {result.error_type}
                       </span>
                     </div>
                   </div>
@@ -218,14 +218,14 @@ export function McpToolView({
                           <>
                             <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             <h3 className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                              Execution Result
+                              Resultado da Execução
                             </h3>
                           </>
                         ) : (
                           <>
                             <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                             <h3 className="text-sm font-medium text-red-700 dark:text-red-300">
-                              Error Result
+                              Resultado com Erro
                             </h3>
                           </>
                         )}
@@ -256,9 +256,9 @@ export function McpToolView({
                     <Clock className="h-3 w-3" />
                     <span>
                       {toolTimestamp ? (
-                        `Completed ${formatTimestamp(toolTimestamp)}`
+                        `Concluído ${formatTimestamp(toolTimestamp)}`
                       ) : assistantTimestamp ? (
-                        `Started ${formatTimestamp(assistantTimestamp)}`
+                        `Iniciado ${formatTimestamp(assistantTimestamp)}`
                       ) : (
                         ''
                       )}
@@ -272,10 +272,10 @@ export function McpToolView({
                 <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1">
-                    Model Context Protocol (MCP)
+                    Protocolo de Contexto de Modelo (MCP)
                   </p>
                   <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                    This tool is provided by an external MCP server, enabling dynamic integration with specialized services and data sources.
+                    Esta ferramenta é fornecida por um servidor MCP externo, permitindo integração dinâmica com serviços e fontes de dados especializados.
                   </p>
                 </div>
               </div>

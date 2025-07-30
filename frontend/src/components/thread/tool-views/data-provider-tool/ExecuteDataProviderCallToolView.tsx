@@ -136,7 +136,7 @@ export function ExecuteDataProviderCallToolView({
               ) : (
                 <AlertTriangle className="h-3 w-3 mr-1" />
               )}
-              {actualIsSuccess ? 'Executed' : 'Failed'}
+              {actualIsSuccess ? 'Executado' : 'Falhou'}
             </Badge>
           )}
         </div>
