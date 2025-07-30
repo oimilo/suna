@@ -101,10 +101,10 @@ export function Navbar() {
   const handleOverlayClick = () => setIsDrawerOpen(false);
 
   const logoSrc = !mounted
-    ? '/brand-logo.svg'
+    ? '/preto.svg'
     : resolvedTheme === 'dark'
-      ? '/brand-logo-white.svg'
-      : '/brand-logo.svg';
+      ? '/branco.svg'
+      : '/preto.svg';
 
   return (
     <header

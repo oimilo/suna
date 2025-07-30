@@ -6,11 +6,15 @@
 - **Arquivos**: 
   - `prophet-logo.svg` - Logo colorido/preto para fundo claro
   - `prophet-logo-white.svg` - Logo branco para fundo escuro
-- **Dimensões**: 160x29px (proporção ~5.5:1)
+- **Dimensões recomendadas**: 
+  - Largura: 120-140px
+  - Altura: 22-30px
+  - Proporção sugerida: 4:1 até 5:1 (mais equilibrado)
 - **Uso**: Header da landing page, navegação principal
 - **Cores**: 
   - Versão clara: Preto (#000000) ou sua cor de marca
   - Versão escura: Branco (#FFFFFF)
+- **Nota**: O código usa width="140" height="22" no desktop e width="120" height="22" no mobile
 
 ### 2. **Símbolo/Ícone**
 - **Arquivo**: `prophet-symbol.svg`

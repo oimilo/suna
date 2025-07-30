@@ -33,9 +33,9 @@ export const BRANDING = {
   
   // Logo paths
   logo: {
-    light: process.env.NEXT_PUBLIC_LOGO_LIGHT || "/prophet-logo.svg",
-    dark: process.env.NEXT_PUBLIC_LOGO_DARK || "/prophet-logo-white.svg",
-    favicon: process.env.NEXT_PUBLIC_FAVICON || "/prophet-symbol.svg"
+    light: process.env.NEXT_PUBLIC_LOGO_LIGHT || "/preto.svg",
+    dark: process.env.NEXT_PUBLIC_LOGO_DARK || "/branco.svg",
+    favicon: process.env.NEXT_PUBLIC_FAVICON || "/symbol.svg"
   },
   
   // Social links
