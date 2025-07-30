@@ -1240,24 +1240,12 @@ export const siteConfig = {
       },
       {
         id: 3,
-        question: `Is ${BRANDING.company} ${BRANDING.name} really free?`,
-        answer:
-          `Yes, ${BRANDING.company} ${BRANDING.name} is completely free and open source. We believe in democratizing AI technology and making it accessible to everyone. You can use it, modify it, and contribute to its development without any cost.`,
-      },
-      {
-        id: 4,
         question: `Can I integrate ${BRANDING.name} with my existing tools?`,
         answer:
           `Yes, ${BRANDING.company} ${BRANDING.name} is designed to be highly compatible with popular tools and platforms. We offer APIs and pre-built integrations for seamless connection with your existing workflow tools and systems.`,
       },
       {
-        id: 5,
-        question: `How can I contribute to ${BRANDING.company} ${BRANDING.name}?`,
-        answer:
-          `You can contribute to ${BRANDING.company} ${BRANDING.name} by submitting pull requests on GitHub, reporting bugs, suggesting new features, or helping with documentation. Join our Discord community to connect with other contributors and Hire ${BRANDING.name}.`,
-      },
-      {
-        id: 6,
+        id: 4,
         question: `How does ${BRANDING.company} ${BRANDING.name} save me time?`,
         answer:
           `${BRANDING.company} ${BRANDING.name} automates repetitive tasks, streamlines workflows, and provides quick solutions to common challenges. This automation and efficiency can save hours of manual work, allowing you to focus on more strategic activities.`,
