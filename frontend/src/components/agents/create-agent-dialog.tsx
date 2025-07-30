@@ -32,7 +32,7 @@ const TOOL_CATEGORIES = ['All', 'AI', 'Code', 'Integration', 'Search', 'File', '
 const initialFormData: AgentCreateRequest = {
   name: '',
   description: '',
-  system_prompt: 'Describe the agent\'s role, behavior, and expertise...',
+  system_prompt: 'Descreva o papel, comportamento e especialização do agente...',
   configured_mcps: [],
   custom_mcps: [],
   agentpress_tools: Object.fromEntries(
@@ -140,10 +140,10 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-semibold">
-                Create New Agent
+                Criar Novo Agente
               </DialogTitle>
               <DialogDescription className="text-sm mt-1">
-                Configure your custom agent with specific tools and instructions
+                Configure seu agente personalizado com ferramentas e instruções específicas
               </DialogDescription>
             </div>
           </div>
@@ -154,13 +154,13 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
             <div className="p-6 py-4 w-[40%] space-y-6 overflow-y-auto">
               <div className="space-y-2">
                 <Label htmlFor="agent-name" className="text-sm font-medium">
-                  Agent Name
+                  Nome do Agente
                 </Label>
                 <Input
                   id="agent-name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="e.g., Research Assistant"
+                  placeholder="ex.: Assistente de Pesquisa"
                   className="h-10"
                   disabled={createAgentMutation.isPending}
                 />
@@ -168,13 +168,13 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
 
               <div className="space-y-2">
                 <Label htmlFor="agent-description" className="text-sm font-medium">
-                  Description
+                  Descrição
                 </Label>
                 <Input
                   id="agent-description"
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Brief description of the agent"
+                  placeholder="Breve descrição do agente"
                   className="h-10"
                   disabled={createAgentMutation.isPending}
                 />
@@ -182,17 +182,17 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
 
               <div className="space-y-2 flex-1">
                 <Label htmlFor="system-instructions" className="text-sm font-medium">
-                  System Instructions
+                  Instruções do Sistema
                 </Label>
                 <Textarea
                   id="system-instructions"
                   value={formData.system_prompt}
                   onChange={(e) => handleInputChange('system_prompt', e.target.value)}
-                  placeholder="Describe the agent's role, behavior, and expertise..."
+                  placeholder="Descreva o papel, comportamento e especialização do agente..."
                   className="min-h-[250px] resize-none"
                   disabled={createAgentMutation.isPending}
                   onFocus={(e) => {
-                    if (e.target.value === "Describe the agent's role, behavior, and expertise...") {
+                    if (e.target.value === "Descreva o papel, comportamento e especialização do agente...") {
                       handleInputChange('system_prompt', '');
                     }
                   }}
@@ -207,22 +207,22 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
                     value="tools" 
                   >
                     <Settings2 className="h-4 w-4" />
-                    Default Tools
+                    Ferramentas Padrão
                   </TabsTrigger>
                   <TabsTrigger 
                     value="mcp" 
                   >
                     <Sparkles className="h-4 w-4" />
-                    MCP Servers
+                    Servidores MCP
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="tools" className="flex-1 flex flex-col m-0 min-h-0">
                   <div className="px-6 py-4 border-b bg-background flex-shrink-0">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Available Tools</h3>
+                      <h3 className="text-lg font-semibold">Ferramentas Disponíveis</h3>
                       <span className="text-sm text-muted-foreground">
-                        {getSelectedToolsCount()} selected
+                        {getSelectedToolsCount()} selecionadas
                       </span>
                     </div>
 
@@ -315,7 +315,7 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
               disabled={createAgentMutation.isPending || isSubmitting}
               className="px-6"
             >
-              Cancel
+              Cancelar
             </Button>
             <Button 
               onClick={handleSubmit}
@@ -324,10 +324,10 @@ export const CreateAgentDialog = ({ isOpen, onOpenChange, onAgentCreated }: Crea
               {createAgentMutation.isPending || isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating Agent
+                  Criando Agente
                 </>
               ) : (
-                'Create Agent'
+                'Criar Agente'
               )}
             </Button>
           </div>

@@ -424,7 +424,7 @@ export default function AgentConfigurationPage() {
                         ) : (
                           <Save className="h-3 w-3" />
                         )}
-                        Save
+                        Salvar
                       </Button>
                     )}
                   </div>

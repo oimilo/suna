@@ -72,10 +72,10 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         description: agentDescription,
         system_prompt: instructionsValue
       });
-      toast.success('Agent updated successfully');
+      toast.success('Agente atualizado com sucesso');
       setEditingInstructions(false);
     } catch (error) {
-      toast.error('Failed to update agent');
+      toast.error('Falha ao atualizar agente');
     }
   };
 
@@ -87,9 +87,9 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         agentId: selectedAgentId,
         agentpress_tools: tools
       });
-      toast.success('Tools updated successfully');
+      toast.success('Ferramentas atualizadas com sucesso');
     } catch (error) {
-      toast.error('Failed to update tools');
+      toast.error('Falha ao atualizar ferramentas');
     }
   };
 
@@ -102,9 +102,9 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         configured_mcps: mcps.configured_mcps || [],
         custom_mcps: mcps.custom_mcps || []
       });
-      toast.success('Integrations updated successfully');
+      toast.success('Integrações atualizadas com sucesso');
     } catch (error) {
-      toast.error('Failed to update integrations');
+      toast.error('Falha ao atualizar integrações');
     }
   };
 
@@ -117,7 +117,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4" />
-              Agent Configuration
+              Configuração do Agente
             </div>
             {selectedAgentId && (
               <Button
@@ -127,7 +127,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                 className="text-xs"
               >
                 <Settings2 className="h-3 w-3 mr-1" />
-                Advanced
+                Avançado
               </Button>
             )}
           </DialogTitle>
@@ -146,23 +146,23 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
             <TabsList className="grid w-full grid-cols-5 flex-shrink-0 h-9 mb-4">
               <TabsTrigger value="tools" className="text-xs">
                 <Settings2 className="h-3 w-3 mr-1" />
-                Tools
+                Ferramentas
               </TabsTrigger>
               <TabsTrigger value="instructions" className="text-xs">
                 <Brain className="h-3 w-3 mr-1" />
-                Instructions
+                Instruções
               </TabsTrigger>
               <TabsTrigger value="knowledge" className="text-xs">
                 <Database className="h-3 w-3 mr-1" />
-                Knowledge
+                Conhecimento
               </TabsTrigger>
               <TabsTrigger value="triggers" className="text-xs">
                 <Zap className="h-3 w-3 mr-1" />
-                Triggers
+                Gatilhos
               </TabsTrigger>
               <TabsTrigger value="workflows" className="text-xs">
                 <Workflow className="h-3 w-3 mr-1" />
-                Workflows
+                Fluxos de Trabalho
               </TabsTrigger>
             </TabsList>
 
@@ -175,7 +175,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                   />
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Select an agent to configure tools</p>
+                    <p className="text-sm text-muted-foreground">Selecione um agente para configurar ferramentas</p>
                   </div>
                 )}
               </div>
@@ -187,34 +187,34 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                   <>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="space-y-2">
-                        <Label htmlFor="agent-name" className="text-sm">Name</Label>
+                        <Label htmlFor="agent-name" className="text-sm">Nome</Label>
                         <Input
                           id="agent-name"
                           value={agentName}
                           onChange={(e) => setAgentName(e.target.value)}
-                          placeholder="Agent name"
+                          placeholder="Nome do agente"
                           className="h-8"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="agent-description" className="text-sm">Description</Label>
+                        <Label htmlFor="agent-description" className="text-sm">Descrição</Label>
                         <Input
                           id="agent-description"
                           value={agentDescription}
                           onChange={(e) => setAgentDescription(e.target.value)}
-                          placeholder="Brief description"
+                          placeholder="Breve descrição"
                           className="h-8"
                         />
                       </div>
                     </div>
                     
                     <div className="space-y-2 flex-1 flex flex-col">
-                      <Label htmlFor="system-instructions" className="text-sm">System Instructions</Label>
+                      <Label htmlFor="system-instructions" className="text-sm">Instruções do Sistema</Label>
                       <Textarea
                         id="system-instructions"
                         value={instructionsValue}
                         onChange={(e) => setInstructionsValue(e.target.value)}
-                        placeholder="Define the agent's role, behavior, and expertise..."
+                        placeholder="Defina o papel, comportamento e especialização do agente..."
                         className="flex-1 resize-none"
                       />
                     </div>
@@ -225,7 +225,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                         disabled={updateAgentMutation.isPending}
                         size="sm"
                       >
-                        {updateAgentMutation.isPending ? 'Saving...' : 'Save'}
+                        {updateAgentMutation.isPending ? 'Salvando...' : 'Salvar'}
                       </Button>
                       <Button
                         variant="outline"
@@ -236,13 +236,13 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                           setInstructionsValue(agent?.system_prompt || '');
                         }}
                       >
-                        Reset
+                        Redefinir
                       </Button>
                     </div>
                   </>
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Select an agent to configure instructions</p>
+                    <p className="text-sm text-muted-foreground">Selecione um agente para configurar instruções</p>
                   </div>
                 )}
               </div>
@@ -257,7 +257,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                   />
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Select an agent to manage knowledge base</p>
+                    <p className="text-sm text-muted-foreground">Selecione um agente para gerenciar base de conhecimento</p>
                   </div>
                 )}
               </div>
@@ -269,7 +269,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                   <AgentTriggersConfiguration agentId={selectedAgentId} />
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Select an agent to configure triggers</p>
+                    <p className="text-sm text-muted-foreground">Selecione um agente para configurar gatilhos</p>
                   </div>
                 )}
               </div>
@@ -284,7 +284,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                   />
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Select an agent to configure workflows</p>
+                    <p className="text-sm text-muted-foreground">Selecione um agente para configurar fluxos de trabalho</p>
                   </div>
                 )}
               </div>

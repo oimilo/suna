@@ -771,7 +771,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
-                            Delete
+                            Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1210,19 +1210,19 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
-              Delete Knowledge Entry
+              Excluir Entrada de Conhecimento
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this knowledge entry. {agentName} will no longer have access to this information.
+              Isso excluirá permanentemente esta entrada de conhecimento. {agentName} não terá mais acesso a essas informações.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteEntryId && handleDelete(deleteEntryId)}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Delete Entry
+              Excluir Entrada
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

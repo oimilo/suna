@@ -75,7 +75,7 @@ export const AgentsList = ({
                     size="sm"
                     className="h-8 w-8 p-0"
                     onClick={() => onEditAgent(agent.agent_id)}
-                    title="Edit agent"
+                    title="Editar agente"
                   >
                     <Settings className="h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -87,26 +87,26 @@ export const AgentsList = ({
                           size="sm"
                           className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                           disabled={deleteAgentMutation.isPending}
-                          title="Delete agent"
+                          title="Excluir agente"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="max-w-md">
                         <AlertDialogHeader>
-                          <AlertDialogTitle className="text-xl">Delete Agent</AlertDialogTitle>
+                          <AlertDialogTitle className="text-xl">Excluir Agente</AlertDialogTitle>
                           <AlertDialogDescription className="text-muted-foreground">
-                            Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
+                            Tem certeza de que deseja excluir &quot;{agent.name}&quot;? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => onDeleteAgent(agent.agent_id)}
                             disabled={deleteAgentMutation.isPending}
                             className="bg-destructive hover:bg-destructive/90"
                           >
-                            {deleteAgentMutation.isPending ? 'Deleting...' : 'Delete'}
+                            {deleteAgentMutation.isPending ? 'Excluindo...' : 'Excluir'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
