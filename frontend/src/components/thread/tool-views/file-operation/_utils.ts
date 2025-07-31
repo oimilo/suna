@@ -114,8 +114,8 @@ export const getOperationConfigs = (): Record<FileOperation, OperationConfig> =>
   create: {
     icon: FilePen,
       color: 'text-green-600',
-    successMessage: 'File created successfully',
-    progressMessage: 'Creating file...',
+    successMessage: 'Arquivo criado com sucesso',
+    progressMessage: 'Criando arquivo...',
       bgColor: 'bg-green-50',
       gradientBg: 'from-green-50 to-green-100',
       borderColor: 'border-green-200',
@@ -125,8 +125,8 @@ export const getOperationConfigs = (): Record<FileOperation, OperationConfig> =>
     edit: {
       icon: Replace,
       color: 'text-blue-600',
-      successMessage: 'File edited successfully',
-      progressMessage: 'Editing file...',
+      successMessage: 'Arquivo editado com sucesso',
+      progressMessage: 'Editando arquivo...',
       bgColor: 'bg-blue-50',
       gradientBg: 'from-blue-50 to-blue-100',
       borderColor: 'border-blue-200',
@@ -136,8 +136,8 @@ export const getOperationConfigs = (): Record<FileOperation, OperationConfig> =>
   rewrite: {
     icon: Replace,
       color: 'text-amber-600',
-    successMessage: 'File rewritten successfully',
-    progressMessage: 'Rewriting file...',
+    successMessage: 'Arquivo reescrito com sucesso',
+    progressMessage: 'Reescrevendo arquivo...',
       bgColor: 'bg-amber-50',
       gradientBg: 'from-amber-50 to-amber-100',
       borderColor: 'border-amber-200',
@@ -147,8 +147,8 @@ export const getOperationConfigs = (): Record<FileOperation, OperationConfig> =>
   delete: {
     icon: Trash2,
       color: 'text-red-600',
-    successMessage: 'File deleted successfully',
-    progressMessage: 'Deleting file...',
+    successMessage: 'Arquivo deletado com sucesso',
+    progressMessage: 'Deletando arquivo...',
       bgColor: 'bg-red-50',
       gradientBg: 'from-red-50 to-red-100',
       borderColor: 'border-red-200',

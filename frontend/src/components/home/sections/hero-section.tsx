@@ -232,12 +232,12 @@ export function HeroSection() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal text-balance text-center">
               <span className="text-primary font-dancing">{BRANDING.name}</span>
             </h1>
-            <p className="text-xl md:text-2xl text-center text-foreground font-medium text-balance leading-relaxed tracking-tight">
+            <p className="text-base md:text-lg text-center text-gray-700 dark:text-gray-400 font-medium text-balance leading-relaxed tracking-tight">
               {t('landing.hero.title')}
             </p>
           </div>
 
-          <div className="flex flex-col items-center w-full max-w-4xl gap-8">
+          <div className="flex flex-col items-center w-full max-w-4xl gap-8 mt-8">
             <div className="w-full relative">
               <div className="relative z-10">
                 <ChatInput
@@ -253,21 +253,6 @@ export function HeroSection() {
                   onAgentSelect={setSelectedAgentId}
                   autoFocus={false}
                 />
-              </div>
-              {/* Subtle glow effect */}
-              <div className="absolute -bottom-4 inset-x-0 h-6 bg-secondary/20 blur-xl rounded-full -z-10 opacity-70"></div>
-            </div>
-            
-            {/* App logos showcase */}
-            <div className="flex items-center gap-4 opacity-60">
-              <span className="text-sm text-muted-foreground">Funciona com:</span>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center text-white font-bold">W</div>
-                <div className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold">G</div>
-                <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold">S</div>
-                <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-bold">N</div>
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">I</div>
-                <span className="text-sm text-muted-foreground">+100</span>
               </div>
             </div>
           </div>
