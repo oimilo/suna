@@ -67,6 +67,7 @@ export function HoverSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={togglePin}
+                onMouseEnter={handleMouseEnter}
                 className="h-8 w-8 mr-2"
               >
                 <PanelLeft className="h-4 w-4" />
@@ -84,10 +85,10 @@ export function HoverSidebar() {
         </div>
       )}
 
-      {/* Área invisível para detectar hover na lateral */}
+      {/* Área invisível para detectar hover na lateral - apenas metade superior */}
       {!isPinned && (
         <div
-          className="fixed left-0 top-0 h-full w-4 z-[100]"
+          className="fixed left-0 top-0 h-[50vh] w-12 z-[99]"
           onMouseEnter={handleMouseEnter}
         />
       )}
