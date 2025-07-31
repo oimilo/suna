@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { formatDateTime, formatDate as formatDateBR, formatNumber } from '@/lib/date-utils';
 import {
   Table,
   TableBody,
@@ -76,7 +77,7 @@ export default function UsageLogs({ accountId }: Props) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    return formatDateTime(dateString);
   };
 
   const formatCost = (cost: number | string) => {
@@ -87,12 +88,18 @@ export default function UsageLogs({ accountId }: Props) {
   };
 
   const formatDateOnly = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (e) {
+      return formatDateBR(dateString);
+    }
   };
 
   const handleThreadClick = (threadId: string, projectId: string) => {
@@ -269,9 +276,12 @@ export default function UsageLogs({ accountId }: Props) {
                             {day.logs.map((log) => (
                               <TableRow key={log.message_id}>
                                 <TableCell className="font-mono text-sm">
-                                  {new Date(
-                                    log.created_at,
-                                  ).toLocaleTimeString()}
+                                  {new Date(log.created_at).toLocaleTimeString('pt-BR', {
+                                    timeZone: 'America/Sao_Paulo',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                  })}
                                 </TableCell>
                                 <TableCell>
                                   <Badge className="font-mono text-xs">
@@ -279,9 +289,9 @@ export default function UsageLogs({ accountId }: Props) {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right font-mono font-medium text-sm">
-                                  {log.content.usage.prompt_tokens.toLocaleString()}{' '}
+                                  {formatNumber(log.content.usage.prompt_tokens)}{' '}
                                   -&gt;{' '}
-                                  {log.content.usage.completion_tokens.toLocaleString()}
+                                  {formatNumber(log.content.usage.completion_tokens)}
                                 </TableCell>
                                 <TableCell className="text-right font-mono font-medium text-sm">
                                   {formatCost(log.estimated_cost)}

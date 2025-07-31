@@ -34,8 +34,8 @@ type PromptExample = {
 
 const allPrompts: PromptExample[] = [
   {
-    title: 'Market research dashboard',
-    query: 'Create a comprehensive market research dashboard analyzing industry trends, customer segments, and competitive landscape. Include data visualization and actionable recommendations.',
+    title: 'Painel de pesquisa de mercado',
+    query: 'Crie um painel abrangente de pesquisa de mercado analisando tendências do setor, segmentos de clientes e cenário competitivo. Inclua visualização de dados e recomendações acionáveis.',
     icon: <BarChart3 className="text-green-700 dark:text-green-400" size={16} />,
   },
   {
@@ -44,28 +44,28 @@ const allPrompts: PromptExample[] = [
     icon: <Bot className="text-blue-700 dark:text-blue-400" size={16} />,
   },
   {
-    title: 'Go-to-market strategy',
-    query: 'Develop a comprehensive go-to-market strategy for a new product. Include market sizing, customer acquisition channels, pricing strategy, and launch timeline.',
+    title: 'Estratégia de lançamento no mercado',
+    query: 'Desenvolva uma estratégia abrangente de lançamento no mercado para um novo produto. Inclua dimensionamento do mercado, canais de aquisição de clientes, estratégia de preços e cronograma de lançamento.',
     icon: <Briefcase className="text-rose-700 dark:text-rose-400" size={16} />,
   },
   {
-    title: 'Data pipeline automation',
-    query: 'Create an automated data pipeline for ETL processes. Include data validation, error handling, monitoring, and scalable architecture design.',
+    title: 'Automação de pipeline de dados',
+    query: 'Crie um pipeline de dados automatizado para processos ETL. Inclua validação de dados, tratamento de erros, monitoramento e design de arquitetura escalável.',
     icon: <Settings className="text-purple-700 dark:text-purple-400" size={16} />,
   },
   {
-    title: 'Productivity system',
-    query: 'Design a comprehensive personal productivity system including task management, goal tracking, habit formation, and time blocking. Create templates and workflows for daily, weekly, and monthly planning.',
+    title: 'Sistema de produtividade',
+    query: 'Projete um sistema abrangente de produtividade pessoal incluindo gerenciamento de tarefas, acompanhamento de metas, formação de hábitos e bloqueio de tempo. Crie modelos e fluxos de trabalho para planejamento diário, semanal e mensal.',
     icon: <Target className="text-orange-700 dark:text-orange-400" size={16} />,
   },
   {
-    title: 'Content marketing plan',
-    query: 'Develop a 6-month content marketing strategy including blog posts, social media, email campaigns, and SEO optimization. Include content calendar and performance metrics.',
+    title: 'Plano de marketing de conteúdo',
+    query: 'Desenvolva uma estratégia de marketing de conteúdo de 6 meses incluindo posts de blog, mídias sociais, campanhas de e-mail e otimização SEO. Inclua calendário de conteúdo e métricas de desempenho.',
     icon: <PenTool className="text-indigo-700 dark:text-indigo-400" size={16} />,
   },
   {
-    title: 'Portfolio analysis',
-    query: 'Create a personal investment portfolio analysis tool with risk assessment, diversification recommendations, and performance tracking against market benchmarks.',
+    title: 'Análise de portfólio',
+    query: 'Crie uma ferramenta de análise de portfólio de investimentos pessoais com avaliação de risco, recomendações de diversificação e acompanhamento de desempenho em relação aos benchmarks do mercado.',
     icon: <DollarSign className="text-emerald-700 dark:text-emerald-400" size={16} />,
   },
   {
@@ -74,33 +74,33 @@ const allPrompts: PromptExample[] = [
     icon: <Users className="text-cyan-700 dark:text-cyan-400" size={16} />,
   },
   {
-    title: 'A/B testing framework',
-    query: 'Design a comprehensive A/B testing framework including hypothesis formation, statistical significance calculations, and result interpretation guidelines.',
+    title: 'Framework de testes A/B',
+    query: 'Projete um framework abrangente de testes A/B incluindo formação de hipóteses, cálculos de significância estatística e diretrizes de interpretação de resultados.',
     icon: <TrendingUp className="text-teal-700 dark:text-teal-400" size={16} />,
   },
   {
-    title: 'Code review automation',
-    query: 'Create an automated code review system that checks for security vulnerabilities, performance issues, and coding standards. Include integration with CI/CD pipelines.',
+    title: 'Automação de revisão de código',
+    query: 'Crie um sistema automatizado de revisão de código que verifique vulnerabilidades de segurança, problemas de desempenho e padrões de codificação. Inclua integração com pipelines CI/CD.',
     icon: <Code className="text-violet-700 dark:text-violet-400" size={16} />,
   },
   {
-    title: 'Risk assessment matrix',
-    query: 'Develop a comprehensive risk assessment framework for business operations including risk identification, probability analysis, impact evaluation, and mitigation strategies.',
+    title: 'Matriz de avaliação de riscos',
+    query: 'Desenvolva um framework abrangente de avaliação de riscos para operações de negócios incluindo identificação de riscos, análise de probabilidade, avaliação de impacto e estratégias de mitigação.',
     icon: <Shield className="text-red-700 dark:text-red-400" size={16} />,
   },
   {
-    title: 'Learning path generator',
-    query: 'Create a personalized learning path generator that adapts to individual goals, current skill level, and preferred learning style. Include progress tracking and resource recommendations.',
+    title: 'Gerador de trilha de aprendizado',
+    query: 'Crie um gerador de trilha de aprendizado personalizado que se adapte aos objetivos individuais, nível de habilidade atual e estilo de aprendizagem preferido. Inclua acompanhamento de progresso e recomendações de recursos.',
     icon: <Brain className="text-pink-700 dark:text-pink-400" size={16} />,
   },
   {
-    title: 'Social media automation',
-    query: 'Design a social media automation system including content scheduling, engagement tracking, hashtag optimization, and performance analytics across multiple platforms.',
+    title: 'Automação de mídias sociais',
+    query: 'Projete um sistema de automação de mídias sociais incluindo agendamento de conteúdo, rastreamento de engajamento, otimização de hashtags e análise de desempenho em múltiplas plataformas.',
     icon: <Globe className="text-blue-600 dark:text-blue-300" size={16} />,
   },
   {
-    title: 'Health tracking dashboard',
-    query: 'Build a comprehensive health tracking dashboard integrating fitness data, nutrition logging, sleep patterns, and medical records with actionable insights and goal setting.',
+    title: 'Painel de monitoramento de saúde',
+    query: 'Construa um painel abrangente de monitoramento de saúde integrando dados de fitness, registro nutricional, padrões de sono e registros médicos com insights acionáveis e definição de metas.',
     icon: <Heart className="text-red-600 dark:text-red-300" size={16} />,
   },
   {
@@ -109,28 +109,28 @@ const allPrompts: PromptExample[] = [
     icon: <Calendar className="text-amber-700 dark:text-amber-400" size={16} />,
   },
   {
-    title: 'Sales funnel optimizer',
-    query: 'Analyze and optimize the entire sales funnel from lead generation to conversion. Include lead scoring, nurture sequences, and conversion rate optimization strategies.',
+    title: 'Otimizador de funil de vendas',
+    query: 'Analise e otimize todo o funil de vendas desde a geração de leads até a conversão. Inclua pontuação de leads, sequências de nutrição e estratégias de otimização de taxa de conversão.',
     icon: <Zap className="text-yellow-600 dark:text-yellow-300" size={16} />,
   },
   {
-    title: 'Startup pitch deck',
-    query: 'Generate a compelling startup pitch deck including problem statement, solution overview, market analysis, business model, financial projections, and funding requirements.',
+    title: 'Apresentação para investidores',
+    query: 'Gere uma apresentação convincente para investidores incluindo declaração do problema, visão geral da solução, análise de mercado, modelo de negócios, projeções financeiras e requisitos de financiamento.',
     icon: <Rocket className="text-orange-600 dark:text-orange-300" size={16} />,
   },
   {
-    title: 'Photography workflow',
-    query: 'Design an end-to-end photography workflow including shoot planning, file organization, editing presets, client delivery, and portfolio management systems.',
+    title: 'Fluxo de trabalho fotográfico',
+    query: 'Projete um fluxo de trabalho fotográfico completo incluindo planejamento de sessões, organização de arquivos, presets de edição, entrega ao cliente e sistemas de gerenciamento de portfólio.',
     icon: <Camera className="text-slate-700 dark:text-slate-400" size={16} />,
   },
   {
-    title: 'Supply chain analysis',
-    query: 'Create a supply chain optimization analysis including vendor evaluation, cost reduction opportunities, risk mitigation, and inventory management strategies.',
+    title: 'Análise da cadeia de suprimentos',
+    query: 'Crie uma análise de otimização da cadeia de suprimentos incluindo avaliação de fornecedores, oportunidades de redução de custos, mitigação de riscos e estratégias de gerenciamento de estoque.',
     icon: <Briefcase className="text-stone-700 dark:text-stone-400" size={16} />,
   },
   {
-    title: 'UX research framework',
-    query: 'Develop a comprehensive UX research framework including user interviews, usability testing, persona development, and data-driven design recommendations.',
+    title: 'Framework de pesquisa UX',
+    query: 'Desenvolva um framework abrangente de pesquisa UX incluindo entrevistas com usuários, testes de usabilidade, desenvolvimento de personas e recomendações de design baseadas em dados.',
     icon: <Sparkles className="text-fuchsia-700 dark:text-fuchsia-400" size={16} />,
   },
 ];

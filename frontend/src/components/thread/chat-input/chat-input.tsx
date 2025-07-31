@@ -405,6 +405,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                     ? 'bg-transparent border border-gray-200/50 dark:border-gray-800/50' 
                     : 'bg-transparent border border-transparent'
                 }`}
+                data-tour="message-input"
                 onFocus={() => setIsFocused(true)}
                 onBlur={(e) => {
                   // Check if the new focus target is still within the card

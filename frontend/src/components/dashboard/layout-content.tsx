@@ -19,7 +19,8 @@ import { MaintenanceBanner } from './maintenance-banner';
 import { 
   OnboardingTour, 
   WelcomeAnnouncement, 
-  OnboardingDevControls 
+  OnboardingDevControls,
+  OnboardingFloatingButton 
 } from '@/components/onboarding';
 import { AnnouncementDialog } from '@/components/ui/announcement-dialog';
 
@@ -128,6 +129,7 @@ export default function DashboardLayoutContent({
         {/* Onboarding components */}
         <WelcomeAnnouncement />
         <OnboardingTour />
+        <OnboardingFloatingButton />
         <OnboardingDevControls />
         <AnnouncementDialog />
       </SidebarProvider>

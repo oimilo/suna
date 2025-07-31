@@ -15,6 +15,7 @@ import {
 import { ToolViewProps } from '../types';
 import { formatTimestamp, getToolTitle } from '../utils';
 import { cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -60,19 +61,7 @@ export function CreateCredentialProfileToolView({
   const logoUrl = iconData?.icon_url;
 
   const formatCreatedAt = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      });
-    } catch (e) {
-      return dateString;
-    }
+    return formatDateTime(dateString);
   };
 
   const getConnectionStatus = (isConnected: boolean) => {

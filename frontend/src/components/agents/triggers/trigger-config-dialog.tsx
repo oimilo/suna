@@ -49,34 +49,34 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
 
   useEffect(() => {
     if (!name && !existingConfig) {
-      setName(`${provider.name} Trigger`);
+      setName(`Gatilho ${provider.name}`);
     }
   }, [provider, existingConfig, name]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Nome é obrigatório';
     }
     if (provider.provider_id === 'telegram') {
       if (!config.bot_token) {
-        newErrors.bot_token = 'Bot token is required';
+        newErrors.bot_token = 'Token do bot é obrigatório';
       }
     } else if (provider.provider_id === 'slack') {
       if (!config.signing_secret) {
-        newErrors.signing_secret = 'Signing secret is required';
+        newErrors.signing_secret = 'Secret de assinatura é obrigatório';
       }
     } else if (provider.provider_id === 'schedule') {
       if (!config.cron_expression) {
-        newErrors.cron_expression = 'Cron expression is required';
+        newErrors.cron_expression = 'Expressão cron é obrigatória';
       }
       if (config.execution_type === 'workflow') {
         if (!config.workflow_id) {
-          newErrors.workflow_id = 'Workflow selection is required';
+          newErrors.workflow_id = 'Seleção de fluxo de trabalho é obrigatória';
         }
       } else {
         if (!config.agent_prompt) {
-          newErrors.agent_prompt = 'Agent prompt is required';
+          newErrors.agent_prompt = 'Prompt do agente é obrigatório';
         }
       }
     }
@@ -117,7 +117,7 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
         return (
           <div className="text-center py-8 text-muted-foreground">
             <Activity className="h-12 w-12 mx-auto mb-4" />
-            <p>Configuration form for {provider.name} is not yet implemented.</p>
+            <p>Formulário de configuração para {provider.name} ainda não foi implementado.</p>
           </div>
         );
     }
@@ -131,7 +131,7 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
             {getDialogIcon(provider.trigger_type)}
           </div>
           <div>
-            <span>Configure {provider.name}</span>
+            <span>Configurar {provider.name}</span>
           </div>
         </DialogTitle>
         <DialogDescription>
@@ -145,12 +145,12 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
           <>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="trigger-name">Name *</Label>
+                <Label htmlFor="trigger-name">Nome *</Label>
                 <Input
                   id="trigger-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter a name for this trigger"
+                  placeholder="Digite um nome para este gatilho"
                   className={errors.name ? 'border-destructive' : ''}
                 />
                 {errors.name && (
@@ -159,12 +159,12 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="trigger-description">Description</Label>
+                <Label htmlFor="trigger-description">Descrição</Label>
                 <Textarea
                   id="trigger-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description for this trigger"
+                  placeholder="Descrição opcional para este gatilho"
                   rows={2}
                 />
               </div>
@@ -176,13 +176,13 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
                   onCheckedChange={setIsActive}
                 />
                 <Label htmlFor="trigger-active">
-                  Enable trigger immediately
+                  Ativar gatilho imediatamente
                 </Label>
               </div>
             </div>
             <div className="border-t pt-6">
               <h3 className="text-sm font-medium mb-4">
-                {provider.name} Configuration
+                Configuração do {provider.name}
               </h3>
               {renderProviderSpecificConfig()}
             </div>
@@ -190,9 +190,9 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
         )}
         {provider.webhook_enabled && existingConfig?.webhook_url && (
           <div className="border-t pt-6">
-            <h3 className="text-sm font-medium mb-4">Webhook Information</h3>
+            <h3 className="text-sm font-medium mb-4">Informações do Webhook</h3>
             <div className="space-y-2">
-              <Label>Webhook URL</Label>
+              <Label>URL do Webhook</Label>
               <div className="flex items-center space-x-2">
                 <Input
                   value={existingConfig.webhook_url}
@@ -215,7 +215,7 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Use this URL to configure the webhook in {provider.name}
+                Use esta URL para configurar o webhook no {provider.name}
               </p>
             </div>
           </div>
@@ -223,16 +223,16 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={isLoading}>
-          Cancel
+          Cancelar
         </Button>
         <Button onClick={handleSave} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin rounded-full h-4 w-4" />
-              {existingConfig ? 'Updating...' : 'Creating...'}
+              {existingConfig ? 'Atualizando...' : 'Criando...'}
             </>
           ) : (
-            `${existingConfig ? 'Update' : 'Create'} Trigger`
+            `${existingConfig ? 'Atualizar' : 'Criar'} Gatilho`
           )}
         </Button>
       </DialogFooter>

@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { pipedreamApi } from '@/hooks/react-query/pipedream/utils';
 import { toast } from 'sonner';
 
 interface PipedreamPreCheckResult {
@@ -11,61 +9,29 @@ interface PipedreamPreCheckResult {
 }
 
 export function usePipedreamPreCheck(): PipedreamPreCheckResult {
-  const [hasAccount, setHasAccount] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    checkPipedreamAccount();
-  }, []);
-
-  const checkPipedreamAccount = async () => {
-    try {
-      setIsChecking(true);
-      const health = await pipedreamApi.checkHealth();
-      
-      if (health.status === 'healthy' && health.has_access_token) {
-        setHasAccount(true);
-      } else {
-        setHasAccount(false);
-        setError('Conta Pipedream não configurada');
-      }
-    } catch (err) {
-      setHasAccount(false);
-      setError('Erro ao verificar conta Pipedream');
-      console.error('Pipedream check error:', err);
-    } finally {
-      setIsChecking(false);
-    }
+  // Como não temos uma forma direta de verificar se o usuário tem conta no Pipedream,
+  // retornamos sempre false para mostrar o card informativo
+  return { 
+    hasAccount: false, 
+    isChecking: false, 
+    error: 'Conta Pipedream necessária para integrações' 
   };
-
-  return { hasAccount, isChecking, error };
 }
 
 export function checkPipedreamBeforeConnect(): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    try {
-      const health = await pipedreamApi.checkHealth();
-      
-      if (health.status === 'healthy' && health.has_access_token) {
-        resolve(true);
-      } else {
-        toast.error(
-          'Você precisa de uma conta Pipedream para conectar integrações',
-          {
-            description: 'Clique para criar uma conta gratuita',
-            action: {
-              label: 'Criar Conta',
-              onClick: () => window.open('https://pipedream.com/auth/signup', '_blank')
-            },
-            duration: 8000
-          }
-        );
-        resolve(false);
+  return new Promise((resolve) => {
+    // Sempre mostra o toast informativo
+    toast.error(
+      'Você precisa de uma conta Pipedream para conectar integrações',
+      {
+        description: 'Clique para criar uma conta gratuita',
+        action: {
+          label: 'Criar Conta',
+          onClick: () => window.open('https://pipedream.com/auth/signup', '_blank')
+        },
+        duration: 8000
       }
-    } catch (err) {
-      toast.error('Erro ao verificar conta Pipedream');
-      resolve(false);
-    }
+    );
+    resolve(false);
   });
 }

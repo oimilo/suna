@@ -48,7 +48,6 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
-import { OnboardingProgress } from '@/components/onboarding';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFeatureFlags } from '@/lib/feature-flags';
 import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
@@ -163,9 +162,12 @@ export function SidebarLeft({
       <SidebarContent className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <SidebarGroup>
           <Link href="/dashboard">
-            <SidebarMenuButton className={cn({
-              'bg-accent text-accent-foreground font-medium': pathname === '/dashboard',
-            })}>
+            <SidebarMenuButton 
+              className={cn({
+                'bg-accent text-accent-foreground font-medium': pathname === '/dashboard',
+              })}
+              data-tour="new-chat-button"
+            >
               <Plus className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
                 Nova Tarefa
@@ -234,9 +236,6 @@ export function SidebarLeft({
               </SidebarMenuButton>
             </Link>
           )}
-        </SidebarGroup>
-        <SidebarGroup>
-          <OnboardingProgress />
         </SidebarGroup>
         <NavAgents />
       </SidebarContent>

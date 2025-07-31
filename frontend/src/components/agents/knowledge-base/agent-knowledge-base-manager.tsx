@@ -118,7 +118,7 @@ interface UploadedFile {
 const USAGE_CONTEXT_OPTIONS = [
   { 
     value: 'always', 
-    label: 'Always Active', 
+    label: 'Sempre Ativo', 
     icon: Globe,
     color: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
   },
@@ -642,7 +642,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search knowledge entries..."
+            placeholder="Buscar entradas de conhecimento..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -650,7 +650,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
         </div>
         <Button onClick={() => handleOpenAddDialog()} className="gap-2">
           <Plus className="h-4 w-4" />
-          Add Knowledge
+          Adicionar Conhecimento
         </Button>
       </div>
       {entries.length === 0 ? (
@@ -658,10 +658,10 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4 border">
             <Bot className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-sm font-semibold mb-2">No Agent Knowledge Entries</h3>
+          <h3 className="text-sm font-semibold mb-2">Nenhuma Entrada de Conhecimento do Agente</h3>
           <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-            Add knowledge entries to provide <span className="font-medium">{agentName}</span> with specialized context, 
-            guidelines, and information it should always remember.
+            Adicione entradas de conhecimento para fornecer ao <span className="font-medium">{agentName}</span> contexto especializado, 
+            diretrizes e informações que ele deve sempre lembrar.
           </p>
         </div>
       ) : (
@@ -842,7 +842,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-blue-600" />
-              Add Knowledge to {agentName}
+              Adicionar Conhecimento a {agentName}
             </DialogTitle>
           </DialogHeader>
           
@@ -851,11 +851,11 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
               <TabsList className="grid w-80 grid-cols-2">
                 <TabsTrigger value="manual" className="gap-2">
                   <PenTool className="h-4 w-4" />
-                  Write Knowledge
+                  Escrever Conhecimento
                 </TabsTrigger>
                 <TabsTrigger value="files" className="gap-2">
                   <Upload className="h-4 w-4" />
-                  Upload Files
+                  Enviar Arquivos
                   {uploadedFiles.length > 0 && (
                     <Badge variant="outline" className="ml-1">
                       {uploadedFiles.length}
@@ -954,10 +954,10 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                   {uploadedFiles.length === 0 && (
                     <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">Upload Files</h3>
+                      <h3 className="text-lg font-medium mb-2">Enviar Arquivos</h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Drag and drop files here or click to browse.<br />
-                        Supports: Documents, Code, ZIP archives
+                        Arraste e solte arquivos aqui ou clique para navegar.<br />
+                        Suporta: Documentos, Código, Arquivos ZIP
                       </p>
                       <Button 
                         onClick={() => fileInputRef.current?.click()}
@@ -965,7 +965,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                         className="gap-2"
                       >
                         <Upload className="h-4 w-4" />
-                        Choose Files
+                        Escolher Arquivos
                       </Button>
                     </div>
                   )}
@@ -1115,7 +1115,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Edit2 className="h-5 w-5 text-blue-600" />
-              Edit Knowledge Entry
+              Editar Entrada de Conhecimento
             </DialogTitle>
           </DialogHeader>
           

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronDown, Search, AlertTriangle, Crown, ArrowUpRight, Brain, Plus, Edit, Trash, Cpu, Key, KeyRound } from 'lucide-react';
+import { useTranslations } from '@/hooks/use-translations';
 import {
   ModelOption,
   SubscriptionStatus,
@@ -65,6 +66,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   hasBorder = false,
   isFocused = false,
 }) => {
+  const { t } = useTranslations();
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [lockedModel, setLockedModel] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -435,7 +437,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                   )}
                   {isRecommended && (
                     <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-medium">
-                      Recommended
+                      {t('common.recommended')}
                     </span>
                   )}
                   {isPremium && !accessible && (
@@ -481,7 +483,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
             </TooltipContent>
           ) : isRecommended ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>Recommended for optimal performance</p>
+              <p>{t('common.recommendedForOptimalPerformance')}</p>
             </TooltipContent>
           ) : isCustom ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
@@ -519,6 +521,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                   variant="ghost"
                   size="sm"
                   className={`h-8 px-2 py-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-all duration-300 ${!isFocused ? 'opacity-20' : 'opacity-100'}`}
+                  data-tour="model-selector"
                 >
                   <div className="relative flex items-center justify-center">
                     <Cpu className="h-4 w-4" />
@@ -579,7 +582,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                 )}
                                 {(MODELS[model.id]?.recommended || false) && (
                                   <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-medium">
-                                    Recommended
+                                    {t('common.recommended')}
                                   </span>
                                 )}
                                 {selectedModel === model.id && (
@@ -630,7 +633,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                     {/* Show capabilities */}
                                     {MODELS[model.id]?.recommended && (
                                       <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-medium whitespace-nowrap">
-                                        Recommended
+                                        {t('common.recommended')}
                                       </span>
                                     )}
                                     <Crown className="h-3.5 w-3.5 text-blue-500" />
@@ -675,7 +678,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               /* Subscription or other status view */
               <div className='max-h-[320px] overflow-y-auto w-full'>
                 <div className="px-3 py-3 flex justify-between items-center">
-                  <span className="text-xs font-medium text-muted-foreground">All Models</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t('common.allModels')}</span>
                   {isLocalMode() && (
                     <div className="flex items-center gap-1">
                       <TooltipProvider>
@@ -737,7 +740,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search models..."
+                placeholder={t('common.searchModels')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchInputKeyDown}

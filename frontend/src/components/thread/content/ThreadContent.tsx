@@ -22,6 +22,7 @@ import { BRANDING } from '@/lib/branding';
 import { ShowToolStream } from './ShowToolStream';
 import { PipedreamConnectButton } from './pipedream-connect-button';
 import { PipedreamUrlDetector } from './pipedream-url-detector';
+import styles from '@/styles/toolcalls.module.css';
 
 const HIDE_STREAMING_XML_TAGS = new Set([
     'execute-command',
@@ -190,9 +191,9 @@ export function renderMarkdownContent(
                         >
                             <button
                                 onClick={() => handleToolClick(messageId, toolName)}
-                                className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+                                className={styles.toolcallContainer}
                             >
-                                <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+                                <div className={styles.toolcallIcon}>
                                     <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                 </div>
                                 <span className="font-mono text-xs text-foreground">{getUserFriendlyToolName(toolName)}</span>
@@ -291,9 +292,9 @@ export function renderMarkdownContent(
                 >
                     <button
                         onClick={() => handleToolClick(messageId, toolName)}
-                        className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+                        className={styles.toolcallContainer}
                     >
-                        <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+                        <div className={styles.toolcallIcon}>
                             <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                         </div>
                         <span className="font-mono text-xs text-foreground">{getUserFriendlyToolName(toolName)}</span>
@@ -335,6 +336,8 @@ export interface ThreadContentProps {
     agentName?: string;
     agentAvatar?: React.ReactNode;
     emptyStateComponent?: React.ReactNode; // Add custom empty state component prop
+    messagesEndRef?: React.RefObject<HTMLDivElement>; // Allow parent to pass ref
+    onScroll?: () => void; // Allow parent to handle scroll
 }
 
 export const ThreadContent: React.FC<ThreadContentProps> = ({
@@ -357,8 +360,13 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     agentName = BRANDING.name,
     agentAvatar = <BrandLogo size={16} />,
     emptyStateComponent,
+    messagesEndRef: parentMessagesEndRef,
+    onScroll: parentOnScroll,
 }) => {
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    // Use parent refs if provided, otherwise create local ones
+    const localMessagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = parentMessagesEndRef || localMessagesEndRef;
+    
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
@@ -381,6 +389,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
         setShowScrollButton(isScrolledUp);
         setUserHasScrolled(isScrolledUp);
+        
+        // Call parent's onScroll handler if provided
+        if (parentOnScroll) {
+            parentOnScroll();
+        }
     };
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {

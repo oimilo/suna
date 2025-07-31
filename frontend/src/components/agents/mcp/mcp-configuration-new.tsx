@@ -174,19 +174,19 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               <Zap className="h-6 w-6 text-muted-foreground" />
             </div>
             <h4 className="text-sm font-medium text-foreground mb-2">
-              No integrations configured
+              Nenhuma integração configurada
             </h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Browse the app registry to connect your apps through Pipedream or add custom MCP servers
+              Navegue pelo registro de apps para conectar seus aplicativos através do Pipedream ou adicione servidores MCP personalizados
             </p>
             <div className="flex gap-2 justify-center">
               <Button onClick={() => setShowRegistryDialog(true)} variant="default">
                 <Store className="h-4 w-4" />
-                Browse Apps
+                Explorar Apps
               </Button>
               <Button onClick={() => setShowCustomDialog(true)} variant="outline">
                 <Server className="h-4 w-4" />
-                Custom MCP
+                MCP Personalizado
               </Button>
             </div>
           </div>
@@ -209,11 +209,11 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
           <div className="flex gap-2 justify-center">
             <Button onClick={() => setShowRegistryDialog(true)} variant="default">
               <Store className="h-4 w-4" />
-              Browse Apps
+              Explorar Apps
             </Button>
             <Button onClick={() => setShowCustomDialog(true)} variant="outline">
               <Server className="h-4 w-4" />
-              Custom MCP
+              MCP Personalizado
             </Button>
           </div>
         </div>
@@ -222,7 +222,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       <Dialog open={showRegistryDialog} onOpenChange={setShowRegistryDialog}>
         <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="sr-only">
-            <DialogTitle>Select Integration</DialogTitle>
+            <DialogTitle>Selecionar Integração</DialogTitle>
           </DialogHeader>
           <PipedreamRegistry showAgentSelector={false} selectedAgentId={selectedAgentId} onAgentChange={handleAgentChange} onToolsSelected={handleToolsSelected} versionData={versionData} versionId={versionId} />
         </DialogContent>

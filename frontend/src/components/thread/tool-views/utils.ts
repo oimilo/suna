@@ -15,16 +15,12 @@ import {
 } from 'lucide-react';
 import { parseXmlToolCalls, isNewXmlFormat } from './xml-parser';
 import { parseToolResult, ParsedToolResult } from './tool-result-parser';
+import { formatDateTime } from '@/lib/date-utils';
 
 // Helper function to format timestamp
 export function formatTimestamp(isoString?: string): string {
   if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return isNaN(date.getTime()) ? 'Invalid date' : date.toLocaleString();
-  } catch (e) {
-    return 'Invalid date';
-  }
+  return formatDateTime(isoString);
 }
 
 // Get standardized tool title

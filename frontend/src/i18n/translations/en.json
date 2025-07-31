@@ -22,7 +22,11 @@
     "delete": "Delete",
     "edit": "Edit",
     "create": "Create",
-    "search": "Search"
+    "search": "Search",
+    "allModels": "All Models",
+    "searchModels": "Search models...",
+    "recommended": "Recommended",
+    "recommendedForOptimalPerformance": "Recommended for optimal performance"
   },
   "billing": {
     "limitReached": "Usage limit reached",
@@ -34,13 +38,27 @@
     "title": "Agents",
     "create": "Create Agent",
     "configure": "Configure",
-    "select": "Select Agent"
+    "select": "Select Agent",
+    "newAgent": "New Agent",
+    "searchAgents": "Search agents...",
+    "exploreAllAgents": "Explore All Agents",
+    "createAgent": "Create Agent",
+    "creating": "Creating...",
+    "searchYourAgents": "Search your agents...",
+    "allAgents": "All Agents",
+    "templates": "Templates",
+    "noPublishedTemplatesYet": "No published templates yet",
+    "publishAgentsToMarketplace": "Publish your agents to the marketplace to share them with the community and track their usage.",
+    "failedToLoadTemplates": "Failed to load templates"
   },
   "chat": {
     "thinking": "Thinking...",
     "newConversation": "New conversation",
     "sendMessage": "Send message",
-    "attachFile": "Attach file"
+    "attachFile": "Attach file",
+    "recordVoiceMessage": "Record voice message",
+    "clickToStopRecording": "Click to stop recording",
+    "processing": "Processing..."
   },
   "settings": {
     "title": "Settings",
@@ -131,5 +149,44 @@
       "disconnected": "Disconnected",
       "error": "Connection error"
     }
+  },
+  "credentials": {
+    "connectNewApp": "Connect New App",
+    "searchAppsAndProfiles": "Search apps and profiles...",
+    "appsWithProfiles": "{count} apps with {profileCount} profiles",
+    "appsWithProfilesConnected": "{count} apps with {profileCount} profiles ({connectedCount} connected)",
+    "profileName": "Profile Name",
+    "status": "Status",
+    "actions": "Actions",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "default": "Default",
+    "inactive": "Inactive",
+    "connect": "Connect",
+    "editName": "Edit Name",
+    "removeDefault": "Remove Default",
+    "setAsDefault": "Set as Default",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "reconnect": "Reconnect",
+    "delete": "Delete",
+    "newProfile": "New Profile",
+    "profile": "profile",
+    "profiles": "profiles",
+    "noCredentialProfilesYet": "No credential profiles yet",
+    "connectYourFavoriteApps": "Connect your favorite apps to create credential profiles for your agents",
+    "connectApp": "Connect App",
+    "noResultsFound": "No results found",
+    "tryAdjustingSearch": "Try adjusting your search terms or browse all apps",
+    "clearSearch": "Clear search",
+    "failedToLoadCredentialProfiles": "Failed to load credential profiles. Please try again.",
+    "deleteProfile": "Delete Profile",
+    "deleteProfileConfirmation": "Are you sure you want to delete \"{profileName}\"? This action cannot be undone.",
+    "cancel": "Cancel",
+    "profileUpdatedSuccessfully": "Profile updated successfully",
+    "profileDeletedSuccessfully": "Profile deleted successfully",
+    "profileConnectedSuccessfully": "Profile connected successfully",
+    "browseApps": "Browse Apps",
+    "selectAppToCreateProfile": "Select an app to create a credential profile"
   }
 }

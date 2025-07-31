@@ -13,56 +13,76 @@ const JoyRideNoSSR = dynamic(
 
 const tourSteps: Step[] = [
   {
-    target: '.project-selector',
+    target: 'body',
     content: (
-      <div className="space-y-2">
-        <h3 className="font-semibold">Bem-vindo ao Prophet! 🌞</h3>
-        <p>Aqui você gerencia seus projetos. Cada projeto tem suas próprias conversas e arquivos.</p>
+      <div className="space-y-3">
+        <h3 className="font-semibold text-lg">Bem-vindo ao Prophet! 🌞</h3>
+        <p className="text-sm">Vou te mostrar rapidamente como usar o Prophet para realizar tarefas incríveis.</p>
+        <div className="bg-primary/10 p-3 rounded-lg mt-3">
+          <p className="text-xs font-medium">Este tour leva apenas 2 minutos!</p>
+        </div>
       </div>
     ),
-    placement: 'bottom',
+    placement: 'center',
     disableBeacon: true,
   },
   {
     target: '[data-tour="new-chat-button"]',
     content: (
       <div className="space-y-2">
-        <h3 className="font-semibold">Iniciar Nova Conversa</h3>
-        <p>Clique aqui para começar uma nova conversa com o Prophet. Você pode pedir para criar código, analisar dados, ou qualquer outra tarefa!</p>
+        <h3 className="font-semibold">Nova Tarefa ✨</h3>
+        <p className="text-sm">Clique aqui para iniciar uma nova conversa com o Prophet.</p>
+        <p className="text-xs text-muted-foreground mt-2">Cada tarefa é salva automaticamente para você voltar depois!</p>
       </div>
     ),
-    placement: 'bottom',
+    placement: 'right',
   },
   {
     target: '[data-tour="model-selector"]',
     content: (
       <div className="space-y-2">
-        <h3 className="font-semibold">Escolha seu Modelo de IA</h3>
-        <p>Diferentes modelos têm diferentes capacidades. O Claude 4 é ótimo para tarefas complexas, enquanto modelos menores são mais rápidos.</p>
+        <h3 className="font-semibold">Seletor de Modelo 🤖</h3>
+        <p className="text-sm">Escolha o modelo de IA ideal para sua tarefa.</p>
+        <ul className="text-xs space-y-1 mt-2 text-muted-foreground">
+          <li>• <strong>Kimi K2</strong>: Rápido e gratuito</li>
+          <li>• <strong>Claude 4</strong>: O mais inteligente (PRO)</li>
+          <li>• <strong>GPT-4</strong>: Versátil e poderoso (PRO)</li>
+        </ul>
       </div>
     ),
     placement: 'top',
-  },
-  {
-    target: '[data-tour="workspace-toggle"]',
-    content: (
-      <div className="space-y-2">
-        <h3 className="font-semibold">Área de Trabalho</h3>
-        <p>Clique aqui para ver a área de trabalho do Prophet. Você verá em tempo real os arquivos sendo criados e comandos executados!</p>
-      </div>
-    ),
-    placement: 'left',
   },
   {
     target: '[data-tour="message-input"]',
     content: (
       <div className="space-y-2">
-        <h3 className="font-semibold">Converse com o Prophet</h3>
-        <p>Digite sua mensagem aqui. Você pode pedir para criar sites, analisar código, gerar imagens e muito mais!</p>
-        <p className="text-sm text-muted-foreground">Dica: Use Shift+Enter para quebrar linha</p>
+        <h3 className="font-semibold">Campo de Mensagem 💬</h3>
+        <p className="text-sm">É aqui que você conversa com o Prophet!</p>
+        <div className="bg-muted/50 p-2 rounded text-xs mt-2 font-mono">
+          "Crie um site de vendas com formulário de contato"
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">💡 Seja específico sobre o que precisa</p>
       </div>
     ),
     placement: 'top',
+  },
+  {
+    target: 'body',
+    content: (
+      <div className="space-y-3">
+        <h3 className="font-semibold text-lg">Pronto para começar! 🚀</h3>
+        <p className="text-sm">Agora você já sabe o básico. Que tal fazer seu primeiro pedido ao Prophet?</p>
+        <div className="space-y-2 mt-3">
+          <p className="text-xs font-medium">Sugestões para começar:</p>
+          <ul className="text-xs space-y-1 text-muted-foreground">
+            <li>• "Crie uma página de apresentação profissional"</li>
+            <li>• "Analise os dados deste arquivo CSV"</li>
+            <li>• "Extraia informações do site exemplo.com"</li>
+          </ul>
+        </div>
+      </div>
+    ),
+    placement: 'center',
   },
 ];
 
@@ -73,6 +93,7 @@ interface OnboardingTourProps {
 export function OnboardingTour({ onComplete }: OnboardingTourProps) {
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
   
   const {
     hasSeenWelcome,
@@ -83,17 +104,40 @@ export function OnboardingTour({ onComplete }: OnboardingTourProps) {
     updateChecklistStep,
   } = useOnboardingStore();
 
+  // Check if critical elements exist
+  const checkElementsExist = useCallback(() => {
+    // Check for at least one critical element
+    const newChatButton = document.querySelector('[data-tour="new-chat-button"]');
+    const messageInput = document.querySelector('[data-tour="message-input"]');
+    
+    return newChatButton || messageInput;
+  }, []);
+
   // Start tour when welcome is seen but tour not completed
   useEffect(() => {
     if (hasSeenWelcome && !hasCompletedTour) {
-      setRun(true);
-      setStepIndex(tourStep);
+      // Add a delay to ensure DOM elements are rendered
+      const startTour = () => {
+        if (checkElementsExist() || retryCount >= 3) {
+          setRun(true);
+          setStepIndex(tourStep);
+        } else {
+          // Retry after a delay
+          setRetryCount(prev => prev + 1);
+        }
+      };
+
+      const timer = setTimeout(startTour, 500);
+      
+      return () => clearTimeout(timer);
     }
-  }, [hasSeenWelcome, hasCompletedTour, tourStep]);
+  }, [hasSeenWelcome, hasCompletedTour, tourStep, checkElementsExist, retryCount]);
 
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
-    const { status, action, index, type } = data;
+    const { status, action, index, type, step } = data;
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    console.log('Tour callback:', { status, action, index, type, step: step?.target });
 
     if (finishedStatuses.includes(status)) {
       setRun(false);
@@ -102,8 +146,16 @@ export function OnboardingTour({ onComplete }: OnboardingTourProps) {
       onComplete?.();
     } else if (type === 'step:after') {
       // Update step index
-      setStepIndex(index + (action === 'next' ? 1 : -1));
-      setTourStep(index);
+      const nextIndex = index + (action === 'next' ? 1 : -1);
+      setStepIndex(nextIndex);
+      setTourStep(nextIndex);
+    } else if (status === 'error') {
+      console.error('Tour error:', data);
+      // Try to continue to next step on error
+      if (index < tourSteps.length - 1) {
+        setStepIndex(index + 1);
+        setTourStep(index + 1);
+      }
     }
   }, [setHasCompletedTour, setTourStep, updateChecklistStep, onComplete]);
 
@@ -121,6 +173,11 @@ export function OnboardingTour({ onComplete }: OnboardingTourProps) {
       showProgress
       showSkipButton
       callback={handleJoyrideCallback}
+      disableOverlay={false}
+      disableScrolling={false}
+      hideCloseButton={false}
+      scrollToFirstStep={false}
+      spotlightClicks={false}
       styles={{
         options: {
           primaryColor: '#F59E0B',

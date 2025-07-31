@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Filter, SortAsc, SortDesc, X, Settings, Wrench, Grid3X3, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,13 +49,14 @@ export const SearchAndFilters = ({
   setViewMode,
   allTools
 }: SearchAndFiltersProps) => {
+  const { t } = useTranslations();
   return (
     <div className="flex flex-col w-full gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col w-full gap-3 sm:flex-row sm:items-center flex-1">
         <div className="relative flex-1 w-full border rounded-xl">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search agents..."
+            placeholder={t('agents.searchAgents')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"

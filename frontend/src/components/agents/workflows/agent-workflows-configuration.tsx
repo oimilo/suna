@@ -161,7 +161,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
           disabled={createWorkflowMutation.isPending}
         >
           <Plus className="h-4 w-4" />
-          {createWorkflowMutation.isPending ? 'Creating...' : 'Create Workflow'}
+          {createWorkflowMutation.isPending ? 'Criando...' : 'Criar Fluxo de Trabalho'}
         </Button>
       </div>
 
@@ -172,7 +172,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
               <div className="flex items-center justify-center p-8">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 animate-spin" />
-                  <span>Loading workflows...</span>
+                  <span>Carregando fluxos de trabalho...</span>
                 </div>
               </div>
             ) : workflows.length === 0 ? (
@@ -180,9 +180,9 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                 <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4 border">
                   <Workflow className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold mb-2">No Agent Workflows</h3>
+                <h3 className="text-sm font-semibold mb-2">Nenhum Fluxo de Trabalho do Agente</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Create workflows to automate tasks and streamline your agent's operations.
+                  Crie fluxos de trabalho para automatizar tarefas e otimizar as operações do seu agente.
                 </p>
               </div>
             ) : (
@@ -217,7 +217,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                             disabled={workflow.status !== 'active' || executeWorkflowMutation.isPending}
                           >
                             <Workflow className="h-4 w-4" />
-                            Execute
+                            Executar
                           </Button>
                           <Button
                             variant="ghost"
@@ -244,18 +244,18 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
       <Dialog open={isExecuteDialogOpen} onOpenChange={setIsExecuteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Execute Workflow</DialogTitle>
+            <DialogTitle>Executar Fluxo de Trabalho</DialogTitle>
             <DialogDescription>
-              Provide input data for "{workflowToExecute?.name}" workflow
+              Forneça dados de entrada para o fluxo de trabalho "{workflowToExecute?.name}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>What would you like the workflow to work on?</Label>
+              <Label>Em que você gostaria que o fluxo de trabalho trabalhasse?</Label>
               <Textarea
                 value={executionInput}
                 onChange={(e) => setExecutionInput(e.target.value)}
-                placeholder="Enter your request..."
+                placeholder="Digite sua solicitação..."
                 rows={4}
                 className="resize-none"
                 required={true}
@@ -267,13 +267,13 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                 variant="outline" 
                 onClick={() => setIsExecuteDialogOpen(false)}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button 
                 onClick={handleConfirmExecution}
                 disabled={executeWorkflowMutation.isPending}
               >
-                {executeWorkflowMutation.isPending ? 'Executing...' : 'Execute Workflow'}
+                {executeWorkflowMutation.isPending ? 'Executando...' : 'Executar Fluxo de Trabalho'}
               </Button>
             </div>
           </div>
@@ -283,19 +283,19 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Fluxo de Trabalho</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete workflow {workflowToDelete?.name}? This action cannot be undone.
+              Tem certeza de que deseja excluir o fluxo de trabalho {workflowToDelete?.name}? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteWorkflowMutation.isPending}
             >
-              {deleteWorkflowMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteWorkflowMutation.isPending ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +59,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { correctAppName } from '@/lib/utils/app-names';
 import { toast } from 'sonner';
 import type { PipedreamProfile, CreateProfileRequest } from '@/components/agents/pipedream/pipedream-types';
 import type { PipedreamApp } from '@/hooks/react-query/pipedream/utils';
@@ -95,6 +97,7 @@ const AppTable: React.FC<AppTableProps> = ({
   isConnecting,
   allAppsData
 }) => {
+  const { t } = useTranslations();
   const [editingProfile, setEditingProfile] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState<PipedreamProfile | null>(null);
@@ -116,12 +119,14 @@ const AppTable: React.FC<AppTableProps> = ({
     );
   }, [allAppsData, appSlug, appName]);
 
+  const correctedAppName = correctAppName(appName);
+  
   const mockPipedreamApp: PipedreamApp = useMemo(() => ({
     id: appSlug,
-    name: appName,
+    name: correctedAppName,
     name_slug: appSlug,
     auth_type: "oauth",
-    description: `Connect to ${appName}`,
+    description: `Connect to ${correctedAppName}`,
     img_src: registryApp?.img_src || "",
     custom_fields_json: registryApp?.custom_fields_json || "[]",
     categories: registryApp?.categories || [],
@@ -131,7 +136,7 @@ const AppTable: React.FC<AppTableProps> = ({
       base_proxy_target_url: registryApp?.connect?.base_proxy_target_url || "",
       proxy_enabled: registryApp?.connect?.proxy_enabled || false,
     },
-  }), [appSlug, appName, registryApp]);
+  }), [appSlug, correctedAppName, registryApp]);
 
   const handleQuickCreate = async () => {
     if (!newProfileName.trim()) {
@@ -188,7 +193,7 @@ const AppTable: React.FC<AppTableProps> = ({
   const columns: DataTableColumn<PipedreamProfile>[] = [
     {
       id: 'name',
-      header: 'Profile Name',
+      header: t('credentials.profileName'),
       width: 'w-1/3',
       cell: (profile) => (
         <div className="flex items-center gap-2">
@@ -233,29 +238,29 @@ const AppTable: React.FC<AppTableProps> = ({
     },
     {
       id: 'status',
-      header: 'Status',
+      header: t('credentials.status'),
       width: 'w-1/4',
       cell: (profile) => (
         <div className="flex items-center gap-2">
           {profile.is_connected ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              Connected
+              {t('credentials.connected')}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="h-2 w-2 rounded-full bg-destructive" />
-              Disconnected
+              {t('credentials.disconnected')}
             </div>
           )}
           {profile.is_default && (
             <Badge variant="outline" className="text-xs">
-              Default
+              {t('credentials.default')}
             </Badge>
           )}
           {!profile.is_active && (
             <Badge variant="outline" className="text-xs">
-              Inactive
+              {t('credentials.inactive')}
             </Badge>
           )}
         </div>
@@ -263,7 +268,7 @@ const AppTable: React.FC<AppTableProps> = ({
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('credentials.actions'),
       width: 'w-1/3',
       headerClassName: 'text-right',
       className: 'text-right',
@@ -282,7 +287,7 @@ const AppTable: React.FC<AppTableProps> = ({
               ) : (
                 <Link className="h-3 w-3" />
               )}
-              Connect
+              {t('credentials.connect')}
             </Button>
           )}
           
@@ -299,13 +304,13 @@ const AppTable: React.FC<AppTableProps> = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleEdit(profile)}>
                 <Edit className="h-4 w-4" />
-                Edit Name
+                {t('credentials.editName')}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => onProfileUpdate(profile, { is_default: !profile.is_default })}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {profile.is_default ? 'Remove Default' : 'Set as Default'}
+                {profile.is_default ? t('credentials.removeDefault') : t('credentials.setAsDefault')}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => onProfileUpdate(profile, { is_active: !profile.is_active })}
@@ -313,19 +318,19 @@ const AppTable: React.FC<AppTableProps> = ({
                 {profile.is_active ? (
                   <>
                     <XCircle className="h-4 w-4" />
-                    Deactivate
+                    {t('credentials.deactivate')}
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    Activate
+                    {t('credentials.activate')}
                   </>
                 )}
               </DropdownMenuItem>
               {profile.is_connected && (
                 <DropdownMenuItem onClick={() => onProfileConnect(profile)}>
                   <RefreshCw className="h-4 w-4" />
-                  Reconnect
+                  {t('credentials.reconnect')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -334,7 +339,7 @@ const AppTable: React.FC<AppTableProps> = ({
                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
-                Delete
+                {t('credentials.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -364,13 +369,13 @@ const AppTable: React.FC<AppTableProps> = ({
               "text-sm font-semibold text-muted-foreground",
               (appImage || iconData?.icon_url) ? "hidden" : "block"
             )}>
-              {appName.charAt(0).toUpperCase()}
+              {correctedAppName.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
-            <h3 className="font-semibold text-sm">{appName}</h3>
+            <h3 className="font-semibold text-sm">{correctedAppName}</h3>
             <p className="text-xs text-muted-foreground">
-              {profiles.length} {profiles.length === 1 ? 'profile' : 'profiles'}
+              {profiles.length} {profiles.length === 1 ? t('credentials.profile') : t('credentials.profiles')}
             </p>
           </div>
         </div>
@@ -424,7 +429,7 @@ const AppTable: React.FC<AppTableProps> = ({
                 onClick={() => onConnect(mockPipedreamApp)}
               >
                 <Plus className="h-3 w-3" />
-                New Profile
+                {t('credentials.newProfile')}
               </Button>
             </>
           )}
@@ -434,20 +439,20 @@ const AppTable: React.FC<AppTableProps> = ({
       <DataTable
         columns={columns}
         data={profiles}
-        emptyMessage={`No ${appName} profiles found`}
+        emptyMessage={`No ${correctedAppName} profiles found`}
         className="bg-card border rounded-lg"
       />
 
       <AlertDialog open={!!showDeleteDialog} onOpenChange={(open) => !open && setShowDeleteDialog(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Profile</AlertDialogTitle>
+            <AlertDialogTitle>{t('credentials.deleteProfile')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{showDeleteDialog?.profile_name}"? This action cannot be undone.
+              {t('credentials.deleteProfileConfirmation', { profileName: showDeleteDialog?.profile_name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('credentials.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (showDeleteDialog) {
@@ -457,7 +462,7 @@ const AppTable: React.FC<AppTableProps> = ({
               }}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              Delete
+              {t('credentials.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -469,6 +474,7 @@ const AppTable: React.FC<AppTableProps> = ({
 export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionProps> = ({
   onConnectNewApp
 }) => {
+  const { t } = useTranslations();
   const [showAppBrowser, setShowAppBrowser] = useState(false);
   const [showConnector, setShowConnector] = useState(false);
   const [selectedApp, setSelectedApp] = useState<PipedreamApp | null>(null);
@@ -506,7 +512,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
   const handleConnectionComplete = (profileId: string, selectedTools: string[], appName: string, appSlug: string) => {
     setShowConnector(false);
     setSelectedApp(null);
-    toast.success(`Connected to ${appName}!`);
+    toast.success(`Connected to ${correctAppName(appName)}!`);
     queryClient.invalidateQueries({ queryKey: pipedreamKeys.profiles.all() });
   };
 
@@ -517,7 +523,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         profileId: profile.profile_id,
         request: updates,
       });
-      toast.success('Profile updated successfully');
+      toast.success(t('credentials.profileUpdatedSuccessfully'));
     } catch (error) {
       console.error('Error updating profile:', error);
     } finally {
@@ -529,7 +535,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
     setIsDeleting(profile.profile_id);
     try {
       await deleteProfile.mutateAsync(profile.profile_id);
-      toast.success('Profile deleted successfully');
+      toast.success(t('credentials.profileDeletedSuccessfully'));
     } catch (error) {
       console.error('Error deleting profile:', error);
     } finally {
@@ -545,7 +551,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         app: profile.app_slug,
         profileName: profile.profile_name,
       });
-      toast.success('Profile connected successfully');
+      toast.success(t('credentials.profileConnectedSuccessfully'));
     } catch (error) {
       console.error('Error connecting profile:', error);
     } finally {
@@ -621,7 +627,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Failed to load credential profiles. Please try again.
+          {t('credentials.failedToLoadCredentialProfiles')}
         </AlertDescription>
       </Alert>
     );
@@ -642,16 +648,16 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-foreground">Nenhum perfil de credencial ainda</h3>
+                <h3 className="font-semibold text-foreground">{t('credentials.noCredentialProfilesYet')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Conecte seus aplicativos favoritos para criar perfis de credencial para seus agentes
+                  {t('credentials.connectYourFavoriteApps')}
                 </p>
               </div>
               <Button 
                 onClick={() => setShowAppBrowser(true)}
               >
                 <Plus className="h-4 w-4" />
-                Conectar App
+                {t('credentials.connectApp')}
               </Button>
             </div>
           </CardContent>
@@ -659,9 +665,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         <Dialog open={showAppBrowser} onOpenChange={setShowAppBrowser}>
           <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="sr-only">
-              <DialogTitle>Browse Apps</DialogTitle>
+              <DialogTitle>{t('credentials.browseApps')}</DialogTitle>
               <DialogDescription>
-                Select an app to create a credential profile
+                {t('credentials.selectAppToCreateProfile')}
               </DialogDescription>
             </DialogHeader>
             <PipedreamRegistry
@@ -684,8 +690,8 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         <div>
           <p className="text-sm text-muted-foreground">
             {searchQuery 
-              ? `${filteredAppsCount} ${filteredAppsCount === 1 ? 'app' : 'apps'} with ${filteredProfilesCount} ${filteredProfilesCount === 1 ? 'profile' : 'profiles'} found`
-              : `${uniqueApps} ${uniqueApps === 1 ? 'app' : 'apps'} with ${totalProfiles} ${totalProfiles === 1 ? 'profile' : 'profiles'} (${connectedProfiles} connected)`
+              ? t('credentials.appsWithProfiles', { count: filteredAppsCount, profileCount: filteredProfilesCount }) + ' found'
+              : t('credentials.appsWithProfilesConnected', { count: uniqueApps, profileCount: totalProfiles, connectedCount: connectedProfiles })
             }
           </p>
         </div>
@@ -694,14 +700,14 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
           size="sm"
         >
           <Plus className="h-4 w-4" />
-          Connect New App
+          {t('credentials.connectNewApp')}
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search apps and profiles..."
+          placeholder={t('credentials.searchAppsAndProfiles')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-12 h-12 rounded-xl bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all"
@@ -725,9 +731,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                 <Search className="h-6 w-6 text-muted-foreground" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-foreground">No results found</h3>
+                <h3 className="font-semibold text-foreground">{t('credentials.noResultsFound')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Try adjusting your search terms or browse all apps
+                  {t('credentials.tryAdjustingSearch')}
                 </p>
               </div>
               <Button 
@@ -735,7 +741,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                 variant="outline"
                 size="sm"
               >
-                Clear search
+                {t('credentials.clearSearch')}
               </Button>
             </div>
           </CardContent>
@@ -759,7 +765,7 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                 <AppTable
                   key={appSlug}
                   appSlug={appSlug}
-                  appName={appProfiles[0].app_name}
+                  appName={correctAppName(appProfiles[0].app_name)}
                   profiles={appProfiles}
                   appImage={registryApp?.img_src}
                   onConnect={handleConnect}
@@ -779,9 +785,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
       <Dialog open={showAppBrowser} onOpenChange={setShowAppBrowser}>
         <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="sr-only">
-            <DialogTitle>Browse Apps</DialogTitle>
+            <DialogTitle>{t('credentials.browseApps')}</DialogTitle>
             <DialogDescription>
-              Select an app to create a credential profile
+              {t('credentials.selectAppToCreateProfile')}
             </DialogDescription>
           </DialogHeader>
           <PipedreamRegistry

@@ -59,9 +59,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
         triggerId: trigger.trigger_id,
         agentId: trigger.agent_id
       });
-      toast.success('Trigger deleted successfully');
+      toast.success('Gatilho excluído com sucesso');
     } catch (error) {
-      toast.error('Failed to delete trigger');
+      toast.error('Falha ao excluir gatilho');
       console.error('Error deleting trigger:', error);
     }
   };
@@ -76,7 +76,7 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
           config: config.config,
           is_active: config.is_active,
         });
-        toast.success('Trigger updated successfully');
+        toast.success('Gatilho atualizado com sucesso');
       } else {
         await createTriggerMutation.mutateAsync({
           agentId,
@@ -85,10 +85,10 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
           description: config.description,
           config: config.config,
         });
-        toast.success('Trigger created successfully');
+        toast.success('Gatilho criado com sucesso');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save trigger');
+      toast.error(error.message || 'Falha ao salvar gatilho');
       console.error('Error saving trigger:', error);
     }
     setConfiguringProvider(null);
@@ -101,9 +101,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
         triggerId: trigger.trigger_id,
         isActive: !trigger.is_active,
       });
-      toast.success(`Trigger ${!trigger.is_active ? 'enabled' : 'disabled'}`);
+      toast.success(`Gatilho ${!trigger.is_active ? 'ativado' : 'desativado'}`);
     } catch (error) {
-      toast.error('Failed to toggle trigger');
+      toast.error('Falha ao alternar gatilho');
       console.error('Error toggling trigger:', error);
     }
   };
@@ -116,9 +116,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
             <Zap className="h-5 w-5 text-destructive" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-destructive">Error Loading Triggers</h3>
+            <h3 className="text-lg font-semibold text-destructive">Erro ao Carregar Gatilhos</h3>
             <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Failed to load triggers'}
+              {error instanceof Error ? error.message : 'Falha ao carregar gatilhos'}
             </p>
           </div>
         </div>
@@ -147,10 +147,10 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
               <Zap className="h-6 w-6 text-muted-foreground" />
             </div>
             <h4 className="text-sm font-semibold text-foreground">
-              No triggers configured
+              Nenhum gatilho configurado
             </h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Click on a trigger provider above to get started
+              Clique em um provedor de gatilho acima para começar
             </p>
           </div>
         )}

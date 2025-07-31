@@ -29,6 +29,7 @@ import { useThreadData, useToolCalls, useBilling, useKeyboardShortcuts } from '.
 import { ThreadError, UpgradeDialog, ThreadLayout } from '../_components';
 import { useVncPreloader } from '@/hooks/useVncPreloader';
 import { useThreadAgent } from '@/hooks/react-query/agents/use-agents';
+import { useTranslations } from '@/hooks/use-translations';
 
 export default function ThreadPage({
   params,
@@ -42,6 +43,7 @@ export default function ThreadPage({
   const { projectId, threadId } = unwrappedParams;
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
+  const { t } = useTranslations();
 
   // State
   const [newMessage, setNewMessage] = useState('');
@@ -155,6 +157,27 @@ export default function ThreadPage({
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  // Função para detectar se o usuário está próximo do final do scroll
+  const isNearBottom = useCallback(() => {
+    if (!messagesContainerRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    // Considera "próximo" se estiver a menos de 100px do final
+    return scrollHeight - scrollTop - clientHeight < 100;
+  }, []);
+
+  // Handler para detectar scroll manual do usuário
+  const handleUserScroll = useCallback(() => {
+    const nearBottom = isNearBottom();
+    // Se o usuário scrollou para longe do final, marca como scroll manual
+    if (!nearBottom && (agentStatus === 'running' || agentStatus === 'connecting')) {
+      setUserHasScrolled(true);
+    }
+    // Se voltou para perto do final, permite auto-scroll novamente
+    if (nearBottom) {
+      setUserHasScrolled(false);
+    }
+  }, [isNearBottom, agentStatus]);
+
   const handleNewMessageFromStream = useCallback((message: UnifiedMessage) => {
     console.log(
       `[STREAM HANDLER] Received message: ID=${message.message_id}, Type=${message.type}`,
@@ -211,9 +234,13 @@ export default function ThreadPage({
         break;
       case 'connecting':
         setAgentStatus('connecting');
+        // Reset scroll tracking when agent starts
+        setUserHasScrolled(false);
         break;
       case 'streaming':
         setAgentStatus('running');
+        // Reset scroll tracking when agent starts streaming
+        setUserHasScrolled(false);
         break;
     }
   }, [setAgentStatus, setAgentRunId, setAutoOpenedPanel]);
@@ -443,13 +470,37 @@ export default function ThreadPage({
     }
   }, [agentRunId, startStreaming, currentHookRunId]);
 
+  // Auto-scroll melhorado durante streaming
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     const isNewUserMessage = lastMsg?.type === 'user';
-    if ((isNewUserMessage || agentStatus === 'running') && !userHasScrolled) {
+    
+    // Scroll imediato quando usuário envia mensagem (coloca no topo visível)
+    if (isNewUserMessage && messages.length > 1) {
+      setUserHasScrolled(false);
+      // Pequeno delay para garantir que a mensagem foi renderizada
+      setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 50);
+    }
+    
+    // Auto-scroll contínuo durante streaming se usuário não fez scroll manual
+    if ((agentStatus === 'running' || agentStatus === 'connecting') && !userHasScrolled) {
       scrollToBottom('smooth');
     }
-  }, [messages, agentStatus, userHasScrolled]);
+    
+    // Também faz scroll quando há novo conteúdo de streaming
+    if (streamingTextContent && !userHasScrolled) {
+      scrollToBottom('smooth');
+    }
+  }, [messages, agentStatus, userHasScrolled, streamingTextContent]);
+
+  // Auto-scroll quando toolcalls são atualizadas durante streaming
+  useEffect(() => {
+    if (streamingToolCall && !userHasScrolled && (agentStatus === 'running' || agentStatus === 'connecting')) {
+      scrollToBottom('smooth');
+    }
+  }, [streamingToolCall, userHasScrolled, agentStatus]);
 
   useEffect(() => {
     if (!latestMessageRef.current || messages.length === 0) return;
@@ -646,6 +697,8 @@ export default function ThreadPage({
           debugMode={debugMode}
           agentName={agent && agent.name}
           agentAvatar={agent && agent.avatar}
+          messagesEndRef={messagesEndRef}
+          onScroll={handleUserScroll}
         />
 
         <div
@@ -664,7 +717,7 @@ export default function ThreadPage({
               value={newMessage}
               onChange={setNewMessage}
               onSubmit={handleSubmitMessage}
-              placeholder={`Describe what you need help with...`}
+              placeholder={t('dashboard.inputPlaceholder')}
               loading={isSending}
               disabled={isSending || agentStatus === 'running' || agentStatus === 'connecting'}
               isAgentRunning={agentStatus === 'running' || agentStatus === 'connecting'}

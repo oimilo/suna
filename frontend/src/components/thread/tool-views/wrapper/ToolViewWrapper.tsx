@@ -4,6 +4,7 @@ import { formatTimestamp, getToolTitle } from '../utils';
 import { getToolIcon } from '../../utils';
 import { CircleDashed, CheckCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import styles from '@/styles/toolcalls.module.css';
 
 export interface ToolViewWrapperProps extends ToolViewProps {
   children: React.ReactNode;
@@ -41,15 +42,15 @@ export function ToolViewWrapper({
   const Icon = getToolIcon(name);
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn(styles.toolViewContainer, className)}>
       {(headerContent || showStatus) && (
         <div className={cn(
-          "flex items-center p-2 bg-zinc-100 dark:bg-zinc-900 justify-between border-zinc-200 dark:border-zinc-800",
+          styles.toolViewHeader,
           headerClassName
         )}>
-          <div className="flex ml-1 items-center">
-            {Icon && <Icon className="h-4 w-4 mr-2 text-zinc-600 dark:text-zinc-400" />}
-            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          <div className={styles.toolViewHeaderContent}>
+            {Icon && <Icon className={styles.toolViewHeaderIcon} />}
+            <span className={styles.toolViewHeaderTitle}>
               {toolTitle}
             </span>
           </div>
@@ -57,16 +58,16 @@ export function ToolViewWrapper({
         </div>
       )}
 
-      <div className={cn("flex-1 overflow-auto", contentClassName)}>
+      <div className={cn(styles.toolViewBody, contentClassName)}>
         {children}
       </div>
 
       {(footerContent || showStatus) && (
         <div className={cn(
-          "p-4 border-t border-zinc-200 dark:border-zinc-800",
+          styles.toolViewFooter,
           footerClassName
         )}>
-          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+          <div className={styles.toolViewFooterContent}>
             {!isStreaming && showStatus && (
               <div className="flex items-center gap-2">
                 {isSuccess ? (

@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Filter, Globe, ChevronDown, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/hooks/use-translations';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,11 +47,6 @@ interface MyAgentsTabProps {
   publishingAgentId?: string | null;
 }
 
-const filterOptions = [
-  { value: 'all', label: 'All Agents', icon: Users },
-  { value: 'templates', label: 'Templates', icon: Globe },
-];
-
 export const MyAgentsTab = ({
   agentsSearchQuery,
   setAgentsSearchQuery,
@@ -75,7 +71,14 @@ export const MyAgentsTab = ({
   onPublishAgent,
   publishingAgentId
 }: MyAgentsTabProps) => {
+  const { t } = useTranslations();
   const [agentFilter, setAgentFilter] = useState<AgentFilter>('all');
+
+  const filterOptions = [
+    { value: 'all', label: t('agents.allAgents'), icon: Users },
+    { value: 'templates', label: t('agents.templates'), icon: Globe },
+  ];
+
 
   const filteredAgents = useMemo(() => {
     if (agentFilter === 'templates') {
@@ -111,7 +114,7 @@ export const MyAgentsTab = ({
     if (templatesError) {
       return (
         <div className="text-center py-16">
-          <p className="text-destructive">Failed to load templates</p>
+          <p className="text-destructive">{t('agents.failedToLoadTemplates')}</p>
         </div>
       );
     }
@@ -122,9 +125,9 @@ export const MyAgentsTab = ({
           <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center mb-6">
             <Globe className="h-10 w-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold mb-3">No published templates yet</h3>
+          <h3 className="text-xl font-semibold mb-3">{t('agents.noPublishedTemplatesYet')}</h3>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            Publish your agents to the marketplace to share them with the community and track their usage.
+            {t('agents.publishAgentsToMarketplace')}
           </p>
         </div>
       );
@@ -158,7 +161,7 @@ export const MyAgentsTab = ({
     <div className="space-y-6 mt-8 flex flex-col min-h-full">
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <SearchBar
-          placeholder="Search your agents..."
+          placeholder={t('agents.searchYourAgents')}
           value={agentsSearchQuery}
           onChange={setAgentsSearchQuery}
         />

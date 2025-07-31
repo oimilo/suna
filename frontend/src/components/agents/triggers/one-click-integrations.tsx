@@ -24,7 +24,7 @@ interface OneClickIntegrationsProps {
 
 const OAUTH_PROVIDERS = {
   schedule: {
-    name: 'Schedule',
+    name: 'Agendamento',
     icon: <Clock className="h-4 w-4" color="#10b981" />,
     isOAuth: false
   }
@@ -70,9 +70,9 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
           triggerId,
           agentId
         });
-        toast.success('Schedule trigger removed successfully');
+        toast.success('Gatilho de agendamento removido com sucesso');
       } catch (error) {
-        toast.error('Failed to remove schedule trigger');
+        toast.error('Falha ao remover gatilho de agendamento');
         console.error('Error removing schedule trigger:', error);
       }
       return;
@@ -90,14 +90,14 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
       await createTriggerMutation.mutateAsync({
         agentId,
         provider_id: 'schedule',
-        name: config.name || 'Scheduled Trigger',
-        description: config.description || 'Automatically scheduled trigger',
+        name: config.name || 'Gatilho Agendado',
+        description: config.description || 'Gatilho agendado automaticamente',
         config: config.config,
       });
-      toast.success('Schedule trigger created successfully');
+      toast.success('Gatilho de agendamento criado com sucesso');
       setConfiguringSchedule(false);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create schedule trigger');
+      toast.error(error.message || 'Falha ao criar gatilho de agendamento');
       console.error('Error creating schedule trigger:', error);
     }
   };
@@ -122,7 +122,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 
   const scheduleProvider: TriggerProvider = {
     provider_id: 'schedule',
-    name: 'Schedule',
+    name: 'Agendamento',
     trigger_type: 'schedule',
     webhook_enabled: true,
     config_schema: {}

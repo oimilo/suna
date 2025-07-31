@@ -37,9 +37,9 @@ export function AgentBuilderTab({
         <div className="text-center space-y-3 max-w-md px-6">
           <div className="text-4xl opacity-50">🔒</div>
           <div>
-            <h3 className="text-base font-semibold text-foreground mb-1">Builder Unavailable</h3>
+            <h3 className="text-base font-semibold text-foreground mb-1">Construtor Indisponível</h3>
             <p className="text-sm text-muted-foreground">
-              Only available for the current version. Please activate this version first.
+              Disponível apenas para a versão atual. Por favor, ative esta versão primeiro.
             </p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export function AgentBuilderTab({
   }
 
   return (
-    <div className="px-4 h-full">
+    <div className="h-full">
       <AgentBuilderChat 
         agentId={agentId}
         formData={displayData}

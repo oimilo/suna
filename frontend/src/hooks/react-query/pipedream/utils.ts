@@ -253,20 +253,6 @@ export const pipedreamApi = {
     return result.data!;
   },
 
-  async healthCheck(): Promise<PipedreamHealthCheckResponse> {
-    const result = await backendApi.get<PipedreamHealthCheckResponse>(
-      '/pipedream/health',
-      {
-        errorContext: { operation: 'health check', resource: 'Pipedream service' },
-      }
-    );
-
-    if (!result.success) {
-      throw new Error(result.error?.message || 'Health check failed');
-    }
-
-    return result.data!;
-  },
 
   async discoverMCPServers(externalUserId: string, appSlug?: string): Promise<any> {
     const request = {

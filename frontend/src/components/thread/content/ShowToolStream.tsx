@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CircleDashed } from 'lucide-react';
 import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';
+import styles from '@/styles/toolcalls.module.css';
 
 // Only show streaming for file operation tools
 const FILE_OPERATION_TOOLS = new Set([
@@ -144,9 +145,9 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                     // Just tool button with shimmer (first 1500ms)
                     <button
                         onClick={() => onToolClick?.(messageId, toolName)}
-                        className="animate-shimmer inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+                        className={`${styles.toolcallContainer} animate-shimmer`}
                     >
-                        <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+                        <div className={styles.toolcallIcon}>
                             <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                         </div>
                         <span className="font-mono text-xs text-foreground">{displayName}</span>
@@ -162,9 +163,9 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
         <div className="my-1">
             <button
                 onClick={() => onToolClick?.(messageId, toolName)}
-                className="animate-shimmer inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+                className={`${styles.toolcallContainer} animate-shimmer`}
             >
-                <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+                <div className={styles.toolcallIcon}>
                     <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                 </div>
                 <span className="font-mono text-xs text-foreground">{displayName}</span>

@@ -3,14 +3,30 @@
 import { useEffect } from 'react';
 import { useAnnouncementStore } from '@/hooks/use-announcement-store';
 import { useOnboardingStore } from '@/hooks/use-onboarding-store';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export function WelcomeAnnouncement() {
   const { addAnnouncement } = useAnnouncementStore();
+  const router = useRouter();
   const { 
     hasSeenWelcome, 
     setHasSeenWelcome, 
     updateChecklistStep 
   } = useOnboardingStore();
+
+  const createExampleProject = async () => {
+    try {
+      // For now, just navigate to projects page
+      // In a real implementation, this would create an actual project
+      toast.success('Preparando seu espaço de trabalho...');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
+    } catch (error) {
+      toast.error('Erro ao criar projeto de exemplo');
+    }
+  };
 
   useEffect(() => {
     // Only show once
@@ -18,42 +34,52 @@ export function WelcomeAnnouncement() {
       const announcementId = addAnnouncement({
         type: 'onboarding',
         title: 'Bem-vindo ao Prophet! 🌞',
-        description: 'Seu assistente de IA está pronto para ajudar você a criar, analisar e automatizar.',
+        description: 'Seu assistente de IA para tarefas do mundo real',
         priority: 'high',
         persistent: false,
         htmlContent: `
           <div class="space-y-4">
-            <div class="text-sm text-muted-foreground">
-              <p>O Prophet pode ajudar você com:</p>
-              <ul class="list-disc list-inside mt-2 space-y-1">
-                <li>🚀 Criar e deploy de sites e aplicações</li>
-                <li>📊 Análise de dados e visualizações</li>
-                <li>🤖 Automação de tarefas repetitivas</li>
-                <li>🎨 Geração e edição de imagens</li>
-                <li>📝 Escrita e revisão de conteúdo</li>
-              </ul>
-            </div>
-            <div class="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg">
+            <div class="space-y-3">
               <p class="text-sm">
-                <span class="font-semibold">Dica:</span> Comece criando um novo projeto ou iniciando uma conversa!
+                Sou um agente de IA que pode executar tarefas reais para você através de uma conversa simples.
               </p>
+              
+              <div class="space-y-2 text-sm">
+                <p class="font-medium">Posso ajudar você com:</p>
+                <ul class="space-y-1 text-xs text-muted-foreground">
+                  <li>📄 <span class="font-medium">Criar e editar arquivos</span> - documentos, código, planilhas</li>
+                  <li>🌐 <span class="font-medium">Navegar e extrair dados da web</span> - pesquisas, análises</li>
+                  <li>🚀 <span class="font-medium">Deploy de sites</span> - publicar projetos online</li>
+                  <li>💻 <span class="font-medium">Executar comandos</span> - automatizar tarefas</li>
+                  <li>🔗 <span class="font-medium">Conectar com seus apps favoritos</span> - Gmail, Slack, etc</li>
+                </ul>
+              </div>
+              
+              <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                <p class="text-sm font-medium">💡 Dica rápida</p>
+                <p class="text-xs text-muted-foreground mt-1">
+                  Você pode me pedir coisas como: "Crie um site portfolio", "Extraia dados deste site", 
+                  "Analise estes arquivos", "Faça deploy desta aplicação"
+                </p>
+              </div>
             </div>
           </div>
         `,
         actions: [
           {
             id: 'start-tour',
-            label: 'Fazer Tour Guiado',
+            label: '🚀 Vamos lá!',
             variant: 'default',
             onClick: () => {
               setHasSeenWelcome(true);
               updateChecklistStep('welcome', true);
-              // Tour will start automatically when hasSeenWelcome becomes true
+              // Create example project and start tour
+              createExampleProject();
             }
           },
           {
             id: 'skip',
-            label: 'Começar a Usar',
+            label: 'Já conheço o Prophet',
             variant: 'outline',
             onClick: () => {
               setHasSeenWelcome(true);

@@ -45,12 +45,12 @@ interface OnboardingStore {
 }
 
 const initialChecklistSteps: OnboardingStep[] = [
-  { id: 'welcome', title: 'Ver mensagem de boas-vindas', completed: false },
-  { id: 'tour', title: 'Completar tour guiado', completed: false },
-  { id: 'project', title: 'Criar primeiro projeto', completed: false },
-  { id: 'chat', title: 'Iniciar primeira conversa', completed: false },
-  { id: 'command', title: 'Executar primeiro comando', completed: false },
-  { id: 'file', title: 'Criar ou editar um arquivo', completed: false },
+  { id: 'welcome', title: 'Conhecer o Prophet', completed: false },
+  { id: 'tour', title: 'Fazer tour rápido', completed: false },
+  { id: 'project', title: 'Criar seu primeiro projeto', completed: false },
+  { id: 'chat', title: 'Pedir algo ao Prophet', completed: false },
+  { id: 'workspace', title: 'Ver a área de trabalho', completed: false },
+  { id: 'result', title: 'Obter seu primeiro resultado', completed: false },
 ];
 
 export const useOnboardingStore = create<OnboardingStore>()(

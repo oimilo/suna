@@ -2,6 +2,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface ThreadSkeletonProps {
     isSidePanelOpen?: boolean;
@@ -14,6 +15,8 @@ export function ThreadSkeleton({
     showHeader = true,
     messageCount = 3,
 }: ThreadSkeletonProps) {
+    const { t } = useTranslations();
+    
     // Mock handlers for the ChatInput component
     const handleSubmit = (message: string) => {
         // No-op for skeleton
@@ -129,7 +132,7 @@ export function ThreadSkeleton({
                         <ChatInput
                             onSubmit={handleSubmit}
                             onChange={handleChange}
-                            placeholder="Describe what you need help with..."
+                            placeholder={t('dashboard.inputPlaceholder')}
                             loading={false}
                             disabled={true}
                             isAgentRunning={false}

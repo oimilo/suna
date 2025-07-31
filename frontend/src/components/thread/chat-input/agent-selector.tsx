@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTranslations } from '@/hooks/use-translations';
 import { useAgents, useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
 
 import { useRouter } from 'next/navigation';
@@ -64,6 +65,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   isSunaAgent,
   isFocused = false
 }) => {
+  const { t } = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
@@ -302,7 +304,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select Agent</p>
+              <p>{t('agents.select')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -321,7 +323,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search agents..."
+                placeholder={t('agents.searchAgents')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchInputKeyDown}
@@ -363,7 +365,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                 className="text-xs flex items-center gap-2 rounded-xl hover:bg-accent/40 transition-all duration-200 text-muted-foreground hover:text-foreground px-4 py-2"
               >
                 <Search className="h-3.5 w-3.5" />
-                Explore All Agents
+                {t('agents.exploreAllAgents')}
               </Button>
 
               <div className="w-px h-4 bg-border/60" />
@@ -376,7 +378,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                 className="text-xs flex items-center gap-2 rounded-xl hover:bg-accent/40 transition-all duration-200 text-muted-foreground hover:text-foreground px-4 py-2 disabled:opacity-50"
               >
                 <Plus className="h-3.5 w-3.5" />
-                {isCreatingAgent || createNewAgentMutation.isPending ? 'Creating...' : 'Create Agent'}
+                {isCreatingAgent || createNewAgentMutation.isPending ? t('agents.creating') : t('agents.createAgent')}
               </Button>
             </div>
           </div>
