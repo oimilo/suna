@@ -31,8 +31,8 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar';
+} from './sidebar-primitives';
+import { useSidebarSafe } from '@/hooks/use-sidebar-safe';
 import {
   Tooltip,
   TooltipContent,
@@ -49,7 +49,7 @@ import { processThreadsWithProjects, useDeleteMultipleThreads, useDeleteThread, 
 import { projectKeys, threadKeys } from '@/hooks/react-query/sidebar/keys';
 
 export function NavAgents() {
-  const { isMobile, state } = useSidebar()
+  const { isMobile, state } = useSidebarSafe()
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<{ threadId: string, projectId: string } | null>(null)
@@ -87,6 +87,15 @@ export function NavAgents() {
   const combinedThreads: ThreadWithProject[] =
     !isProjectsLoading && !isThreadsLoading ?
       processThreadsWithProjects(threads, projects) : [];
+
+  // Debug logs
+  console.log('NavAgents Debug:', {
+    state,
+    isLoading: isProjectsLoading || isThreadsLoading,
+    threadsCount: threads.length,
+    projectsCount: projects.length,
+    combinedThreadsCount: combinedThreads.length
+  });
 
   const handleDeletionProgress = (completed: number, total: number) => {
     const percentage = (completed / total) * 100;
@@ -351,48 +360,46 @@ export function NavAgents() {
   return (
     <SidebarGroup>
       <div className="flex justify-between items-center">
-        <SidebarGroupLabel>Tasks</SidebarGroupLabel>
-        {state !== 'collapsed' ? (
+        <SidebarGroupLabel>Tarefas</SidebarGroupLabel>
+        {selectedThreads.size > 0 && (
           <div className="flex items-center space-x-1">
-            {selectedThreads.size > 0 ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={deselectAllThreads}
-                  className="h-7 w-7"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={selectAllThreads}
-                  disabled={selectedThreads.size === combinedThreads.length}
-                  className="h-7 w-7"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleMultiDelete}
-                  className="h-7 w-7 text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            ) : null}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={deselectAllThreads}
+              className="h-6 w-6"
+              title="Desmarcar todos"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={selectAllThreads}
+              disabled={selectedThreads.size === combinedThreads.length}
+              className="h-6 w-6"
+              title="Marcar todos"
+            >
+              <Check className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleMultiDelete}
+              className="h-6 w-6 text-destructive"
+              title="Deletar selecionados"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
           </div>
-        ) : null}
+        )}
       </div>
 
       <SidebarMenu className="overflow-y-auto max-h-[calc(100vh-200px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
 
 
-        {state !== 'collapsed' && (
-          <>
-            {isLoading ? (
+        {/* Always show threads regardless of state */}
+        {isLoading ? (
               // Show skeleton loaders while loading
               Array.from({ length: 3 }).map((_, index) => (
                 <SidebarMenuItem key={`skeleton-${index}`}>
@@ -416,7 +423,7 @@ export function NavAgents() {
                       <SidebarMenuButton
                         asChild
                         className={`relative ${isActive
-                          ? 'bg-accent text-accent-foreground font-medium'
+                          ? 'bg-accent text-accent-foreground'
                           : isSelected
                             ? 'bg-primary/10'
                             : ''
@@ -516,8 +523,6 @@ export function NavAgents() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
-          </>
-        )}
       </SidebarMenu>
 
       {(isDeletingSingle || isDeletingMultiple) && totalToDelete > 0 && (

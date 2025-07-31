@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SidebarLeft } from '@/components/sidebar/sidebar-left';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { HoverSidebar } from '@/components/sidebar/hover-sidebar';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
 import { MaintenanceAlert } from '@/components/maintenance-alert';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -40,6 +40,7 @@ export default function DashboardLayoutContent({
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const { data: healthData, isLoading: isCheckingHealth, error: healthError } = useApiHealth();
+  const { isPinned } = useSidebarContext();
 
   useEffect(() => {
     // setShowPricingAlert(false)
@@ -103,36 +104,36 @@ export default function DashboardLayoutContent({
 
   return (
     <DeleteOperationProvider>
-      <SidebarProvider>
-        <SidebarLeft />
-        <SidebarInset>
+      <>
+        <HoverSidebar />
+        <div className={`min-h-screen bg-background transition-all duration-200 ${isPinned ? 'pl-64' : 'pl-0'}`}>
           {mantenanceBanner}
-          <div className="bg-background">{children}</div>
-        </SidebarInset>
+          {children}
+        </div>
+      </>
 
-        {/* <PricingAlert 
-        open={showPricingAlert} 
-        onOpenChange={setShowPricingAlert}
-        closeable={false}
-        accountId={personalAccount?.account_id}
-        /> */}
+      {/* <PricingAlert 
+      open={showPricingAlert} 
+      onOpenChange={setShowPricingAlert}
+      closeable={false}
+      accountId={personalAccount?.account_id}
+      /> */}
 
-        <MaintenanceAlert
-          open={showMaintenanceAlert}
-          onOpenChange={setShowMaintenanceAlert}
-          closeable={true}
-        />
+      <MaintenanceAlert
+        open={showMaintenanceAlert}
+        onOpenChange={setShowMaintenanceAlert}
+        closeable={true}
+      />
 
-        {/* Status overlay for deletion operations */}
-        <StatusOverlay />
-        
-        {/* Onboarding components */}
-        <WelcomeAnnouncement />
-        <OnboardingTour />
-        <OnboardingFloatingButton />
-        <OnboardingDevControls />
-        <AnnouncementDialog />
-      </SidebarProvider>
+      {/* Status overlay for deletion operations */}
+      <StatusOverlay />
+      
+      {/* Onboarding components */}
+      <WelcomeAnnouncement />
+      <OnboardingTour />
+      <OnboardingFloatingButton />
+      <OnboardingDevControls />
+      <AnnouncementDialog />
     </DeleteOperationProvider>
   );
 }

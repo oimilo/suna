@@ -433,5 +433,16 @@
     "sendInvite": "Enviar Convite",
     "inviteSent": "Convite enviado com sucesso!",
     "inviteError": "Erro ao enviar convite. Tente novamente."
+  },
+  "sidebar": {
+    "home": "Início",
+    "history": "Histórico",
+    "agents": "Agentes",
+    "settings": "Configurações",
+    "newTask": "Nova Tarefa",
+    "integrations": "Integrações",
+    "explore": "Explorar",
+    "myAgents": "Meus Agentes",
+    "newAgent": "Novo Agente"
   }
 }

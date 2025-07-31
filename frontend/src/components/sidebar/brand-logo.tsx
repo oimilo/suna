@@ -23,7 +23,7 @@ export function BrandLogo({ size = 24 }: BrandLogoProps) {
 
   return (
     <Image
-        src={BRANDING.logo.favicon || "/prophet-symbol.svg"}
+        src={BRANDING.logo.favicon || "/symbol.svg"}
         alt={BRANDING.company}
         width={size}
         height={size}

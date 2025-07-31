@@ -4,7 +4,6 @@ import React, { useState, Suspense, useEffect, useRef } from 'react';
 import { BRANDING } from '@/lib/branding';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Menu } from 'lucide-react';
 import {
   ChatInput,
   ChatInputHandles,
@@ -13,7 +12,7 @@ import {
   BillingError,
 } from '@/lib/api';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebarSafe } from '@/hooks/use-sidebar-safe';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -49,7 +48,7 @@ export function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebarSafe();
   const { data: accounts } = useAccounts();
   const personalAccount = accounts?.find((account) => account.personal_account);
   const chatInputRef = useRef<ChatInputHandles>(null);
@@ -195,24 +194,6 @@ export function DashboardContent() {
     <>
       <ModalProviders />
       <div className="flex flex-col h-screen w-full">
-        {isMobile && (
-          <div className="absolute top-4 left-4 z-10">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setOpenMobile(true)}
-                >
-                  <Menu className="h-4 w-4" />
-                  <span className="sr-only">{t('dashboard.openMenu')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('dashboard.openMenu')}</TooltipContent>
-            </Tooltip>
-          </div>
-        )}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[650px] max-w-[90%]">
           <div className="flex flex-col items-center text-center w-full">
             {/* <div className="flex items-center gap-1">

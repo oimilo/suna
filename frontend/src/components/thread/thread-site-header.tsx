@@ -16,7 +16,7 @@ import { useUpdateProject } from "@/hooks/react-query"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
-import { useSidebar } from "@/components/ui/sidebar"
+import { useSidebarSafe } from "@/hooks/use-sidebar-safe"
 import { ShareModal } from "@/components/sidebar/share-modal"
 import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/react-query/sidebar/keys";
@@ -61,7 +61,7 @@ export function SiteHeader({
   const knowledgeBaseEnabled = flags.knowledge_base;
 
   const isMobile = useIsMobile() || isMobileView
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile } = useSidebarSafe()
   const updateProjectMutation = useUpdateProject()
 
   const openShareModal = () => {

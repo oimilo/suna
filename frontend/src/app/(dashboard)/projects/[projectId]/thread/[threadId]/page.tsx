@@ -12,7 +12,7 @@ import { BRANDING } from '@/lib/branding';
 import { BillingError } from '@/lib/api';
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebarSafe } from '@/hooks/use-sidebar-safe';
 import { useAgentStream } from '@/hooks/useAgentStream';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -67,7 +67,7 @@ export default function ThreadPage({
   const initialLayoutAppliedRef = useRef(false);
 
   // Sidebar
-  const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
+  const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebarSafe();
 
   // Custom hooks
   const {

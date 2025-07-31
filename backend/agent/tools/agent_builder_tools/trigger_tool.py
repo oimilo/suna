@@ -6,7 +6,8 @@ from .base_tool import AgentBuilderBaseTool
 from utils.logger import logger
 from datetime import datetime
 from services.supabase import DBConnection
-from triggers.support.factory import TriggerModuleFactory
+from triggers import get_trigger_service
+from triggers import TriggerType
 
 
 class TriggerTool(AgentBuilderBaseTool):
@@ -124,8 +125,7 @@ class TriggerTool(AgentBuilderBaseTool):
             else:
                 trigger_config["agent_prompt"] = agent_prompt
             
-            trigger_db = DBConnection()
-            trigger_svc, _, _ = await TriggerModuleFactory.create_trigger_module(trigger_db)
+            trigger_svc = get_trigger_service(self.db)
             
             try:
                 trigger = await trigger_svc.create_trigger(

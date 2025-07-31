@@ -1,5 +1,6 @@
 import React from 'react';
-import { SiteHeader } from '@/components/thread/thread-site-header';
+// import { SiteHeader } from '@/components/thread/thread-site-header';
+import { FloatingActions } from '@/components/thread/floating-actions';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';
 import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
@@ -90,16 +91,16 @@ export function ThreadLayout({
           : ''
           }`}
       >
-        <SiteHeader
-          threadId={threadId}
-          projectName={projectName}
-          projectId={projectId}
-          onViewFiles={onViewFiles}
-          onToggleSidePanel={onToggleSidePanel}
-          onProjectRenamed={onProjectRenamed}
-          isMobileView={isMobile}
-          debugMode={debugMode}
-        />
+        {/* SiteHeader removida - topbar não deve existir no chat */}
+        
+        {/* Botões flutuantes no canto superior direito */}
+        {!isMobile && (
+          <FloatingActions
+            threadId={threadId}
+            projectId={projectId}
+            onViewFiles={onViewFiles}
+          />
+        )}
 
         {children}
       </div>

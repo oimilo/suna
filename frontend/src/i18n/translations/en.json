@@ -188,5 +188,16 @@
     "profileConnectedSuccessfully": "Profile connected successfully",
     "browseApps": "Browse Apps",
     "selectAppToCreateProfile": "Select an app to create a credential profile"
+  },
+  "sidebar": {
+    "home": "Home",
+    "history": "History",
+    "agents": "Agents",
+    "settings": "Settings",
+    "newTask": "New Task",
+    "integrations": "Integrations",
+    "explore": "Explore",
+    "myAgents": "My Agents",
+    "newAgent": "New Agent"
   }
 }
