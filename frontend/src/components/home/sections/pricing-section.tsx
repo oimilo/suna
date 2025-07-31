@@ -152,7 +152,7 @@ function BillingPeriodToggle({
           )}>
             Anual
             <span className="bg-green-600 text-green-50 dark:bg-green-500 dark:text-green-50 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
-              15% off
+              15% desc
             </span>
           </div>
         </div>
@@ -299,7 +299,7 @@ function PricingTier({
     isScheduled && currentSubscription?.scheduled_price_id === tierPriceId;
   const isPlanLoading = isLoading[tierPriceId];
 
-  let buttonText = isAuthenticated ? 'Select Plan' : 'Start Free';
+  let buttonText = isAuthenticated ? 'Selecionar Plano' : 'Começar Grátis';
   let buttonDisabled = isPlanLoading;
   let buttonVariant: ButtonVariant = null;
   let ringClass = '';
@@ -310,7 +310,7 @@ function PricingTier({
   if (tier.isContactSales) {
     buttonText = 'Entre em contato';
     buttonVariant = 'default';
-    buttonClassName = 'bg-primary hover:bg-primary/90 text-primary-foreground';
+    buttonClassName = 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
   } else if (isAuthenticated) {
     if (isCurrentActivePlan) {
       buttonText = 'Plano Atual';
@@ -374,7 +374,7 @@ function PricingTier({
         targetAmount === 0 &&
         currentSubscription?.status !== 'no_subscription'
       ) {
-        buttonText = 'Select Plan';
+        buttonText = 'Selecionar Plano';
         buttonDisabled = true;
         buttonVariant = 'secondary';
         buttonClassName = 'bg-primary/5 hover:bg-primary/10 text-primary';
@@ -395,7 +395,7 @@ function PricingTier({
           } else {
             buttonText = 'Upgrade';
             buttonVariant = tier.buttonColor as ButtonVariant;
-            buttonClassName = 'bg-primary hover:bg-primary/90 text-primary-foreground';
+            buttonClassName = 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
           }
         } else if (targetAmount < currentAmount && !(currentIsYearly && targetIsMonthly && targetAmount === currentAmount)) {
           buttonText = '-';
@@ -417,22 +417,22 @@ function PricingTier({
             buttonClassName =
               'opacity-50 cursor-not-allowed bg-muted text-muted-foreground';
           } else {
-            buttonText = 'Select Plan';
+            buttonText = 'Selecionar Plano';
             buttonVariant = tier.buttonColor as ButtonVariant;
             buttonClassName =
-              'bg-primary hover:bg-primary/90 text-primary-foreground';
+              'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
           }
         } else {
-          buttonText = 'Select Plan';
+          buttonText = 'Selecionar Plano';
           buttonVariant = tier.buttonColor as ButtonVariant;
           buttonClassName =
-            'bg-primary hover:bg-primary/90 text-primary-foreground';
+            'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
         }
       }
     }
 
     if (isPlanLoading) {
-      buttonText = 'Loading...';
+      buttonText = 'Carregando...';
       buttonClassName = 'opacity-70 cursor-not-allowed';
     }
   } else {
@@ -440,8 +440,8 @@ function PricingTier({
     buttonVariant = tier.buttonColor as ButtonVariant;
     buttonClassName =
       tier.buttonColor === 'default'
-        ? 'bg-primary hover:bg-primary/90 text-white'
-        : 'bg-secondary hover:bg-secondary/90 text-white';
+        ? 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black'
+        : 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
   }
 
   return (
@@ -474,7 +474,7 @@ function PricingTier({
             tier.yearlyStripePriceId && (currentTier.name === tier.name ||
               parseFloat(tier.price.replace('R$', '').trim()) >= parseFloat(currentTier.price.replace('R$', '').trim())) && (
               <span className="bg-green-500/10 text-green-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                Recommended
+                Recomendado
               </span>
             )}
           {isAuthenticated && statusBadge}
@@ -648,7 +648,7 @@ export function PricingSection({
     return (
       <div className="p-4 bg-muted/30 border border-border rounded-lg text-center">
         <p className="text-sm text-muted-foreground">
-          Running in local development mode - billing features are disabled
+          Executando em modo de desenvolvimento local - recursos de cobrança estão desabilitados
         </p>
       </div>
     );
@@ -663,10 +663,10 @@ export function PricingSection({
         <>
           <SectionHeader>
             <h2 className="text-3xl md:text-4xl font-medium tracking-tighter text-center text-balance">
-              Choose the right plan for your needs
+              Escolha o plano ideal para suas necessidades
             </h2>
             <p className="text-muted-foreground text-center text-balance font-medium">
-              Start with our free plan or upgrade for more AI token credits
+              Comece com nosso plano gratuito ou faça upgrade para mais créditos de IA
             </p>
           </SectionHeader>
           <div className="relative w-full h-full">

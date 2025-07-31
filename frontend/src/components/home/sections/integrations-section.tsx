@@ -200,7 +200,7 @@ export function IntegrationsSection() {
           <p className="text-lg text-muted-foreground mb-6">
             Essas são apenas algumas possibilidades. O Prophet se adapta ao seu fluxo de trabalho.
           </p>
-          <button className="px-8 py-4 bg-primary text-primary-foreground rounded-full font-medium text-lg hover:bg-primary/90 transition-colors">
+          <button className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-full font-medium text-lg hover:bg-black/80 dark:hover:bg-white/80 transition-colors">
             Comece a automatizar agora
           </button>
         </div>
