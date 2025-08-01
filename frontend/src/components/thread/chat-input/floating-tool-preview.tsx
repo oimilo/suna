@@ -125,7 +125,7 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
             layoutId={CONTENT_LAYOUT_ID}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            className="relative bg-muted/30 backdrop-blur-sm border border-border/50 dark:border-zinc-700 rounded-xl pl-12 pr-12 py-1.5 w-full cursor-pointer group shadow-sm hover:shadow-md transition-shadow"
+            className="relative bg-muted/30 backdrop-blur-sm border border-border/50 dark:border-zinc-700 rounded-xl pl-12 pr-12 py-2.5 w-full cursor-pointer group shadow-sm hover:shadow-md transition-shadow"
             onClick={handleClick}
             style={{ opacity: isExpanding ? 0 : 1 }}
           >
@@ -150,10 +150,9 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
             {/* Tool Thumbnail - positioned after arrow */}
             <motion.div
               layoutId="tool-icon"
-              className="absolute left-11 top-1/2 -translate-y-1/2 w-14 h-12 rounded-lg bg-card dark:bg-card border border-border/60 dark:border-zinc-700 overflow-hidden shadow-md"
+              className="absolute left-11 -top-4 w-14 h-12 rounded-lg bg-card dark:bg-card border border-border/60 dark:border-zinc-700 overflow-hidden shadow-md"
               style={{ 
-                opacity: isExpanding ? 0 : 1,
-                marginTop: '-4px' // Projeta para cima
+                opacity: isExpanding ? 0 : 1
               }}
             >
               {/* Thumbnail preview - simplified representation */}
