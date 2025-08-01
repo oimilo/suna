@@ -198,8 +198,7 @@ async def _update_agent_run_status_direct(
     client,
     agent_run_id: str,
     status: str,
-    error: Optional[str] = None,
-    responses: Optional[list] = None
+    error: Optional[str] = None
 ) -> bool:
     """
     Direct database update for agent run status (production-friendly version).
@@ -213,9 +212,6 @@ async def _update_agent_run_status_direct(
 
         if error:
             update_data["error"] = error
-
-        if responses:
-            update_data["responses"] = responses
 
         # Simple update with single retry
         for retry in range(2):
@@ -263,16 +259,20 @@ async def stop_agent_run(agent_run_id: str, error_message: Optional[str] = None)
     # Use the imported function in development, or do it directly in production
     if update_agent_run_status is not None:
         update_success = await update_agent_run_status(
-            client, agent_run_id, final_status, error=error_message, responses=all_responses
+            client, agent_run_id, final_status, error=error_message
         )
     else:
         # Direct database update for production
         update_success = await _update_agent_run_status_direct(
-            client, agent_run_id, final_status, error=error_message, responses=all_responses
+            client, agent_run_id, final_status, error=error_message
         )
 
     if not update_success:
         logger.error(f"Failed to update database status for stopped/failed run {agent_run_id}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update agent run status in database"
+        )
 
     # Send STOP signal to the global control channel
     global_control_channel = f"agent_run:{agent_run_id}:control"
