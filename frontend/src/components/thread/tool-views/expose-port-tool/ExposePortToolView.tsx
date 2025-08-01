@@ -48,7 +48,7 @@ export function ExposePortToolView({
             </div>
             <div>
               <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                Port Exposure
+                Exposição de Porta
               </CardTitle>
             </div>
           </div>
@@ -67,7 +67,7 @@ export function ExposePortToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              {actualIsSuccess ? 'Port exposed successfully' : 'Failed to expose port'}
+              {actualIsSuccess ? 'Porta exposta com sucesso' : 'Falha ao expor porta'}
             </Badge>
           )}
         </div>
@@ -79,7 +79,7 @@ export function ExposePortToolView({
             icon={Computer}
             iconColor="text-emerald-500 dark:text-emerald-400"
             bgColor="bg-gradient-to-b from-emerald-100 to-emerald-50 shadow-inner dark:from-emerald-800/40 dark:to-emerald-900/60 dark:shadow-emerald-950/20"
-            title="Exposing port"
+            title="Expondo porta"
             filePath={port?.toString()}
             showProgress={true}
           />
@@ -92,7 +92,7 @@ export function ExposePortToolView({
                     <div className="flex items-start gap-3 mb-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-2">
-                          Exposed URL
+                          URL Exposta
                         </h3>
                         <a
                           href={url}
@@ -109,11 +109,11 @@ export function ExposePortToolView({
                     <div className="space-y-3">
                       <div className="flex flex-col gap-1.5">
                         <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          Port Details
+                          Detalhes da Porta
                         </div>
                         <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline" className="bg-zinc-50 dark:bg-zinc-800 font-mono">
-                            Port: {port}
+                            Porta: {port}
                           </Badge>
                         </div>
                       </div>
@@ -126,7 +126,7 @@ export function ExposePortToolView({
 
                       <div className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-md p-3 text-amber-600 dark:text-amber-400 flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>This URL might only be temporarily available and could expire after some time.</span>
+                        <span>Esta URL pode estar disponível apenas temporariamente e pode expirar após algum tempo.</span>
                       </div>
                     </div>
                   </div>
@@ -140,10 +140,10 @@ export function ExposePortToolView({
                     <Computer className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-                    No Port Information
+                    Sem Informações de Porta
                   </h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md">
-                    No port exposure information is available yet. Use the expose-port command to share a local port.
+                    Nenhuma informação de exposição de porta disponível ainda. Use o comando expose-port para compartilhar uma porta local.
                   </p>
                 </div>
               )}
@@ -157,7 +157,7 @@ export function ExposePortToolView({
           {!isStreaming && port && (
             <Badge variant="outline">
               <Computer className="h-3 w-3 mr-1" />
-              Port {port}
+              Porta {port}
             </Badge>
           )}
         </div>

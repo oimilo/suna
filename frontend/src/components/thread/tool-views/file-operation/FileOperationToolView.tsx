@@ -143,7 +143,7 @@ export function FileOperationToolView({
         <div className="flex items-center justify-center h-full p-12">
           <div className="text-center">
             <FileIcon className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No content to preview</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Nenhum conteúdo para visualizar</p>
           </div>
         </div>
       );
@@ -154,7 +154,7 @@ export function FileOperationToolView({
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
             src={htmlPreviewUrl}
-            title={`HTML Preview of ${fileName}`}
+            title={`Visualização HTML de ${fileName}`}
             className="flex-grow border-0"
             sandbox="allow-same-origin allow-scripts"
           />
@@ -199,7 +199,7 @@ export function FileOperationToolView({
         <Icon className={cn("h-10 w-10", config.color)} />
       </div>
       <h3 className="text-xl font-semibold mb-6 text-zinc-900 dark:text-zinc-100">
-        File Deleted
+        Arquivo Deletado
       </h3>
       <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
         <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
@@ -207,7 +207,7 @@ export function FileOperationToolView({
         </code>
       </div>
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        This file has been permanently removed
+        Este arquivo foi removido permanentemente
       </p>
     </div>
   );
@@ -218,7 +218,7 @@ export function FileOperationToolView({
         <div className="flex items-center justify-center h-full p-12">
           <div className="text-center">
             <FileIcon className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No source code to display</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Nenhum código fonte para exibir</p>
           </div>
         </div>
       );
@@ -288,7 +288,7 @@ export function FileOperationToolView({
                 <Button variant="outline" size="sm" className="h-8 text-xs bg-white dark:bg-muted/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-none" asChild>
                   <a href={htmlPreviewUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                    Open in Browser
+                    Abrir no Navegador
                   </a>
                 </Button>
               )}
@@ -298,14 +298,14 @@ export function FileOperationToolView({
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all [&[data-state=active]]:bg-white [&[data-state=active]]:dark:bg-primary/10 [&[data-state=active]]:text-foreground hover:bg-background/50 text-muted-foreground shadow-none"
                 >
                   <Code className="h-3.5 w-3.5" />
-                  Source
+                  Código
                 </TabsTrigger>
                 <TabsTrigger
                   value="preview"
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all [&[data-state=active]]:bg-white [&[data-state=active]]:dark:bg-primary/10 [&[data-state=active]]:text-foreground hover:bg-background/50 text-muted-foreground shadow-none"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  Preview
+                  Visualizar
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -322,7 +322,7 @@ export function FileOperationToolView({
                   bgColor={config.bgColor}
                   title={config.progressMessage}
                   filePath={processedFilePath || 'Processing file...'}
-                  subtitle="Please wait while the file is being processed"
+                  subtitle="Por favor aguarde enquanto o arquivo está sendo processado"
                   showProgress={false}
                 />
               ) : operation === 'delete' ? (
@@ -331,7 +331,7 @@ export function FileOperationToolView({
                     <Icon className={cn("h-10 w-10", config.color)} />
                   </div>
                   <h3 className="text-xl font-semibold mb-6 text-zinc-900 dark:text-zinc-100">
-                    Delete Operation
+                    Operação de Exclusão
                   </h3>
                   <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center">
                     <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
@@ -354,7 +354,7 @@ export function FileOperationToolView({
                   bgColor={config.bgColor}
                   title={config.progressMessage}
                   filePath={processedFilePath || 'Processing file...'}
-                  subtitle="Please wait while the file is being processed"
+                  subtitle="Por favor aguarde enquanto o arquivo está sendo processado"
                   showProgress={false}
                 />
               ) : operation === 'delete' ? (
