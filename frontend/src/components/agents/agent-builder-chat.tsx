@@ -15,6 +15,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { AgentBuilderIntro } from './agent-builder-intro';
+import { useAgentBuilderIntro } from '@/hooks/use-agent-builder-intro';
 
 interface AgentBuilderChatProps {
   agentId: string;
@@ -75,6 +77,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const stopAgentMutation = useStopAgentMutation();
   const chatHistoryQuery = useAgentBuilderChatHistory(agentId);
   const queryClient = useQueryClient();
+  const { shouldShowIntro, markIntroAsShown } = useAgentBuilderIntro();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -91,6 +94,12 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
     if (chatHistoryQuery.data && chatHistoryQuery.status === 'success' && !hasInitiallyLoadedRef.current) {
       console.log('[AgentBuilderChat] Loading chat history for agent:', agentId);
       const { messages: historyMessages, thread_id } = chatHistoryQuery.data;
+      
+      // Mark intro as shown if there's chat history
+      if (historyMessages && historyMessages.length > 0) {
+        markIntroAsShown();
+      }
+      
       if (historyMessages && historyMessages.length > 0) {
         const unifiedMessages = historyMessages
           .filter((msg) => msg.type !== 'status')
@@ -221,6 +230,9 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   ) => {
     if (!message.trim() && !chatInputRef.current?.getPendingFiles().length) return;
 
+    // Mark intro as shown when first message is sent
+    markIntroAsShown();
+    
     setIsSubmitting(true);
     setHasStartedConversation(true);
     setSaveStatus('saving');
@@ -380,12 +392,16 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
             agentName={t('agents.builder.title')}
             agentAvatar={'🤖'}
             emptyStateComponent={
-              <div className="mt-6 flex flex-col items-center text-center text-muted-foreground/80">
-                <div className="flex w-20 aspect-square items-center justify-center rounded-2xl bg-muted-foreground/10 p-4 mb-4">
-                  <div className="text-4xl">🤖</div>
+              shouldShowIntro && messages.length === 0 ? (
+                <AgentBuilderIntro />
+              ) : (
+                <div className="mt-6 flex flex-col items-center text-center text-muted-foreground/80">
+                  <div className="flex w-20 aspect-square items-center justify-center rounded-2xl bg-muted-foreground/10 p-4 mb-4">
+                    <div className="text-4xl">🤖</div>
+                  </div>
+                  <p className='w-[60%] text-2xl'>{t('agents.builder.intro')} <span className='text-primary/80 font-semibold'>{t('agents.builder.title')}</span>. {t('agents.builder.description')}</p>
                 </div>
-                <p className='w-[60%] text-2xl'>{t('agents.builder.intro')} <span className='text-primary/80 font-semibold'>{t('agents.builder.title')}</span>. {t('agents.builder.description')}</p>
-              </div>
+              )
             }
           />
           <div ref={messagesEndRef} />
