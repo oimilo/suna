@@ -698,13 +698,4 @@ async def run_agent(
         if generation:
             generation.end(output=full_response)
     
-    # Send completion signal if we exited the loop normally (not due to error)
-    if not has_error_occurred:
-        logger.info(f"Agent run completed successfully after {iteration_count} iterations")
-        yield {
-            "type": "status",
-            "status": "completed",
-            "message": "Agent run completed successfully"
-        }
-
     asyncio.create_task(asyncio.to_thread(lambda: langfuse.flush()))
