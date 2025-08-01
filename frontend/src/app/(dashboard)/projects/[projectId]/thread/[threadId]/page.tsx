@@ -708,7 +708,9 @@ export default function ThreadPage({
             leftSidebarState === 'expanded' ? 'left-[72px] md:left-[256px]' : 'left-[72px]',
             isSidePanelOpen ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]' : 'right-0',
             isMobile ? 'left-0 right-0' : ''
-          )}>
+          )}
+          style={{ paddingBottom: '25px' }}
+        >
           <div className={cn(
             "mx-auto",
             isMobile ? "w-full" : "max-w-3xl"

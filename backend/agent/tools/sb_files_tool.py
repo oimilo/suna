@@ -397,7 +397,7 @@ class SandboxFilesTool(SandboxToolsBase):
             
             # Prepare the request for Morph's fast apply using the exact format from their docs
             payload = {
-                "model": "morph/morph-code-edit",
+                "model": "morph-v3-fast",
                 "messages": [
                     {
                         "role": "user", 

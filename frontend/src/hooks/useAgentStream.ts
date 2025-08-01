@@ -416,6 +416,41 @@ export function useAgentStream(
       }
 
       console.error('[useAgentStream] Streaming error:', errorMessage, err);
+      
+      // Check if this is a TransferEncoding error from OpenRouter
+      const isTransferEncodingError = 
+        errorMessage.includes('TransferEncodingError') ||
+        errorMessage.includes('Not enough data to satisfy transfer length') ||
+        errorMessage.includes('APIConnectionError') ||
+        errorMessage.includes('OpenrouterException');
+      
+      if (isTransferEncodingError) {
+        console.warn('[useAgentStream] Transfer encoding error detected, attempting to recover');
+        // Don't show error immediately, wait to see if agent is still running
+        setTimeout(() => {
+          const runId = currentRunIdRef.current;
+          if (runId) {
+            getAgentStatus(runId)
+              .then((agentStatus) => {
+                if (agentStatus.status === 'running') {
+                  console.log('[useAgentStream] Agent still running after transfer error, continuing...');
+                  // Don't finalize, let it continue
+                } else {
+                  console.log('[useAgentStream] Agent not running after transfer error, finalizing');
+                  setError('Connection interrupted while processing response');
+                  finalizeStream(mapAgentStatus(agentStatus.status) || 'error', runId);
+                }
+              })
+              .catch((statusErr) => {
+                console.error('[useAgentStream] Error checking status after transfer error:', statusErr);
+                setError('Connection lost to agent');
+                finalizeStream('error', runId);
+              });
+          }
+        }, 2000); // Wait 2 seconds before checking
+        return;
+      }
+      
       setError(errorMessage);
       
       // Show error toast with longer duration
@@ -486,21 +521,29 @@ export function useAgentStream(
         if (!isMountedRef.current) return;
 
         const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[useAgentStream] Error checking agent status for ${runId} after stream close: ${errorMessage}`,
-        );
+        // Don't log as error if agent is simply not running anymore
+        if (errorMessage.includes('is not running')) {
+          console.log(
+            `[useAgentStream] Agent ${runId} is no longer running after stream close (expected behavior).`,
+          );
+        } else {
+          console.error(
+            `[useAgentStream] Error checking agent status for ${runId} after stream close: ${errorMessage}`,
+          );
+        }
 
         const isNotFoundError =
           errorMessage.includes('not found') ||
           errorMessage.includes('404') ||
-          errorMessage.includes('does not exist');
+          errorMessage.includes('does not exist') ||
+          errorMessage.includes('is not running');
 
         if (isNotFoundError) {
           console.log(
-            `[useAgentStream] Agent run ${runId} not found after stream close. Finalizing.`,
+            `[useAgentStream] Agent run ${runId} not found or not running after stream close. Finalizing as completed.`,
           );
-          // Revert to agent_not_running for this specific case
-          finalizeStream('agent_not_running', runId);
+          // Agent finished execution, finalize as completed
+          finalizeStream('completed', runId);
         } else {
           // For other errors checking status, finalize with generic error
           finalizeStream('error', runId);

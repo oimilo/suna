@@ -135,22 +135,25 @@ export function SiteHeader({
   return (
     <>
       <header className={cn(
-        "bg-background sticky top-0 flex h-14 shrink-0 items-center gap-2 z-20 w-full",
-        isMobile && "px-2"
+        "bg-background sticky top-0 flex h-14 shrink-0 items-center z-20 w-full px-4"
       )}>
-        {isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setOpenMobile(true)}
-            className="h-9 w-9 mr-1"
-            aria-label="Open sidebar"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-        )}
+        <div className={cn(
+          "w-full mx-auto flex items-center justify-between",
+          isMobile ? "w-full" : "max-w-3xl"
+        )}>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpenMobile(true)}
+              className="h-9 w-9 mr-2"
+              aria-label="Abrir barra lateral"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          )}
 
-        <div className="flex flex-1 items-center gap-2 px-3">
+          <div className="flex flex-1 items-center gap-2">
           {isEditing ? (
             <div className="flex items-center gap-1">
               <Input
@@ -185,14 +188,14 @@ export function SiteHeader({
             <div
               className="text-base font-medium text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
               onClick={startEditing}
-              title="Click to rename project"
+              title="Clique para renomear o projeto"
             >
               {projectName}
             </div>
           )}
-        </div>
+          </div>
 
-        <div className="flex items-center gap-1 pr-4">
+          <div className="flex items-center gap-1">
           {/* Debug mode indicator */}
           {debugMode && (
             <div className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-md mr-2">
@@ -226,7 +229,7 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View Files in Task</p>
+                  <p>Ver Arquivos da Tarefa</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -242,27 +245,13 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Share Chat</p>
+                  <p>Compartilhar Chat</p>
                 </TooltipContent>
               </Tooltip>
 
-              {/* <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onToggleSidePanel}
-                    className="h-9 w-9 cursor-pointer"
-                  >
-                    <PanelRightOpen className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Alternar Visualização da Área de Trabalho (CMD+I)</p>
-                </TooltipContent>
-              </Tooltip> */}
             </TooltipProvider>
           )}
+          </div>
         </div>
       </header>
       <ShareModal

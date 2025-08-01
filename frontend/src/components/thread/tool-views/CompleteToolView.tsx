@@ -148,7 +148,7 @@ export function CompleteToolView({
     return ext === 'html' || ext === 'htm' || ext === 'md' || ext === 'markdown' || ext === 'csv' || ext === 'tsv';
   };
 
-  const toolTitle = getToolTitle(name) || 'Task Complete';
+  const toolTitle = getToolTitle(name) || 'Tarefa Concluída';
 
   const handleFileClick = (filePath: string) => {
     if (onFileClick) {

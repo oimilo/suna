@@ -155,7 +155,7 @@ export function WebCrawlToolView({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5" />
               )}
-              {isSuccess ? 'Crawling completed' : 'Crawling failed'}
+              {isSuccess ? 'Rastreamento concluído' : 'Rastreamento falhou'}
             </Badge>
           )}
         </div>
@@ -175,7 +175,7 @@ export function WebCrawlToolView({
                 Fetching content from <span className="font-mono text-xs break-all">{domain}</span>
               </p>
               <Progress value={progress} className="w-full h-1" />
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">{progress}% complete</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">{progress}% concluído</p>
             </div>
           </div>
         ) : url ? (

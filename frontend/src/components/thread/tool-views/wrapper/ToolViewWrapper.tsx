@@ -77,8 +77,8 @@ export function ToolViewWrapper({
                 )}
                 <span>
                   {isSuccess
-                    ? customStatus?.success || "Completed successfully"
-                    : customStatus?.failure || "Execution failed"}
+                    ? customStatus?.success || "Concluído com sucesso"
+                    : customStatus?.failure || "Execução falhou"}
                 </span>
               </div>
             )}

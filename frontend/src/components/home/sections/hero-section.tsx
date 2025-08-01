@@ -190,10 +190,10 @@ export function HeroSection() {
   };
 
   return (
-    <section id="hero" className="w-full relative overflow-hidden">
+    <section id="hero" className="w-full relative overflow-hidden min-h-screen flex items-center">
       <div className="relative flex flex-col items-center w-full px-6">
 
-        <div className="relative z-10 pt-20 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
+        <div className="relative z-10 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
           {/* <p className="border border-border bg-accent rounded-full text-sm h-8 px-3 flex items-center gap-2">
             {hero.badgeIcon}
             {hero.badge}
@@ -258,7 +258,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-      <div className="mb-16 sm:mt-52 max-w-4xl mx-auto"></div>
 
       {/* Auth Dialog */}
       <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
