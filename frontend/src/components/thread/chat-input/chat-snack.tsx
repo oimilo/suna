@@ -13,6 +13,7 @@ export interface ChatSnackProps {
     toolCalls?: ToolCallInput[];
     toolCallIndex?: number;
     onExpandToolPreview?: () => void;
+    onNavigateToolPreview?: (index: number) => void;
     agentName?: string;
     showToolPreview?: boolean;
 
@@ -33,6 +34,7 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
     toolCalls = [],
     toolCallIndex = 0,
     onExpandToolPreview,
+    onNavigateToolPreview,
     agentName,
     showToolPreview = false,
     showUsagePreview = false,
@@ -90,6 +92,7 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
                     toolCalls={toolCalls}
                     currentIndex={toolCallIndex}
                     onExpand={onExpandToolPreview || (() => { })}
+                    onNavigate={onNavigateToolPreview}
                     agentName={agentName}
                     isVisible={true}
                     showIndicators={hasMultiple}
@@ -112,7 +115,7 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
                             damping: 30
                         }
                     }}
-                    className="-mb-4 w-full"
+                    className="w-full"
                     style={{ pointerEvents: 'auto' }}
                 >
                     <motion.div
