@@ -8,7 +8,7 @@ import os
 import json
 import httpx
 import asyncio
-from typing import Optional
+from typing import Optional, Tuple
 
 class SandboxFilesTool(SandboxToolsBase):
     """Tool for executing file system operations in a Daytona sandbox. All operations are performed relative to the /workspace directory."""
@@ -367,15 +367,22 @@ class SandboxFilesTool(SandboxToolsBase):
         except Exception as e:
             return self.fail_response(f"Error deleting file: {str(e)}")
 
-    async def _call_morph_api(self, file_content: str, code_edit: str, instructions: str, file_path: str) -> Optional[str]:
-        """Call Morph API to apply edits to file content"""
+    async def _call_morph_api(self, file_content: str, code_edit: str, instructions: str, file_path: str) -> Tuple[Optional[str], Optional[str]]:
+        """Call Morph API to apply edits to file content
+        
+        Returns:
+            Tuple of (new_content, error_message)
+            - new_content: The edited content if successful, None otherwise
+            - error_message: Error description if failed, None if successful
+        """
         try:
             morph_api_key = getattr(config, 'MORPH_API_KEY', None) or os.getenv('MORPH_API_KEY')
             
             # Only use Morph API, no fallback to OpenRouter
             if not morph_api_key:
-                logger.warning("No Morph API key found. Edit file functionality requires MORPH_API_KEY to be set.")
-                return None
+                error_msg = "No Morph API key found. Edit file functionality requires MORPH_API_KEY to be set."
+                logger.warning(error_msg)
+                return None, error_msg
             
             api_key = morph_api_key
             base_url = "https://api.morphllm.com/v1"
@@ -417,20 +424,30 @@ class SandboxFilesTool(SandboxToolsBase):
                             # Remove first line (```language) and last line (```)
                             content = '\n'.join(lines[1:-1])
                     
-                    return content
+                    return content, None
                 else:
-                    logger.error("Invalid response from Morph API")
-                    return None
+                    error_msg = "Invalid response from Morph API - no choices in response"
+                    logger.error(error_msg)
+                    return None, error_msg
                     
         except httpx.TimeoutException:
-            logger.error("Morph API request timed out")
-            return None
+            error_msg = "Morph API request timed out after 30 seconds"
+            logger.error(error_msg)
+            return None, error_msg
         except httpx.HTTPStatusError as e:
-            logger.error(f"Morph API returned error: {e.response.status_code}")
-            return None
+            error_msg = f"Morph API returned HTTP error: {e.response.status_code}"
+            if hasattr(e.response, 'text'):
+                try:
+                    error_body = e.response.text
+                    error_msg += f" - {error_body}"
+                except:
+                    pass
+            logger.error(error_msg)
+            return None, error_msg
         except Exception as e:
-            logger.error(f"Error calling Morph API: {str(e)}")
-            return None
+            error_msg = f"Error calling Morph API: {str(e)}"
+            logger.error(error_msg)
+            return None, error_msg
 
     @openapi_schema({
         "type": "function",
@@ -505,7 +522,17 @@ def authenticate_user(username, password):
             
             # Try Morph AI editing first
             logger.info(f"Attempting AI-powered edit for file '{target_file}' with instructions: {instructions[:100]}...")
-            new_content = await self._call_morph_api(original_content, code_edit, instructions, target_file)
+            new_content, error_message = await self._call_morph_api(original_content, code_edit, instructions, target_file)
+            
+            # Check for errors first
+            if error_message:
+                return self.fail_response(f"AI editing failed: {error_message}")
+            
+            if new_content is None:
+                return self.fail_response("AI editing failed for an unknown reason. The model returned no content.")
+            
+            if new_content == original_content:
+                return self.success_response(f"AI editing resulted in no changes to the file '{target_file}'.")
             
             if new_content and new_content != original_content:
                 # AI editing successful
@@ -534,12 +561,8 @@ def authenticate_user(username, password):
                 return self.success_response(message)
             
             else:
-                # Check if it failed due to missing API key or other reason
-                morph_api_key = getattr(config, 'MORPH_API_KEY', None) or os.getenv('MORPH_API_KEY')
-                if not morph_api_key:
-                    return self.fail_response(f"Edit file functionality requires MORPH_API_KEY to be configured. Please set MORPH_API_KEY in your environment variables or use 'full_file_rewrite' instead.")
-                else:
-                    return self.fail_response(f"AI editing was unable to apply the requested changes. The edit may be unclear or the file content may not match the expected format.")
+                # This should not happen given the checks above, but just in case
+                return self.fail_response(f"Unexpected error: AI editing produced no changes or invalid content.")
                     
         except Exception as e:
             return self.fail_response(f"Error editing file: {str(e)}")
