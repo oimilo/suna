@@ -454,7 +454,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                     className={containerClassName}
                     onScroll={handleScroll}
                 >
-                    <div className="mx-auto max-w-3xl md:px-8 min-w-0">
+                    <div className="mx-auto max-w-3xl px-4 min-w-0">
                         <div className="space-y-8 min-w-0">
                             {(() => {
 

@@ -707,7 +707,7 @@ export default function ThreadPage({
           className={cn(
             "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8",
             isSidePanelAnimating ? "" : "transition-all duration-200 ease-in-out",
-            leftSidebarState === 'expanded' ? 'left-[72px] md:left-[256px]' : 'left-[72px]',
+            leftSidebarState === 'expanded' ? 'left-4 md:left-6' : 'left-4',
             isSidePanelOpen 
               ? 'right-[60%]' // Sempre 60% para a área de trabalho
               : 'right-0',

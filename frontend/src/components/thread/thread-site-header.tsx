@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { useSidebarSafe } from "@/hooks/use-sidebar-safe"
+import { useSidebarContext } from '@/contexts/sidebar-context'
 import { ShareModal } from "@/components/sidebar/share-modal"
 import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/react-query/sidebar/keys";
@@ -62,6 +63,7 @@ export function SiteHeader({
 
   const isMobile = useIsMobile() || isMobileView
   const { setOpenMobile } = useSidebarSafe()
+  const { isPinned } = useSidebarContext()
   const updateProjectMutation = useUpdateProject()
 
   const openShareModal = () => {
@@ -154,6 +156,28 @@ export function SiteHeader({
           )}
 
           <div className="flex flex-1 items-center gap-2">
+          {/* Side panel toggle button - only visible when sidebar is not pinned */}
+          {!isPinned && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggleSidePanel}
+                    className="h-9 w-9 cursor-pointer"
+                    aria-label="Toggle side panel"
+                  >
+                    <PanelRightOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Área de Trabalho</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
           {isEditing ? (
             <div className="flex items-center gap-1">
               <Input
@@ -203,19 +227,8 @@ export function SiteHeader({
             </div>
           )}
 
-          {isMobile ? (
-            // Mobile view - only show the side panel toggle
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleSidePanel}
-              className="h-9 w-9 cursor-pointer"
-              aria-label="Toggle computer panel"
-            >
-              <PanelRightOpen className="h-4 w-4" />
-            </Button>
-          ) : (
-            // Desktop view - show all buttons with tooltips
+          {!isMobile && (
+            // Desktop view - show file and share buttons with tooltips
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

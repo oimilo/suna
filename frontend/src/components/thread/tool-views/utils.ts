@@ -45,7 +45,7 @@ export function getToolTitle(toolName: string): string {
     'browser-fill': 'Preencher no Browser',
     'browser-wait': 'Aguardar no Browser',
     'see-image': 'Ver Imagem',
-    'ask': 'Perguntar',
+    'ask': 'Aguardando Resposta',
     'complete': 'Tarefa Concluída',
     'execute-data-provider-call': 'Chamar Provedor de Dados',
     'get-data-provider-endpoints': 'Obter Endpoints de Dados',

@@ -360,7 +360,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
 
     return (
-      <div className="mx-auto w-full max-w-4xl relative">
+      <div className="w-full relative">
         <div className="relative flex flex-col gap-2">
           <ChatSnack
             toolCalls={toolCalls}
@@ -381,7 +381,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             isVisible={showToolPreview || !!showSnackbar}
           />
           <div
-            className={`w-full max-w-4xl mx-auto overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative`}
+            className={`w-full overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {

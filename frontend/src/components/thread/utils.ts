@@ -326,8 +326,8 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['get-data-provider-endpoints', 'Obtendo endpoints'],
   
   ['deploy', 'Fazendo Deploy'],
-  ['ask', 'Perguntar'],
-  ['complete', 'Completando Tarefa'],
+  ['ask', 'Aguardando Resposta'],
+  ['complete', 'Tarefa Concluída'],
   ['crawl-webpage', 'Rastreando Website'],
   ['expose-port', 'Expondo Porta'],
   ['scrape-webpage', 'Extraindo Dados do Website'],
@@ -378,8 +378,8 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['get_data_provider_endpoints', 'Obtendo endpoints'],
   
   ['deploy', 'Fazendo Deploy'],
-  ['ask', 'Perguntar'],
-  ['complete', 'Completando Tarefa'],
+  ['ask', 'Aguardando Resposta'],
+  ['complete', 'Tarefa Concluída'],
   ['crawl_webpage', 'Rastreando Website'],
   ['expose_port', 'Expondo Porta'],
   ['scrape_webpage', 'Extraindo Dados do Website'],

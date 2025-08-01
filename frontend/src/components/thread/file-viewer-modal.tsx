@@ -212,13 +212,13 @@ export function FileViewerModal({
         }
       } catch (error) {
         console.error(`[DOWNLOAD ALL] Error exploring directory ${dirPath}:`, error);
-        toast.error(`Failed to read directory: ${dirPath}`);
+        toast.error(`Falha ao ler diretório: ${dirPath}`);
       }
     };
 
     await exploreDirectory(startPath);
 
-    console.log(`[DOWNLOAD ALL] Discovered ${allFiles.length} files, total size: ${totalSize} bytes`);
+    console.log(`[DOWNLOAD ALL] Descobertos ${allFiles.length} arquivos, tamanho total: ${totalSize} bytes`);
     return { files: allFiles, totalSize };
   }, [sandboxId]);
 
@@ -228,13 +228,13 @@ export function FileViewerModal({
 
     try {
       setIsDownloadingAll(true);
-      setDownloadProgress({ current: 0, total: 0, currentFile: 'Discovering files...' });
+      setDownloadProgress({ current: 0, total: 0, currentFile: 'Descobrindo arquivos...' });
 
       // Step 1: Discover all files
       const { files } = await discoverAllFiles();
 
       if (files.length === 0) {
-        toast.error('No files found to download');
+        toast.error('Nenhum arquivo encontrado para baixar');
         return;
       }
 
@@ -242,7 +242,7 @@ export function FileViewerModal({
 
       // Step 2: Create zip and load files
       const zip = new JSZip();
-      setDownloadProgress({ current: 0, total: files.length, currentFile: 'Creating archive...' });
+      setDownloadProgress({ current: 0, total: files.length, currentFile: 'Criando arquivo...' });
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -273,7 +273,7 @@ export function FileViewerModal({
             );
 
             if (!response.ok) {
-              console.warn(`[DOWNLOAD ALL] Failed to load file: ${file.path} (${response.status})`);
+              console.warn(`[DOWNLOAD ALL] Falha ao carregar arquivo: ${file.path} (${response.status})`);
               continue; // Skip this file and continue with others
             }
 
@@ -300,7 +300,7 @@ export function FileViewerModal({
                 const blobContent = await blobResponse.blob();
                 zip.file(relativePath, blobContent);
               } catch (blobError) {
-                console.warn(`[DOWNLOAD ALL] Failed to fetch blob content for: ${file.path}`, blobError);
+                console.warn(`[DOWNLOAD ALL] Falha ao buscar conteúdo blob para: ${file.path}`, blobError);
                 // Fallback: try to fetch from server directly
                 const fallbackResponse = await fetch(
                   `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
@@ -332,7 +332,7 @@ export function FileViewerModal({
       setDownloadProgress({
         current: files.length,
         total: files.length,
-        currentFile: 'Generating zip file...'
+        currentFile: 'Gerando arquivo zip...'
       });
 
       console.log('[DOWNLOAD ALL] Generating zip file...');
@@ -354,12 +354,12 @@ export function FileViewerModal({
       // Clean up
       setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-      toast.success(`Downloaded ${files.length} files as zip archive`);
+      toast.success(`${files.length} arquivos baixados como arquivo zip`);
       console.log(`[DOWNLOAD ALL] Successfully created zip with ${files.length} files`);
 
     } catch (error) {
       console.error('[DOWNLOAD ALL] Error creating zip:', error);
-      toast.error(`Failed to create zip archive: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Falha ao criar arquivo zip: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsDownloadingAll(false);
       setDownloadProgress(null);
@@ -479,7 +479,7 @@ export function FileViewerModal({
     // Handle any loading errors
     if (filesError) {
       console.error('Failed to load files:', filesError);
-      toast.error('Failed to load files');
+      toast.error('Falha ao carregar arquivos');
     }
   }, [open, sandboxId, currentPath, isInitialLoad, isLoadingFiles, filesError]);
 
@@ -758,7 +758,7 @@ export function FileViewerModal({
           console.warn(`[FILE VIEWER] Binary file received as string content, this should not happen: ${selectedFilePath}`);
           setTextContentForRenderer(null);
           setBlobUrlForRenderer(null);
-          setContentError('Binary file received in incorrect format. Please try refreshing.');
+          setContentError('Arquivo binário recebido em formato incorreto. Por favor, tente recarregar.');
         } else {
           // Actual text content for text files
           console.log(`[FILE VIEWER] Setting text content for text file: ${selectedFilePath}`);
@@ -783,7 +783,7 @@ export function FileViewerModal({
         console.warn(`[FILE VIEWER] Unknown content type for: ${selectedFilePath}`, typeof cachedFileContent);
         setTextContentForRenderer(null);
         setBlobUrlForRenderer(null);
-        setContentError('Unknown content type received.');
+        setContentError('Tipo de conteúdo desconhecido recebido.');
       }
     }
   }, [selectedFilePath, cachedFileContent, isCachedFileLoading, cachedFileError]);
@@ -864,14 +864,14 @@ export function FileViewerModal({
       try {
         // Use the ref to access the markdown content directly
         if (!markdownRef.current) {
-          throw new Error('Markdown content not found');
+          throw new Error('Conteúdo markdown não encontrado');
         }
 
         // Create a standalone document for printing
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
           throw new Error(
-            'Unable to open print window. Please check if popup blocker is enabled.',
+            'Não foi possível abrir janela de impressão. Verifique se o bloqueador de popups está ativado.',
           );
         }
 
@@ -1011,11 +1011,11 @@ export function FileViewerModal({
         printWindow.document.write(htmlContent);
         printWindow.document.close();
 
-        toast.success('PDF export initiated. Check your print dialog.');
+        toast.success('Exportação de PDF iniciada. Verifique sua janela de impressão.');
       } catch (error) {
         console.error('PDF export failed:', error);
         toast.error(
-          `Failed to export PDF: ${error instanceof Error ? error.message : String(error)}`,
+          `Falha ao exportar PDF: ${error instanceof Error ? error.message : String(error)}`,
         );
       } finally {
         setIsExportingPdf(false);
@@ -1084,7 +1084,7 @@ export function FileViewerModal({
 
     } catch (error) {
       console.error('[FILE VIEWER] Download error:', error);
-      toast.error(`Failed to download file: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Falha ao baixar arquivo: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsDownloading(false);
     }
@@ -1107,7 +1107,7 @@ export function FileViewerModal({
       activeDownloadUrls.current.delete(url);
     }, 10000);
 
-    toast.success('Download started');
+    toast.success('Download iniciado');
   };
 
   // Handle file upload - Define after helpers
@@ -1144,7 +1144,7 @@ export function FileViewerModal({
         } = await supabase.auth.getSession();
 
         if (!session?.access_token) {
-          throw new Error('No access token available');
+          throw new Error('Sem token de acesso disponível');
         }
 
         const response = await fetch(
@@ -1166,11 +1166,11 @@ export function FileViewerModal({
         // Reload the file list using React Query
         await refetchFiles();
 
-        toast.success(`Uploaded: ${normalizedName}`);
+        toast.success(`Enviado: ${normalizedName}`);
       } catch (error) {
         console.error('Upload failed:', error);
         toast.error(
-          `Upload failed: ${error instanceof Error ? error.message : String(error)}`,
+          `Falha ao enviar: ${error instanceof Error ? error.message : String(error)},`
         );
       } finally {
         setIsUploading(false);
@@ -1193,7 +1193,7 @@ export function FileViewerModal({
       <DialogContent className="sm:max-w-[90vw] md:max-w-[1200px] w-[95vw] h-[90vh] max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-4 py-2 border-b flex-shrink-0 flex flex-row gap-4 items-center">
           <DialogTitle className="text-lg font-semibold">
-            Workspace Files
+            Arquivos do Workspace
           </DialogTitle>
 
           {/* Download progress display */}
@@ -1204,7 +1204,7 @@ export function FileViewerModal({
                 <span>
                   {downloadProgress.total > 0
                     ? `${downloadProgress.current}/${downloadProgress.total}`
-                    : 'Preparing...'
+                    : 'Preparando...'
                   }
                 </span>
               </div>
@@ -1236,7 +1236,7 @@ export function FileViewerModal({
                     onClick={navigatePrevious}
                     disabled={currentFileIndex <= 0}
                     className="h-8 w-8 p-0"
-                    title="Previous file (←)"
+                    title="Arquivo anterior (←)"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -1249,7 +1249,7 @@ export function FileViewerModal({
                     onClick={navigateNext}
                     disabled={currentFileIndex >= (filePathList?.length || 0) - 1}
                     className="h-8 w-8 p-0"
-                    title="Next file (→)"
+                    title="Próximo arquivo (→)"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -1265,7 +1265,7 @@ export function FileViewerModal({
             size="icon"
             onClick={navigateHome}
             className="h-8 w-8"
-            title="Go to home directory"
+            title="Ir para diretório inicial"
           >
             <Home className="h-4 w-4" />
           </Button>
@@ -1277,7 +1277,7 @@ export function FileViewerModal({
               className="h-7 px-2 text-sm font-medium min-w-fit flex-shrink-0"
               onClick={navigateHome}
             >
-              home
+              início
             </Button>
 
             {currentPath !== '/workspace' && (
@@ -1325,7 +1325,7 @@ export function FileViewerModal({
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
-                  <span className="hidden sm:inline">Download</span>
+                  <span className="hidden sm:inline">Baixar</span>
                 </Button>
 
                 {/* Replace the Export as PDF button with a dropdown */}
@@ -1347,7 +1347,7 @@ export function FileViewerModal({
                         ) : (
                           <FileText className="h-4 w-4" />
                         )}
-                        <span className="hidden sm:inline">Export as PDF</span>
+                        <span className="hidden sm:inline">Exportar como PDF</span>
                         <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1356,13 +1356,13 @@ export function FileViewerModal({
                         onClick={() => handleExportPdf('portrait')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span className="rotate-90">⬌</span> Portrait
+                        <span className="rotate-90">⬌</span> Retrato
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleExportPdf('landscape')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span>⬌</span> Landscape
+                        <span>⬌</span> Paisagem
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1386,7 +1386,7 @@ export function FileViewerModal({
                     ) : (
                       <Archive className="h-4 w-4" />
                     )}
-                    <span className="hidden sm:inline">Download All</span>
+                    <span className="hidden sm:inline">Baixar Tudo</span>
                   </Button>
                 )}
 
@@ -1402,7 +1402,7 @@ export function FileViewerModal({
                   ) : (
                     <Upload className="h-4 w-4" />
                   )}
-                  <span className="hidden sm:inline">Upload</span>
+                  <span className="hidden sm:inline">Enviar</span>
                 </Button>
               </>
             )}
@@ -1426,12 +1426,12 @@ export function FileViewerModal({
                 <div className="h-full w-full flex flex-col items-center justify-center">
                   <Loader className="h-8 w-8 animate-spin text-primary mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    Loading file{selectedFilePath ? `: ${selectedFilePath.split('/').pop()}` : '...'}
+                    Carregando arquivo{selectedFilePath ? `: ${selectedFilePath.split('/').pop()}` : '...'}
                   </p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
                     {(() => {
                       // Normalize the path for consistent cache checks
-                      if (!selectedFilePath) return "Preparing...";
+                      if (!selectedFilePath) return "Preparando...";
 
                       let normalizedPath = selectedFilePath;
                       if (!normalizedPath.startsWith('/workspace')) {
@@ -1445,8 +1445,8 @@ export function FileViewerModal({
                       const isCached = FileCache.has(`${sandboxId}:${normalizedPath}:${detectedContentType}`);
 
                       return isCached
-                        ? "Using cached version"
-                        : "Fetching from server";
+                        ? "Usando versão em cache"
+                        : "Buscando do servidor";
                     })()}
                   </p>
                 </div>
@@ -1455,7 +1455,7 @@ export function FileViewerModal({
                   <div className="max-w-md p-6 text-center border rounded-lg bg-muted/10">
                     <AlertTriangle className="h-10 w-10 text-orange-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">
-                      Error Loading File
+                      Erro ao Carregar Arquivo
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       {contentError}
@@ -1473,7 +1473,7 @@ export function FileViewerModal({
                           } as FileInfo);
                         }}
                       >
-                        Retry
+                        Tentar Novamente
                       </Button>
                       <Button
                         variant="outline"
@@ -1481,7 +1481,7 @@ export function FileViewerModal({
                           clearSelectedFile();
                         }}
                       >
-                        Back to Files
+                        Voltar aos Arquivos
                       </Button>
                     </div>
                   </div>
@@ -1501,7 +1501,7 @@ export function FileViewerModal({
                       return (
                         <div className="h-full w-full flex items-center justify-center">
                           <div className="text-sm text-muted-foreground">
-                            Loading {isPdfFile ? 'PDF' : isImageFile ? 'image' : 'file'}...
+                            Carregando {isPdfFile ? 'PDF' : isImageFile ? 'imagem' : 'arquivo'}...
                           </div>
                         </div>
                       );
@@ -1537,7 +1537,7 @@ export function FileViewerModal({
                 <div className="h-full w-full flex flex-col items-center justify-center">
                   <Folder className="h-12 w-12 mb-2 text-muted-foreground opacity-30" />
                   <p className="text-sm text-muted-foreground">
-                    Directory is empty
+                    Diretório vazio
                   </p>
                 </div>
               ) : (
