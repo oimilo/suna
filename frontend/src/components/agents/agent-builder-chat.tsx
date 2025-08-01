@@ -378,8 +378,8 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
             handleToolClick={() => { }}
             handleOpenFileViewer={handleOpenFileViewer}
             streamHookStatus={streamHookStatus}
-            agentName={t('agents.builder.title')}
-            agentAvatar={'🤖'}
+            agentName="Prophet"
+            agentAvatar={null}
             emptyStateComponent={
               messages.length === 0 ? (
                 <AgentBuilderIntro />
@@ -400,7 +400,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
           disabled={isSubmitting}
           isAgentRunning={agentStatus === 'running' || agentStatus === 'connecting'}
           onStopAgent={handleStopAgent}
-          agentName="Agent Builder"
+          agentName="Prophet"
           hideAttachments={true}
           bgColor='bg-muted-foreground/10'
           hideAgentSelection={true}
