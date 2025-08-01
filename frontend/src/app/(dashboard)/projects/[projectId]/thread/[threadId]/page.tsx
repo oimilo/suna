@@ -30,6 +30,7 @@ import { ThreadError, UpgradeDialog, ThreadLayout } from '../_components';
 import { useVncPreloader } from '@/hooks/useVncPreloader';
 import { useThreadAgent } from '@/hooks/react-query/agents/use-agents';
 import { useTranslations } from '@/hooks/use-translations';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 
 export default function ThreadPage({
   params,
@@ -68,6 +69,7 @@ export default function ThreadPage({
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebarSafe();
+  const { isPinned } = useSidebarContext();
 
   // Custom hooks
   const {
@@ -706,7 +708,9 @@ export default function ThreadPage({
             "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8",
             isSidePanelAnimating ? "" : "transition-all duration-200 ease-in-out",
             leftSidebarState === 'expanded' ? 'left-[72px] md:left-[256px]' : 'left-[72px]',
-            isSidePanelOpen ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]' : 'right-0',
+            isSidePanelOpen 
+              ? 'right-[60%]' // Sempre 60% para a área de trabalho
+              : 'right-0',
             isMobile ? 'left-0 right-0' : ''
           )}
           style={{ paddingBottom: '25px' }}

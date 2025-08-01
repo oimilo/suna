@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ToolView } from './tool-views/wrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BRANDING } from '@/lib/branding';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -84,6 +85,7 @@ export function ToolCallSidePanel({
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   const isMobile = useIsMobile();
+  const { isPinned } = useSidebarContext();
 
   const handleClose = React.useCallback(() => {
     onClose();
@@ -427,9 +429,7 @@ export function ToolCallSidePanel({
           <div
             className={cn(
               'border rounded-2xl flex flex-col shadow-2xl bg-background',
-              isMobile
-                ? 'w-full'
-                : 'w-[90%] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[650px]',
+              'w-full',
             )}
           >
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -693,10 +693,12 @@ export function ToolCallSidePanel({
             }
           }}
           className={cn(
-            'fixed top-2 right-2 bottom-4 border rounded-3xl flex flex-col z-30',
+            'fixed top-2 bottom-4 border rounded-3xl flex flex-col z-30 right-2',
             isMobile
               ? 'left-2'
-              : 'w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]',
+              : isPinned 
+                ? 'left-[calc(256px+(100%-256px)*0.4)]' // Quando pinned: sidebar + 40% do espaço restante
+                : 'left-[40%]', // Quando não pinned: 40% da tela
           )}
           style={{
             overflow: 'hidden',

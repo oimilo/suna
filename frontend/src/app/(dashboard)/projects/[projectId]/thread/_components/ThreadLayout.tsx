@@ -6,6 +6,7 @@ import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
 import { Project } from '@/lib/api';
 import { ApiMessageType, BillingData } from '../_types';
 import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 
 interface ThreadLayoutProps {
   children: React.ReactNode;
@@ -76,6 +77,8 @@ export function ThreadLayout({
   agentName,
   disableInitialAnimation = false
 }: ThreadLayoutProps) {
+  const { isPinned } = useSidebarContext();
+  
   return (
     <div className="flex h-screen">
       {debugMode && (
@@ -86,7 +89,7 @@ export function ThreadLayout({
 
       <div
         className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || isSidePanelOpen)
-          ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
+          ? 'mr-[60%]' // Sempre deixa 60% para a área de trabalho
           : ''
           }`}
       >
