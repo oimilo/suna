@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
 
 export function AgentBuilderIntro() {
   const [displayedText, setDisplayedText] = useState('');
@@ -36,32 +35,29 @@ Como posso ajudá-lo hoje? Descreva o que você gostaria que seu agente fizesse 
   }, [fullText]);
 
   return (
-    <div className="mx-auto max-w-3xl md:px-8 min-w-0">
-      <div className="space-y-8 min-w-0">
-        <div>
-          <div className="flex flex-col gap-2">
-            {/* Cabeçalho do assistente - espelhando o layout original */}
-            <div className="flex items-center">
-              <div className="rounded-md flex items-center justify-center relative">
-                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                  <span className="text-lg">🤖</span>
-                </div>
+    <div className="w-full h-full flex flex-col items-start justify-start overflow-y-auto scrollbar-hide">
+      <div className="w-full mx-auto max-w-3xl px-4 md:px-8 pt-8">
+        <div className="space-y-8">
+          <div>
+            <div className="flex flex-col gap-2">
+              {/* Cabeçalho do assistente */}
+              <div className="flex items-center">
+                <p className="text-sm text-muted-foreground">
+                  Agent Builder
+                </p>
               </div>
-              <p className="ml-2 text-sm text-muted-foreground">
-                Agent Builder
-              </p>
-            </div>
-            
-            {/* Conteúdo da mensagem */}
-            <div className="flex max-w-[90%] text-sm break-words overflow-hidden">
-              <div className="space-y-2 min-w-0 flex-1">
-                <div>
-                  <div className="prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden">
-                    <div className="whitespace-pre-wrap">
-                      {displayedText}
-                      {isTyping && (
-                        <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse" />
-                      )}
+              
+              {/* Conteúdo da mensagem */}
+              <div className="flex max-w-[90%] text-sm break-words overflow-hidden">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div>
+                    <div className="prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden">
+                      <p className="whitespace-pre-wrap mb-0">
+                        {displayedText}
+                        {isTyping && (
+                          <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse" />
+                        )}
+                      </p>
                     </div>
                   </div>
                 </div>
