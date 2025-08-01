@@ -14,7 +14,7 @@ export function AgentBuilderIntro() {
     "Mas tenho certeza que juntos vamos torná-lo especial!",
     "Você me diz que capacidades ele deve ter e eu me certifico que ele as consiga!",
     "Automatizar envio de lembretes no Notion, sistema de agendamento pelo Google Calendar, o quê quiser!",
-    "Mas acho que estou me antecipando... antes disso, prazer, sou o Prophet!"
+    "Mas estou me antecipando... o que tem em mente para seu agente?"
   ];
 
   useEffect(() => {
