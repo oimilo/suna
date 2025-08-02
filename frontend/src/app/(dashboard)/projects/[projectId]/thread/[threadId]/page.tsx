@@ -55,7 +55,6 @@ export default function ThreadPage({
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [initialPanelOpenAttempted, setInitialPanelOpenAttempted] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
 
@@ -719,12 +718,6 @@ export default function ThreadPage({
           <div className={cn(
             "relative w-full mx-auto max-w-3xl px-4"
           )}>
-            {/* Blinking cursor when not focused */}
-            {!isInputFocused && !newMessage && (
-              <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-10" 
-                style={{ animation: 'blink 1s infinite' }} 
-              />
-            )}
             <ChatInput
               value={newMessage}
               onChange={setNewMessage}
@@ -741,8 +734,6 @@ export default function ThreadPage({
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}
               onAgentSelect={setSelectedAgentId}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
               showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
