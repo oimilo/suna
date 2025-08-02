@@ -46,7 +46,6 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
   const [agentStatus, setAgentStatus] = useState<'idle' | 'running' | 'connecting' | 'error'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const isSunaAgent = agentMetadata?.is_suna_default || false;
 
@@ -388,12 +387,6 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
       </div>
       <div className="flex-shrink-0">
         <div className="p-0 md:p-4 md:px-10 relative">
-          {/* Blinking cursor when not focused */}
-          {!isInputFocused && !inputValue && (
-            <div className="absolute left-4 md:left-[3.5rem] top-[1.375rem] md:top-[2.375rem] h-6 w-0.5 bg-muted-foreground z-10" 
-              style={{ animation: 'blink 1s infinite' }} 
-            />
-          )}
           <ChatInput
             ref={chatInputRef}
             onSubmit={threadId ? handleSubmitMessage : handleSubmitFirstMessage}
@@ -412,8 +405,6 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
               toast.info("You can only test the agent you are currently configuring");
             }}
             autoFocus={false}
-            onFocus={() => setIsInputFocused(true)}
-            onBlur={() => setIsInputFocused(false)}
           />
         </div>
       </div>
