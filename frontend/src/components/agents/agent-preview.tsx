@@ -401,7 +401,7 @@ export const AgentPreview = ({
             {avatar}
           </div>
         )}
-        <div className="flex-1">
+        <div className="flex-1 max-w-fit">
           {onFieldChange ? (
             <EditableText
               value={isSunaAgent ? "Prophet" : agent.name}
