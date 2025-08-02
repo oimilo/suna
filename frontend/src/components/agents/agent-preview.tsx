@@ -374,48 +374,50 @@ export const AgentPreview = ({
 
   return (
     <div className="h-full flex flex-col bg-muted dark:bg-muted/30">
-      <div className="flex-shrink-0 flex items-center gap-3 p-8">
-        {!isSunaAgent && onStyleChange ? (
-          <StylePicker
-            currentEmoji={avatar}
-            currentColor={color}
-            onStyleChange={onStyleChange}
-            agentId={agent.agent_id}
-          >
-            <div 
-              className="h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ring-1 ring-black/5 hover:ring-black/10 transition-all duration-200 cursor-pointer"
+      <div className="flex-shrink-0 flex items-center justify-between p-8">
+        <div className="flex items-center gap-3">
+          {!isSunaAgent && onStyleChange ? (
+            <StylePicker
+              currentEmoji={avatar}
+              currentColor={color}
+              onStyleChange={onStyleChange}
+              agentId={agent.agent_id}
+            >
+              <div 
+                className="h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ring-1 ring-black/5 hover:ring-black/10 transition-all duration-200 cursor-pointer"
+                style={{ backgroundColor: color }}
+              >
+                <div className="text-lg font-medium">{avatar}</div>
+              </div>
+            </StylePicker>
+          ) : isSunaAgent ? (
+            <div className="h-10 w-10 bg-background rounded-lg bg-muted border border flex items-center justify-center">
+              <BrandLogo size={16} />
+            </div>
+          ) : (
+            <div
+              className="h-10 w-10 flex items-center justify-center rounded-lg text-lg"
               style={{ backgroundColor: color }}
             >
-              <div className="text-lg font-medium">{avatar}</div>
+              {avatar}
             </div>
-          </StylePicker>
-        ) : isSunaAgent ? (
-          <div className="h-10 w-10 bg-background rounded-lg bg-muted border border flex items-center justify-center">
-            <BrandLogo size={16} />
-          </div>
-        ) : (
-          <div
-            className="h-10 w-10 flex items-center justify-center rounded-lg text-lg"
-            style={{ backgroundColor: color }}
-          >
-            {avatar}
-          </div>
-        )}
-        <div className="flex-1 max-w-fit">
-          {onFieldChange ? (
-            <EditableText
-              value={isSunaAgent ? "Prophet" : agent.name}
-              onSave={handleNameChange}
-              className={cn(
-                "text-base font-semibold bg-transparent text-foreground placeholder:text-muted-foreground",
-                !isNameEditable && isSunaAgent && "cursor-not-allowed opacity-75"
-              )}
-              placeholder="Nome do agente..."
-              disabled={!isNameEditable}
-            />
-          ) : (
-            <h3 className="font-semibold">{agent.name || 'Unnamed Agent'}</h3>
           )}
+          <div>
+            {onFieldChange ? (
+              <EditableText
+                value={isSunaAgent ? "Prophet" : agent.name}
+                onSave={handleNameChange}
+                className={cn(
+                  "text-base font-semibold bg-transparent text-foreground placeholder:text-muted-foreground",
+                  !isNameEditable && isSunaAgent && "cursor-not-allowed opacity-75"
+                )}
+                placeholder="Nome do agente..."
+                disabled={!isNameEditable}
+              />
+            ) : (
+              <h3 className="font-semibold">{agent.name || 'Unnamed Agent'}</h3>
+            )}
+          </div>
         </div>
         <Badge variant="highlight" className="text-sm">{t('agents.previewMode')}</Badge>
       </div>
