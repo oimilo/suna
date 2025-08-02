@@ -183,7 +183,7 @@ export function IntegrationsSection() {
             <Card key={index} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge className="text-xs">
                     {example.persona}
                   </Badge>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />

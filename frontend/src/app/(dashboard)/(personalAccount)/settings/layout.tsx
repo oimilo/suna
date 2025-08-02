@@ -15,7 +15,7 @@ export default function PersonalAccountSettingsPage({
   const { t } = usePtTranslations();
   
   const items = [
-    { name: 'Perfil', href: '/settings' },
+    { name: 'Conta', href: '/settings' },
     { name: 'Equipes', href: '/settings/teams' },
     { name: t('settings.billing'), href: '/settings/billing' },
     { name: t('settings.usageLogs'), href: '/settings/usage-logs' },
@@ -24,7 +24,7 @@ export default function PersonalAccountSettingsPage({
   return (
     <>
       <div className="space-y-6 w-full">
-        <Separator className="border-subtle dark:border-white/10" />
+        <Separator />
         <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 w-full max-w-7xl mx-auto px-4">
           <aside className="lg:w-1/4 p-1">
             <nav className="flex flex-col space-y-1">
@@ -41,7 +41,7 @@ export default function PersonalAccountSettingsPage({
               ))}
             </nav>
           </aside>
-          <div className="flex-1 bg-card-bg dark:bg-background-secondary p-6 rounded-2xl border border-subtle dark:border-white/10 shadow-custom">
+          <div className="flex-1">
             {children}
           </div>
         </div>

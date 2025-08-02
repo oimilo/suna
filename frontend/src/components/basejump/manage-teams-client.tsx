@@ -48,21 +48,15 @@ export function ManageTeamsClient({ teams }: ManageTeamsClientProps) {
             {teams.map((team) => (
               <TableRow
                 key={team.account_id}
-                className="hover:bg-hover-bg border-subtle dark:border-white/10"
               >
                 <TableCell>
                   <div className="flex items-center gap-x-2">
-                    <span className="font-medium text-card-title">
+                    <span className="font-medium">
                       {team.name}
                     </span>
                     <Badge
                       variant={
-                        team.account_role === 'owner' ? 'default' : 'outline'
-                      }
-                      className={
-                        team.account_role === 'owner'
-                          ? 'bg-primary hover:bg-primary/90'
-                          : 'text-foreground/70 border-subtle dark:border-white/10'
+                        team.account_role === 'owner' ? 'default' : 'secondary'
                       }
                     >
                       {team.is_primary_owner
@@ -74,8 +68,8 @@ export function ManageTeamsClient({ teams }: ManageTeamsClientProps) {
                 <TableCell className="text-right">
                   <Button
                     variant="outline"
+                    size="sm"
                     asChild
-                    className="rounded-lg h-9 border-subtle dark:border-white/10 hover:bg-hover-bg dark:hover:bg-hover-bg-dark"
                   >
                     <Link href={`/${team.slug}`}>Visualizar</Link>
                   </Button>

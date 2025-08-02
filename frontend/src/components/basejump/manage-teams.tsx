@@ -18,10 +18,10 @@ export default async function ManageTeams() {
   );
 
   return (
-    <Card className="border-subtle dark:border-white/10 bg-white dark:bg-background-secondary shadow-none rounded-xl">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base text-card-title">Suas Equipes</CardTitle>
-        <CardDescription className="text-foreground/70">
+    <Card>
+      <CardHeader>
+        <CardTitle>Suas Equipes</CardTitle>
+        <CardDescription>
           Equipes que você pertence ou é dono
         </CardDescription>
       </CardHeader>
