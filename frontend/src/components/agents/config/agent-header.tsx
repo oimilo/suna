@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Settings } from 'lucide-react';
+import { Sparkles, Settings, PanelLeft } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditableText } from '@/components/ui/editable';
 import { StylePicker } from '../style-picker';
@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { BRANDING } from '@/lib/branding';
 import { BrandLogo } from '@/components/sidebar/brand-logo';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AgentHeaderProps {
   agentId: string;
@@ -30,6 +32,8 @@ interface AgentHeaderProps {
       name_editable?: boolean;
     };
   };
+  isPinned?: boolean;
+  setIsPinned?: (pinned: boolean) => void;
 }
 
 export function AgentHeader({
@@ -42,6 +46,8 @@ export function AgentHeader({
   onStyleChange,
   onTabChange,
   agentMetadata,
+  isPinned,
+  setIsPinned,
 }: AgentHeaderProps) {
   const { t } = usePtTranslations();
   const isSunaAgent = agentMetadata?.is_suna_default || false;
@@ -61,6 +67,24 @@ export function AgentHeader({
   return (
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-3">
+        {/* Sidepanel button */}
+        {setIsPinned && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPinned(!isPinned)}
+                className="h-8 w-8"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isPinned ? 'Desacoplar' : 'Acoplar'}
+            </TooltipContent>
+          </Tooltip>
+        )}
         <div className="relative">
           {isSunaAgent ? (
             <div className="h-9 w-9 bg-background rounded-lg bg-muted border border flex items-center justify-center">

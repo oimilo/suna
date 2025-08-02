@@ -34,6 +34,7 @@ import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { BrandLogo } from '../sidebar/brand-logo';
 import { checkEnvironmentVariables } from '@/lib/env-check';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -48,6 +49,7 @@ export function DashboardContent() {
     useBillingError();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isPinned } = useSidebarContext();
   const isMobile = useIsMobile();
   const { setOpenMobile } = useSidebarSafe();
   const { data: accounts } = useAccounts();
@@ -194,7 +196,10 @@ export function DashboardContent() {
   return (
     <>
       <ModalProviders />
-      <div className="flex flex-col h-screen w-full">
+      <div className={cn(
+        "flex flex-col h-screen w-full",
+        isPinned && "lg:pl-64"
+      )}>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] max-w-[90%]">
           <div className="w-full mb-8 pl-4">
             <p className="text-3xl font-normal text-muted-foreground text-left">

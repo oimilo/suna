@@ -22,6 +22,7 @@ import { useAgentVersionStore } from '../../../../../lib/stores/agent-version-st
 import { cn } from '@/lib/utils';
 
 import { AgentHeader, VersionAlert, AgentBuilderTab, ConfigurationTab } from '@/components/agents/config';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 import { UpcomingRunsDropdown } from '@/components/agents/upcoming-runs-dropdown';
 
 interface FormData {
@@ -40,6 +41,7 @@ export default function AgentConfigurationPage() {
   const params = useParams();
   const agentId = params.agentId as string;
   const queryClient = useQueryClient();
+  const { isPinned, setIsPinned } = useSidebarContext();
 
   const { agent, versionData, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
   const searchParams = useSearchParams();
@@ -280,8 +282,9 @@ export default function AgentConfigurationPage() {
               <div className="flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-4">
+                    {/* Version control and upcoming runs hidden for cleaner UI */}
                     <div className="flex items-center gap-2">
-                      {!agent?.metadata?.is_suna_default && (
+                      {/* {!agent?.metadata?.is_suna_default && (
                         <AgentVersionSwitcher
                           agentId={agentId}
                           currentVersionId={agent?.current_version_id}
@@ -306,7 +309,7 @@ export default function AgentConfigurationPage() {
                           setOriginalData(formData);
                         }}
                       />
-                      <UpcomingRunsDropdown agentId={agentId} />
+                      <UpcomingRunsDropdown agentId={agentId} /> */}
                     </div>
                     <div className="flex items-center gap-2">
                       {hasUnsavedChanges && !isViewingOldVersion && (
@@ -343,6 +346,8 @@ export default function AgentConfigurationPage() {
                     onStyleChange={handleStyleChange}
                     onTabChange={setActiveTab}
                     agentMetadata={agent?.metadata}
+                    isPinned={isPinned}
+                    setIsPinned={setIsPinned}
                   />
                 </div>
               </div>
@@ -385,8 +390,9 @@ export default function AgentConfigurationPage() {
             <div className="flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
+                  {/* Version control and upcoming runs hidden for cleaner UI */}
                   <div className="flex items-center gap-2">
-                    <AgentVersionSwitcher
+                    {/* <AgentVersionSwitcher
                       agentId={agentId}
                       currentVersionId={agent?.current_version_id}
                       currentFormData={{
@@ -409,7 +415,7 @@ export default function AgentConfigurationPage() {
                         setOriginalData(formData);
                       }}
                     />
-                    <UpcomingRunsDropdown agentId={agentId} />
+                    <UpcomingRunsDropdown agentId={agentId} /> */}
                   </div>
                   <div className="flex items-center gap-2">
                     {hasUnsavedChanges && !isViewingOldVersion && (
@@ -448,6 +454,8 @@ export default function AgentConfigurationPage() {
                   onStyleChange={handleStyleChange}
                   onTabChange={setActiveTab}
                   agentMetadata={agent?.metadata}
+                  isPinned={isPinned}
+                  setIsPinned={setIsPinned}
                 />
               </div>
             </div>

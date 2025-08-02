@@ -55,6 +55,7 @@ export default function ThreadPage({
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [initialPanelOpenAttempted, setInitialPanelOpenAttempted] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
 
@@ -707,18 +708,23 @@ export default function ThreadPage({
           className={cn(
             "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8",
             isSidePanelAnimating ? "" : "transition-all duration-200 ease-in-out",
-            leftSidebarState === 'expanded' ? 'left-4 md:left-6' : 'left-4',
+            isPinned && !isMobile ? 'left-64' : leftSidebarState === 'expanded' ? 'left-4 md:left-6' : 'left-4',
             isSidePanelOpen 
-              ? 'right-[60%]' // Sempre 60% para a área de trabalho
+              ? (isPinned && !isMobile ? 'right-[50%]' : 'right-[60%]') // Ajusta apenas quando pinned
               : 'right-0',
             isMobile ? 'left-0 right-0' : ''
           )}
           style={{ paddingBottom: '25px' }}
         >
           <div className={cn(
-            "mx-auto",
-            isMobile ? "w-full" : "max-w-3xl"
+            "relative w-full"
           )}>
+            {/* Blinking cursor when not focused */}
+            {!isInputFocused && !newMessage && (
+              <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-10" 
+                style={{ animation: 'blink 1s infinite' }} 
+              />
+            )}
             <ChatInput
               value={newMessage}
               onChange={setNewMessage}
@@ -728,13 +734,15 @@ export default function ThreadPage({
               disabled={isSending || agentStatus === 'running' || agentStatus === 'connecting'}
               isAgentRunning={agentStatus === 'running' || agentStatus === 'connecting'}
               onStopAgent={handleStopAgent}
-              autoFocus={!isLoading}
+              autoFocus={false}
               onFileBrowse={handleOpenFileViewer}
               sandboxId={sandboxId || undefined}
               messages={messages}
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}
               onAgentSelect={setSelectedAgentId}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
               showToolPreview={!isSidePanelOpen && toolCalls.length > 0}

@@ -410,11 +410,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg">
               <div 
-                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-2xl' : 'rounded-2xl'} transition-all duration-300 ${
-                  isFocused 
-                    ? 'bg-white/80 dark:bg-white/8 border border-gray-200 dark:border-gray-700 backdrop-blur-sm' 
-                    : 'bg-transparent border border-transparent'
-                }`}
+                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-2xl' : 'rounded-2xl'} transition-all duration-300 bg-white/80 dark:bg-white/8 border border-gray-200 dark:border-gray-700 backdrop-blur-sm`}
                 data-tour="message-input"
                 onFocus={() => {
                   setIsFocused(true);
