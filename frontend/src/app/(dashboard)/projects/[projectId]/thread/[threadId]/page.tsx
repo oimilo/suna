@@ -706,7 +706,7 @@ export default function ThreadPage({
 
         <div
           className={cn(
-            "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8",
+            "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent pt-8",
             isSidePanelAnimating ? "" : "transition-all duration-200 ease-in-out",
             isPinned && !isMobile ? 'left-64' : leftSidebarState === 'expanded' ? 'left-4 md:left-6' : 'left-4',
             isSidePanelOpen 
@@ -717,7 +717,7 @@ export default function ThreadPage({
           style={{ paddingBottom: '25px' }}
         >
           <div className={cn(
-            "relative w-full"
+            "relative w-full mx-auto max-w-3xl px-4"
           )}>
             {/* Blinking cursor when not focused */}
             {!isInputFocused && !newMessage && (
