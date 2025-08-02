@@ -14,7 +14,7 @@ export default async function PersonalAccountSettingsPage() {
   const { data: user } = await supabaseClient.auth.getUser();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8 px-4 lg:px-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold">Conta</h1>
