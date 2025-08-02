@@ -26,7 +26,7 @@ export default function PersonalAccountSettingsPage({
       <div className="space-y-6 w-full">
         <Separator />
         <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 w-full max-w-7xl mx-auto px-4">
-          <aside className="lg:w-1/4 p-1">
+          <aside className="lg:w-1/4 p-1 lg:ml-[30px]">
             <nav className="flex flex-col space-y-1">
               {items.map((item) => (
                 <Link

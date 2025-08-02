@@ -100,7 +100,7 @@ export function HoverSidebar() {
           isPinned ? (
             "left-0 top-0 w-64 h-full"
           ) : (
-            isExpanded ? "left-3 lg:left-10 top-3 w-64 h-[calc(100vh-1.5rem)] shadow-2xl rounded-lg" : "left-0 top-0 w-0 h-0 overflow-hidden pointer-events-none"
+            isExpanded ? "left-3 top-3 w-64 h-[calc(100vh-1.5rem)] shadow-2xl rounded-lg" : "left-0 top-0 w-0 h-0 overflow-hidden pointer-events-none"
           )
         )}
         onMouseEnter={handleMouseEnter}
