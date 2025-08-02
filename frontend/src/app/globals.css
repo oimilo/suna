@@ -609,9 +609,15 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
 @theme {
   --animate-shimmer: shimmer 1s infinite;
   --animate-gradient-shift: gradient-shift 2s ease infinite;
+  --animate-blink: blink 1s infinite;
 }
 
 .animate-shimmer {

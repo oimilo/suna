@@ -43,6 +43,7 @@ export function DashboardContent() {
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
   const [initiatedThreadId, setInitiatedThreadId] = useState<string | null>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const { billingError, handleBillingError, clearBillingError } =
     useBillingError();
   const router = useRouter();
@@ -194,34 +195,22 @@ export function DashboardContent() {
     <>
       <ModalProviders />
       <div className="flex flex-col h-screen w-full">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[650px] max-w-[90%]">
-          <div className="flex flex-col items-center text-center w-full">
-            {/* <div className="flex items-center gap-1">
-              <h1 className="tracking-tight text-4xl text-muted-foreground leading-tight">
-                Hey, I am
-              </h1>
-              <h1 className="ml-1 tracking-tight text-4xl font-semibold leading-tight text-primary flex items-center gap-3">
-                {displayName}
-                {isSunaAgent ? (
-                  <span className="ml-2 flex items-center">
-                    <BrandLogo size={24} />
-                  </span>
-                ) : agentAvatar && (
-                  <span className="text-muted-foreground ml-2">
-                    {agentAvatar}
-                  </span>
-                )}
-              </h1>
-            </div> */}
-            <p className="tracking-tight text-3xl font-normal text-muted-foreground/80 mt-2 mb-8">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] max-w-[90%]">
+          <div className="w-full mb-8 pl-4">
+            <p className="text-3xl font-normal text-muted-foreground text-left">
               {t('dashboard.greeting')}
             </p>
           </div>
           <div className={cn(
-            "w-full mb-2",
-            "max-w-full",
-            "sm:max-w-3xl"
+            "w-full mb-2 relative",
+            "max-w-full"
           )}>
+            {/* Blinking cursor when not focused */}
+            {!isInputFocused && !inputValue && (
+              <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground" 
+                style={{ animation: 'blink 1s infinite' }} 
+              />
+            )}
             <ChatInput
               ref={chatInputRef}
               onSubmit={handleSubmit}
@@ -234,9 +223,12 @@ export function DashboardContent() {
               onAgentSelect={setSelectedAgentId}
               enableAdvancedConfig={true}
               onConfigureAgent={(agentId) => router.push(`/agents/config/${agentId}`)}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+              autoFocus={false}
             />
           </div>
-          <Examples onSelectPrompt={setInputValue} />
+          <Examples onSelectPrompt={setInputValue} isVisible={isInputFocused} />
         </div>
         <BillingErrorAlert
           message={billingError?.message}

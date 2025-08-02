@@ -53,6 +53,7 @@ export function HeroSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const { billingError, handleBillingError, clearBillingError } =
@@ -228,18 +229,20 @@ export function HeroSection() {
               </svg>
             </span>
           </Link> */}
-          <div className="flex flex-col items-center justify-center gap-5 pt-8">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal text-balance text-center">
-              <span className="text-primary font-dancing">{BRANDING.name}</span>
-            </h1>
-            <p className="text-base md:text-lg text-center text-gray-700 dark:text-gray-400 font-medium text-balance leading-relaxed tracking-tight">
-              {t('landing.hero.title')}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center w-full max-w-4xl gap-8 mt-8">
+          <div className="w-full max-w-[800px] mx-auto">
+            <div className="w-full mb-8 pl-4">
+              <p className="text-3xl font-normal text-muted-foreground text-left">
+                {t('dashboard.greeting')}
+              </p>
+            </div>
             <div className="w-full relative">
               <div className="relative z-10">
+                {/* Blinking cursor when not focused */}
+                {!isInputFocused && !inputValue && (
+                  <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-20" 
+                    style={{ animation: 'blink 1s infinite' }} 
+                  />
+                )}
                 <ChatInput
                   ref={chatInputRef}
                   onSubmit={handleChatInputSubmit}
@@ -252,6 +255,8 @@ export function HeroSection() {
                   selectedAgentId={selectedAgentId}
                   onAgentSelect={setSelectedAgentId}
                   autoFocus={false}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
                 />
               </div>
             </div>

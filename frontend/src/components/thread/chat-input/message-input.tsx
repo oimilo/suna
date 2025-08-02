@@ -206,8 +206,9 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             onPaste={handlePaste}
             placeholder={placeholder}
             className={cn(
-              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[36px] max-h-[200px] overflow-y-auto resize-none',
+              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[36px] max-h-[200px] overflow-y-auto resize-none transition-opacity duration-300',
               isDraggingOver ? 'opacity-40' : '',
+              !isFocused ? 'placeholder:opacity-0' : 'placeholder:opacity-100',
             )}
             disabled={loading || (disabled && !isAgentRunning)}
             rows={1}
@@ -217,7 +218,10 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
         </div>
 
 
-        <div className="flex items-center justify-between mt-0 mb-1 px-2">
+        <div className={cn(
+          "flex items-center justify-between mt-0 mb-1 px-2 transition-opacity duration-300",
+          !isFocused ? "opacity-0" : "opacity-100"
+        )}>
           <div className="flex items-center gap-3">
             {!hideAttachments && (
               <FileUploadHandler
@@ -275,8 +279,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                   loading ||
                   (disabled && !isAgentRunning)
                   ? 'opacity-50'
-                  : '',
-                !isFocused ? 'opacity-20 bg-muted/30' : 'opacity-100'
+                  : ''
               )}
               disabled={
                 (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||

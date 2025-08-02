@@ -256,7 +256,7 @@ export const FileUploadHandler = forwardRef<
                   onClick={handleFileUpload}
                   variant="outline"
                   size="sm"
-                  className={`h-8 px-3 py-2 bg-transparent border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-all duration-300 ${!isFocused ? 'opacity-20 border-transparent' : 'opacity-100 border-border'}`}
+                  className={`h-8 w-8 p-0 bg-transparent border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center justify-center transition-all duration-300 ${!isFocused ? 'opacity-20 border-transparent' : 'opacity-100 border-border'}`}
                   disabled={
                     !isLoggedIn || loading || (disabled && !isAgentRunning) || isUploading
                   }
@@ -266,7 +266,6 @@ export const FileUploadHandler = forwardRef<
                   ) : (
                     <Paperclip className="h-4 w-4" />
                   )}
-                  <span className="text-sm">Anexar</span>
                 </Button>
               </span>
             </TooltipTrigger>

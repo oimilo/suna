@@ -106,7 +106,7 @@ export default function DashboardLayoutContent({
     <DeleteOperationProvider>
       <>
         <HoverSidebar />
-        <div className={`min-h-screen bg-background transition-all duration-200 ${isPinned ? 'pl-64' : 'pl-0'}`}>
+        <div className={`min-h-screen transition-all duration-200 ${isPinned ? 'pl-64' : 'pl-0'}`}>
           {mantenanceBanner}
           {children}
         </div>
@@ -132,7 +132,7 @@ export default function DashboardLayoutContent({
       <WelcomeAnnouncement />
       <OnboardingTour />
       <OnboardingFloatingButton />
-      <OnboardingDevControls />
+      {/* <OnboardingDevControls /> */}
       <AnnouncementDialog />
     </DeleteOperationProvider>
   );

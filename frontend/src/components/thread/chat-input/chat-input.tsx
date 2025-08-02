@@ -67,6 +67,8 @@ export interface ChatInputProps {
   agentMetadata?: {
     is_suna_default?: boolean;
   };
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export interface UploadedFile {
@@ -110,6 +112,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       defaultShowSnackbar = false,
       showToLowCreditUsers = true,
       agentMetadata,
+      onFocus,
+      onBlur,
     },
     ref,
   ) => {
@@ -381,7 +385,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             isVisible={showToolPreview || !!showSnackbar}
           />
           <div
-            className={`w-full overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative`}
+            className={`w-full overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-2xl'} relative`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {
@@ -406,17 +410,21 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
 
             <div className="w-full text-sm flex flex-col justify-between items-start rounded-lg">
               <div 
-                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-3xl' : 'rounded-3xl'} transition-all duration-300 ${
+                className={`w-full p-1.5 ${enableAdvancedConfig && selectedAgentId ? 'pb-1' : 'pb-2'} ${enableAdvancedConfig && selectedAgentId ? 'rounded-t-2xl' : 'rounded-2xl'} transition-all duration-300 ${
                   isFocused 
-                    ? 'bg-transparent border border-gray-200/50 dark:border-gray-800/50' 
+                    ? 'bg-white/80 dark:bg-white/8 border border-gray-200 dark:border-gray-700 backdrop-blur-sm' 
                     : 'bg-transparent border border-transparent'
                 }`}
                 data-tour="message-input"
-                onFocus={() => setIsFocused(true)}
+                onFocus={() => {
+                  setIsFocused(true);
+                  onFocus?.();
+                }}
                 onBlur={(e) => {
                   // Check if the new focus target is still within the card
                   if (!e.currentTarget.contains(e.relatedTarget)) {
                     setIsFocused(false);
+                    onBlur?.();
                   }
                 }}
               >
@@ -441,8 +449,14 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   onStopAgent={onStopAgent}
                   isDraggingOver={isDraggingOver}
                   uploadedFiles={uploadedFiles}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
+                  onFocus={() => {
+                    setIsFocused(true);
+                    onFocus?.();
+                  }}
+                  onBlur={() => {
+                    setIsFocused(false);
+                    onBlur?.();
+                  }}
                   isFocused={isFocused}
 
                   fileInputRef={fileInputRef}
@@ -469,7 +483,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
               </div>
 
               {enableAdvancedConfig && selectedAgentId && (
-              <div className="w-full border-t border-border/30 bg-muted/20 px-4 py-1.5 rounded-b-3xl border-l border-r border-b border-border">
+              <div className="w-full border-t border-border/30 bg-muted/20 px-4 py-1.5 rounded-b-2xl border-l border-r border-b border-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none">
                     <button

@@ -59,7 +59,7 @@ export function HoverSidebar() {
     <>
       {/* Header com ícone e logo - esconde na página de chat */}
       {!pathname.includes('/thread/') && (
-        <div className="fixed top-0 left-0 z-[100] h-14 flex items-center px-4 bg-background w-full">
+        <div className="fixed top-0 left-0 z-[100] h-14 flex items-center px-4 bg-transparent backdrop-blur-sm w-full">
           {/* Ícone de painel sempre visível */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -155,8 +155,6 @@ export function HoverSidebar() {
         </div>
       </aside>
 
-      {/* Spacer para o conteúdo não ficar embaixo do header */}
-      {!pathname.includes('/thread/') && <div className="h-14" />}
     </>
   );
 }

@@ -143,8 +143,10 @@ const getRandomPrompts = (count: number = 3): PromptExample[] => {
 
 export const Examples = ({
   onSelectPrompt,
+  isVisible = true,
 }: {
   onSelectPrompt?: (query: string) => void;
+  isVisible?: boolean;
 }) => {
   const [displayedPrompts, setDisplayedPrompts] = useState<PromptExample[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -161,51 +163,58 @@ export const Examples = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4">
-      <div className="group relative">
-        <div className="flex gap-2 justify-center py-2">
-          {displayedPrompts.map((prompt, index) => (
-            <motion.div
-              key={`${prompt.title}-${index}`}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{
-                duration: 0.3,
-                delay: index * 0.03,
-                ease: "easeOut"
-              }}
+    <motion.div 
+      className="w-full max-w-4xl mx-auto px-4"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ 
+        opacity: isVisible ? 1 : 0,
+        y: isVisible ? 0 : 10
+      }}
+      transition={{ duration: 0.2 }}
+      style={{ pointerEvents: isVisible ? 'auto' : 'none' }}
+    >
+      <div className="group relative flex gap-2 justify-center items-center py-2">
+        {displayedPrompts.map((prompt, index) => (
+          <motion.div
+            key={`${prompt.title}-${index}`}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              duration: 0.3,
+              delay: index * 0.03,
+              ease: "easeOut"
+            }}
+          >
+            <Button
+              variant="outline"
+              className="w-fit h-fit px-3 py-2 rounded-full border-neutral-200/30 dark:border-neutral-800/30 bg-neutral-50/60 hover:bg-neutral-100/70 dark:bg-neutral-900/60 dark:hover:bg-neutral-800/70 backdrop-blur-sm text-sm font-normal text-muted-foreground hover:text-foreground transition-all"
+              onClick={() => onSelectPrompt && onSelectPrompt(prompt.query)}
             >
-              <Button
-                variant="outline"
-                className="w-fit h-fit px-3 py-2 rounded-full border-neutral-200 dark:border-neutral-800 bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => onSelectPrompt && onSelectPrompt(prompt.query)}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    {React.cloneElement(prompt.icon as React.ReactElement, { size: 14 })}
-                  </div>
-                  <span className="whitespace-nowrap">{prompt.title}</span>
+              <div className="flex items-center gap-2">
+                <div className="flex-shrink-0">
+                  {React.cloneElement(prompt.icon as React.ReactElement, { size: 14 })}
                 </div>
-              </Button>
-            </motion.div>
-          ))}
-        </div>
-
+                <span className="whitespace-nowrap">{prompt.title}</span>
+              </div>
+            </Button>
+          </motion.div>
+        ))}
+        
         {/* Refresh button that appears on hover */}
         <Button
           variant="ghost"
           size="sm"
           onClick={handleRefresh}
-          className="absolute -top-4 right-1 h-5 w-5 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          className="h-7 w-7 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 bg-neutral-50/60 hover:bg-neutral-100/70 dark:bg-neutral-900/60 dark:hover:bg-neutral-800/70 backdrop-blur-sm ml-1"
         >
           <motion.div
             animate={{ rotate: isRefreshing ? 360 : 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
-            <RefreshCw size={10} className="text-muted-foreground" />
+            <RefreshCw size={14} className="text-muted-foreground" />
           </motion.div>
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 };
