@@ -346,6 +346,8 @@ export default function AgentConfigurationPage() {
                     agentMetadata={agent?.metadata}
                     isPinned={isPinned}
                     setIsPinned={setIsPinned}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
                   />
                 </div>
               </div>
@@ -463,6 +465,8 @@ export default function AgentConfigurationPage() {
                   agentMetadata={agent?.metadata}
                   isPinned={isPinned}
                   setIsPinned={setIsPinned}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
                 />
               </div>
             </div>
@@ -477,6 +481,8 @@ export default function AgentConfigurationPage() {
                     isViewingOldVersion={isViewingOldVersion}
                     onFieldChange={handleFieldChange}
                     onStyleChange={handleStyleChange}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
                   />
                 </TabsContent>
                 <TabsContent value="configuration" className="flex-1 h-0 m-0 overflow-y-auto">

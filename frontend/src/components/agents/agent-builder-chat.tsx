@@ -393,18 +393,6 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
               <span className="font-medium text-sm">{formData.name || 'Novo Agente'}</span>
             </div>
           </div>
-          <Tabs value={activeTab} onValueChange={onTabChange}>
-            <TabsList className="h-7 bg-muted/50">
-              <TabsTrigger value="agent-builder" className="text-xs data-[state=active]:bg-background">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Prompt para Construir
-              </TabsTrigger>
-              <TabsTrigger value="configuration" className="text-xs data-[state=active]:bg-background">
-                <Settings className="h-3 w-3 mr-1" />
-                Config Manual
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
       </div>
 
@@ -438,18 +426,6 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
                   <div className="text-xs text-muted-foreground">Clique acima para fechar</div>
                 </div>
               </div>
-              <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-                <TabsList className="w-full h-8 bg-muted/50">
-                  <TabsTrigger value="agent-builder" className="flex-1 text-xs data-[state=active]:bg-background">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Prompt
-                  </TabsTrigger>
-                  <TabsTrigger value="configuration" className="flex-1 text-xs data-[state=active]:bg-background">
-                    <Settings className="h-3 w-3 mr-1" />
-                    Config
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
             </div>
           </CollapsibleContent>
         </Collapsible>
