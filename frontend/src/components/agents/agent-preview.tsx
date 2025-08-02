@@ -17,6 +17,9 @@ import { BillingError } from '@/lib/api';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { BrandLogo } from '../sidebar/brand-logo';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { EditableText } from '@/components/ui/editable';
+import { StylePicker } from './style-picker';
+import { BRANDING } from '@/lib/branding';
 
 interface Agent {
   agent_id: string;
@@ -34,10 +37,27 @@ interface AgentPreviewProps {
   agent: Agent;
   agentMetadata?: {
     is_suna_default?: boolean;
+    restrictions?: {
+      name_editable?: boolean;
+    };
+  };
+  onFieldChange?: (field: string, value: any) => void;
+  onStyleChange?: (emoji: string, color: string) => void;
+  isViewingOldVersion?: boolean;
+  currentStyle?: {
+    avatar: string;
+    color: string;
   };
 }
 
-export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
+export const AgentPreview = ({ 
+  agent, 
+  agentMetadata,
+  onFieldChange,
+  onStyleChange,
+  isViewingOldVersion = false,
+  currentStyle
+}: AgentPreviewProps) => {
   const { t } = usePtTranslations();
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -48,11 +68,16 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
 
   const isSunaAgent = agentMetadata?.is_suna_default || false;
+  const restrictions = agentMetadata?.restrictions || {};
+  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandles>(null);
 
   const getAgentStyling = () => {
+    if (currentStyle) {
+      return currentStyle;
+    }
     const agentData = agent as any;
     if (agentData.avatar && agentData.avatar_color) {
       return {
@@ -64,6 +89,18 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
   };
 
   const { avatar, color } = getAgentStyling();
+  
+  const handleNameChange = (value: string) => {
+    if (!isNameEditable && isSunaAgent) {
+      toast.error("Nome não pode ser editado", {
+        description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
+      });
+      return;
+    }
+    if (onFieldChange) {
+      onFieldChange('name', value);
+    }
+  };
 
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
   const addUserMessageMutation = useAddUserMessageMutation();
@@ -338,7 +375,21 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
   return (
     <div className="h-full flex flex-col bg-muted dark:bg-muted/30">
       <div className="flex-shrink-0 flex items-center gap-3 p-8">
-        {isSunaAgent ? (
+        {!isSunaAgent && onStyleChange ? (
+          <StylePicker
+            currentEmoji={avatar}
+            currentColor={color}
+            onStyleChange={onStyleChange}
+            agentId={agent.agent_id}
+          >
+            <div 
+              className="h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ring-1 ring-black/5 hover:ring-black/10 transition-all duration-200 cursor-pointer"
+              style={{ backgroundColor: color }}
+            >
+              <div className="text-lg font-medium">{avatar}</div>
+            </div>
+          </StylePicker>
+        ) : isSunaAgent ? (
           <div className="h-10 w-10 bg-background rounded-lg bg-muted border border flex items-center justify-center">
             <BrandLogo size={16} />
           </div>
@@ -351,7 +402,20 @@ export const AgentPreview = ({ agent, agentMetadata }: AgentPreviewProps) => {
           </div>
         )}
         <div className="flex-1">
-          <h3 className="font-semibold">{agent.name || 'Unnamed Agent'}</h3>
+          {onFieldChange ? (
+            <EditableText
+              value={isSunaAgent ? "Prophet" : agent.name}
+              onSave={handleNameChange}
+              className={cn(
+                "text-base font-semibold bg-transparent text-foreground placeholder:text-muted-foreground",
+                !isNameEditable && isSunaAgent && "cursor-not-allowed opacity-75"
+              )}
+              placeholder="Nome do agente..."
+              disabled={!isNameEditable}
+            />
+          ) : (
+            <h3 className="font-semibold">{agent.name || 'Unnamed Agent'}</h3>
+          )}
         </div>
         <Badge variant="highlight" className="text-sm">{t('agents.previewMode')}</Badge>
       </div>

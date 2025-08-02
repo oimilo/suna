@@ -21,6 +21,8 @@ interface AgentBuilderTabProps {
   isViewingOldVersion: boolean;
   onFieldChange: (field: string, value: any) => void;
   onStyleChange: (emoji: string, color: string) => void;
+  activeTab: string;
+  onTabChange: (value: string) => void;
 }
 
 export function AgentBuilderTab({
@@ -30,6 +32,8 @@ export function AgentBuilderTab({
   isViewingOldVersion,
   onFieldChange,
   onStyleChange,
+  activeTab,
+  onTabChange,
 }: AgentBuilderTabProps) {
   if (isViewingOldVersion) {
     return (
@@ -55,6 +59,8 @@ export function AgentBuilderTab({
         handleFieldChange={onFieldChange}
         handleStyleChange={onStyleChange}
         currentStyle={currentStyle}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
       />
     </div>
   );

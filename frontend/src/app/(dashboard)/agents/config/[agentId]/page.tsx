@@ -277,7 +277,7 @@ export default function AgentConfigurationPage() {
     <div className="h-screen flex flex-col bg-background">
       <div className="flex-1 flex overflow-hidden">
         <div className="hidden lg:flex w-full h-full">
-          <div className="w-1/2 border-r border-border/40 bg-background h-full flex flex-col">
+          <div className="w-2/5 border-r border-border/40 bg-background h-full flex flex-col">
             <div className="h-full flex flex-col">
               <div className="flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="p-4">
@@ -340,11 +340,9 @@ export default function AgentConfigurationPage() {
                     agentId={agentId}
                     displayData={displayData}
                     currentStyle={currentStyle}
-                    activeTab={activeTab}
                     isViewingOldVersion={isViewingOldVersion}
                     onFieldChange={handleFieldChange}
                     onStyleChange={handleStyleChange}
-                    onTabChange={setActiveTab}
                     agentMetadata={agent?.metadata}
                     isPinned={isPinned}
                     setIsPinned={setIsPinned}
@@ -361,6 +359,8 @@ export default function AgentConfigurationPage() {
                       isViewingOldVersion={isViewingOldVersion}
                       onFieldChange={handleFieldChange}
                       onStyleChange={handleStyleChange}
+                      activeTab={activeTab}
+                      onTabChange={setActiveTab}
                     />
                   </TabsContent>
                   <TabsContent value="configuration" className="flex-1 h-0 m-0 overflow-y-auto">
@@ -379,9 +379,18 @@ export default function AgentConfigurationPage() {
               </div>
             </div>
           </div>
-          <div className="w-1/2 bg-muted/30 overflow-y-auto">
+          <div className="w-3/5 bg-muted/30 overflow-y-auto">
             <div className="h-full">
-              {previewAgent && <AgentPreview agent={previewAgent} agentMetadata={agent?.metadata} />}
+              {previewAgent && (
+                <AgentPreview 
+                  agent={previewAgent} 
+                  agentMetadata={agent?.metadata}
+                  onFieldChange={handleFieldChange}
+                  onStyleChange={handleStyleChange}
+                  isViewingOldVersion={isViewingOldVersion}
+                  currentStyle={currentStyle}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -448,11 +457,9 @@ export default function AgentConfigurationPage() {
                   agentId={agentId}
                   displayData={displayData}
                   currentStyle={currentStyle}
-                  activeTab={activeTab}
                   isViewingOldVersion={isViewingOldVersion}
                   onFieldChange={handleFieldChange}
                   onStyleChange={handleStyleChange}
-                  onTabChange={setActiveTab}
                   agentMetadata={agent?.metadata}
                   isPinned={isPinned}
                   setIsPinned={setIsPinned}
@@ -502,7 +509,16 @@ export default function AgentConfigurationPage() {
                 <DrawerTitle>Agent Preview</DrawerTitle>
               </DrawerHeader>
               <div className="flex-1 overflow-y-auto p-4">
-                {previewAgent && <AgentPreview agent={previewAgent} agentMetadata={agent?.metadata} />}
+                {previewAgent && (
+                  <AgentPreview 
+                    agent={previewAgent} 
+                    agentMetadata={agent?.metadata}
+                    onFieldChange={handleFieldChange}
+                    onStyleChange={handleStyleChange}
+                    isViewingOldVersion={isViewingOldVersion}
+                    currentStyle={currentStyle}
+                  />
+                )}
               </div>
             </DrawerContent>
           </Drawer>

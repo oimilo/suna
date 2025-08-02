@@ -10,11 +10,11 @@ export function AgentBuilderIntro() {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const messages = [
-    "Ei, tá vendo esse cara aqui do lado? Ele não é muita coisa por enquanto",
-    "Mas tenho certeza que juntos vamos torná-lo especial!",
-    "Você me diz que capacidades ele deve ter e eu me certifico que ele as consiga!",
-    "Automatizar envio de lembretes no Notion, sistema de agendamento pelo Google Calendar, o quê quiser!",
-    "Mas estou me antecipando... o que tem em mente para seu agente?"
+    "Olá! Eu sou o Prophet, vou te ajudar a configurar seu novo agente",
+    "Vamos transformar este agente em algo especial, personalizado para suas necessidades",
+    "Me conte que tipo de tarefas você quer que ele execute",
+    "Posso configurar integrações com Gmail, Slack, Notion, Google Calendar e mais de 2700 serviços",
+    "Como você gostaria que seu agente te ajudasse no dia a dia?"
   ];
 
   useEffect(() => {

@@ -16,6 +16,11 @@ import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
 import { AgentBuilderIntro } from './agent-builder-intro';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronDown, Sparkles, Settings } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AgentBuilderChatProps {
   agentId: string;
@@ -23,6 +28,8 @@ interface AgentBuilderChatProps {
   handleFieldChange: (field: string, value: any) => void;
   handleStyleChange: (emoji: string, color: string) => void;
   currentStyle: { avatar: string; color: string };
+  activeTab: string;
+  onTabChange: (value: string) => void;
 }
 
 export const AgentBuilderChat = React.memo(function AgentBuilderChat({
@@ -30,7 +37,9 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   formData,
   handleFieldChange,
   handleStyleChange,
-  currentStyle
+  currentStyle,
+  activeTab,
+  onTabChange
 }: AgentBuilderChatProps) {
   const { t } = usePtTranslations();
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -41,6 +50,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
+  const [isContextOpen, setIsContextOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandles>(null);
@@ -368,6 +378,83 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Card de contexto do agente - Desktop */}
+      <div className="hidden md:block mx-4 mt-4 mb-2 p-3 bg-muted/50 rounded-lg border">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground">Configurando:</div>
+            <div className="flex items-center gap-2">
+              <div 
+                className="h-6 w-6 rounded flex items-center justify-center text-xs"
+                style={{ backgroundColor: currentStyle.color }}
+              >
+                {currentStyle.avatar}
+              </div>
+              <span className="font-medium text-sm">{formData.name || 'Novo Agente'}</span>
+            </div>
+          </div>
+          <Tabs value={activeTab} onValueChange={onTabChange}>
+            <TabsList className="h-7 bg-muted/50">
+              <TabsTrigger value="agent-builder" className="text-xs data-[state=active]:bg-background">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Prompt para Construir
+              </TabsTrigger>
+              <TabsTrigger value="configuration" className="text-xs data-[state=active]:bg-background">
+                <Settings className="h-3 w-3 mr-1" />
+                Config Manual
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Card de contexto do agente - Mobile (Colapsável) */}
+      <div className="md:hidden">
+        <Collapsible open={isContextOpen} onOpenChange={setIsContextOpen}>
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between p-3 bg-muted/30 border-b">
+              <span className="text-xs text-muted-foreground">
+                Configurando: <span className="font-medium text-foreground">{formData.name || 'Novo Agente'}</span>
+              </span>
+              <ChevronDown 
+                className={cn(
+                  "h-3 w-3 transition-transform duration-200",
+                  isContextOpen && "rotate-180"
+                )}
+              />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-3 bg-muted/20 border-b space-y-3">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="h-8 w-8 rounded flex items-center justify-center text-sm"
+                  style={{ backgroundColor: currentStyle.color }}
+                >
+                  {currentStyle.avatar}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{formData.name || 'Novo Agente'}</div>
+                  <div className="text-xs text-muted-foreground">Clique acima para fechar</div>
+                </div>
+              </div>
+              <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+                <TabsList className="w-full h-8 bg-muted/50">
+                  <TabsTrigger value="agent-builder" className="flex-1 text-xs data-[state=active]:bg-background">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Prompt
+                  </TabsTrigger>
+                  <TabsTrigger value="configuration" className="flex-1 text-xs data-[state=active]:bg-background">
+                    <Settings className="h-3 w-3 mr-1" />
+                    Config
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto scrollbar-hide">
           <ThreadContent
