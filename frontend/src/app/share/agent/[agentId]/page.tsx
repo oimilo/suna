@@ -8,7 +8,7 @@ import { AgentPreview } from '@/components/agents/agent-preview';
 export default function SharedAgentPage() {
   const params = useParams();
   const agentId = params.agentId as string;
-  const { agent, versionData, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
+  const { agent, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
 
   if (isLoading) {
     return (
@@ -41,7 +41,6 @@ export default function SharedAgentPage() {
         
         <AgentPreview 
           agent={agent}
-          versionData={versionData}
           isViewingOldVersion={isViewingOldVersion}
         />
       </div>

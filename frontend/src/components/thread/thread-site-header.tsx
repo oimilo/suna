@@ -63,7 +63,16 @@ export function SiteHeader({
 
   const isMobile = useIsMobile() || isMobileView
   const { setOpenMobile } = useSidebarSafe()
-  const { isPinned } = useSidebarContext()
+  
+  // Try to use sidebar context, but fall back to false if not available
+  let isPinned = false;
+  try {
+    const context = useSidebarContext();
+    isPinned = context.isPinned;
+  } catch {
+    // Context not available, use default
+  }
+  
   const updateProjectMutation = useUpdateProject()
 
   const openShareModal = () => {
