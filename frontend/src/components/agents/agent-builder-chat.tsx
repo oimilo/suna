@@ -265,6 +265,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
         agentFormData.append('agent_id', prophetAgentId);
       } else {
         console.log('[AGENT BUILDER] No valid Prophet agent ID found, will use default');
+        // Don't send any agent_id - let backend use the default
       }
 
       files.forEach((file) => {
