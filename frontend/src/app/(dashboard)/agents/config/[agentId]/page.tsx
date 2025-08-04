@@ -22,7 +22,6 @@ import { useAgentVersionStore } from '../../../../../lib/stores/agent-version-st
 import { cn } from '@/lib/utils';
 
 import { AgentHeader, VersionAlert, AgentBuilderTab, ConfigurationTab } from '@/components/agents/config';
-import { useSidebarContext } from '@/contexts/sidebar-context';
 import { UpcomingRunsDropdown } from '@/components/agents/upcoming-runs-dropdown';
 
 interface FormData {
@@ -41,7 +40,9 @@ export default function AgentConfigurationPage() {
   const params = useParams();
   const agentId = params.agentId as string;
   const queryClient = useQueryClient();
-  const { isPinned, setIsPinned } = useSidebarContext();
+  // Removido uso de sidebar context para permitir links compartilhados
+  const isPinned = false;
+  const setIsPinned = () => {};
 
   const { agent, versionData, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
   const searchParams = useSearchParams();
