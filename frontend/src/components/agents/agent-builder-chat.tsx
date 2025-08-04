@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronDown, Sparkles, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAgents } from '@/hooks/react-query/agents/use-agents';
 
 interface AgentBuilderChatProps {
   agentId: string;
@@ -86,6 +87,19 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const stopAgentMutation = useStopAgentMutation();
   const chatHistoryQuery = useAgentBuilderChatHistory(agentId);
   const queryClient = useQueryClient();
+  const { data: agentsResponse } = useAgents();
+  const agents = agentsResponse?.agents || [];
+  
+  // Find the default Prophet/Suna agent to use for execution
+  const defaultProphetAgent = agents.find((agent: any) => agent.metadata?.is_suna_default === true);
+  const prophetAgentId = defaultProphetAgent?.agent_id;
+  
+  // Debug log
+  useEffect(() => {
+    console.log('[AGENT BUILDER] Agents loaded:', agents.length);
+    console.log('[AGENT BUILDER] Default Prophet agent:', defaultProphetAgent);
+    console.log('[AGENT BUILDER] Prophet agent ID:', prophetAgentId);
+  }, [agents, defaultProphetAgent, prophetAgentId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -243,6 +257,15 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
       agentFormData.append('prompt', message);
       agentFormData.append('is_agent_builder', String(true));
       agentFormData.append('target_agent_id', agentId);
+      
+      // Use the default Prophet agent for execution
+      // Only append if we have a valid UUID (not undefined or empty)
+      if (prophetAgentId && prophetAgentId !== 'agent-builder-virtual') {
+        console.log('[AGENT BUILDER] Using Prophet agent ID:', prophetAgentId);
+        agentFormData.append('agent_id', prophetAgentId);
+      } else {
+        console.log('[AGENT BUILDER] No valid Prophet agent ID found, will use default');
+      }
 
       files.forEach((file) => {
         const normalizedName = normalizeFilenameToNFC(file.name);
@@ -441,7 +464,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
             handleToolClick={() => { }}
             handleOpenFileViewer={handleOpenFileViewer}
             streamHookStatus={streamHookStatus}
-            agentName="Prophet"
+            agentName={formData.name || 'Novo Agente'}
             agentAvatar={null}
             emptyStateComponent={
               messages.length === 0 ? (
@@ -463,10 +486,11 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
           disabled={isSubmitting}
           isAgentRunning={agentStatus === 'running' || agentStatus === 'connecting'}
           onStopAgent={handleStopAgent}
-          agentName="Prophet"
+          agentName={formData.name || 'Novo Agente'}
           hideAttachments={true}
           bgColor='bg-muted-foreground/10'
           hideAgentSelection={true}
+          selectedAgentId={prophetAgentId}
         />
       </div>
     </div>

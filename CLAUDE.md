@@ -407,6 +407,8 @@ if (!secret) {
 }
 ```
 
+**IMPORTANTE**: As variáveis de ambiente do frontend estão em `.env.local`, não em `.env`
+
 ## 🐛 Troubleshooting
 
 ### Problemas Comuns

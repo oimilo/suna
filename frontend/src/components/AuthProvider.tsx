@@ -10,7 +10,7 @@ import React, {
 import { createClient } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { checkAndInstallSunaAgent } from '@/lib/utils/install-suna-agent';
+import { checkAndInstallProphetAgent } from '@/lib/utils/install-prophet-agent';
 
 type AuthContextType = {
   supabase: SupabaseClient;
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           case 'SIGNED_IN':
             if (newSession?.user) {
               console.log('✅ User signed in');
-              await checkAndInstallSunaAgent(newSession.user.id, newSession.user.created_at);
+              await checkAndInstallProphetAgent(newSession.user.id, newSession.user.created_at);
             }
             break;
           case 'SIGNED_OUT':
