@@ -143,6 +143,12 @@ def _generate_model_structures():
         for alias in config["aliases"]:
             aliases[alias] = model_name
         
+        # Special handling for claude-sonnet-4
+        if model_name == "anthropic/claude-sonnet-4-20250514":
+            # Add the common frontend format
+            aliases["anthropic/claude-sonnet-4"] = model_name
+            paid_models.append("anthropic/claude-sonnet-4")
+        
         # Add pricing
         pricing[model_name] = config["pricing"]
         
