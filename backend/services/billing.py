@@ -532,12 +532,21 @@ async def can_use_model(client, user_id: str, model_name: str):
             "minutes_limit": "no limit"
         }
     
-        
+    # Add detailed logging for debugging
+    logger.info(f"[MODEL_ACCESS_CHECK] Checking model access for user {user_id}")
+    logger.info(f"[MODEL_ACCESS_CHECK] Requested model: {model_name}")
+    
     allowed_models = await get_allowed_models_for_user(client, user_id)
+    logger.info(f"[MODEL_ACCESS_CHECK] User's allowed models: {allowed_models}")
+    
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
+    logger.info(f"[MODEL_ACCESS_CHECK] Resolved model: {resolved_model}")
+    
     if resolved_model in allowed_models:
+        logger.info(f"[MODEL_ACCESS_CHECK] Access GRANTED for {resolved_model}")
         return True, "Model access allowed", [resolved_model]  # Return only the requested model
     
+    logger.warning(f"[MODEL_ACCESS_CHECK] Access DENIED for {model_name} (resolved: {resolved_model})")
     return False, f"Your current subscription plan does not include access to {model_name}. Please upgrade your subscription or choose from your available models: {', '.join(allowed_models)}", allowed_models
 
 async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optional[Dict]]:

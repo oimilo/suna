@@ -336,11 +336,13 @@ async def start_agent(
 
     # Use model from config if not specified in the request
     model_name = body.model_name
-    logger.info(f"Original model_name from request: {model_name}")
+    logger.info(f"[THREAD_START] Thread ID: {thread_id}")
+    logger.info(f"[THREAD_START] Original model_name from request: {model_name}")
+    logger.info(f"[THREAD_START] Request body: {body}")
 
     if model_name is None:
         model_name = config.MODEL_TO_USE
-        logger.info(f"Using model from config: {model_name}")
+        logger.info(f"[THREAD_START] Using model from config: {model_name}")
 
     # Log the model name after alias resolution
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
@@ -974,11 +976,12 @@ async def initiate_agent_with_files(
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
 
     # Use model from config if not specified in the request
-    logger.info(f"Original model_name from request: {model_name}")
+    logger.info(f"[AGENT_INITIATE] Original model_name from request: {model_name}")
+    logger.info(f"[AGENT_INITIATE] User ID: {user_id}")
 
     if model_name is None:
         model_name = config.MODEL_TO_USE
-        logger.info(f"Using model from config: {model_name}")
+        logger.info(f"[AGENT_INITIATE] Using model from config: {model_name}")
 
     # Log the model name after alias resolution
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
