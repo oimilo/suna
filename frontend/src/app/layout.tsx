@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
 import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, Dancing_Script } from 'next/font/google';
+import { Geist, Geist_Mono, Dancing_Script, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from '@/components/ui/sonner';
@@ -25,6 +25,18 @@ const dancingScript = Dancing_Script({
   variable: '--font-dancing-script',
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
+});
+
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const viewport: Viewport = {
@@ -129,7 +141,7 @@ export default function RootLayout({
       </head>
 
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased font-sans bg-background`}
+        className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased font-sans bg-background`}
       >
         <noscript>
           <iframe

@@ -100,7 +100,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
     // Always show tool button, conditionally show content below for file operations only
     if (showExpanded && isFileOperationTool) {
         return (
-            <div className="my-1">
+            <div className="my-2.5">
                 {shouldShowContent ? (
                     // Expanded view with content - show after 1500ms for file operations
                     <div className={`border border-neutral-200 dark:border-neutral-700/50 rounded-2xl overflow-hidden transition-all duration-500 ease-in-out ${shouldShowContent ? 'bg-zinc-100 dark:bg-neutral-900' : 'bg-muted'
@@ -145,7 +145,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                     // Just tool button with shimmer (first 1500ms)
                     <button
                         onClick={() => onToolClick?.(messageId, toolName)}
-                        className={`${styles.toolcallContainer} animate-shimmer`}
+                        className={styles.toolcallLoading}
                     >
                         <div className={styles.toolcallIcon}>
                             <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
@@ -160,10 +160,10 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
 
     // Show normal tool button (non-file-operation tools or non-expanded case)
     return (
-        <div className="my-1">
+        <div className="my-2.5">
             <button
                 onClick={() => onToolClick?.(messageId, toolName)}
-                className={`${styles.toolcallContainer} animate-shimmer`}
+                className={styles.toolcallLoading}
             >
                 <div className={styles.toolcallIcon}>
                     <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />

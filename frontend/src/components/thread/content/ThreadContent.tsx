@@ -187,7 +187,7 @@ export function renderMarkdownContent(
                     contentParts.push(
                         <div
                             key={`tool-${match.index}-${index}`}
-                            className="my-1"
+                            className="my-2"
                         >
                             <button
                                 onClick={() => handleToolClick(messageId, toolName)}
@@ -951,11 +951,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                         {/* Tool call content */}
                                         <div className="space-y-2">
-                                            <div className="animate-shimmer inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium text-primary bg-primary/10 rounded-md border border-primary/20">
-                                                <CircleDashed className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-spin animation-duration-2000" />
-                                                <span className="font-mono text-xs text-primary">
-                                                    {currentToolCall.name || 'Using Tool'}
-                                                </span>
+                                            <div className="inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium text-primary bg-primary/10 rounded-md border border-primary/20 relative overflow-hidden">
+                                                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/15 to-primary/5 animate-pulse"></div>
+                                                <div className="relative z-10 flex items-center gap-1.5">
+                                                    <CircleDashed className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-spin animation-duration-2000" />
+                                                    <span className="font-mono text-xs text-primary">
+                                                        {currentToolCall.name || 'Using Tool'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

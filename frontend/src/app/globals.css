@@ -627,6 +627,10 @@
   animation: var(--animate-gradient-shift);
 }
 
+.dark .animate-shimmer {
+  @apply bg-gradient-to-r from-neutral-800 via-neutral-900 to-neutral-800;
+}
+
 .animate-shimmer::before {
   content: '';
   @apply absolute top-0 left-0 w-full h-full;
@@ -639,6 +643,15 @@
   animation: var(--animate-shimmer);
   width: 100%;
   transform: translateX(-100%);
+}
+
+.dark .animate-shimmer::before {
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 .animate-shimmer-gray {
