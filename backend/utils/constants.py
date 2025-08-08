@@ -109,12 +109,20 @@ MODELS = {
         "tier_availability": ["paid"]
     },
     "anthropic/claude-3-5-sonnet-latest": {
-        "aliases": ["sonnet-3.5"],
+        "aliases": ["claude-3.5-sonnet", "sonnet-3.5"],
         "pricing": {
             "input_cost_per_million_tokens": 3.00,
             "output_cost_per_million_tokens": 15.00
         },
-        "tier_availability": ["paid"]
+        "tier_availability": ["free", "paid"]
+    },
+    "anthropic/claude-3-5-haiku-latest": {
+        "aliases": ["claude-3.5-haiku", "haiku-3.5"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.80,
+            "output_cost_per_million_tokens": 4.00
+        },
+        "tier_availability": ["free", "paid"]
     },   
 }
 

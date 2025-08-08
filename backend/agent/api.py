@@ -334,6 +334,10 @@ async def start_agent(
     if not instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
 
+    # Get user's billing info to determine tier
+    from services.billing import get_user_subscription, get_tier_info_from_price, get_allowed_models_for_user
+    from utils.model_selection import get_user_model_or_default
+    
     # Use model from config if not specified in the request
     model_name = body.model_name
     logger.info(f"[THREAD_START] Thread ID: {thread_id}")
@@ -341,8 +345,31 @@ async def start_agent(
     logger.info(f"[THREAD_START] Request body: {body}")
 
     if model_name is None:
-        model_name = config.MODEL_TO_USE
-        logger.info(f"[THREAD_START] Using model from config: {model_name}")
+        # Get user's tier to determine default model
+        subscription = await get_user_subscription(user_id)
+        tier_name = 'free'  # Default to free
+        
+        if subscription:
+            price_id = None
+            if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+                price_id = subscription['items']['data'][0]['price']['id']
+            else:
+                price_id = subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
+            
+            price_data = None
+            if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+                price_data = subscription['items']['data'][0].get('price')
+            
+            tier_info = get_tier_info_from_price(price_id, price_data)
+            tier_name = tier_info['name']
+        
+        # Get allowed models and select appropriate default
+        db_connection = DBConnection()
+        client = await db_connection.client
+        allowed_models = await get_allowed_models_for_user(client, user_id)
+        model_name = get_user_model_or_default(None, tier_name, allowed_models)
+        
+        logger.info(f"[THREAD_START] User tier: {tier_name}, selected default model: {model_name}")
 
     # Log the model name after alias resolution
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
@@ -975,13 +1002,40 @@ async def initiate_agent_with_files(
     if not instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
 
+    # Get user's billing info to determine tier
+    from services.billing import get_user_subscription, get_tier_info_from_price, get_allowed_models_for_user
+    from utils.model_selection import get_user_model_or_default
+    
     # Use model from config if not specified in the request
     logger.info(f"[AGENT_INITIATE] Original model_name from request: {model_name}")
     logger.info(f"[AGENT_INITIATE] User ID: {user_id}")
 
     if model_name is None:
-        model_name = config.MODEL_TO_USE
-        logger.info(f"[AGENT_INITIATE] Using model from config: {model_name}")
+        # Get user's tier to determine default model
+        subscription = await get_user_subscription(user_id)
+        tier_name = 'free'  # Default to free
+        
+        if subscription:
+            price_id = None
+            if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+                price_id = subscription['items']['data'][0]['price']['id']
+            else:
+                price_id = subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
+            
+            price_data = None
+            if subscription.get('items') and subscription['items'].get('data') and len(subscription['items']['data']) > 0:
+                price_data = subscription['items']['data'][0].get('price')
+            
+            tier_info = get_tier_info_from_price(price_id, price_data)
+            tier_name = tier_info['name']
+        
+        # Get allowed models and select appropriate default
+        db_connection = DBConnection()
+        client = await db_connection.client
+        allowed_models = await get_allowed_models_for_user(client, user_id)
+        model_name = get_user_model_or_default(None, tier_name, allowed_models)
+        
+        logger.info(f"[AGENT_INITIATE] User tier: {tier_name}, selected default model: {model_name}")
 
     # Log the model name after alias resolution
     resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
