@@ -184,15 +184,18 @@ def _generate_model_structures():
 # Generate all structures
 FREE_TIER_MODELS, PAID_TIER_MODELS, MODEL_NAME_ALIASES, HARDCODED_MODEL_PRICES = _generate_model_structures()
 
+# Simplified: Only Claude Sonnet 4 for all tiers
+CLAUDE_SONNET_4_ONLY = ["claude-sonnet-4-20250514"]
+
 MODEL_ACCESS_TIERS = {
-    "free": FREE_TIER_MODELS,
-    "pro": PAID_TIER_MODELS,  # New Pro plan
-    "pro_max": PAID_TIER_MODELS,  # New Pro Max plan (could add GPT-4.1 later)
-    "tier_2_20": PAID_TIER_MODELS,
-    "tier_6_50": PAID_TIER_MODELS,
-    "tier_12_100": PAID_TIER_MODELS,
-    "tier_25_200": PAID_TIER_MODELS,
-    "tier_50_400": PAID_TIER_MODELS,
-    "tier_125_800": PAID_TIER_MODELS,
-    "tier_200_1000": PAID_TIER_MODELS,
+    "free": CLAUDE_SONNET_4_ONLY,
+    "pro": CLAUDE_SONNET_4_ONLY,
+    "pro_max": CLAUDE_SONNET_4_ONLY,
+    "tier_2_20": CLAUDE_SONNET_4_ONLY,
+    "tier_6_50": CLAUDE_SONNET_4_ONLY,
+    "tier_12_100": CLAUDE_SONNET_4_ONLY,
+    "tier_25_200": CLAUDE_SONNET_4_ONLY,
+    "tier_50_400": CLAUDE_SONNET_4_ONLY,
+    "tier_125_800": CLAUDE_SONNET_4_ONLY,
+    "tier_200_1000": CLAUDE_SONNET_4_ONLY,
 }

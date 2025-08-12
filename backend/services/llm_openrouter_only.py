@@ -20,6 +20,8 @@ def force_openrouter_prefix(model_name: str) -> str:
         "anthropic/claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
         "anthropic/claude-3-5-sonnet-latest": "openrouter/anthropic/claude-3.5-sonnet",
         "claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",  # Claude 4 real
+        "claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",  # Claude 4 real
+        "claude-sonnet-4-0": "openrouter/anthropic/claude-sonnet-4",  # Claude 4 real
         "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",  # Claude 4 real
         "anthropic/claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",  # Claude 4 real
         "anthropic/claude-3-7-sonnet-latest": "openrouter/anthropic/claude-3.7-sonnet",

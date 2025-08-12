@@ -1,44 +1,25 @@
 /**
- * Model fallback configuration for handling access errors
+ * Model fallback configuration - simplified for Claude Sonnet 4 only
  */
 
-// Map of models to their fallback alternatives
+// All models fallback to Claude Sonnet 4
 export const MODEL_FALLBACK_MAP: Record<string, string[]> = {
-  'anthropic/claude-sonnet-4': [
-    'anthropic/claude-3-5-sonnet-latest',
-    'anthropic/claude-3-7-sonnet-latest',
-    'openrouter/deepseek/deepseek-chat-v3-0324',
-    'openrouter/moonshotai/kimi-k2',
-  ],
-  'claude-sonnet-4': [
-    'anthropic/claude-3-5-sonnet-latest',
-    'anthropic/claude-3-7-sonnet-latest',
-    'openrouter/deepseek/deepseek-chat-v3-0324',
-    'openrouter/moonshotai/kimi-k2',
-  ],
+  'anthropic/claude-sonnet-4': ['claude-sonnet-4-20250514'],
+  'claude-sonnet-4': ['claude-sonnet-4-20250514'],
+  'claude-sonnet-4-20250514': ['claude-sonnet-4-20250514'],
 };
 
-// Models that are generally available without subscription
+// Only Claude Sonnet 4 is available
 export const FREE_TIER_MODELS = [
-  'openrouter/moonshotai/kimi-k2',
-  'openrouter/deepseek/deepseek-chat-v3-0324',
-  'openrouter/deepseek/deepseek-chat',
-  'xai/grok-4',
-  'gemini/gemini-2.5-pro',
+  'claude-sonnet-4-20250514',
 ];
 
 /**
- * Get fallback model for a given model that failed with 403
+ * Get fallback model - always returns Claude Sonnet 4
  */
 export function getFallbackModel(failedModel: string): string | null {
-  const fallbacks = MODEL_FALLBACK_MAP[failedModel];
-  if (fallbacks && fallbacks.length > 0) {
-    // Return the first fallback option
-    return fallbacks[0];
-  }
-  
-  // If no specific fallback, try a free tier model
-  return FREE_TIER_MODELS[0] || null;
+  // Always return Claude Sonnet 4
+  return 'claude-sonnet-4-20250514';
 }
 
 /**

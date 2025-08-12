@@ -529,7 +529,7 @@ class WorkflowExecutor:
         from services.billing import check_billing_status, can_use_model
         
         client = await self._db.client
-        model_name = config.MODEL_TO_USE or "anthropic/claude-sonnet-4-20250514"
+        model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
         
         can_use, model_message, _ = await can_use_model(client, account_id, model_name)
         if not can_use:
@@ -565,7 +565,7 @@ class WorkflowExecutor:
         agent_config: Dict[str, Any]
     ) -> str:
         client = await self._db.client
-        model_name = config.MODEL_TO_USE or "anthropic/claude-sonnet-4-20250514"
+        model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,

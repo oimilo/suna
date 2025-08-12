@@ -2,10 +2,12 @@
  * Map frontend model IDs to backend/API model names
  */
 export const MODEL_MAPPING: Record<string, string> = {
-  // Claude models
-  'claude-sonnet-4': 'anthropic/claude-sonnet-4',
-  'anthropic/claude-sonnet-4-20250514': 'anthropic/claude-sonnet-4',
-  'anthropic/claude-sonnet-4': 'anthropic/claude-sonnet-4',
+  // Claude models - Sonnet 4 now uses direct Anthropic API
+  'claude-sonnet-4': 'claude-sonnet-4-20250514',
+  'claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
+  'claude-sonnet-4-0': 'claude-sonnet-4-20250514',
+  'anthropic/claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
+  'anthropic/claude-sonnet-4': 'claude-sonnet-4-20250514',
   
   // Add other model mappings as needed
   'gemini-flash': 'google/gemini-flash-1.5',

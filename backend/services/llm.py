@@ -127,7 +127,8 @@ def prepare_params(
     top_p: Optional[float] = None,
     model_id: Optional[str] = None,
     enable_thinking: Optional[bool] = False,
-    reasoning_effort: Optional[str] = 'low'
+    reasoning_effort: Optional[str] = 'low',
+    use_anthropic_direct: bool = False
 ) -> Dict[str, Any]:
     """Prepare parameters for the API call."""
     params = {
@@ -139,8 +140,19 @@ def prepare_params(
         "stream": stream,
     }
 
-    if api_key:
-        params["api_key"] = api_key
+    # Configure for direct Anthropic API usage
+    if use_anthropic_direct:
+        # Use Anthropic API key directly
+        if config.ANTHROPIC_API_KEY:
+            params["api_key"] = config.ANTHROPIC_API_KEY
+            logger.info(f"Using Anthropic API key directly: {config.ANTHROPIC_API_KEY[:10]}...")
+        else:
+            logger.error("ANTHROPIC_API_KEY not found for direct Anthropic usage!")
+    else:
+        # Use provided API key (for OpenRouter or other providers)
+        if api_key:
+            params["api_key"] = api_key
+            
     if api_base:
         params["api_base"] = api_base
     if model_id:
@@ -333,11 +345,29 @@ async def make_llm_api_call(
         LLMRetryError: If API call fails after retries
         LLMError: For other API-related errors
     """
-    # Force OpenRouter prefix on all models
-    original_model = model_name
-    model_name = force_openrouter_prefix(model_name)
-    if original_model != model_name:
-        logger.info(f"Forcing OpenRouter: {original_model} -> {model_name}")
+    # Check if we should use Anthropic directly for Claude Sonnet 4
+    use_anthropic_direct = False
+    claude_sonnet_4_models = [
+        "claude-sonnet-4-20250514",
+        "claude-sonnet-4-0", 
+        "claude-sonnet-4",
+        "anthropic/claude-sonnet-4-20250514",
+        "anthropic/claude-sonnet-4-0",
+        "anthropic/claude-sonnet-4"
+    ]
+    
+    if model_name in claude_sonnet_4_models and config.ANTHROPIC_API_KEY:
+        # Use Anthropic directly for Claude Sonnet 4
+        use_anthropic_direct = True
+        # Normalize to the correct model name for Anthropic API
+        model_name = "claude-sonnet-4-20250514"
+        logger.info(f"Using Anthropic API directly for Claude Sonnet 4: {model_name}")
+    else:
+        # Force OpenRouter prefix on all other models
+        original_model = model_name
+        model_name = force_openrouter_prefix(model_name)
+        if original_model != model_name:
+            logger.info(f"Forcing OpenRouter: {original_model} -> {model_name}")
     
     # Debug: Check if OpenRouter API key is available
     if model_name.startswith("openrouter/"):
@@ -355,7 +385,7 @@ async def make_llm_api_call(
     
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
-    logger.info(f"📡 API Call: Using model {model_name}")
+    logger.info(f"📡 API Call: Using model {model_name} (Direct Anthropic: {use_anthropic_direct})")
     params = prepare_params(
         messages=messages,
         model_name=model_name,
@@ -370,7 +400,8 @@ async def make_llm_api_call(
         top_p=top_p,
         model_id=model_id,
         enable_thinking=enable_thinking,
-        reasoning_effort=reasoning_effort
+        reasoning_effort=reasoning_effort,
+        use_anthropic_direct=use_anthropic_direct
     )
     last_error = None
     for attempt in range(MAX_RETRIES):

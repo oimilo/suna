@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { UploadedFile } from './chat-input';
 import { FileUploadHandler } from './file-upload-handler';
 import { VoiceRecorder } from './voice-recorder';
-import { ModelSelector } from './model-selector';
+// import { FixedModelDisplay } from './fixed-model-display';
 import { BRANDING } from '@/lib/branding';
 import { AgentSelector } from './agent-selector';
 import { canAccessModel, SubscriptionStatus } from './_use-model-selection';
@@ -177,17 +177,10 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 isFocused={isFocused}
               />
             )}
-            <ModelSelector
-              selectedModel={selectedModel}
-              onModelChange={onModelChange}
-              modelOptions={modelOptions}
-              subscriptionStatus={subscriptionStatus}
-              canAccessModel={canAccessModel}
-              refreshCustomModels={refreshCustomModels}
-              billingModalOpen={billingModalOpen}
-              setBillingModalOpen={setBillingModalOpen}
+            {/* Temporarily commented - Model selector removed as we're using Claude Sonnet 4 for all users
+            <FixedModelDisplay
               isFocused={isFocused}
-            />
+            /> */}
           </div>
         );
       }

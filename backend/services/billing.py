@@ -524,30 +524,12 @@ async def get_allowed_models_for_user(client, user_id: str):
 
 
 async def can_use_model(client, user_id: str, model_name: str):
-    if config.ENV_MODE == EnvMode.LOCAL:
-        logger.info("Running in local development mode - billing checks are disabled")
-        return True, "Local development mode - billing disabled", {
-            "price_id": "local_dev",
-            "plan_name": "Local Development",
-            "minutes_limit": "no limit"
-        }
-    
-    # Add detailed logging for debugging
-    logger.info(f"[MODEL_ACCESS_CHECK] Checking model access for user {user_id}")
-    logger.info(f"[MODEL_ACCESS_CHECK] Requested model: {model_name}")
-    
-    allowed_models = await get_allowed_models_for_user(client, user_id)
-    logger.info(f"[MODEL_ACCESS_CHECK] User's allowed models: {allowed_models}")
-    
-    resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
-    logger.info(f"[MODEL_ACCESS_CHECK] Resolved model: {resolved_model}")
-    
-    if resolved_model in allowed_models:
-        logger.info(f"[MODEL_ACCESS_CHECK] Access GRANTED for {resolved_model}")
-        return True, "Model access allowed", [resolved_model]  # Return only the requested model
-    
-    logger.warning(f"[MODEL_ACCESS_CHECK] Access DENIED for {model_name} (resolved: {resolved_model})")
-    return False, f"Your current subscription plan does not include access to {model_name}. Please upgrade your subscription or choose from your available models: {', '.join(allowed_models)}", allowed_models
+    """
+    Simplified: All users can use Claude Sonnet 4.
+    """
+    # Always allow Claude Sonnet 4 for all users
+    logger.info(f"[MODEL_ACCESS_CHECK] User {user_id} granted access to Claude Sonnet 4")
+    return True, "Model access allowed", ["claude-sonnet-4-20250514"]
 
 async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optional[Dict]]:
     """
