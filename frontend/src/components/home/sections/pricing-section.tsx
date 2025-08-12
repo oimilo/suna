@@ -134,41 +134,33 @@ function BillingPeriodToggle({
   setBillingPeriod: (period: 'monthly' | 'yearly') => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-3">
-      <div
-        className="relative bg-muted rounded-full p-1.5 cursor-pointer shadow-inner"
-        onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-      >
-        <div className="flex relative">
-          {/* Sliding background */}
-          <motion.div
-            className="absolute inset-y-0 bg-primary rounded-full shadow-md"
-            initial={false}
-            animate={{
-              x: billingPeriod === 'monthly' ? 0 : '100%',
-              width: billingPeriod === 'monthly' ? '64px' : '120px',
-            }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          />
-          
-          <div className={cn("px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 relative z-10",
+    <div className="flex items-center justify-center">
+      <div className="flex gap-2 p-1 bg-muted rounded-lg">
+        <button
+          onClick={() => setBillingPeriod('monthly')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
             billingPeriod === 'monthly'
-              ? 'text-primary-foreground'
+              ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
-          )}>
-            Mensal
-          </div>
-          <div className={cn("px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 relative z-10",
+          )}
+        >
+          Mensal
+        </button>
+        <button
+          onClick={() => setBillingPeriod('yearly')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2",
             billingPeriod === 'yearly'
-              ? 'text-primary-foreground'
+              ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
-          )}>
-            Anual
-            <Badge className="bg-green-600 text-green-50 dark:bg-green-500 dark:text-green-50 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap border-0 shadow-sm">
-              -15%
-            </Badge>
-          </div>
-        </div>
+          )}
+        >
+          Anual
+          <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 font-semibold border-0">
+            -15%
+          </Badge>
+        </button>
       </div>
     </div>
   );
@@ -463,7 +455,7 @@ function PricingTier({
         'relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl',
         'h-full flex flex-col',
         tier.isPopular && !insideDialog
-          ? 'border-primary/30 shadow-xl scale-[1.02]'
+          ? 'border-primary/30 shadow-xl'
           : 'hover:border-primary/20',
         !insideDialog && ringClass,
         isCurrentActivePlan && 'border-primary/50'
@@ -471,8 +463,8 @@ function PricingTier({
     >
       {/* Popular badge */}
       {tier.isPopular && !insideDialog && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[11px] font-semibold shadow-md flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
             POPULAR
           </div>
