@@ -6,8 +6,10 @@ import { siteConfig } from '@/lib/home';
 import { cn } from '@/lib/utils';
 import { motion } from 'motion/react';
 import React, { useState, useEffect } from 'react';
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon, Sparkles, TrendingUp, Shield, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   createCheckoutSession,
   SubscriptionStatus,
@@ -134,26 +136,37 @@ function BillingPeriodToggle({
   return (
     <div className="flex items-center justify-center gap-3">
       <div
-        className="relative bg-muted rounded-full p-1 cursor-pointer"
+        className="relative bg-muted rounded-full p-1.5 cursor-pointer shadow-inner"
         onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
       >
-        <div className="flex">
-          <div className={cn("px-3 py-1 rounded-full text-xs font-medium transition-all duration-200",
+        <div className="flex relative">
+          {/* Sliding background */}
+          <motion.div
+            className="absolute inset-y-0 bg-primary rounded-full shadow-md"
+            initial={false}
+            animate={{
+              x: billingPeriod === 'monthly' ? 0 : '100%',
+              width: billingPeriod === 'monthly' ? '64px' : '120px',
+            }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          />
+          
+          <div className={cn("px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 relative z-10",
             billingPeriod === 'monthly'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground'
+              ? 'text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
           )}>
             Mensal
           </div>
-          <div className={cn("px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
+          <div className={cn("px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 relative z-10",
             billingPeriod === 'yearly'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground'
+              ? 'text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
           )}>
             Anual
-            <span className="bg-green-600 text-green-50 dark:bg-green-500 dark:text-green-50 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
-              15% desc
-            </span>
+            <Badge className="bg-green-600 text-green-50 dark:bg-green-500 dark:text-green-50 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap border-0 shadow-sm">
+              -15%
+            </Badge>
           </div>
         </div>
       </div>
@@ -445,40 +458,55 @@ function PricingTier({
   }
 
   return (
-    <div
+    <Card
       className={cn(
-        'rounded-xl flex flex-col relative',
+        'relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl',
         insideDialog
           ? 'min-h-[300px]'
           : 'h-full min-h-[300px]',
         tier.isPopular && !insideDialog
-          ? 'md:shadow-[0px_61px_24px_-10px_rgba(0,0,0,0.01),0px_34px_20px_-8px_rgba(0,0,0,0.05),0px_15px_15px_-6px_rgba(0,0,0,0.09),0px_4px_8px_-2px_rgba(0,0,0,0.10),0px_0px_0px_1px_rgba(0,0,0,0.08)] bg-accent'
-          : 'bg-[#F3F4F6] dark:bg-[#F9FAFB]/[0.02] border border-border',
+          ? 'border-primary/30 shadow-xl scale-105'
+          : 'hover:border-primary/20',
         !insideDialog && ringClass,
+        isCurrentActivePlan && 'border-primary/50'
       )}
     >
-      <div className={cn(
-        "flex flex-col gap-3",
-        insideDialog ? "p-3" : "p-4"
+      {/* Popular badge */}
+      {tier.isPopular && !insideDialog && (
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4" />
+            MAIS POPULAR
+          </div>
+        </div>
+      )}
+      
+      {/* Background gradient */}
+      {tier.isPopular && (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/0" />
+      )}
+      <CardContent className={cn(
+        "flex flex-col h-full",
+        insideDialog ? "p-6" : "p-8",
+        tier.isPopular && "pt-12"
       )}>
-        <p className="text-sm flex items-center gap-2">
-          {tier.name}
-          {tier.isPopular && (
-            <span className="bg-gradient-to-b from-secondary/50 from-[1.92%] to-secondary to-[100%] text-white inline-flex w-fit items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-medium shadow-[0px_6px_6px_-3px_rgba(0,0,0,0.08),0px_3px_3px_-1.5px_rgba(0,0,0,0.08),0px_1px_1px_-0.5px_rgba(0,0,0,0.08),0px_0px_0px_1px_rgba(255,255,255,0.12)_inset,0px_1px_0px_0px_rgba(255,255,255,0.12)_inset]">
-              Popular
-            </span>
-          )}
-          {/* Show upgrade badge for yearly plans when user is on monthly */}
-          {!tier.isPopular && isAuthenticated && currentSubscription && billingPeriod === 'yearly' &&
-            currentTier && currentSubscription.price_id === currentTier.stripePriceId &&
-            tier.yearlyStripePriceId && (currentTier.name === tier.name ||
-              parseFloat(tier.price.replace('R$', '').trim()) >= parseFloat(currentTier.price.replace('R$', '').trim())) && (
-              <span className="bg-green-500/10 text-green-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                Recomendado
-              </span>
-            )}
-          {isAuthenticated && statusBadge}
-        </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold">
+              {tier.name}
+            </h3>
+            {/* Show upgrade badge for yearly plans when user is on monthly */}
+            {!tier.isPopular && isAuthenticated && currentSubscription && billingPeriod === 'yearly' &&
+              currentTier && currentSubscription.price_id === currentTier.stripePriceId &&
+              tier.yearlyStripePriceId && (currentTier.name === tier.name ||
+                parseFloat(tier.price.replace('R$', '').trim()) >= parseFloat(currentTier.price.replace('R$', '').trim())) && (
+                <Badge variant="secondary" className="bg-green-500/10 text-green-700 border-0">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  Recomendado
+                </Badge>
+              )}
+            {isAuthenticated && statusBadge}
+          </div>
         <div className="flex items-baseline mt-2">
           {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0' ? (
             <div className="flex flex-col">
@@ -502,59 +530,63 @@ function PricingTier({
             </div>
           )}
         </div>
-        <p className="hidden text-sm mt-2">{tier.description}</p>
-
-        {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage ? (
-          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-50 border-green-200 text-green-700 w-fit">
-            Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} por ano
-          </div>
-        ) : (
-          <div className="hidden items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 border-primary/20 text-primary w-fit">
-            {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0'
-              ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/mês (cobrado anualmente)`
-              : `${displayPrice}/mês`
-            }
-          </div>
-        )}
-      </div>
-
-      <div className={cn(
-        "flex-grow",
-        insideDialog ? "px-3 pb-2" : "px-4 pb-3"
-      )}>
-        {tier.features && tier.features.length > 0 && (
-          <ul className="space-y-3">
-            {tier.features.map((feature) => (
-              <li key={feature} className="flex items-center gap-2">
-                <div className="size-5 min-w-5 rounded-full border border-primary/20 flex items-center justify-center">
-                  <CheckIcon className="size-3 text-primary" />
-                </div>
-                <span className="text-sm">{feature}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className={cn(
-        "mt-auto",
-        insideDialog ? "px-3 pt-1 pb-3" : "px-4 pt-2 pb-4"
-      )}>
-        <Button
-          onClick={() => handleSubscribe(tierPriceId)}
-          disabled={buttonDisabled}
-          variant={buttonVariant || 'default'}
-          className={cn(
-            'w-full font-medium transition-all duration-200',
-            isCompact || insideDialog ? 'h-8 rounded-md text-xs' : 'h-10 rounded-full text-sm',
-            buttonClassName,
-            isPlanLoading && 'animate-pulse',
+          {tier.description && (
+            <p className="text-sm text-muted-foreground">{tier.description}</p>
           )}
-        >
-          {buttonText}
-        </Button>
-      </div>
-    </div>
+
+          {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 w-fit border border-green-500/20">
+              <Shield className="w-3.5 h-3.5" />
+              Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} por ano
+            </div>
+          ) : (
+            <div className="hidden items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 border-primary/20 text-primary w-fit">
+              {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0'
+                ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/mês (cobrado anualmente)`
+                : `${displayPrice}/mês`
+              }
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        
+        {/* Features */}
+        <div className="flex-grow">
+          {tier.features && tier.features.length > 0 && (
+            <ul className="space-y-3">
+              {tier.features.map((feature, index) => (
+                <li key={index} className="flex items-start gap-3 group">
+                  <div className="size-5 min-w-5 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mt-0.5 group-hover:scale-110 transition-transform">
+                    <CheckIcon className="size-3 text-primary" />
+                  </div>
+                  <span className="text-sm leading-relaxed">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-8">
+          <Button
+            onClick={() => handleSubscribe(tierPriceId)}
+            disabled={buttonDisabled}
+            variant={buttonVariant || 'default'}
+            className={cn(
+              'w-full font-medium transition-all duration-200 shadow-sm',
+              isCompact || insideDialog ? 'h-10 rounded-lg text-sm' : 'h-12 rounded-xl text-base',
+              buttonClassName,
+              isPlanLoading && 'animate-pulse',
+              !buttonDisabled && !isCurrentActivePlan && 'hover:shadow-lg hover:scale-[1.02]'
+            )}
+          >
+            {buttonText}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -657,69 +689,112 @@ export function PricingSection({
   return (
     <section
       id="pricing"
-      className={cn("flex flex-col items-center justify-center gap-10 w-full relative pb-12")}
+      className={cn("py-32 relative overflow-hidden", insideDialog && "py-0")}
     >
-      {showTitleAndTabs && (
+      {/* Background gradient */}
+      {!insideDialog && (
         <>
-          <SectionHeader>
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tighter text-center text-balance">
-              Escolha o plano ideal para suas necessidades
-            </h2>
-            <p className="text-muted-foreground text-center text-balance font-medium">
-              Comece com nosso plano gratuito ou faça upgrade para mais créditos de IA
-            </p>
-          </SectionHeader>
-          <div className="relative w-full h-full">
-            <div className="absolute -top-14 left-1/2 -translate-x-1/2">
-              <PricingTabs
-                activeTab={deploymentType}
-                setActiveTab={handleTabChange}
-                className="mx-auto"
-              />
-            </div>
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-background to-muted/30" />
+          
+          {/* Decorative elements */}
+          <div className="absolute top-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
         </>
       )}
+      
+      <div className="relative">
+        {showTitleAndTabs && (
+          <>
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+                <Zap className="w-4 h-4" />
+                PLANOS & PREÇOS
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Escolha o plano ideal para suas necessidades
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                Comece com nosso plano gratuito ou faça upgrade para mais créditos de IA
+              </p>
+            </div>
+            <div className="relative w-full h-full mb-8">
+              <div className="flex justify-center">
+                <PricingTabs
+                  activeTab={deploymentType}
+                  setActiveTab={handleTabChange}
+                  className="mx-auto"
+                />
+              </div>
+            </div>
+          </>
+        )}
 
-      {deploymentType === 'cloud' && (
-        <BillingPeriodToggle
-          billingPeriod={billingPeriod}
-          setBillingPeriod={setBillingPeriod}
-        />
-      )}
-
-      {deploymentType === 'cloud' && (
-        <div className={cn(
-          "grid gap-4 w-full mx-auto",
-          {
-            "px-6 max-w-7xl": !insideDialog,
-            "max-w-7xl": insideDialog
-          },
-          insideDialog
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-4"
-            : "min-[650px]:grid-cols-2 lg:grid-cols-4",
-          !insideDialog && "grid-rows-1 items-stretch"
-        )}>
-          {siteConfig.cloudPricingItems
-            .filter((tier) => !tier.hidden && (!hideFree || tier.price !== '$0'))
-            .map((tier) => (
-              <PricingTier
-                key={tier.name}
-                tier={tier}
-                currentSubscription={currentSubscription}
-                isLoading={planLoadingStates}
-                isFetchingPlan={isFetchingPlan}
-                onPlanSelect={handlePlanSelect}
-                onSubscriptionUpdate={handleSubscriptionUpdate}
-                isAuthenticated={isAuthenticated}
-                returnUrl={returnUrl}
-                insideDialog={insideDialog}
+        {deploymentType === 'cloud' && (
+          <>
+            <div className="flex justify-center mb-12">
+              <BillingPeriodToggle
                 billingPeriod={billingPeriod}
+                setBillingPeriod={setBillingPeriod}
               />
-            ))}
-        </div>
-      )}
+            </div>
+
+            <div className={cn(
+              "grid gap-8 mx-auto",
+              {
+                "px-6 max-w-7xl": !insideDialog,
+                "max-w-7xl": insideDialog
+              },
+              insideDialog
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-4"
+                : "min-[650px]:grid-cols-2 lg:grid-cols-4",
+              !insideDialog && "grid-rows-1 items-stretch"
+            )}>
+              {siteConfig.cloudPricingItems
+                .filter((tier) => !tier.hidden && (!hideFree || tier.price !== '$0'))
+                .map((tier) => (
+                  <PricingTier
+                    key={tier.name}
+                    tier={tier}
+                    currentSubscription={currentSubscription}
+                    isLoading={planLoadingStates}
+                    isFetchingPlan={isFetchingPlan}
+                    onPlanSelect={handlePlanSelect}
+                    onSubscriptionUpdate={handleSubscriptionUpdate}
+                    isAuthenticated={isAuthenticated}
+                    returnUrl={returnUrl}
+                    insideDialog={insideDialog}
+                    billingPeriod={billingPeriod}
+                  />
+                ))}
+            </div>
+            
+            {/* Trust indicators */}
+            {!insideDialog && (
+              <div className="mt-20 text-center">
+                <div className="inline-flex flex-col items-center gap-6">
+                  <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium">Pagamento seguro</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-medium">Ativação instantânea</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-purple-600" />
+                      <span className="text-sm font-medium">Cancele quando quiser</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Dúvidas? Entre em contato com nossa equipe de vendas
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </section>
-                 
   );
 }

@@ -69,8 +69,8 @@ export default function AgentConfigurationPage() {
   const [originalData, setOriginalData] = useState<FormData>(formData);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  // Initialize active tab from URL param, default to 'agent-builder'
-  const initialTab = tabParam === 'configuration' ? 'configuration' : 'agent-builder';
+  // Initialize active tab from URL param, default to 'configuration'
+  const initialTab = tabParam === 'agent-builder' ? 'agent-builder' : 'configuration';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {

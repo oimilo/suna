@@ -561,6 +561,8 @@ async def start_agent(
             message_id=None,
             has_attachments=False,
             agent_version_id=agent_config.get('version_id') if agent_config else None,
+            is_agent_builder=is_agent_builder,
+            target_agent_id=target_agent_id,
         ))
     else:
         # In development, use RabbitMQ

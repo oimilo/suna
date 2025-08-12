@@ -69,7 +69,7 @@
     "failedToLoadTemplates": "Falha ao carregar modelos",
     "promptToConfig": "Prompt para Construir",
     "manualConfig": "Config Manual",
-    "previewMode": "Preview Mode",
+    "previewMode": "Modo Preview",
     "builder": {
       "title": "Agent Builder",
       "intro": "Sou seu",

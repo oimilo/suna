@@ -8,7 +8,7 @@ import { HeroSection } from '@/components/home/sections/hero-section';
 import { PricingSection } from '@/components/home/sections/pricing-section';
 import { IntegrationsSection } from '@/components/home/sections/integrations-section';
 import { HowItWorksSection } from '@/components/home/sections/how-it-works-section';
-import { SocialProofSection } from '@/components/home/sections/social-proof-section';
+// import { SocialProofSection } from '@/components/home/sections/social-proof-section';
 import { ModalProviders } from '@/providers/modal-providers';
 import { BackgroundAALChecker } from '@/components/auth/background-aal-checker';
 
@@ -49,7 +49,7 @@ export default function Home() {
             <div className='flex flex-col items-center px-4'>
               <PricingSection />
             </div>
-            <SocialProofSection />
+            {/* <SocialProofSection /> */}
             {/* <TestimonialSection /> */}
             <FAQSection />
             <CTASection />

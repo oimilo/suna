@@ -436,13 +436,6 @@ export const AgentPreview = ({
             agentAvatar={avatar}
             emptyStateComponent={
               <div className="flex flex-col items-center text-center text-muted-foreground/80">
-                <div className="flex w-20 aspect-square items-center justify-center rounded-2xl bg-muted-foreground/10 p-4 mb-4">
-                  {isSunaAgent ? (
-                    <BrandLogo size={36} />
-                  ) : (
-                    <div className="text-4xl">{avatar}</div>
-                  )}
-                </div>
                 <p className='w-[60%] text-2xl mb-3'>{t('agents.builder.startConversation')} <span className='text-primary/80 font-semibold'>{agent.name}</span></p>
                 <p className='w-[70%] text-sm text-muted-foreground/60'>{t('agents.builder.testDescription')}</p>
               </div>
@@ -457,7 +450,7 @@ export const AgentPreview = ({
             ref={chatInputRef}
             onSubmit={threadId ? handleSubmitMessage : handleSubmitFirstMessage}
             loading={isSubmitting}
-            placeholder={`Message ${agent.name || 'agent'}...`}
+            placeholder={`Mandar mensagem para ${agent.name || 'agente'}`}
             value={inputValue}
             onChange={setInputValue}
             disabled={isSubmitting}

@@ -45,6 +45,8 @@ async def run_agent_async(
     message_id: Optional[str] = None,
     has_attachments: bool = False,
     agent_version_id: Optional[str] = None,
+    is_agent_builder: bool = False,
+    target_agent_id: Optional[str] = None,
 ) -> None:
     """Run the agent directly without RabbitMQ."""
     
@@ -65,6 +67,8 @@ async def run_agent_async(
             enable_thinking=enable_thinking,
             reasoning_effort=reasoning_effort,
             agent_config=agent_config,
+            is_agent_builder=is_agent_builder,
+            target_agent_id=target_agent_id,
         )
         
         # Process the streaming responses
