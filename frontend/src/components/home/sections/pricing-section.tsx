@@ -112,7 +112,7 @@ function PriceDisplay({ price, isCompact }: PriceDisplayProps) {
   return (
     <motion.span
       key={price}
-      className={isCompact ? 'text-xl font-semibold' : 'text-4xl font-semibold'}
+      className={isCompact ? 'text-xl font-semibold' : 'text-3xl font-bold'}
       initial={{
         opacity: 0,
         x: 10,
@@ -461,11 +461,9 @@ function PricingTier({
     <Card
       className={cn(
         'relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl',
-        insideDialog
-          ? 'min-h-[300px]'
-          : 'h-full min-h-[300px]',
+        'h-full flex flex-col',
         tier.isPopular && !insideDialog
-          ? 'border-primary/30 shadow-xl scale-105'
+          ? 'border-primary/30 shadow-xl scale-[1.02]'
           : 'hover:border-primary/20',
         !insideDialog && ringClass,
         isCurrentActivePlan && 'border-primary/50'
@@ -473,10 +471,10 @@ function PricingTier({
     >
       {/* Popular badge */}
       {tier.isPopular && !insideDialog && (
-        <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            MAIS POPULAR
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            POPULAR
           </div>
         </div>
       )}
@@ -486,11 +484,11 @@ function PricingTier({
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/0" />
       )}
       <CardContent className={cn(
-        "flex flex-col h-full",
-        insideDialog ? "p-6" : "p-8",
-        tier.isPopular && "pt-12"
+        "flex flex-col flex-1",
+        insideDialog ? "p-4" : "p-6",
+        tier.isPopular && "pt-10"
       )}>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold">
               {tier.name}
@@ -550,18 +548,16 @@ function PricingTier({
         </div>
 
         {/* Divider */}
-        <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="my-4 h-px bg-border" />
         
         {/* Features */}
         <div className="flex-grow">
           {tier.features && tier.features.length > 0 && (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {tier.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-3 group">
-                  <div className="size-5 min-w-5 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mt-0.5 group-hover:scale-110 transition-transform">
-                    <CheckIcon className="size-3 text-primary" />
-                  </div>
-                  <span className="text-sm leading-relaxed">{feature}</span>
+                <li key={index} className="flex items-start gap-2.5">
+                  <CheckIcon className="size-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-sm leading-relaxed text-muted-foreground">{feature}</span>
                 </li>
               ))}
             </ul>
@@ -569,7 +565,7 @@ function PricingTier({
         </div>
 
         {/* CTA */}
-        <div className="mt-8">
+        <div className="mt-6">
           <Button
             onClick={() => handleSubscribe(tierPriceId)}
             disabled={buttonDisabled}
@@ -710,8 +706,8 @@ export function PricingSection({
                 <Zap className="w-4 h-4" />
                 PLANOS & PREÇOS
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Escolha o plano ideal para suas necessidades
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Escolha o plano ideal para você
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                 Comece com nosso plano gratuito ou faça upgrade para mais créditos de IA
@@ -739,15 +735,13 @@ export function PricingSection({
             </div>
 
             <div className={cn(
-              "grid gap-8 mx-auto",
+              "grid gap-6 mx-auto",
               {
-                "px-6 max-w-7xl": !insideDialog,
-                "max-w-7xl": insideDialog
+                "px-6 max-w-6xl": !insideDialog,
+                "max-w-full": insideDialog
               },
-              insideDialog
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-4"
-                : "min-[650px]:grid-cols-2 lg:grid-cols-4",
-              !insideDialog && "grid-rows-1 items-stretch"
+              "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+              "items-stretch"
             )}>
               {siteConfig.cloudPricingItems
                 .filter((tier) => !tier.hidden && (!hideFree || tier.price !== '$0'))

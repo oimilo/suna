@@ -80,7 +80,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: `${BRANDING.name} - Open Source Generalist AI Agent`,
+    title: BRANDING.name,
     description: BRANDING.description,
     url: siteConfig.url,
     siteName: BRANDING.name,
