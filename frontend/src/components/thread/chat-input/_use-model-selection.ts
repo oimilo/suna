@@ -6,10 +6,10 @@ import { isLocalMode } from '@/lib/config';
 import { useAvailableModels } from '@/hooks/react-query/subscriptions/use-model';
 import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscription-utils';
 
-export const STORAGE_KEY_MODEL = 'suna-preferred-model-v3';
+export const STORAGE_KEY_MODEL = 'suna-preferred-model-v4'; // Changed version to force reset
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4'; // Claude 4 Sonnet (mais avançado)
-export const DEFAULT_FREE_MODEL_ID = 'moonshotai/kimi-k2';
+export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514'; // Claude 4 Sonnet
+export const DEFAULT_FREE_MODEL_ID = 'claude-sonnet-4-20250514'; // Same for all users now
 // export const DEFAULT_FREE_MODEL_ID = 'deepseek/deepseek-chat';
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
@@ -315,48 +315,20 @@ export const useModelSelection = () => {
         return;
       }
       
-      const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
-      console.log('Saved model from localStorage:', savedModel);
+      // Always use Claude Sonnet 4 - ignore saved preferences
+      const fixedModel = 'claude-sonnet-4-20250514';
+      console.log('Using fixed model Claude Sonnet 4:', fixedModel);
       
-      // If we have a saved model, validate it's still available and accessible
-      if (savedModel) {
-        // Wait for models to load before validating
-        if (isLoadingModels) {
-          console.log('Models still loading, waiting...');
-          return;
-        }
-        
-        const modelOption = MODEL_OPTIONS.find(option => option.id === savedModel);
-        const isCustomModel = isLocalMode() && customModels.some(model => model.id === savedModel);
-        
-        // Check if saved model is still valid and accessible
-        if (modelOption || isCustomModel) {
-          const isAccessible = isLocalMode() || 
-            canAccessModel(subscriptionStatus, modelOption?.requiresSubscription ?? false);
-          
-          if (isAccessible) {
-            console.log('Using saved model:', savedModel);
-            setSelectedModel(savedModel);
-            setHasInitialized(true);
-            return;
-          } else {
-            console.log('Saved model not accessible, falling back to default');
-          }
-        } else {
-          console.log('Saved model not found in available models, falling back to default');
-        }
-      }
+      // Clear old localStorage to prevent confusion
+      localStorage.removeItem('suna-preferred-model-v3'); // Remove old version
+      localStorage.setItem(STORAGE_KEY_MODEL, fixedModel); // Save new fixed model
       
-      // Fallback to default model
-      const defaultModel = subscriptionStatus === 'active' ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
-      console.log('Using default model:', defaultModel);
-      setSelectedModel(defaultModel);
-      saveModelPreference(defaultModel);
+      setSelectedModel(fixedModel);
       setHasInitialized(true);
       
     } catch (error) {
-      console.warn('Failed to load preferences from localStorage:', error);
-      const defaultModel = subscriptionStatus === 'active' ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
+      console.warn('Failed to set model:', error);
+      const defaultModel = 'claude-sonnet-4-20250514';
       setSelectedModel(defaultModel);
       saveModelPreference(defaultModel);
       setHasInitialized(true);
@@ -365,46 +337,20 @@ export const useModelSelection = () => {
 
   // Handle model selection change
   const handleModelChange = (modelId: string) => {
-    console.log('handleModelChange called with:', modelId);
+    console.log('handleModelChange called with:', modelId, '- forcing Claude Sonnet 4');
     
-    // Refresh custom models from localStorage to ensure we have the latest
-    if (isLocalMode()) {
-      refreshCustomModels();
-    }
+    // Always use Claude Sonnet 4 regardless of selection
+    const fixedModel = 'claude-sonnet-4-20250514';
     
-    // First check if it's a custom model in local mode
-    const isCustomModel = isLocalMode() && customModels.some(model => model.id === modelId);
-    
-    // Then check if it's in standard MODEL_OPTIONS
-    const modelOption = MODEL_OPTIONS.find(option => option.id === modelId);
-    
-    // Check if model exists in either custom models or standard options
-    if (!modelOption && !isCustomModel) {
-      console.warn('Model not found in options:', modelId, MODEL_OPTIONS, isCustomModel, customModels);
-      
-      // Reset to default model when the selected model is not found
-      const defaultModel = isLocalMode() ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
-      setSelectedModel(defaultModel);
-      saveModelPreference(defaultModel);
-      return;
-    }
-
-    // Check access permissions (except for custom models in local mode)
-    if (!isCustomModel && !isLocalMode() && 
-        !canAccessModel(subscriptionStatus, modelOption?.requiresSubscription ?? false)) {
-      console.warn('Model not accessible:', modelId);
-      return;
-    }
-    
-    console.log('Setting selected model and saving to localStorage:', modelId);
-    setSelectedModel(modelId);
-    saveModelPreference(modelId);
+    console.log('Setting fixed model:', fixedModel);
+    setSelectedModel(fixedModel);
+    saveModelPreference(fixedModel);
   };
 
   // Get the actual model ID to send to the backend
   const getActualModelId = (modelId: string): string => {
-    // No need for automatic prefixing in most cases - just return as is
-    return modelId;
+    // Always return Claude Sonnet 4
+    return 'claude-sonnet-4-20250514';
   };
 
   return {
