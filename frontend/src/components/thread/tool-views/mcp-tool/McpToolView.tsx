@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  PlugIcon,
   CheckCircle,
   AlertTriangle,
   Loader2,
@@ -57,7 +56,6 @@ export function McpToolView({
     parsedTool.displayName;
 
   const ServerIcon = getMCPServerIcon(serverName);
-  const serverColor = getMCPServerColor(serverName);
 
   useEffect(() => {
     if (isStreaming) {
@@ -80,20 +78,12 @@ export function McpToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "relative p-2 rounded-lg bg-gradient-to-br border",
-              serverColor
-            )}>
-              <ServerIcon className="w-5 h-5 text-current" />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white dark:bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-200 dark:border-zinc-800">
-                <PlugIcon className="w-2.5 h-2.5 text-zinc-600 dark:text-zinc-400" />
-              </div>
-            </div>
+            <ServerIcon className="h-4 w-4 text-muted-foreground opacity-60" />
             <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              <CardTitle className="text-sm font-medium text-foreground">
                 {displayName}
               </CardTitle>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -103,21 +93,16 @@ export function McpToolView({
           </div>
 
           {!isStreaming && (
-            <Badge
-              variant="secondary"
-              className={
-                isSuccess && result && !result.isError
-                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-              }
-            >
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
               {isSuccess && result && !result.isError ? (
-                <CheckCircle className="h-3.5 w-3.5" />
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5" />
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
               )}
-              {isSuccess && result && !result.isError ? 'Concluído com sucesso' : 'Execução falhou'}
-            </Badge>
+              <span className="text-xs font-medium text-muted-foreground">
+                {isSuccess && result && !result.isError ? 'Sucesso' : 'Falhou'}
+              </span>
+            </div>
           )}
         </div>
       </CardHeader>

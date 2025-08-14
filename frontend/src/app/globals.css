@@ -238,7 +238,7 @@
 }
 
 :root {
-  --background: oklch(0.9741 0 129.63);
+  --background: oklch(0.965 0 129.63);
   --foreground: oklch(0.2277 0.0034 67.65);
   --card: oklch(98.46% 0.002 247.84);
   --card-foreground: oklch(0.145 0 0);
@@ -263,7 +263,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.9741 0 129.63);
+  --sidebar: oklch(0.965 0 129.63);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -274,7 +274,7 @@
 }
 
 .dark {
-  --background: oklch(0.185 0.005 285.823);
+  --background: oklch(0.195 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.2 0.005 285.823);
   --card-foreground: oklch(0.985 0 0);
@@ -298,7 +298,7 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.185 0.005 285.823);
+  --sidebar: oklch(0.195 0.005 285.823);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -689,4 +689,41 @@
       background-position: calc(100% + var(--shiny-width)) 0;
     }
   }
-  }
+}
+
+/* Fix tool view card spacing issues */
+[data-slot="card"] {
+  gap: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Remove default padding from cards in tool views */
+.tool-view-card,
+[data-slot="card"].gap-0 {
+  padding: 0 !important;
+}
+
+/* Fix CardContent padding bottom */
+[data-slot="card-content"] {
+  padding-bottom: 0 !important;
+}
+
+/* Ensure tool view containers use full height properly */
+.tool-view-container > [data-slot="card"] {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix footer alignment in tool views - remove any margin */
+[data-slot="card"] > div:last-child {
+  margin-top: auto;
+  margin-bottom: 0 !important;
+}
+
+/* Specific fix for tool view footers */
+[data-slot="card"] > .h-10 {
+  margin: 0 !important;
+  flex-shrink: 0;
+}

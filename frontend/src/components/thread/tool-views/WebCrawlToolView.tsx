@@ -127,15 +127,13 @@ export function WebCrawlToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
-              <Globe className="w-5 h-5 text-primary" />
-            </div>
+            <Globe className="h-4 w-4 text-muted-foreground opacity-60" />
 
             <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              <CardTitle className="text-sm font-medium text-foreground">
                 {toolTitle}
               </CardTitle>
             </div>
@@ -181,7 +179,7 @@ export function WebCrawlToolView({
         ) : url ? (
           // Results State
           <ScrollArea className="h-full w-full">
-            <div className="p-4 py-0 my-4">
+            <div className="p-4 pt-4 pb-0">
               {/* Target URL Section */}
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
@@ -324,17 +322,17 @@ export function WebCrawlToolView({
       </CardContent>
 
       {/* Footer */}
-      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
-        <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+        <div className="h-full flex items-center gap-2">
           {!isStreaming && webpageContent?.text && (
-            <Badge className="h-6 py-0.5">
-              <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5" />
-              Content extracted
-            </Badge>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+              <span className="text-xs font-medium text-muted-foreground">Conteúdo extraído</span>
+            </div>
           )}
         </div>
 
-        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="text-xs text-muted-foreground/60">
           {toolTimestamp && !isStreaming
             ? formatTimestamp(toolTimestamp)
             : assistantTimestamp

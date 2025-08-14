@@ -86,14 +86,12 @@ export function SearchMcpServersToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
-              <Search className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-            </div>
+            <Search className="h-4 w-4 text-muted-foreground opacity-60" />
             <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              <CardTitle className="text-sm font-medium text-foreground">
                 {toolTitle}
               </CardTitle>
             </div>
@@ -241,7 +239,7 @@ export function SearchMcpServersToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Search className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
+              <h3 className="text-sm font-medium text-foreground mb-2">
                 No MCP servers found
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">

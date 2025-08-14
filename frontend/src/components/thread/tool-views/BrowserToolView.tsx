@@ -267,42 +267,33 @@ export function BrowserToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
-              <MonitorPlay className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                {toolTitle}
-              </CardTitle>
-            </div>
+            <MonitorPlay className="h-4 w-4 text-muted-foreground opacity-60" />
+            <CardTitle className="text-sm font-medium text-foreground">
+              {toolTitle}
+            </CardTitle>
           </div>
 
           {!isRunning && (
-            <Badge
-              variant="secondary"
-              className={
-                isSuccess
-                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-              }
-            >
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
               {isSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
               )}
-              {isSuccess ? 'Browser action completed' : 'Browser action failed'}
-            </Badge>
+              <span className="text-xs font-medium text-muted-foreground">
+                {isSuccess ? 'Ação concluída' : 'Ação falhou'}
+              </span>
+            </div>
           )}
 
           {isRunning && (
-            <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
-              <CircleDashed className="h-3.5 w-3.5 animate-spin" />
-              Executing browser action
-            </Badge>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <CircleDashed className="h-3.5 w-3.5 animate-spin text-muted-foreground opacity-60" />
+              <span className="text-xs font-medium text-muted-foreground">Executando ação</span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -404,7 +395,7 @@ export function BrowserToolView({
         </div>
       </CardContent>
 
-      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
         <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           {!isRunning && (
             <Badge className="h-6 py-0.5">

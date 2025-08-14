@@ -170,10 +170,10 @@ function SafeImage({ src, alt, filePath, className }: { src: string; alt: string
       </div>
 
       <div className="flex items-center justify-between w-full px-2 py-2 bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-        <Badge variant="secondary" className="bg-white/90 dark:bg-black/70 text-zinc-700 dark:text-zinc-300 shadow-sm">
-          <ImageIcon className="h-3 w-3 mr-1" />
-          {filePath.split('.').pop()?.toUpperCase()}
-        </Badge>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+          <span className="text-xs font-medium text-muted-foreground">{filePath.split('.').pop()?.toUpperCase()}</span>
+        </div>
 
         <div className="flex items-center gap-1">
           <Button
@@ -276,12 +276,6 @@ export function SeeImageToolView({
     );
   }
 
-  const config = {
-    color: 'text-blue-500 dark:text-blue-400',
-    bgColor: 'bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20',
-    badgeColor: 'bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300',
-    hoverColor: 'hover:bg-gradient-to-b hover:from-blue-200 hover:to-blue-100 dark:hover:from-blue-800/60 dark:hover:to-blue-900/40'
-  };
 
   const imageUrl = constructImageUrl(filePath, project);
   const filename = filePath.split('/').pop() || filePath;
@@ -290,15 +284,13 @@ export function SeeImageToolView({
 
   return (
     <Card className="flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-b p-2 px-4 space-y-0">
-        <div className="flex items-center justify-between">
+      <CardHeader className="h-14 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-b flex items-center px-4">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <div className={cn("relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 transition-colors", config.bgColor)}>
-              <ImageIcon className={cn("w-5 h-5", config.color)} />
-            </div>
+            <ImageIcon className="h-4 w-4 text-muted-foreground opacity-60" />
             <div>
               <div className="flex items-center">
-                <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                <CardTitle className="text-sm font-medium text-foreground">
                   {truncateString(filename, 25)}
                 </CardTitle>
                 {isAnimated && (
@@ -311,29 +303,21 @@ export function SeeImageToolView({
           </div>
 
           {!isStreaming ? (
-            <Badge variant="secondary" className={cn(
-              "px-2.5 py-1 transition-colors flex items-center gap-1.5",
-              actualIsSuccess
-                ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-            )}>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
               {actualIsSuccess ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Success
-                </>
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
               ) : (
-                <>
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Failed
-                </>
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
               )}
-            </Badge>
+              <span className="text-xs font-medium text-muted-foreground">
+                {actualIsSuccess ? 'Sucesso' : 'Falhou'}
+              </span>
+            </div>
           ) : (
-            <Badge variant="secondary" className="bg-gradient-to-b from-blue-50 to-blue-100 text-blue-700 border border-blue-200/50 dark:from-blue-900/30 dark:to-blue-800/20 dark:text-blue-400 dark:border-blue-800/30 px-2.5 py-1 flex items-center gap-1.5">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Loading image...
-            </Badge>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground opacity-60" />
+              <span className="text-xs font-medium text-muted-foreground">Carregando imagem...</span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -371,16 +355,16 @@ export function SeeImageToolView({
         )}
       </CardContent>
 
-      <div className="h-10 px-4 py-2 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-          <Badge className="py-0.5 h-6 bg-gradient-to-b from-blue-50 to-blue-100 text-blue-700 border border-blue-200/50 dark:from-blue-900/30 dark:to-blue-800/20 dark:text-blue-400 dark:border-blue-800/30">
-            <ImageIcon className="h-3 w-3 mr-1" />
-            IMAGE
-          </Badge>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+            <ImageIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+            <span className="text-xs font-medium text-muted-foreground">IMAGEM</span>
+          </div>
           {fileExt && (
-            <Badge variant="outline" className="py-0 px-1.5 h-5 text-[10px] uppercase font-medium">
-              {fileExt}
-            </Badge>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <span className="text-xs font-medium text-muted-foreground">{fileExt.toUpperCase()}</span>
+            </div>
           )}
         </div>
 

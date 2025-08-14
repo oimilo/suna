@@ -320,16 +320,16 @@ export function ToolCallSidePanel({
     if (isLiveMode) {
       if (agentStatus === 'running') {
         return (
-          <div className={`${baseClasses} bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800`}>
-            <div className={`${dotClasses} bg-green-500 animate-pulse`} />
-            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Atualizações ao Vivo</span>
+          <div className={`${baseClasses} bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8`}>
+            <div className={`${dotClasses} bg-emerald-500 animate-pulse`} />
+            <span className={`${textClasses} text-muted-foreground`}>Atualizações ao Vivo</span>
           </div>
         );
       } else {
         return (
-          <div className={`${baseClasses} bg-neutral-50 dark:bg-neutral-900/20 border border-neutral-200 dark:border-neutral-800`}>
-            <div className={`${dotClasses} bg-neutral-500`} />
-            <span className={`${textClasses} text-neutral-700 dark:text-neutral-400`}>Última Ferramenta</span>
+          <div className={`${baseClasses} bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8`}>
+            <div className={`${dotClasses} bg-zinc-400 opacity-60`} />
+            <span className={`${textClasses} text-muted-foreground`}>Última Ferramenta</span>
           </div>
         );
       }
@@ -337,21 +337,21 @@ export function ToolCallSidePanel({
       if (agentStatus === 'running') {
         return (
           <div
-            className={`${baseClasses} bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer`}
+            className={`${baseClasses} bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer`}
             onClick={jumpToLive}
           >
-            <div className={`${dotClasses} bg-green-500 animate-pulse`} />
-            <span className={`${textClasses} text-green-700 dark:text-green-400`}>Ir para Ao Vivo</span>
+            <div className={`${dotClasses} bg-emerald-500 animate-pulse`} />
+            <span className={`${textClasses} text-muted-foreground`}>Ir para Ao Vivo</span>
           </div>
         );
       } else {
         return (
           <div
-            className={`${baseClasses} bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer`}
+            className={`${baseClasses} bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer`}
             onClick={jumpToLatest}
           >
-            <div className={`${dotClasses} bg-blue-500`} />
-            <span className={`${textClasses} text-blue-700 dark:text-blue-400`}>Jump to Latest</span>
+            <div className={`${dotClasses} bg-blue-500 opacity-80`} />
+            <span className={`${textClasses} text-muted-foreground`}>Ir para última</span>
           </div>
         );
       }
@@ -500,11 +500,8 @@ export function ToolCallSidePanel({
           <div className="flex flex-col items-center justify-center flex-1 p-8">
             <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
               <div className="relative">
-                <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center">
-                  <Computer className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-zinc-400 dark:text-zinc-500 rounded-full"></div>
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
+                  <Computer className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
                 </div>
               </div>
               <div className="space-y-2">
@@ -534,8 +531,8 @@ export function ToolCallSidePanel({
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
-                    <CircleDashed className="h-3 w-3 animate-spin" />
+                  <div className="px-2.5 py-1 rounded-lg text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1.5">
+                    <CircleDashed className="h-3.5 w-3.5 animate-spin opacity-60" />
                     <span>Executando</span>
                   </div>
                   <Button
@@ -552,8 +549,8 @@ export function ToolCallSidePanel({
             <div className="flex flex-col items-center justify-center flex-1 p-8">
               <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
                 <div className="relative">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                    <CircleDashed className="h-8 w-8 text-blue-500 dark:text-blue-400 animate-spin" />
+                  <div className="w-16 h-16 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60 rounded-full flex items-center justify-center">
+                    <CircleDashed className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-spin" />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -646,8 +643,8 @@ export function ToolCallSidePanel({
 
             {isStreaming && (
               <div className="flex items-center gap-2">
-                <div className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
-                  <CircleDashed className="h-3 w-3 animate-spin" />
+                <div className="px-2.5 py-1 rounded-lg text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1.5">
+                  <CircleDashed className="h-3 w-3 animate-spin opacity-60" />
                   <span>Executando</span>
                 </div>
                 <Button
@@ -701,24 +698,27 @@ export function ToolCallSidePanel({
             }
           }}
           className={cn(
-            'fixed top-2 bottom-4 border rounded-3xl flex flex-col z-30 right-2',
+            'fixed border border-black/6 dark:border-white/8 rounded-2xl flex flex-col z-30 right-4',
+            'shadow-lg dark:shadow-none',
             isMobile
-              ? 'left-2'
+              ? 'left-4'
               : isPinned 
-                ? 'left-[calc(256px+(100%-256px)*0.4)]' // Quando pinned: sidebar + 40% do espaço restante
-                : 'left-[40%]', // Quando não pinned: 40% da tela
+                ? 'left-[calc(256px+(100%-256px)*0.4+16px)]' // Quando pinned: sidebar + 40% do espaço restante + gap
+                : 'left-[calc(40%+16px)]', // Quando não pinned: 40% da tela + gap
           )}
           style={{
             overflow: 'hidden',
+            top: '25px',
+            bottom: '25px',
           }}
         >
-          <div className="flex-1 flex flex-col overflow-hidden bg-card">
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
             {renderContent()}
           </div>
           {(displayTotalCalls > 1 || (isCurrentToolStreaming && totalCompletedCalls > 0)) && (
             <div
               className={cn(
-                'border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900',
+                'border-t border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02]',
                 isMobile ? 'p-2' : 'px-4 py-2.5',
               )}
             >

@@ -57,7 +57,7 @@ export function getToolTitle(toolName: string): string {
     'configure-profile-for-agent': 'Configurar Perfil para Agente',
     'get-credential-profiles': 'Obter Perfis de Credenciais',
     'get-current-agent-config': 'Obter Configuração do Agente',
-    'deploy': 'Implantar',
+    'deploy': 'Publicar',
 
     'generic-tool': 'Ferramenta',
     'default': 'Ferramenta',

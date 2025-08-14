@@ -463,6 +463,16 @@ export default function ThreadPage({
     }
   }, [initialPanelOpenAttempted, messages, toolCalls, initialLoadCompleted, setIsSidePanelOpen, setCurrentToolIndex]);
 
+  // Auto-scroll to bottom when initial load is completed
+  useEffect(() => {
+    if (initialLoadCompleted && messages.length > 0) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        scrollToBottom('auto');
+      }, 100);
+    }
+  }, [initialLoadCompleted]);
+
   useEffect(() => {
     if (agentRunId && agentRunId !== currentHookRunId) {
       console.log(

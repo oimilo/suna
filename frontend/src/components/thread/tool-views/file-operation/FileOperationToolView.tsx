@@ -269,40 +269,55 @@ export function FileOperationToolView({
   };
 
   return (
-    <Card className="flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
       <Tabs defaultValue={'preview'} className="w-full h-full">
-        <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2 mb-0">
+        <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={cn("relative p-2 rounded-lg border", config.gradientBg, config.borderColor)}>
-                <Icon className={cn("h-5 w-5", config.color)} />
-              </div>
+              <Icon className="h-4 w-4 text-muted-foreground opacity-60" />
               <div>
-                <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                <CardTitle className="text-sm font-medium text-foreground">
                   {toolTitle}
                 </CardTitle>
               </div>
             </div>
             <div className='flex items-center gap-2'>
+              {!isStreaming && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                  {isSuccess ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+                  )}
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {isSuccess ? 'Sucesso' : 'Falhou'}
+                  </span>
+                </div>
+              )}
               {isHtml && htmlPreviewUrl && !isStreaming && (
-                <Button variant="outline" size="sm" className="h-8 text-xs bg-white dark:bg-muted/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-none" asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs bg-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.03] border border-black/6 dark:border-white/8 rounded-lg" 
+                  asChild
+                >
                   <a href={htmlPreviewUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                    Abrir no Navegador
+                    <ExternalLink className="h-3.5 w-3.5 mr-1.5 opacity-60" />
+                    <span className="text-muted-foreground">Abrir no Navegador</span>
                   </a>
                 </Button>
               )}
-              <TabsList className="h-8 bg-muted/50 border border-border/50 p-0.5 gap-1">
+              <TabsList className="h-8 bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 p-0.5 gap-0.5 rounded-lg">
                 <TabsTrigger
                   value="code"
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all [&[data-state=active]]:bg-white [&[data-state=active]]:dark:bg-primary/10 [&[data-state=active]]:text-foreground hover:bg-background/50 text-muted-foreground shadow-none"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.04] [&[data-state=active]]:dark:bg-white/[0.04] [&[data-state=active]]:text-foreground [&[data-state=active]]:shadow-sm hover:bg-black/[0.02] dark:hover:bg-white/[0.02] text-muted-foreground data-[state=inactive]:opacity-60"
                 >
                   <Code className="h-3.5 w-3.5" />
                   Código
                 </TabsTrigger>
                 <TabsTrigger
                   value="preview"
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all [&[data-state=active]]:bg-white [&[data-state=active]]:dark:bg-primary/10 [&[data-state=active]]:text-foreground hover:bg-background/50 text-muted-foreground shadow-none"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.04] [&[data-state=active]]:dark:bg-white/[0.04] [&[data-state=active]]:text-foreground [&[data-state=active]]:shadow-sm hover:bg-black/[0.02] dark:hover:bg-white/[0.02] text-muted-foreground data-[state=inactive]:opacity-60"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Visualizar
@@ -312,7 +327,7 @@ export function FileOperationToolView({
           </div>
         </CardHeader>
 
-        <CardContent className="p-0 -my-2 h-full flex-1 overflow-hidden relative">
+        <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
           <TabsContent value="code" className="flex-1 h-full mt-0 p-0 overflow-hidden">
             <ScrollArea className="h-screen w-full min-h-0">
               {isStreaming && !fileContent ? (
@@ -374,12 +389,12 @@ export function FileOperationToolView({
           </TabsContent>
         </CardContent>
 
-        <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+        <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
           <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <Badge variant="outline" className="py-0.5 h-6">
-              <FileIcon className="h-3 w-3" />
-              {hasHighlighting ? language.toUpperCase() : fileExtension.toUpperCase() || 'TEXT'}
-            </Badge>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <FileIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+              <span className="text-xs font-medium text-muted-foreground">{hasHighlighting ? language.toUpperCase() : fileExtension.toUpperCase() || 'TEXT'}</span>
+            </div>
           </div>
 
           <div className="text-xs text-zinc-500 dark:text-zinc-400">

@@ -4,7 +4,6 @@ import {
   CheckCircle,
   AlertTriangle,
   CircleDashed,
-  Clock,
   Loader2,
   ArrowRight,
   TerminalIcon,
@@ -151,35 +150,28 @@ export function TerminateCommandToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20">
-              <StopCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-            </div>
+            <StopCircle className="h-4 w-4 text-muted-foreground opacity-60" />
             <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              <CardTitle className="text-sm font-medium text-foreground">
                 {toolTitle}
               </CardTitle>
             </div>
           </div>
 
           {!isStreaming && (
-            <Badge
-              variant="secondary"
-              className={
-                terminationSuccess
-                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-              }
-            >
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
               {terminationSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
               )}
-              {terminationSuccess ? 'Session terminated' : 'Termination failed'}
-            </Badge>
+              <span className="text-xs font-medium text-muted-foreground">
+                {terminationSuccess ? 'Sessão encerrada' : 'Falha ao encerrar'}
+              </span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -293,18 +285,17 @@ export function TerminateCommandToolView({
         )}
       </CardContent>
 
-      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
         <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           {!isStreaming && finalSessionName && (
-            <Badge variant="outline" className="h-6 py-0.5 bg-zinc-50 dark:bg-zinc-900">
-              <StopCircle className="h-3 w-3 mr-1" />
-              Terminate
-            </Badge>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <StopCircle className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+              <span className="text-xs font-medium text-muted-foreground">Terminar</span>
+            </div>
           )}
         </div>
 
-        <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-          <Clock className="h-3.5 w-3.5" />
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
           {actualToolTimestamp && !isStreaming
             ? formatTimestamp(actualToolTimestamp)
             : actualAssistantTimestamp

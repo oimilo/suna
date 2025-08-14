@@ -12,6 +12,7 @@ import { CsvRenderer } from './preview-renderers/csv-renderer';
 import { useFileContent, useImageContent } from '@/hooks/react-query/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api';
+import styles from '@/styles/toolcalls.module.css';
 
 // Define basic file types
 export type FileType =
@@ -243,11 +244,14 @@ export function FileAttachment({
                 <button
                     onClick={handleClick}
                     className={cn(
-                        "group relative min-h-[54px] min-w-fit rounded-xl cursor-pointer",
-                        "border border-black/10 dark:border-white/10",
-                        "bg-black/5 dark:bg-black/20",
+                        "group relative min-h-[54px] min-w-fit rounded-lg cursor-pointer",
+                        "border border-black/6 dark:border-white/8",
+                        "bg-black/2 dark:bg-white/3",
+                        "hover:bg-black/4 dark:hover:bg-white/6",
+                        "hover:border-black/10 dark:hover:border-white/12",
                         "p-0 overflow-hidden",
                         "flex items-center justify-center",
+                        "transition-all duration-200",
                         isGridLayout ? "w-full" : "min-w-[54px]",
                         className
                     )}
@@ -269,11 +273,14 @@ export function FileAttachment({
                 <button
                     onClick={handleClick}
                     className={cn(
-                        "group relative min-h-[54px] min-w-fit rounded-xl cursor-pointer",
-                        "border border-black/10 dark:border-white/10",
-                        "bg-black/5 dark:bg-black/20",
+                        "group relative min-h-[54px] min-w-fit rounded-lg cursor-pointer",
+                        "border border-black/6 dark:border-white/8",
+                        "bg-black/2 dark:bg-white/3",
+                        "hover:bg-black/4 dark:hover:bg-white/6",
+                        "hover:border-black/10 dark:hover:border-white/12",
                         "p-0 overflow-hidden",
                         "flex flex-col items-center justify-center gap-1",
+                        "transition-all duration-200",
                         isGridLayout ? "w-full" : "inline-block",
                         className
                     )}
@@ -294,11 +301,14 @@ export function FileAttachment({
             <button
                 onClick={handleClick}
                 className={cn(
-                    "group relative min-h-[54px] rounded-2xl cursor-pointer",
-                    "border border-black/10 dark:border-white/10",
-                    "bg-black/5 dark:bg-black/20",
+                    "group relative min-h-[54px] rounded-lg cursor-pointer",
+                    "border border-black/6 dark:border-white/8",
+                    "bg-black/2 dark:bg-white/3",
+                    "hover:bg-black/4 dark:hover:bg-white/6",
+                    "hover:border-black/10 dark:hover:border-white/12",
                     "p-0 overflow-hidden", // No padding, content touches borders
                     "flex items-center justify-center", // Center the image
+                    "transition-all duration-200",
                     isGridLayout ? "w-full" : "inline-block", // Full width in grid
                     className
                 )}
@@ -386,9 +396,8 @@ export function FileAttachment({
         return (
             <div
                 className={cn(
-                    "group relative rounded-xl w-full",
-                    "border",
-                    "bg-card",
+                    "group relative rounded-lg w-full",
+                    styles.filePreviewOverride, // Apply override styles
                     "overflow-hidden",
                     "h-[300px]", // Fixed height for previews
                     "pt-10", // Room for header
@@ -462,14 +471,14 @@ export function FileAttachment({
                 </div>
 
                 {/* Header with filename */}
-                <div className="absolute top-0 left-0 right-0 bg-accent p-2 z-10 flex items-center justify-between">
-                    <div className="text-sm font-medium truncate">{filename}</div>
+                <div className="absolute top-0 left-0 right-0 bg-black/[0.02] dark:bg-white/[0.02] backdrop-blur-sm px-3 py-2 z-10 flex items-center justify-between border-b border-black/6 dark:border-white/8">
+                    <div className="text-xs font-medium truncate text-muted-foreground">{filename}</div>
                     {onClick && (
                         <button
                             onClick={handleClick}
-                            className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                            className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                         >
-                            <ExternalLink size={14} />
+                            <ExternalLink size={12} className="text-muted-foreground opacity-60" />
                         </button>
                     )}
                 </div>
@@ -486,11 +495,13 @@ export function FileAttachment({
         <button
             onClick={handleClick}
             className={cn(
-                "group flex rounded-xl transition-all duration-200 min-h-[54px] h-[54px] overflow-hidden cursor-pointer",
-                "border border-black/10 dark:border-white/10",
-                "bg-sidebar",
+                "group flex rounded-lg transition-all duration-200 min-h-[48px] h-[48px] overflow-hidden cursor-pointer",
+                "border border-black/6 dark:border-white/8",
+                "bg-black/2 dark:bg-white/3",
+                "hover:bg-black/4 dark:hover:bg-white/6",
+                "hover:border-black/10 dark:hover:border-white/12",
                 "text-left",
-                "pr-7", // Right padding for X button
+                "pr-4", // Right padding
                 isInlineMode
                     ? "min-w-[170px] w-full sm:max-w-[300px] sm:w-fit" // Full width on mobile, constrained on larger screens
                     : "min-w-[170px] max-w-[300px] w-fit", // Original constraints for grid layout
@@ -499,20 +510,20 @@ export function FileAttachment({
             style={safeStyle}
             title={filename}
         >
-            <div className="relative min-w-[54px] w-[54px] h-full aspect-square flex-shrink-0 bg-black/5 dark:bg-white/5">
+            <div className="relative min-w-[48px] w-[48px] h-full aspect-square flex-shrink-0">
                 <div className="flex items-center justify-center h-full w-full">
-                    <IconComponent className="h-5 w-5 text-black/60 dark:text-white/60" />
+                    <IconComponent className="h-4 w-4 text-muted-foreground opacity-60" />
                 </div>
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col justify-center p-2 pl-3 overflow-hidden">
-                <div className="text-sm font-medium text-foreground truncate max-w-full">
+            <div className="flex-1 min-w-0 flex flex-col justify-center p-2 pl-2 overflow-hidden">
+                <div className="text-sm font-medium text-foreground/90 truncate max-w-full">
                     {filename}
                 </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                    <span className="text-black/60 dark:text-white/60 truncate">{typeLabel}</span>
-                    <span className="text-black/40 dark:text-white/40 flex-shrink-0">·</span>
-                    <span className="text-black/60 dark:text-white/60 flex-shrink-0">{fileSize}</span>
+                <div className="text-xs text-muted-foreground/60 flex items-center gap-1 truncate">
+                    <span className="truncate">{typeLabel}</span>
+                    <span className="flex-shrink-0">·</span>
+                    <span className="flex-shrink-0">{fileSize}</span>
                 </div>
             </div>
         </button>
@@ -535,7 +546,7 @@ export function FileAttachmentGrid({
     className,
     sandboxId,
     showPreviews = true,
-    collapsed = false,
+    collapsed = false, // Keep false to show previews
     project
 }: FileAttachmentGridProps) {
     if (!attachments || attachments.length === 0) return null;

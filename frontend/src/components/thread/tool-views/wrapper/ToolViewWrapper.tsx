@@ -69,28 +69,28 @@ export function ToolViewWrapper({
         )}>
           <div className={styles.toolViewFooterContent}>
             {!isStreaming && showStatus && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
                 {isSuccess ? (
-                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
                 ) : (
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
                 )}
-                <span>
+                <span className="text-xs font-medium text-muted-foreground">
                   {isSuccess
-                    ? customStatus?.success || "Concluído com sucesso"
-                    : customStatus?.failure || "Execução falhou"}
+                    ? customStatus?.success || "Sucesso"
+                    : customStatus?.failure || "Falhou"}
                 </span>
               </div>
             )}
 
             {isStreaming && showStatus && (
-              <div className="flex items-center gap-2">
-                <CircleDashed className="h-3.5 w-3.5 text-blue-500 animate-spin" />
-                <span>{customStatus?.streaming || "Processing..."}</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <CircleDashed className="h-3.5 w-3.5 text-muted-foreground opacity-60 animate-spin" />
+                <span className="text-xs font-medium text-muted-foreground">{customStatus?.streaming || "Aguardando Resposta"}</span>
               </div>
             )}
 
-            <div className="text-xs">
+            <div className="text-xs text-muted-foreground/60">
               {toolTimestamp && !isStreaming
                 ? formatTimestamp(toolTimestamp)
                 : assistantTimestamp

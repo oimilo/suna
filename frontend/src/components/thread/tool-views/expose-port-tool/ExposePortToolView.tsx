@@ -11,7 +11,6 @@ import {
 } from '../utils';
 import { extractExposePortData } from './_utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
 
@@ -40,35 +39,26 @@ export function ExposePortToolView({
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20">
-              <Computer className="w-5 h-5 text-green-500 dark:text-green-400" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                Exposição de Porta
-              </CardTitle>
-            </div>
+            <Computer className="h-4 w-4 text-muted-foreground opacity-60" />
+            <CardTitle className="text-sm font-medium text-foreground">
+              Exposição de Porta
+            </CardTitle>
           </div>
 
           {!isStreaming && (
-            <Badge
-              variant="secondary"
-              className={
-                actualIsSuccess
-                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-              }
-            >
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
               {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
               )}
-              {actualIsSuccess ? 'Porta exposta com sucesso' : 'Falha ao expor porta'}
-            </Badge>
+              <span className="text-xs font-medium text-muted-foreground">
+                {actualIsSuccess ? 'Porta exposta com sucesso' : 'Falha ao expor porta'}
+              </span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -85,50 +75,46 @@ export function ExposePortToolView({
           />
         ) : (
           <ScrollArea className="h-full w-full">
-            <div className="p-4 py-0 my-4 space-y-6">
+            <div className="p-4 pt-4 pb-0 space-y-6">
               {url && (
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-sm overflow-hidden">
-                  <div className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-2">
-                          URL Exposta
-                        </h3>
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-md font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 mb-3"
-                        >
-                          {url}
-                          <ExternalLink className="flex-shrink-0 h-3.5 w-3.5" />
-                        </a>
+                <div className="space-y-4">
+                  {/* URL Exposta Section */}
+                  <div>
+                    <h3 className="text-xs font-medium text-muted-foreground mb-2">URL Exposta</h3>
+                    <div className="bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 rounded-lg p-3">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
+                      >
+                        {url}
+                        <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Detalhes da Porta */}
+                  <div>
+                    <h3 className="text-xs font-medium text-muted-foreground mb-2">Detalhes da Porta</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                        <Computer className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+                        <span className="text-xs font-medium text-muted-foreground">Porta: {port}</span>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          Detalhes da Porta
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge variant="outline" className="bg-zinc-50 dark:bg-zinc-800 font-mono">
-                            Porta: {port}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {message && (
-                        <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                          {message}
-                        </div>
-                      )}
-
-                      <div className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-md p-3 text-amber-600 dark:text-amber-400 flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>Esta URL pode estar disponível apenas temporariamente e pode expirar após algum tempo.</span>
-                      </div>
+                  {message && (
+                    <div className="text-sm text-muted-foreground bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 rounded-lg p-3">
+                      {message}
                     </div>
+                  )}
+
+                  {/* Warning */}
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/10 dark:border-amber-400/10">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 opacity-80 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs text-amber-700 dark:text-amber-400">Esta URL pode estar disponível apenas temporariamente e pode expirar após algum tempo.</span>
                   </div>
                 </div>
               )}
@@ -152,13 +138,13 @@ export function ExposePortToolView({
         )}
       </CardContent>
 
-      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
         <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           {!isStreaming && port && (
-            <Badge variant="outline">
-              <Computer className="h-3 w-3 mr-1" />
-              Porta {port}
-            </Badge>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <Computer className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+              <span className="text-xs font-medium text-muted-foreground">Porta {port}</span>
+            </div>
           )}
         </div>
 

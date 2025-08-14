@@ -4,16 +4,12 @@ import {
     CheckCircle,
     AlertTriangle,
     ExternalLink,
-    Globe,
     Folder,
     TerminalIcon,
 } from 'lucide-react';
 import { ToolViewProps } from './types';
 import { getToolTitle, normalizeContentToString } from './utils';
-import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from './shared/LoadingState';
 
@@ -92,7 +88,7 @@ function extractDeployData(assistantContent: any, toolContent: any): {
         } catch (e) {
             // If parsing fails, treat as raw content
             deployResult = {
-                message: 'Deploy completed',
+                message: 'Publicação concluída',
                 output: toolStr,
                 success: true,
             };
@@ -134,35 +130,28 @@ export function DeployToolView({
 
     return (
         <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-            <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+            <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
                 <div className="flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="relative p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/20">
-                            <Rocket className="w-5 h-5 text-orange-500 dark:text-orange-400" />
-                        </div>
+                        <Rocket className="h-4 w-4 text-muted-foreground opacity-60" />
                         <div>
-                            <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                            <CardTitle className="text-sm font-medium text-foreground">
                                 {toolTitle}
                             </CardTitle>
                         </div>
                     </div>
 
                     {!isStreaming && (
-                        <Badge
-                            variant="secondary"
-                            className={
-                                actualIsSuccess
-                                    ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                                    : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-                            }
-                        >
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
                             {actualIsSuccess ? (
-                                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
                             ) : (
-                                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
                             )}
-                            {actualIsSuccess ? 'Deploy successful' : 'Deploy failed'}
-                        </Badge>
+                            <span className="text-xs font-medium text-muted-foreground">
+                                {actualIsSuccess ? 'Publicação realizada' : 'Publicação falhou'}
+                            </span>
+                        </div>
                     )}
                 </div>
             </CardHeader>
@@ -173,8 +162,8 @@ export function DeployToolView({
                         icon={Rocket}
                         iconColor="text-orange-500 dark:text-orange-400"
                         bgColor="bg-gradient-to-b from-orange-100 to-orange-50 shadow-inner dark:from-orange-800/40 dark:to-orange-900/60 dark:shadow-orange-950/20"
-                        title="Deploying website"
-                        filePath={projectName || 'Processing deployment...'}
+                        title="Implantando site"
+                        filePath={projectName || 'Processando publicação...'}
                         showProgress={true}
                     />
                 ) : (
@@ -186,57 +175,47 @@ export function DeployToolView({
                                 <div className="space-y-4">
                                     {/* Deployment URL Card */}
                                     {deployResult.url && (
-                                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-sm">
-                                            <div className="p-3">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                                        <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        <div className="space-y-3">
+                                            <div>
+                                                <h3 className="text-xs font-medium text-muted-foreground mb-2">Site Publicado</h3>
+                                                <div className="bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 dark:bg-emerald-400/10">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Live</span>
+                                                        </div>
                                                     </div>
-                                                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                                        Website Deployed
-                                                    </span>
-                                                    <Badge variant="outline" className="text-xs h-5 px-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                                                        Live
-                                                    </Badge>
-                                                </div>
-
-                                                <div className="bg-zinc-50 dark:bg-zinc-800 rounded p-2 mb-3">
-                                                    <code className="text-xs font-mono text-zinc-700 dark:text-zinc-300 break-all">
+                                                    <a
+                                                        href={deployResult.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
+                                                    >
                                                         {deployResult.url}
-                                                    </code>
-                                                </div>
-
-                                                <Button
-                                                    asChild
-                                                    size="sm"
-                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-8"
-                                                >
-                                                    <a href={deployResult.url} target="_blank" rel="noopener noreferrer">
-                                                        <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                                                        Open Website
+                                                        <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
                                                     </a>
-                                                </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* Terminal Output */}
                                     {cleanOutput.length > 0 && (
-                                        <div className="bg-zinc-100 dark:bg-neutral-900 rounded-lg overflow-hidden border border-zinc-200/20">
-                                            <div className="bg-accent px-4 py-2 flex items-center gap-2">
-                                                <TerminalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                                    Deployment Log
-                                                </span>
-                                            </div>
-                                            <div className="p-4 max-h-96 overflow-auto scrollbar-hide">
-                                                <pre className="text-xs text-zinc-600 dark:text-zinc-300 font-mono whitespace-pre-wrap break-all">
-                                                    {cleanOutput.map((line, index) => (
-                                                        <div key={index} className="py-0.5">
-                                                            {line || ' '}
-                                                        </div>
-                                                    ))}
-                                                </pre>
+                                        <div>
+                                            <h3 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                                                <TerminalIcon className="h-3.5 w-3.5 opacity-60" />
+                                                Log da Publicação
+                                            </h3>
+                                            <div className="bg-black/[0.02] dark:bg-white/[0.02] rounded-lg overflow-hidden border border-black/6 dark:border-white/8">
+                                                <div className="p-3 max-h-96 overflow-auto scrollbar-hide">
+                                                    <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-all">
+                                                        {cleanOutput.map((line, index) => (
+                                                            <div key={index} className="py-0.5">
+                                                                {line || ' '}
+                                                            </div>
+                                                        ))}
+                                                    </pre>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -244,31 +223,33 @@ export function DeployToolView({
                             ) : (
                                 /* Failure State */
                                 <div className="space-y-4">
-                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <AlertTriangle className="h-5 w-5 text-red-600" />
-                                            <h3 className="font-medium text-red-900 dark:text-red-100">
-                                                Deployment Failed
-                                            </h3>
+                                    <div className="bg-red-500/5 dark:bg-red-400/5 border border-red-500/10 dark:border-red-400/10 rounded-lg p-3">
+                                        <div className="flex items-start gap-2">
+                                            <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400 opacity-80 mt-0.5 flex-shrink-0" />
+                                            <div className="space-y-1">
+                                                <h3 className="text-sm font-medium text-red-700 dark:text-red-400">
+                                                    Publicação Falhou
+                                                </h3>
+                                                <p className="text-xs text-red-700/80 dark:text-red-400/80">
+                                                    A publicação encontrou um erro. Verifique os logs abaixo para mais detalhes.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-red-700 dark:text-red-300">
-                                            The deployment encountered an error. Check the logs below for details.
-                                        </p>
                                     </div>
 
                                     {/* Raw Error Output */}
                                     {rawContent && (
-                                        <div className="bg-zinc-100 dark:bg-neutral-900 rounded-lg overflow-hidden border border-zinc-200/20">
-                                            <div className="bg-accent px-4 py-2 flex items-center gap-2">
-                                                <TerminalIcon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                                    Error Details
-                                                </span>
-                                            </div>
-                                            <div className="p-4 max-h-96 overflow-auto scrollbar-hide">
-                                                <pre className="text-xs text-zinc-600 dark:text-zinc-300 font-mono whitespace-pre-wrap break-all">
-                                                    {rawContent}
-                                                </pre>
+                                        <div>
+                                            <h3 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                                                <TerminalIcon className="h-3.5 w-3.5 opacity-60" />
+                                                Detalhes do Erro
+                                            </h3>
+                                            <div className="bg-black/[0.02] dark:bg-white/[0.02] rounded-lg overflow-hidden border border-black/6 dark:border-white/8">
+                                                <div className="p-3 max-h-96 overflow-auto scrollbar-hide">
+                                                    <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-all">
+                                                        {rawContent}
+                                                    </pre>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -278,6 +259,25 @@ export function DeployToolView({
                     </ScrollArea>
                 )}
             </CardContent>
+
+            <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+                <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+                    {!isStreaming && projectName && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                            <Folder className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+                            <span className="text-xs font-medium text-muted-foreground">{projectName}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {toolTimestamp || assistantTimestamp ? 
+                        new Date(toolTimestamp || assistantTimestamp || '').toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        }) : ''}
+                </div>
+            </div>
         </Card>
     );
 } 

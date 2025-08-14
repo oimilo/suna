@@ -113,7 +113,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                             <div className=' flex items-center justify-center p-1 rounded-sm'>
                                 <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                             </div>
-                            <span className="font-mono text-xs text-foreground">{displayName}</span>
+                            <span className="text-xs font-medium text-muted-foreground">{displayName}</span>
                             {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
                         </button>
 
@@ -150,7 +150,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                         <div className={styles.toolcallIcon}>
                             <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                         </div>
-                        <span className="font-mono text-xs text-foreground">{displayName}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{displayName}</span>
                         {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
                     </button>
                 )}
@@ -168,7 +168,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                 <div className={styles.toolcallIcon}>
                     <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                 </div>
-                <span className="font-mono text-xs text-foreground">{displayName}</span>
+                <span className="text-xs font-medium text-muted-foreground">{displayName}</span>
                 {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
             </button>
         </div>
