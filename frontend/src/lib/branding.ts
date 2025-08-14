@@ -8,7 +8,7 @@ export const BRANDING = {
   name: process.env.NEXT_PUBLIC_APP_NAME || "Prophet",
   
   // App description
-  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Automatize tarefas e conecte seus apps favoritos com IA conversacional",
+  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Agente IA avançado com 2700+ integrações para automação inteligente utilizando linguagem natural",
   
   // App URL
   url: process.env.NEXT_PUBLIC_APP_URL || "https://prophet.build",
