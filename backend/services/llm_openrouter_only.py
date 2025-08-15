@@ -45,8 +45,9 @@ def force_openrouter_prefix(model_name: str) -> str:
         "gpt-3.5-turbo": "openrouter/openai/gpt-3.5-turbo",
         
         # Google models
-        "gemini/gemini-2.5-pro": "openrouter/google/gemini-pro-1.5",  # Mapear para versão disponível
-        "google/gemini-2.5-pro": "openrouter/google/gemini-pro-1.5",
+        "gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "google/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
         "gemini-pro": "openrouter/google/gemini-pro-1.5",
         "gemini-2.0-flash": "openrouter/google/gemini-exp-1121:free",
         
