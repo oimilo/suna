@@ -192,7 +192,8 @@ def prepare_params(
         logger.debug("Added Claude-specific headers")
 
     # Add OpenRouter-specific parameters
-    if model_name.startswith("openrouter/"):
+    # Check if we're using OpenRouter (not using direct Anthropic API)
+    if not use_anthropic_direct:
         logger.info(f"Preparing OpenRouter parameters for model: {model_name}")
         
         # Ensure OpenRouter API key is passed directly
