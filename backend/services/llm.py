@@ -79,16 +79,16 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     
     # Map models to their OpenRouter equivalents
     fallback_mapping = {
-        "anthropic/claude-3-7-sonnet-latest": "anthropic/claude-3.7-sonnet",
-        "anthropic/claude-sonnet-4-20250514": "anthropic/claude-sonnet-4",
-        "anthropic/claude-sonnet-4": "anthropic/claude-sonnet-4",
-        "anthropic/claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
-        "anthropic/claude-3-5-sonnet-latest": "anthropic/claude-3.5-sonnet",
-        "xai/grok-4": "x-ai/grok-beta",
-        "gemini-2.5-pro": "google/gemini-2.5-pro",
-        "gemini/gemini-2.5-pro": "google/gemini-2.5-pro",
-        "google/gemini-2.5-pro": "google/gemini-2.5-pro",
-        "deepseek/deepseek-chat": "deepseek/deepseek-chat",
+        "anthropic/claude-3-7-sonnet-latest": "openrouter/anthropic/claude-3.7-sonnet",
+        "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",
+        "anthropic/claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",
+        "anthropic/claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3-5-sonnet-latest": "openrouter/anthropic/claude-3.5-sonnet",
+        "xai/grok-4": "openrouter/x-ai/grok-beta",
+        "gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "google/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
+        "deepseek/deepseek-chat": "openrouter/deepseek/deepseek-chat",
     }
     
     # Check for exact match first
@@ -102,12 +102,12 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     
     # Default fallbacks by provider
     if "claude" in model_name.lower() or "anthropic" in model_name.lower():
-        return "anthropic/claude-3.5-sonnet"
+        return "openrouter/anthropic/claude-3.5-sonnet"
     elif "gemini" in model_name.lower() or "google" in model_name.lower():
         # If Gemini 2.5 Pro fails, try Gemini 1.5 Pro as fallback
-        return "google/gemini-pro-1.5"
+        return "openrouter/google/gemini-pro-1.5"
     elif "xai" in model_name.lower() or "grok" in model_name.lower():
-        return "x-ai/grok-beta"
+        return "openrouter/x-ai/grok-beta"
     
     return None
 
@@ -192,8 +192,8 @@ def prepare_params(
         logger.debug("Added Claude-specific headers")
 
     # Add OpenRouter-specific parameters
-    # Check if we're using OpenRouter (not using direct Anthropic API)
-    if not use_anthropic_direct:
+    # Check if we're using OpenRouter (model has openrouter/ prefix)
+    if model_name.startswith("openrouter/"):
         logger.info(f"Preparing OpenRouter parameters for model: {model_name}")
         
         # Ensure OpenRouter API key is passed directly
@@ -376,8 +376,8 @@ async def make_llm_api_call(
         if original_model != model_name:
             logger.info(f"Forcing OpenRouter: {original_model} -> {model_name}")
     
-    # Debug: Check if OpenRouter API key is available
-    if model_name.startswith("openrouter/"):
+    # Debug: Check if OpenRouter API key is available for non-Anthropic models
+    if not use_anthropic_direct:
         env_key = os.environ.get('OPENROUTER_API_KEY')
         config_key = config.OPENROUTER_API_KEY
         if not env_key:
