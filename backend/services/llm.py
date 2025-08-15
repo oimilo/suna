@@ -79,16 +79,16 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     
     # Map models to their OpenRouter equivalents
     fallback_mapping = {
-        "anthropic/claude-3-7-sonnet-latest": "openrouter/anthropic/claude-3.7-sonnet",
-        "anthropic/claude-sonnet-4-20250514": "openrouter/anthropic/claude-sonnet-4",
-        "anthropic/claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",
-        "anthropic/claude-3.5-sonnet": "openrouter/anthropic/claude-3.5-sonnet",
-        "anthropic/claude-3-5-sonnet-latest": "openrouter/anthropic/claude-3.5-sonnet",
-        "xai/grok-4": "openrouter/x-ai/grok-beta",
-        "gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
-        "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
-        "google/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
-        "deepseek/deepseek-chat": "openrouter/deepseek/deepseek-chat",
+        "anthropic/claude-3-7-sonnet-latest": "anthropic/claude-3.7-sonnet",
+        "anthropic/claude-sonnet-4-20250514": "anthropic/claude-sonnet-4",
+        "anthropic/claude-sonnet-4": "anthropic/claude-sonnet-4",
+        "anthropic/claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3-5-sonnet-latest": "anthropic/claude-3.5-sonnet",
+        "xai/grok-4": "x-ai/grok-beta",
+        "gemini-2.5-pro": "google/gemini-2.5-pro",
+        "gemini/gemini-2.5-pro": "google/gemini-2.5-pro",
+        "google/gemini-2.5-pro": "google/gemini-2.5-pro",
+        "deepseek/deepseek-chat": "deepseek/deepseek-chat",
     }
     
     # Check for exact match first
@@ -102,9 +102,12 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
     
     # Default fallbacks by provider
     if "claude" in model_name.lower() or "anthropic" in model_name.lower():
-        return "openrouter/anthropic/claude-3.5-sonnet"
+        return "anthropic/claude-3.5-sonnet"
+    elif "gemini" in model_name.lower() or "google" in model_name.lower():
+        # If Gemini 2.5 Pro fails, try Gemini 1.5 Pro as fallback
+        return "google/gemini-pro-1.5"
     elif "xai" in model_name.lower() or "grok" in model_name.lower():
-        return "openrouter/x-ai/grok-beta"
+        return "x-ai/grok-beta"
     
     return None
 
