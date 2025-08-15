@@ -4,14 +4,10 @@ import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, AlertCircle, Workflow, Trash2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { 
   useAgentWorkflows, 
@@ -29,7 +25,7 @@ interface AgentWorkflowsConfigurationProps {
   agentName: string;
 }
 
-export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflowsConfigurationProps) {
+export function AgentWorkflowsConfiguration({ agentId }: AgentWorkflowsConfigurationProps) {
   const router = useRouter();
 
   const { data: workflows = [], isLoading } = useAgentWorkflows(agentId);
@@ -42,7 +38,6 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
   const [workflowToExecute, setWorkflowToExecute] = useState<AgentWorkflow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<AgentWorkflow | null>(null);
-  const [activeTab, setActiveTab] = useState('workflows');
 
   const [executionInput, setExecutionInput] = useState<string>('');
 
@@ -76,13 +71,6 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
     }
   }, [agentId, router, createWorkflowMutation, updateWorkflowMutation]);
 
-  const handleUpdateWorkflowStatus = useCallback(async (workflowId: string, status: AgentWorkflow['status']) => {
-    await updateWorkflowMutation.mutateAsync({ 
-      agentId, 
-      workflowId, 
-      workflow: { status } 
-    });
-  }, [agentId, updateWorkflowMutation]);
 
   const handleExecuteWorkflow = useCallback((workflow: AgentWorkflow) => {
     setWorkflowToExecute(workflow);
@@ -136,39 +124,51 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
 
 
   const getStatusBadge = (status: AgentWorkflow['status']) => {
-    const colors = {
-      draft: 'text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-800',
-      active: 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900',
-      paused: 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-900',
-      archived: 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900'
+    const statusConfig = {
+      draft: {
+        className: 'bg-muted/50 text-muted-foreground border border-border',
+        label: 'Rascunho'
+      },
+      active: {
+        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+        label: 'Ativo'
+      },
+      paused: {
+        className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+        label: 'Pausado'
+      },
+      archived: {
+        className: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20',
+        label: 'Arquivado'
+      }
     };
     
+    const config = statusConfig[status];
+    
     return (
-      <Badge className={colors[status]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
+      <div className={`px-2 py-0.5 rounded text-xs font-medium ${config.className}`}>
+        {config.label}
+      </div>
     );
   };
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
+      <div className="flex justify-end mb-4">
         <Button 
-          size='sm' 
-          variant='outline' 
-          className="flex items-center gap-2" 
+          size="sm" 
+          variant="default" 
+          className="h-9 px-3 gap-1.5 text-sm font-medium" 
           onClick={handleCreateWorkflow}
           disabled={createWorkflowMutation.isPending}
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           {createWorkflowMutation.isPending ? 'Criando...' : 'Criar Fluxo de Trabalho'}
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsContent value="workflows" className="space-y-4">
-            {isLoading ? (
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {isLoading ? (
               <div className="flex items-center justify-center p-8">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 animate-spin" />
@@ -186,61 +186,84 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="space-y-2">
                 {workflows.map((workflow) => (
-                  <div key={workflow.id} className="group">
-                    <Card
-                      className="p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => handleWorkflowClick(workflow.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-lg font-semibold">{workflow.name}</h4>
-                          <div className="flex items-center space-x-2 mt-2">
+                  <div 
+                    key={workflow.id} 
+                    className="group p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200 cursor-pointer"
+                    onClick={() => handleWorkflowClick(workflow.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Ícone */}
+                      <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0">
+                        <Workflow className="h-4 w-4" />
+                      </div>
+                      
+                      {/* Conteúdo */}
+                      <div className="flex-1 min-w-0">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-medium truncate">
+                              {workflow.name}
+                            </h4>
                             {getStatusBadge(workflow.status)}
-                            {workflow.is_default && <Badge variant="outline">Default</Badge>}
+                            {workflow.is_default && (
+                              <div className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                Padrão
+                              </div>
+                            )}
                           </div>
-                          <p className="mt-3 text-sm text-muted-foreground">{workflow.description}</p>
-                          <div className="flex items-center text-xs mt-4">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            <span>Created {new Date(workflow.created_at).toLocaleDateString()}</span>
+                          
+                          {/* Ações */}
+                          <div className="flex items-center gap-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExecuteWorkflow(workflow);
+                              }}
+                              disabled={workflow.status !== 'active' || executeWorkflowMutation.isPending}
+                              className="h-7 px-2 hover:bg-black/5 dark:hover:bg-white/5"
+                            >
+                              <Workflow className="h-3.5 w-3.5 mr-1.5 opacity-60" />
+                              <span className="text-xs">Executar</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteWorkflow(workflow);
+                              }}
+                              disabled={deleteWorkflowMutation.isPending}
+                              className="h-7 w-7 p-0 hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 opacity-60" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex-shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleExecuteWorkflow(workflow);
-                            }}
-                            disabled={workflow.status !== 'active' || executeWorkflowMutation.isPending}
-                          >
-                            <Workflow className="h-4 w-4" />
-                            Executar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteWorkflow(workflow);
-                            }}
-                            disabled={deleteWorkflowMutation.isPending}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        
+                        {/* Descrição */}
+                        {workflow.description && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {workflow.description}
+                          </p>
+                        )}
+                        
+                        {/* Data de criação */}
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground/60">
+                          <Calendar className="h-3 w-3" />
+                          <span>Criado em {new Date(workflow.created_at).toLocaleDateString('pt-BR')}</span>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   </div>
                 ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+              </div>
+            )}
+      </div>
       <Dialog open={isExecuteDialogOpen} onOpenChange={setIsExecuteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

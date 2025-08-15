@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { 
   Edit, 
@@ -20,7 +19,7 @@ import {
 import { TriggerConfiguration } from './types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getTriggerIcon } from './utils';
-import { truncateString } from '@/lib/utils';
+import { truncateString, cn } from '@/lib/utils';
 
 interface ConfiguredTriggersListProps {
   triggers: TriggerConfiguration[];
@@ -71,24 +70,71 @@ export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
         {triggers.map((trigger) => (
           <div
             key={trigger.trigger_id}
-            className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+            className="p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200"
           >
-            <div className="flex items-center space-x-4 flex-1">
-              <div className="p-2 rounded-lg bg-muted border">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-md bg-transparent border-0 shrink-0 opacity-60">
                 {getTriggerIcon(trigger.trigger_type)}
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h4 className="text-sm font-medium truncate">
-                    {trigger.name}
-                  </h4>
-                  <Badge 
-                    variant={trigger.is_active ? "default" : "secondary"}
-                    className="text-xs"
-                  >
-                    {trigger.is_active ? "Active" : "Inactive"}
-                  </Badge>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium truncate">
+                      {trigger.name}
+                    </h4>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded text-xs font-medium",
+                      trigger.is_active 
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
+                        : "bg-muted text-muted-foreground border border-border"
+                    )}>
+                      {trigger.is_active ? "Ativo" : "Inativo"}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                    <Switch
+                      checked={trigger.is_active}
+                      onCheckedChange={() => onToggle(trigger)}
+                      disabled={isLoading}
+                      className="scale-90"
+                    />
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onEdit(trigger)}
+                          className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                          disabled={isLoading}
+                        >
+                          <Edit className="h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Editar gatilho</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onRemove(trigger)}
+                          className="h-7 w-7 p-0 hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+                          disabled={isLoading}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Deletar gatilho</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
                 
                 {trigger.description && (
@@ -107,95 +153,47 @@ export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
                   </div>
                 )}
                 {trigger.webhook_url && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono max-w-xs truncate">
+                  <div className="flex items-center gap-2 mt-2">
+                    <code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono truncate flex-1 max-w-full border border-black/6 dark:border-white/8">
                       {trigger.webhook_url}
                     </code>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={() => copyToClipboard(trigger.webhook_url!)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Copy webhook URL</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    {trigger.webhook_url.startsWith('http') && (
+                    <div className="flex items-center gap-1 shrink-0">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 w-6 p-0"
-                            onClick={() => window.open(trigger.webhook_url, '_blank')}
+                            className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                            onClick={() => copyToClipboard(trigger.webhook_url!)}
                           >
-                            <ExternalLink className="h-3 w-3" />
+                            <Copy className="h-3 w-3 opacity-60" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Open webhook URL</p>
+                          <p>Copiar URL</p>
                         </TooltipContent>
                       </Tooltip>
-                    )}
+                      {trigger.webhook_url.startsWith('http') && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                              onClick={() => window.open(trigger.webhook_url, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3 opacity-60" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Abrir URL</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center">
-                    <Switch
-                      checked={trigger.is_active}
-                      onCheckedChange={() => onToggle(trigger)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{trigger.is_active ? 'Disable' : 'Enable'} trigger</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onEdit(trigger)}
-                    className="h-8 w-8 p-0"
-                    disabled={isLoading}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit trigger</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onRemove(trigger)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    disabled={isLoading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete trigger</p>
-                </TooltipContent>
-              </Tooltip>
             </div>
           </div>
         ))}

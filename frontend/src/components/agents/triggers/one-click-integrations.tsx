@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Clock } from 'lucide-react';
+import { Loader2, AlertCircle, Plus } from 'lucide-react';
 import { TriggerConfigDialog } from './trigger-config-dialog';
 import { TriggerProvider } from './types';
 import { Dialog } from '@/components/ui/dialog';
@@ -24,8 +24,8 @@ interface OneClickIntegrationsProps {
 
 const OAUTH_PROVIDERS = {
   schedule: {
-    name: 'Agendamento',
-    icon: <Clock className="h-4 w-4" color="#10b981" />,
+    name: 'Adicionar Gatilho',
+    icon: <Plus className="h-3.5 w-3.5" />,
     isOAuth: false
   }
 } as const;
@@ -130,7 +130,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex justify-end">
         {Object.entries(OAUTH_PROVIDERS).map(([providerId, config]) => {
           const provider = providerId as ProviderKey;
           const isInstalled = isProviderInstalled(provider);
@@ -145,8 +145,8 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
           return (
             <Button
               key={providerId}
-              variant="outline"
-              size='sm'
+              variant="default"
+              size="sm"
               onClick={() => {
                 if (provider === 'schedule') {
                   handleInstall(provider); 
@@ -156,10 +156,10 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
                 }
               }}
               disabled={isLoading}
-              className="flex items-center"
+              className="h-9 px-3 gap-1.5 text-sm font-medium"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 config.icon
               )}

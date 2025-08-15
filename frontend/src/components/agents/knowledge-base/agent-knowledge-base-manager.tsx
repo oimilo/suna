@@ -8,18 +8,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Plus, 
   Edit2, 
   Trash2, 
   Clock, 
-  MoreVertical,
   AlertCircle,
   FileText,
-  Eye,
-  EyeOff,
   Globe,
   Search,
   Loader2,
@@ -35,13 +34,6 @@ import {
   PenTool,
   X
 } from 'lucide-react';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,8 +112,23 @@ const USAGE_CONTEXT_OPTIONS = [
     value: 'always', 
     label: 'Sempre Ativo', 
     icon: Globe,
-    color: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+    description: 'O conhecimento estará sempre disponível para o agente',
+    color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
   },
+  {
+    value: 'on_request',
+    label: 'Sob Demanda',
+    icon: Search,
+    description: 'O agente busca o conhecimento quando necessário',
+    color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+  },
+  {
+    value: 'contextual',
+    label: 'Contextual',
+    icon: Bot,
+    description: 'Ativado automaticamente com base no contexto da conversa',
+    color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+  }
 ] as const;
 
 const getFileTypeIcon = (filename: string, mimeType?: string) => {
@@ -352,7 +359,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
       name: entry.name,
       description: entry.description || '',
       content: entry.content,
-      usage_context: entry.usage_context,
+      usage_context: entry.usage_context || 'always',
     });
     setEditDialog({ entry, isOpen: true });
   };
@@ -620,13 +627,14 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
   );
 
   return (
-    <div 
-      className="space-y-6"
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-    >
+    <TooltipProvider>
+      <div 
+        className="space-y-6"
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
       {dragActive && (
         <div className="fixed inset-0 bg-blue-500/20 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-8 shadow-lg border-2 border-dashed border-blue-500">
@@ -638,18 +646,23 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground opacity-60" />
           <Input
-            placeholder="Buscar entradas de conhecimento..."
+            placeholder="Buscar entrada"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="h-9 pl-9 text-sm bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 focus:bg-transparent"
           />
         </div>
-        <Button onClick={() => handleOpenAddDialog()} className="gap-2">
-          <Plus className="h-4 w-4" />
+        <Button 
+          onClick={() => handleOpenAddDialog()} 
+          size="sm"
+          variant="default"
+          className="h-9 px-3 gap-1.5 text-sm font-medium"
+        >
+          <Plus className="h-3.5 w-3.5" />
           Adicionar Conhecimento
         </Button>
       </div>
@@ -678,106 +691,121 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
               const SourceIcon = getSourceIcon(entry.source_type || 'manual', entry.source_metadata?.filename);
               
               return (
-                <Card
+                <div
                   key={entry.entry_id}
                   className={cn(
-                    "group transition-all p-0",
-                    entry.is_active 
-                      ? "bg-card" 
-                      : "bg-muted/30 opacity-70"
+                    "group p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200",
+                    !entry.is_active && "opacity-60"
                   )}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-start gap-3">
+                    {/* Ícone */}
+                    <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0">
+                      <SourceIcon className="h-4 w-4" />
+                    </div>
+                    
+                    {/* Conteúdo */}
+                    <div className="flex-1 min-w-0">
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <SourceIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <h3 className="font-medium truncate">{entry.name}</h3>
+                          <h4 className="text-sm font-medium truncate">
+                            {entry.name}
+                          </h4>
                           {!entry.is_active && (
-                            <Badge variant="outline" className="text-xs">
-                              <EyeOff className="h-3 w-3 mr-1" />
-                              Disabled
-                            </Badge>
+                            <div className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20">
+                              Desativado
+                            </div>
                           )}
                           {entry.source_type && entry.source_type !== 'manual' && (
-                            <Badge variant="outline" className="text-xs">
+                            <div className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                               {entry.source_type === 'git_repo' ? 'Git' : 
-                               entry.source_type === 'zip_extracted' ? 'ZIP' : 'File'}
-                            </Badge>
+                               entry.source_type === 'zip_extracted' ? 'ZIP' : 'Arquivo'}
+                            </div>
                           )}
                         </div>
-                        {entry.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
-                            {entry.description}
-                          </p>
-                        )}
-                        <p className="text-sm text-foreground/80 line-clamp-2 leading-relaxed">
-                          {entry.content}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className={cn("text-xs gap-1", contextConfig.color)}>
-                              <ContextIcon className="h-3 w-3" />
-                              {contextConfig.label}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(entry.created_at).toLocaleDateString()}
-                            </span>
-                            {entry.file_size && (
-                              <span className="text-xs text-muted-foreground">
-                                {(entry.file_size / 1024).toFixed(1)}KB
-                              </span>
-                            )}
-                          </div>
-                          {entry.content_tokens && (
-                            <span className="text-xs text-muted-foreground">
-                              ~{entry.content_tokens.toLocaleString()} tokens
-                            </span>
-                          )}
+                        
+                        {/* Ações */}
+                        <div className="flex items-center gap-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Switch
+                            checked={entry.is_active}
+                            onCheckedChange={() => handleToggleActive(entry)}
+                            className="scale-90 mr-1"
+                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenEditDialog(entry)}
+                                className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                              >
+                                <Edit2 className="h-3.5 w-3.5 opacity-60" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteEntryId(entry.entry_id)}
+                                className="h-7 w-7 p-0 hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 opacity-60" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Excluir</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem onClick={() => handleOpenEditDialog(entry)}>
-                            <Edit2 className="h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleActive(entry)}>
-                            {entry.is_active ? (
-                              <>
-                                <EyeOff className="h-4 w-4" />
-                                Disable
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="h-4 w-4" />
-                                Enable
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => setDeleteEntryId(entry.entry_id)}
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      
+                      {/* Descrição */}
+                      {entry.description && (
+                        <p className="text-xs text-muted-foreground truncate mb-2">
+                          {entry.description}
+                        </p>
+                      )}
+                      
+                      {/* Conteúdo preview */}
+                      <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-3">
+                        {entry.content}
+                      </p>
+                      
+                      {/* Footer com badges e info */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-3">
+                          {/* Badge de contexto */}
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 px-2 py-0.5 rounded",
+                            contextConfig.color
+                          )}>
+                            <ContextIcon className="h-3 w-3" />
+                            <span className="font-medium">{contextConfig.label}</span>
+                          </div>
+                          
+                          {/* Data */}
+                          <div className="flex items-center gap-1 text-muted-foreground/60">
+                            <Clock className="h-3 w-3" />
+                            <span>{new Date(entry.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Tokens */}
+                        {entry.content_tokens && (
+                          <span className="text-muted-foreground/60">
+                            ~{entry.content_tokens.toLocaleString()} tokens
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })
           )}
@@ -838,55 +866,97 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
         accept=".txt,.pdf,.docx,.zip"
       />
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              Adicionar Conhecimento a {agentName}
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-black/6 dark:border-white/8">
+            <DialogTitle className="flex items-center gap-2.5 text-base font-medium">
+              <div className="p-1.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <span>Adicionar Conhecimento a {agentName}</span>
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto">
-            <Tabs value={addDialogTab} onValueChange={(value) => setAddDialogTab(value as any)} className="w-full">
-              <TabsList className="grid w-80 grid-cols-2">
-                <TabsTrigger value="manual" className="gap-2">
-                  <PenTool className="h-4 w-4" />
-                  Escrever Conhecimento
-                </TabsTrigger>
-                <TabsTrigger value="files" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Enviar Arquivos
-                  {uploadedFiles.length > 0 && (
-                    <Badge variant="outline" className="ml-1">
-                      {uploadedFiles.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Tabs value={addDialogTab} onValueChange={(value) => setAddDialogTab(value as any)} className="flex-1 flex flex-col">
+              {/* Tab Switcher */}
+              <div className="px-6 pt-4 pb-0">
+                <div className="flex gap-4 border-b border-black/6 dark:border-white/8">
+                  <button
+                    type="button"
+                    onClick={() => setAddDialogTab('manual')}
+                    className={cn(
+                      "flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-all duration-200",
+                      addDialogTab === 'manual' 
+                        ? "border-primary text-foreground" 
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <PenTool className="h-3.5 w-3.5" />
+                    <span>Escrever Conhecimento</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddDialogTab('files')}
+                    className={cn(
+                      "flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-all duration-200",
+                      addDialogTab === 'files' 
+                        ? "border-primary text-foreground" 
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>Enviar Arquivos</span>
+                    {uploadedFiles.length > 0 && (
+                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary font-normal">
+                        {uploadedFiles.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
 
-              <TabsContent value="manual" className="space-y-6 mt-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium">Name *</Label>
+              <TabsContent value="manual" className="flex-1 overflow-y-auto px-6 pb-6">
+                <form onSubmit={handleSubmit} className="pt-4 space-y-4">
+                  {/* Nome */}
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-normal text-foreground mb-2 block">
+                      Nome *
+                    </Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Coding Standards, Domain Knowledge, API Guidelines"
+                      placeholder="ex: Padrões de Código, Conhecimento de Domínio, Diretrizes de API"
                       required
+                      className="h-10"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="usage_context" className="text-sm font-medium">Usage Context</Label>
+                  {/* Contexto de Uso */}
+                  <div>
+                    <Label htmlFor="usage_context" className="text-sm font-normal text-foreground mb-2 block">
+                      Contexto de Uso
+                    </Label>
                     <Select
                       value={formData.usage_context}
                       onValueChange={(value: 'always' | 'on_request' | 'contextual') => 
                         setFormData(prev => ({ ...prev, usage_context: value }))
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
+                      <SelectTrigger className="h-10 w-full">
+                        {(() => {
+                          const selected = USAGE_CONTEXT_OPTIONS.find(o => o.value === formData.usage_context);
+                          if (selected) {
+                            const Icon = selected.icon;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>{selected.label}</span>
+                              </div>
+                            );
+                          }
+                          return <span>Selecione...</span>;
+                        })()}
                       </SelectTrigger>
                       <SelectContent>
                         {USAGE_CONTEXT_OPTIONS.map((option) => {
@@ -894,7 +964,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                           return (
                             <SelectItem key={option.value} value={option.value}>
                               <div className="flex items-center gap-2">
-                                <Icon className="h-4 w-4" />
+                                <Icon className="h-3.5 w-3.5" />
                                 <span>{option.label}</span>
                               </div>
                             </SelectItem>
@@ -902,69 +972,65 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                         })}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      {USAGE_CONTEXT_OPTIONS.find(o => o.value === formData.usage_context)?.description}
+                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                  {/* Descrição */}
+                  <div>
+                    <Label htmlFor="description" className="text-sm font-normal text-foreground mb-2 block">
+                      Descrição
+                    </Label>
                     <Input
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Brief description of this knowledge (optional)"
+                      placeholder="Breve descrição deste conhecimento (opcional)"
+                      className="h-10"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="content" className="text-sm font-medium">Content *</Label>
+                  {/* Conteúdo */}
+                  <div>
+                    <Label htmlFor="content" className="text-sm font-normal text-foreground mb-2 block">
+                      Conteúdo *
+                    </Label>
                     <Textarea
                       id="content"
                       value={formData.content}
                       onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                      placeholder={`Enter the specialized knowledge that ${agentName} should know...`}
-                      className="min-h-[200px] resize-y"
+                      placeholder={`Digite o conhecimento especializado que ${agentName} deve saber...`}
+                      className="min-h-[180px] resize-none"
                       required
                     />
-                    <div className="text-xs text-muted-foreground">
-                      Approximately {Math.ceil(formData.content.length / 4).toLocaleString()} tokens
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      Aproximadamente {Math.ceil(formData.content.length / 4).toLocaleString()} tokens
+                    </p>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={!formData.name.trim() || !formData.content.trim() || createMutation.isPending}
-                      className="gap-2"
-                    >
-                      {createMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Add Knowledge
-                    </Button>
-                  </div>
                 </form>
               </TabsContent>
 
-              <TabsContent value="files" className="space-y-6 mt-6">
-                <div className="space-y-4">
+              <TabsContent value="files" className="flex-1 overflow-y-auto">
+                <div className="px-6 py-4">
                   {uploadedFiles.length === 0 && (
-                    <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">Enviar Arquivos</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Arraste e solte arquivos aqui ou clique para navegar.<br />
-                        Suporta: Documentos, Código, Arquivos ZIP
+                    <div className="border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-lg p-12 text-center hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
+                      <Upload className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">
+                        Enviar Arquivos
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        Arraste e solte arquivos aqui ou clique para navegar
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
+                        Suporta: TXT, PDF, DOCX, ZIP
                       </p>
                       <Button 
                         onClick={() => fileInputRef.current?.click()}
                         variant="outline"
-                        className="gap-2"
+                        className="h-9"
                       >
-                        <Upload className="h-4 w-4" />
                         Escolher Arquivos
                       </Button>
                     </div>
@@ -1079,129 +1145,192 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
                     </div>
                   )}
 
-                  {uploadedFiles.length > 0 && (
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={uploadFiles}
-                        disabled={uploadMutation.isPending || uploadedFiles.filter(f => 
-                          f.status === 'pending' && 
-                          (f.isFromZip || !f.file.name.toLowerCase().endsWith('.zip'))
-                        ).length === 0}
-                        className="gap-2"
-                      >
-                        {uploadMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="h-4 w-4" />
-                        )}
-                        Upload Files ({uploadedFiles.filter(f => 
-                          f.status === 'pending' && 
-                          (f.isFromZip || !f.file.name.toLowerCase().endsWith('.zip'))
-                        ).length})
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
+          
+          {/* Footer com botões */}
+          <div className="border-t border-black/6 dark:border-white/8 px-6 py-4">
+            <div className="flex justify-end gap-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleCloseDialog}
+              >
+                Cancelar
+              </Button>
+              {addDialogTab === 'manual' ? (
+                <Button 
+                  onClick={(e) => handleSubmit(e as any)}
+                  disabled={!formData.name.trim() || !formData.content.trim() || createMutation.isPending}
+                  className="gap-2"
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Adicionando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Adicionar Conhecimento
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={uploadFiles}
+                  disabled={uploadMutation.isPending || uploadedFiles.filter(f => 
+                    f.status === 'pending' && 
+                    (f.isFromZip || !f.file.name.toLowerCase().endsWith('.zip'))
+                  ).length === 0}
+                  className="gap-2"
+                >
+                  {uploadMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  Enviar Arquivos ({uploadedFiles.filter(f => 
+                    f.status === 'pending' && 
+                    (f.isFromZip || !f.file.name.toLowerCase().endsWith('.zip'))
+                  ).length})
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={editDialog.isOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-blue-600" />
-              Editar Entrada de Conhecimento
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-black/6 dark:border-white/8">
+            <DialogTitle className="flex items-center gap-2.5 text-base font-medium">
+              <div className="p-1.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <Edit2 className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <span>Editar Entrada de Conhecimento</span>
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto">
-            <form onSubmit={handleSubmit} className="space-y-6 p-1">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-sm font-medium">Name *</Label>
+          <div className="flex-1 overflow-y-auto px-6">
+            <form onSubmit={handleSubmit} className="py-4 space-y-4">
+              <div>
+                <Label htmlFor="edit-name" className="text-sm font-normal text-foreground mb-2 block">
+                  Nome *
+                </Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Coding Standards, Domain Knowledge, API Guidelines"
+                  placeholder="ex: Padrões de Código, Conhecimento de Domínio, Diretrizes de API"
                   required
+                  className="h-10"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-usage_context" className="text-sm font-medium">Usage Context</Label>
+              <div>
+                <Label htmlFor="edit-usage_context" className="text-sm font-normal text-foreground mb-2 block">
+                  Contexto de Uso
+                </Label>
                 <Select
-                  value={formData.usage_context}
-                  onValueChange={(value: 'always' | 'on_request' | 'contextual') => 
-                    setFormData(prev => ({ ...prev, usage_context: value }))
-                  }
+                  value={formData.usage_context || 'always'}
+                  onValueChange={(value: 'always' | 'on_request' | 'contextual') => {
+                    setFormData(prev => ({ ...prev, usage_context: value }));
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {USAGE_CONTEXT_OPTIONS.map((option) => {
-                      const Icon = option.icon;
-                      return (
-                        <SelectItem key={option.value} value={option.value}>
+                  <SelectTrigger className="h-10 w-full">
+                    {(() => {
+                      const selected = USAGE_CONTEXT_OPTIONS.find(o => o.value === (formData.usage_context || 'always'));
+                      if (selected) {
+                        const Icon = selected.icon;
+                        return (
                           <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
-                            <span>{option.label}</span>
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{selected.label}</span>
                           </div>
-                        </SelectItem>
-                      );
-                    })}
+                        );
+                      }
+                      return <span>Selecione...</span>;
+                    })()}
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="always">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-3.5 w-3.5" />
+                        <span>Sempre Ativo</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="on_request">
+                      <div className="flex items-center gap-2">
+                        <Search className="h-3.5 w-3.5" />
+                        <span>Sob Demanda</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="contextual">
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-3.5 w-3.5" />
+                        <span>Contextual</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  {USAGE_CONTEXT_OPTIONS.find(o => o.value === formData.usage_context)?.description}
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-description" className="text-sm font-medium">Description</Label>
+              <div>
+                <Label htmlFor="edit-description" className="text-sm font-normal text-foreground mb-2 block">
+                  Descrição
+                </Label>
                 <Input
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of this knowledge (optional)"
+                  placeholder="Breve descrição deste conhecimento (opcional)"
+                  className="h-10"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-content" className="text-sm font-medium">Content *</Label>
+              <div>
+                <Label htmlFor="edit-content" className="text-sm font-normal text-foreground mb-2 block">
+                  Conteúdo *
+                </Label>
                 <Textarea
                   id="edit-content"
                   value={formData.content}
                   onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder={`Enter the specialized knowledge that ${agentName} should know...`}
+                  placeholder={`Digite o conhecimento especializado que ${agentName} deve saber...`}
                   className="min-h-[200px] resize-y"
                   required
                 />
-                <div className="text-xs text-muted-foreground">
-                  Approximately {Math.ceil(formData.content.length / 4).toLocaleString()} tokens
+                <div className="text-xs text-muted-foreground mt-1">
+                  Aproximadamente {Math.ceil(formData.content.length / 4).toLocaleString()} tokens
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={!formData.name.trim() || !formData.content.trim() || updateMutation.isPending}
-                  className="gap-2"
-                >
-                  {updateMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Edit2 className="h-4 w-4" />
-                  )}
-                  Save Changes
-                </Button>
-              </div>
             </form>
+          </div>
+          
+          <div className="border-t border-black/6 dark:border-white/8 px-6 py-4">
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={(e) => handleSubmit(e as any)}
+                disabled={!formData.name.trim() || !formData.content.trim() || updateMutation.isPending}
+                className="gap-2"
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Edit2 className="h-4 w-4" />
+                )}
+                Salvar Alterações
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1227,6 +1356,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }; 

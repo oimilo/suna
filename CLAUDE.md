@@ -267,6 +267,320 @@ export function useProjetos(userId: string) {
 }
 ```
 
+## 🎨 Design System Suna
+
+### Princípios de Design
+
+O Suna adota um design **minimalista e moderno** com foco em:
+- **Sutileza**: Bordas e backgrounds com transparências muito baixas
+- **Hierarquia clara**: Uso de opacidade para criar níveis visuais
+- **Feedback suave**: Transições e hovers delicados
+- **Consistência**: Padrões reutilizáveis em todos os componentes
+
+### Cores e Transparências
+
+```tsx
+// Backgrounds primários
+const backgrounds = {
+  // Light mode
+  subtle: "bg-black/[0.02]",      // Background muito sutil
+  hover: "bg-black/[0.04]",       // Hover state
+  active: "bg-black/[0.06]",      // Active/pressed state
+  
+  // Dark mode
+  darkSubtle: "dark:bg-white/[0.03]",
+  darkHover: "dark:bg-white/[0.06]", 
+  darkActive: "dark:bg-white/[0.08]"
+}
+
+// Bordas
+const borders = {
+  default: "border-black/6 dark:border-white/8",      // Borda padrão muito sutil
+  hover: "border-black/10 dark:border-white/12",      // Borda no hover
+}
+
+// Estados de status
+const statusColors = {
+  success: {
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-600 dark:text-emerald-400",
+    border: "border-emerald-500/20"
+  },
+  error: {
+    bg: "bg-red-500/10",
+    text: "text-red-600 dark:text-red-400",
+    border: "border-red-500/20"
+  },
+  warning: {
+    bg: "bg-amber-500/10",
+    text: "text-amber-600 dark:text-amber-400",
+    border: "border-amber-500/20"
+  },
+  info: {
+    bg: "bg-blue-500/10",
+    text: "text-blue-600 dark:text-blue-400",
+    border: "border-blue-500/20"
+  }
+}
+```
+
+### Componentes Base
+
+#### Cards Minimalistas
+
+```tsx
+// Card padrão do design system
+<div className="rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 p-4 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200">
+  {/* Conteúdo */}
+</div>
+
+// Card com estado de sucesso
+<div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+  <span className="text-emerald-600 dark:text-emerald-400">
+    Sucesso
+  </span>
+</div>
+```
+
+#### Botões Sutis
+
+```tsx
+// Botão ghost minimalista
+<Button
+  variant="ghost"
+  className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+>
+  <Icon className="h-3.5 w-3.5 opacity-60" />
+</Button>
+
+// Botão com hover colorido
+<Button
+  variant="ghost"
+  className="hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+>
+  <Trash2 className="h-3.5 w-3.5 opacity-60" />
+</Button>
+```
+
+#### Badges e Tags
+
+```tsx
+// Badge de status
+<div className={cn(
+  "px-2 py-0.5 rounded text-xs font-medium",
+  isActive 
+    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
+    : "bg-muted text-muted-foreground border border-border"
+)}>
+  {isActive ? "Ativo" : "Inativo"}
+</div>
+
+// Tag informativa
+<div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+  <CircleDashed className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+  <span className="text-xs font-medium text-muted-foreground">
+    Processando
+  </span>
+</div>
+```
+
+#### Código e Snippets
+
+```tsx
+// Bloco de código inline
+<code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono border border-black/6 dark:border-white/8">
+  {codeContent}
+</code>
+```
+
+### Tipografia
+
+```tsx
+// Hierarquia de títulos
+const typography = {
+  // Títulos principais
+  h1: "text-2xl font-semibold tracking-tight",
+  h2: "text-xl font-semibold tracking-tight",
+  h3: "text-lg font-semibold",
+  h4: "text-sm font-medium",
+  
+  // Corpo de texto
+  body: "text-sm text-foreground",
+  bodyMuted: "text-sm text-muted-foreground",
+  
+  // Textos pequenos
+  small: "text-xs text-muted-foreground",
+  tiny: "text-xs text-muted-foreground/60",
+  
+  // Monospace
+  mono: "font-mono text-xs"
+}
+```
+
+### Ícones
+
+```tsx
+// Tamanhos padrões de ícones
+const iconSizes = {
+  xs: "h-3 w-3",      // Extra pequeno
+  sm: "h-3.5 w-3.5",  // Pequeno (padrão para botões)
+  md: "h-4 w-4",      // Médio
+  lg: "h-5 w-5",      // Grande
+  xl: "h-6 w-6"       // Extra grande
+}
+
+// Sempre use opacidade para ícones secundários
+<Icon className="h-3.5 w-3.5 opacity-60" />
+
+// Ícones coloridos para status
+<CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+<AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+```
+
+### Espaçamentos
+
+```tsx
+// Sistema de espaçamento consistente
+const spacing = {
+  // Padding em cards/containers
+  cardPadding: "p-4",
+  sectionPadding: "p-6",
+  
+  // Gaps entre elementos
+  tightGap: "gap-1",    // 0.25rem
+  smallGap: "gap-2",    // 0.5rem
+  defaultGap: "gap-3",  // 0.75rem
+  largeGap: "gap-4",    // 1rem
+  
+  // Margens entre seções
+  sectionMargin: "mt-6 mb-6",
+  componentMargin: "mt-4 mb-4"
+}
+```
+
+### Animações e Transições
+
+```tsx
+// Transição padrão
+const transitions = {
+  default: "transition-all duration-200",
+  fast: "transition-all duration-100",
+  slow: "transition-all duration-300",
+  
+  // Para hovers e interações
+  hover: "transition-colors duration-200",
+  
+  // Para loading states
+  pulse: "animate-pulse",
+  spin: "animate-spin"
+}
+
+// Exemplo de uso
+<div className="hover:bg-black/5 transition-all duration-200">
+  {/* Conteúdo */}
+</div>
+```
+
+### Padrões de Layout
+
+```tsx
+// Container com ícone e conteúdo
+<div className="flex items-start gap-3">
+  <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0">
+    <Icon className="h-4 w-4" />
+  </div>
+  <div className="flex-1 min-w-0">
+    {/* Conteúdo principal */}
+  </div>
+</div>
+
+// Header com ações
+<div className="flex items-center justify-between mb-1">
+  <div className="flex items-center gap-2">
+    <h4 className="text-sm font-medium">Título</h4>
+    <Badge />
+  </div>
+  <div className="flex items-center gap-2">
+    {/* Botões de ação */}
+  </div>
+</div>
+```
+
+### Tool Calls e Feedback Visual
+
+```tsx
+// Tool call container (referência: toolcalls.module.css)
+<div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200 cursor-pointer">
+  <div className="p-1 rounded">
+    <Icon className="h-3.5 w-3.5 opacity-60" />
+  </div>
+  <span>Tool Name</span>
+</div>
+
+// Estados de tool calls
+const toolCallStates = {
+  pending: "border-amber-500/20 bg-amber-500/5",
+  running: "border-blue-500/20 bg-blue-500/5 animate-pulse",
+  success: "border-emerald-500/20 bg-emerald-500/5",
+  error: "border-red-500/20 bg-red-500/5"
+}
+```
+
+### Exemplo Completo: Card de Automação
+
+```tsx
+export function AutomationCard({ trigger }: Props) {
+  return (
+    <div className="p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200">
+      <div className="flex items-start gap-3">
+        {/* Ícone */}
+        <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0">
+          <Clock className="h-4 w-4" />
+        </div>
+        
+        {/* Conteúdo */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-medium truncate">
+                {trigger.name}
+              </h4>
+              <div className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Ativo
+              </div>
+            </div>
+            
+            {/* Ações */}
+            <div className="flex items-center gap-2">
+              <Switch className="scale-90" />
+              <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5">
+                <Edit className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Descrição */}
+          <p className="text-xs text-muted-foreground truncate">
+            {trigger.description}
+          </p>
+          
+          {/* URL com botões */}
+          <div className="flex items-center gap-2 mt-2">
+            <code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono truncate flex-1 border border-black/6 dark:border-white/8">
+              {trigger.webhook_url}
+            </code>
+            <Button variant="ghost" className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5">
+              <Copy className="h-3 w-3 opacity-60" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
 ## 🌍 Localização PT-BR
 
 ### Onde Traduzir

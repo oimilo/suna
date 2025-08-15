@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -206,18 +206,18 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       onOpenChange(open);
       if (!open) handleReset();
     }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-primary" />
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-black/6 dark:border-white/8">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-medium">
+            <div className="p-1.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+              <Zap className="h-4 w-4 text-muted-foreground" />
             </div>
-            <DialogTitle>Connect New Service</DialogTitle>
-          </div>
-          <DialogDescription>
+            <span>Conectar Novo Serviço</span>
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground mt-2">
             {step === 'setup' 
-              ? 'Connect to external services to expand your capabilities with new tools and integrations.'
-              : 'Choose which tools you\'d like to enable from this service connection.'
+              ? 'Conecte-se a serviços externos para expandir suas capacidades com novas ferramentas e integrações.'
+              : 'Escolha quais ferramentas você gostaria de habilitar desta conexão de serviço.'
             }
           </DialogDescription>
           <div className="flex items-center gap-2 pt-2">
@@ -231,7 +231,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
               )}>
                 1
               </div>
-              Setup Connection
+              Configurar Conexão
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <div className={cn(
@@ -244,16 +244,16 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
               )}>
                 2
               </div>
-              Select Tools
+              Selecionar Ferramentas
             </div>
           </div>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto max-h-[60vh] flex flex-col">
+        <div className="flex-1 overflow-y-auto px-6">
           {step === 'setup' ? (
-            <div className="space-y-6 p-1 flex-1">
+            <div className="py-4 space-y-4">
               <div className="space-y-4">
                 <div className="space-y-3">
-                  <Label className="text-base font-medium">How would you like to connect?</Label>
+                  <Label className="text-sm font-normal text-foreground mb-2 block">Como você gostaria de se conectar?</Label>
                   <RadioGroup 
                     value={serverType} 
                     onValueChange={(value: 'http' | 'sse') => setServerType(value)}
@@ -267,8 +267,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <Server className="h-4 w-4 text-primary" />
-                          <Label htmlFor="http" className="text-base font-medium cursor-pointer">
-                            Streamable HTTP
+                          <Label htmlFor="http" className="text-sm font-medium cursor-pointer">
+                            HTTP Streamable
                           </Label>
                         </div>
                       </div>
@@ -281,8 +281,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <Wifi className="h-4 w-4 text-primary" />
-                          <Label htmlFor="sse" className="text-base font-medium cursor-pointer">
-                            SSE (Server-Sent Events)
+                          <Label htmlFor="sse" className="text-sm font-medium cursor-pointer">
+                            SSE (Eventos Enviados pelo Servidor)
                           </Label>
                         </div>
                       </div>
@@ -292,25 +292,25 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="serverName" className="text-base font-medium">
-                    Connection Name
+                  <Label htmlFor="serverName" className="text-sm font-normal text-foreground mb-2 block">
+                    Nome da Conexão
                   </Label>
                   <input
                     id="serverName"
                     type="text"
-                    placeholder="e.g., Gmail, Slack, Customer Support Tools"
+                    placeholder="ex: Gmail, Slack, Ferramentas de Suporte"
                     value={manualServerName}
                     onChange={(e) => setManualServerName(e.target.value)}
-                    className="w-full px-4 py-3 border border-input bg-background rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    className="w-full h-10 px-3 border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Give this connection a memorable name
+                    Dê a esta conexão um nome memorável
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="config" className="text-base font-medium">
-                    Connection URL
+                  <Label htmlFor="config" className="text-sm font-normal text-foreground mb-2 block">
+                    URL de Conexão
                   </Label>
                   <Input
                       id="config"
@@ -318,10 +318,10 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                       placeholder={exampleConfigs[serverType]}
                       value={configText}
                       onChange={(e) => setConfigText(e.target.value)}
-                      className="w-full px-4 py-3 border border-input bg-muted rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
+                      className="w-full h-10 px-3 border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
                     />
                   <p className="text-sm text-muted-foreground">
-                    Paste the complete connection URL provided by your service
+                    Cole a URL completa de conexão fornecida pelo seu serviço
                   </p>
                 </div>
               </div>
@@ -420,46 +420,51 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
           ) : null}
         </div>
 
-        <DialogFooter className="flex-shrink-0 pt-4">
-          {step === 'tools' ? (
-            <>
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleToolsNext}
-                disabled={selectedTools.size === 0}
-              >
-                Add Connection ({selectedTools.size} tools)
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={validateAndDiscoverTools}
-                disabled={!configText.trim() || !manualServerName.trim() || isValidating}
-              >
-                {isValidating ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Discovering tools...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-5 w-5" />
-                    Connect
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </DialogFooter>
+        <div className="border-t border-black/6 dark:border-white/8 px-6 py-4">
+          <div className="flex justify-end gap-3">
+            {step === 'tools' ? (
+              <>
+                <Button variant="outline" onClick={handleBack}>
+                  Voltar
+                </Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleToolsNext}
+                  disabled={selectedTools.size === 0}
+                  className="gap-2"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Adicionar Conexão ({selectedTools.size} ferramentas)
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={validateAndDiscoverTools}
+                  disabled={!configText.trim() || !manualServerName.trim() || isValidating}
+                  className="gap-2"
+                >
+                  {isValidating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Descobrindo ferramentas...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Conectar
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
