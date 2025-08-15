@@ -8,9 +8,8 @@ import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscrip
 
 export const STORAGE_KEY_MODEL = 'suna-preferred-model-v4'; // Changed version to force reset
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514'; // Claude 4 Sonnet
-export const DEFAULT_FREE_MODEL_ID = 'claude-sonnet-4-20250514'; // Same for all users now
-// export const DEFAULT_FREE_MODEL_ID = 'deepseek/deepseek-chat';
+export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514'; // Claude 4 Sonnet - Agente avançado
+export const DEFAULT_FREE_MODEL_ID = 'gemini-2.5-pro'; // Gemini 2.5 Pro - Agente padrão
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
 
@@ -31,90 +30,21 @@ export interface CustomModel {
 
 // SINGLE SOURCE OF TRUTH for all model data - aligned with backend constants
 export const MODELS = {
-  // Premium tier models
-  'claude-sonnet-4': { 
-    tier: 'premium',
-    priority: 100, 
-    recommended: true,
-    lowQuality: false
-  },
-
-  // 'gemini-flash-2.5': { 
-  //   tier: 'free', 
-  //   priority: 70,
-  //   recommended: false,
-  //   lowQuality: false
-  // },
-  // 'qwen3': { 
-  //   tier: 'free', 
-  //   priority: 60,
-  //   recommended: false,
-  //   lowQuality: false
-  // },
-
-  // DeepSeek V3 - excellent coding model at low cost
-  'deepseek/deepseek-chat': {
+  // Agente padrão - Gemini 2.5 Pro (Free for all users)
+  'gemini-2.5-pro': {
     tier: 'free',
-    priority: 98,
+    priority: 90,
     recommended: true,
     lowQuality: false
   },
-
-  // Premium/Paid tier models (require subscription) - except specific free models
-  'moonshotai/kimi-k2': { 
-    tier: 'free', 
-    priority: 99,
-    recommended: false,
+  
+  // Agente avançado - Claude 4 Sonnet (Premium only)
+  'claude-sonnet-4-20250514': {
+    tier: 'premium',
+    priority: 100,
+    recommended: true,
     lowQuality: false
-  },
-  'grok-4': { 
-    tier: 'premium', 
-    priority: 98,
-    recommended: false,
-    lowQuality: false
-  },
-  'sonnet-3.7': { 
-    tier: 'premium', 
-    priority: 97, 
-    recommended: false,
-    lowQuality: false
-  },
-  'google/gemini-2.5-pro': { 
-    tier: 'premium', 
-    priority: 96,
-    recommended: false,
-    lowQuality: false
-  },
-  'gpt-4.1': { 
-    tier: 'premium', 
-    priority: 96,
-    recommended: false,
-    lowQuality: false
-  },
-  'sonnet-3.5': { 
-    tier: 'premium', 
-    priority: 90,
-    recommended: false,
-    lowQuality: false
-  },
-  'gpt-4o': { 
-    tier: 'premium', 
-    priority: 88,
-    recommended: false,
-    lowQuality: false
-  },
-  'gemini-2.5-flash:thinking': { 
-    tier: 'premium', 
-    priority: 84,
-    recommended: false,
-    lowQuality: false
-  },
-  // 'deepseek/deepseek-chat-v3-0324': { 
-  //   tier: 'free', 
-  //   priority: 75,
-  //   recommended: false,
-  //   lowQuality: false
-  // },
+  }
 };
 
 // Helper to check if a user can access a model based on subscription status
@@ -204,94 +134,30 @@ export const useModelSelection = () => {
 
   // Generate model options list with consistent structure
   const MODEL_OPTIONS = useMemo(() => {
-    let models = [];
-    
-    // Default models if API data not available
-    if (!modelsData?.models || isLoadingModels) {
-      models = [
-        { 
-          id: DEFAULT_FREE_MODEL_ID, 
-          label: 'DeepSeek', 
-          requiresSubscription: false,
-          priority: MODELS[DEFAULT_FREE_MODEL_ID]?.priority || 50
-        },
-        { 
-          id: DEFAULT_PREMIUM_MODEL_ID, 
-          label: 'Sonnet 4', 
-          requiresSubscription: true, 
-          priority: MODELS[DEFAULT_PREMIUM_MODEL_ID]?.priority || 100
-        },
-      ];
-    } else {
-      // Process API-provided models
-      models = modelsData.models.map(model => {
-        const shortName = model.short_name || model.id;
-        const displayName = model.display_name || shortName;
-        
-        // Format the display label
-        let cleanLabel = displayName;
-        if (cleanLabel.includes('/')) {
-          cleanLabel = cleanLabel.split('/').pop() || cleanLabel;
-        }
-        
-        cleanLabel = cleanLabel
-          .replace(/-/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        
-        // Get model data from our central MODELS constant
-        const modelData = MODELS[shortName] || {};
-        const isPremium = model?.requires_subscription || modelData.tier === 'premium' || false;
-        
-        return {
-          id: shortName,
-          label: cleanLabel,
-          requiresSubscription: isPremium,
-          top: modelData.priority >= 90, // Mark high-priority models as "top"
-          priority: modelData.priority || 0,
-          lowQuality: modelData.lowQuality || false,
-          recommended: modelData.recommended || false
-        };
-      });
-    }
-    
-    // Add custom models if in local mode
-    if (isLocalMode() && customModels.length > 0) {
-      const customModelOptions = customModels.map(model => ({
-        id: model.id,
-        label: model.label || formatModelName(model.id),
+    // Fixed model list with custom aliases
+    const models = [
+      { 
+        id: DEFAULT_FREE_MODEL_ID, 
+        label: 'Agente padrão', 
         requiresSubscription: false,
-        top: false,
-        isCustom: true,
-        priority: 30, // Low priority by default
-        lowQuality: false,
-        recommended: false
-      }));
-      
-      models = [...models, ...customModelOptions];
-    }
+        priority: MODELS[DEFAULT_FREE_MODEL_ID]?.priority || 90,
+        description: 'Gemini 2.5 Pro - Rápido e eficiente',
+        recommended: true
+      },
+      { 
+        id: DEFAULT_PREMIUM_MODEL_ID, 
+        label: 'Agente avançado', 
+        requiresSubscription: true, 
+        priority: MODELS[DEFAULT_PREMIUM_MODEL_ID]?.priority || 100,
+        description: 'Claude 4 Sonnet - Mais inteligente e preciso',
+        recommended: true
+      },
+    ];
     
-    // Sort models consistently in one place:
-    // 1. First by recommended (recommended first)
-    // 2. Then by priority (higher first)
-    // 3. Finally by name (alphabetical)
-    const sortedModels = models.sort((a, b) => {
-      // First by recommended status
-      if (a.recommended !== b.recommended) {
-        return a.recommended ? -1 : 1;
-      }
-
-      // Then by priority (higher first)
-      if (a.priority !== b.priority) {
-        return b.priority - a.priority;
-      }
-      
-      // Finally by name
-      return a.label.localeCompare(b.label);
-    });
+    // Sort models by priority (higher first)
+    const sortedModels = models.sort((a, b) => b.priority - a.priority);
     return sortedModels;
-  }, [modelsData, isLoadingModels, customModels]);
+  }, []);
 
   // Get filtered list of models the user can access (no additional sorting)
   const availableModels = useMemo(() => {
@@ -315,42 +181,65 @@ export const useModelSelection = () => {
         return;
       }
       
-      // Always use Claude Sonnet 4 - ignore saved preferences
-      const fixedModel = 'claude-sonnet-4-20250514';
-      console.log('Using fixed model Claude Sonnet 4:', fixedModel);
+      // Check saved preference
+      const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
       
-      // Clear old localStorage to prevent confusion
-      localStorage.removeItem('suna-preferred-model-v3'); // Remove old version
-      localStorage.setItem(STORAGE_KEY_MODEL, fixedModel); // Save new fixed model
+      // Determine default model based on subscription
+      const defaultModel = subscriptionStatus === 'active' 
+        ? DEFAULT_PREMIUM_MODEL_ID 
+        : DEFAULT_FREE_MODEL_ID;
       
-      setSelectedModel(fixedModel);
+      // Use saved model if available and user has access, otherwise use default
+      const modelToUse = savedModel && MODEL_OPTIONS.find(m => m.id === savedModel) && 
+                         canAccessModel(subscriptionStatus, MODEL_OPTIONS.find(m => m.id === savedModel)!.requiresSubscription)
+        ? savedModel 
+        : defaultModel;
+      
+      console.log('Selected model:', modelToUse, 'Subscription:', subscriptionStatus);
+      
+      // Clear old localStorage versions
+      localStorage.removeItem('suna-preferred-model-v3');
+      
+      setSelectedModel(modelToUse);
+      saveModelPreference(modelToUse);
       setHasInitialized(true);
       
     } catch (error) {
-      console.warn('Failed to set model:', error);
-      const defaultModel = 'claude-sonnet-4-20250514';
+      console.warn('Failed to initialize model:', error);
+      const defaultModel = subscriptionStatus === 'active' 
+        ? DEFAULT_PREMIUM_MODEL_ID 
+        : DEFAULT_FREE_MODEL_ID;
       setSelectedModel(defaultModel);
       saveModelPreference(defaultModel);
       setHasInitialized(true);
     }
-  }, [subscriptionStatus, MODEL_OPTIONS, isLoadingModels, customModels, hasInitialized]);
+  }, [subscriptionStatus, MODEL_OPTIONS, hasInitialized]);
 
   // Handle model selection change
   const handleModelChange = (modelId: string) => {
-    console.log('handleModelChange called with:', modelId, '- forcing Claude Sonnet 4');
+    console.log('handleModelChange called with:', modelId);
     
-    // Always use Claude Sonnet 4 regardless of selection
-    const fixedModel = 'claude-sonnet-4-20250514';
+    // Check if user has access to this model
+    const model = MODEL_OPTIONS.find(m => m.id === modelId);
+    if (!model) {
+      console.warn('Model not found:', modelId);
+      return;
+    }
     
-    console.log('Setting fixed model:', fixedModel);
-    setSelectedModel(fixedModel);
-    saveModelPreference(fixedModel);
+    if (!canAccessModel(subscriptionStatus, model.requiresSubscription)) {
+      console.warn('User does not have access to model:', modelId);
+      return;
+    }
+    
+    console.log('Setting selected model:', modelId);
+    setSelectedModel(modelId);
+    saveModelPreference(modelId);
   };
 
   // Get the actual model ID to send to the backend
   const getActualModelId = (modelId: string): string => {
-    // Always return Claude Sonnet 4
-    return 'claude-sonnet-4-20250514';
+    // Return the selected model ID
+    return modelId;
   };
 
   return {

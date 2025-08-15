@@ -40,9 +40,9 @@ class LLMRetryError(LLMError):
 
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
-    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER', 'XAI', 'MORPH', 'GEMINI']
+    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER', 'XAI', 'MORPH', 'GEMINI', 'GOOGLE']
     for provider in providers:
-        key = getattr(config, f'{provider}_API_KEY')
+        key = getattr(config, f'{provider}_API_KEY', None)
         if key:
             # Set the key in environment for LiteLLM
             os.environ[f'{provider}_API_KEY'] = key
@@ -128,7 +128,8 @@ def prepare_params(
     model_id: Optional[str] = None,
     enable_thinking: Optional[bool] = False,
     reasoning_effort: Optional[str] = 'low',
-    use_anthropic_direct: bool = False
+    use_anthropic_direct: bool = False,
+    use_google_direct: bool = False
 ) -> Dict[str, Any]:
     """Prepare parameters for the API call."""
     params = {
@@ -140,7 +141,7 @@ def prepare_params(
         "stream": stream,
     }
 
-    # Configure for direct Anthropic API usage
+    # Configure for direct API usage
     if use_anthropic_direct:
         # Use Anthropic API key directly
         if config.ANTHROPIC_API_KEY:
@@ -148,6 +149,14 @@ def prepare_params(
             logger.info(f"Using Anthropic API key directly: {config.ANTHROPIC_API_KEY[:10]}...")
         else:
             logger.error("ANTHROPIC_API_KEY not found for direct Anthropic usage!")
+    elif use_google_direct:
+        # Use Google/Gemini API key directly
+        google_key = config.GEMINI_API_KEY or config.GOOGLE_API_KEY
+        if google_key:
+            params["api_key"] = google_key
+            logger.info(f"Using Google/Gemini API key directly: {google_key[:10]}...")
+        else:
+            logger.error("GEMINI_API_KEY or GOOGLE_API_KEY not found for direct Google usage!")
     else:
         # Use provided API key (for OpenRouter or other providers)
         if api_key:
@@ -347,6 +356,8 @@ async def make_llm_api_call(
     """
     # Check if we should use Anthropic directly for Claude Sonnet 4
     use_anthropic_direct = False
+    use_google_direct = False
+    
     claude_sonnet_4_models = [
         "claude-sonnet-4-20250514",
         "claude-sonnet-4-0", 
@@ -356,12 +367,24 @@ async def make_llm_api_call(
         "anthropic/claude-sonnet-4"
     ]
     
+    gemini_25_pro_models = [
+        "gemini-2.5-pro",
+        "google/gemini-2.5-pro",
+        "gemini/gemini-2.5-pro"
+    ]
+    
     if model_name in claude_sonnet_4_models and config.ANTHROPIC_API_KEY:
         # Use Anthropic directly for Claude Sonnet 4
         use_anthropic_direct = True
         # Normalize to the correct model name for Anthropic API
         model_name = "claude-sonnet-4-20250514"
         logger.info(f"Using Anthropic API directly for Claude Sonnet 4: {model_name}")
+    elif model_name in gemini_25_pro_models and (config.GEMINI_API_KEY or config.GOOGLE_API_KEY):
+        # Use Google API directly for Gemini 2.5 Pro
+        use_google_direct = True
+        # Normalize to the correct model name for Google API
+        model_name = "gemini/gemini-2.5-pro"
+        logger.info(f"Using Google API directly for Gemini 2.5 Pro: {model_name}")
     else:
         # Force OpenRouter prefix on all other models
         original_model = model_name
@@ -385,7 +408,7 @@ async def make_llm_api_call(
     
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
-    logger.info(f"📡 API Call: Using model {model_name} (Direct Anthropic: {use_anthropic_direct})")
+    logger.info(f"📡 API Call: Using model {model_name} (Direct Anthropic: {use_anthropic_direct}, Direct Google: {use_google_direct})")
     params = prepare_params(
         messages=messages,
         model_name=model_name,
@@ -401,7 +424,8 @@ async def make_llm_api_call(
         model_id=model_id,
         enable_thinking=enable_thinking,
         reasoning_effort=reasoning_effort,
-        use_anthropic_direct=use_anthropic_direct
+        use_anthropic_direct=use_anthropic_direct,
+        use_google_direct=use_google_direct
     )
     last_error = None
     for attempt in range(MAX_RETRIES):

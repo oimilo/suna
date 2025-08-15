@@ -9,6 +9,7 @@ import { VoiceRecorder } from './voice-recorder';
 // import { FixedModelDisplay } from './fixed-model-display';
 import { BRANDING } from '@/lib/branding';
 import { AgentSelector } from './agent-selector';
+import { ModelSelector } from './model-selector';
 import { canAccessModel, SubscriptionStatus } from './_use-model-selection';
 import { isLocalMode } from '@/lib/config';
 import { useFeatureFlag } from '@/lib/feature-flags';
@@ -177,10 +178,17 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 isFocused={isFocused}
               />
             )}
-            {/* Temporarily commented - Model selector removed as we're using Claude Sonnet 4 for all users
-            <FixedModelDisplay
+            <ModelSelector
+              selectedModel={selectedModel}
+              onModelChange={onModelChange}
+              modelOptions={modelOptions}
+              canAccessModel={canAccessModel}
+              subscriptionStatus={subscriptionStatus}
+              refreshCustomModels={refreshCustomModels}
+              billingModalOpen={billingModalOpen}
+              setBillingModalOpen={setBillingModalOpen}
               isFocused={isFocused}
-            /> */}
+            />
           </div>
         );
       }

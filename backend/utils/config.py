@@ -201,6 +201,7 @@ class Configuration:
     XAI_API_KEY: Optional[str] = os.getenv('XAI_API_KEY')
     MORPH_API_KEY: Optional[str] = os.getenv('MORPH_API_KEY')
     GEMINI_API_KEY: Optional[str] = os.getenv('GEMINI_API_KEY')
+    GOOGLE_API_KEY: Optional[str] = os.getenv('GOOGLE_API_KEY')  # Alternative to GEMINI_API_KEY
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OR_SITE_URL: Optional[str] = os.getenv('OR_SITE_URL', os.getenv('COMPANY_URL', 'https://kortix.ai'))
     OR_APP_NAME: Optional[str] = os.getenv('OR_APP_NAME', f"{os.getenv('COMPANY_NAME', 'Kortix')} AI")    
