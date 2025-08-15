@@ -17,7 +17,6 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { X } from 'lucide-react';
 
 interface BillingModalProps {
     open: boolean;
@@ -88,10 +87,11 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Faça Upgrade do Seu Plano</DialogTitle>
+            <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0">
+                <DialogHeader className="px-6 py-4 border-b border-black/6 dark:border-white/8">
+                    <DialogTitle className="text-lg font-semibold">Escolha seu plano</DialogTitle>
                 </DialogHeader>
+                <div className="overflow-y-auto px-4 py-6">
 
                 {isLoading || authLoading ? (
                     <div className="space-y-4">
@@ -121,7 +121,9 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
                             </div>
                         )}
 
-                        <PricingSection returnUrl={returnUrl} showTitleAndTabs={false} />
+                        <div className="px-2">
+                            <PricingSection returnUrl={returnUrl} showTitleAndTabs={false} insideDialog={true} />
+                        </div>
 
                         {subscriptionData && (
                             <Button
@@ -134,6 +136,7 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
                         )}
                     </>
                 )}
+                </div>
             </DialogContent>
         </Dialog>
     );

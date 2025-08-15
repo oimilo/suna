@@ -315,16 +315,16 @@ function PricingTier({
   if (tier.isContactSales) {
     buttonText = 'Entre em contato';
     buttonVariant = 'default';
-    buttonClassName = 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
+    buttonClassName = 'bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black';
   } else if (isAuthenticated) {
     if (isCurrentActivePlan) {
       buttonText = 'Plano Atual';
       buttonDisabled = true;
       buttonVariant = 'secondary';
       ringClass = isCompact ? 'ring-1 ring-primary' : 'ring-2 ring-primary';
-      buttonClassName = 'bg-primary/5 hover:bg-primary/10 text-primary';
+      buttonClassName = 'bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/30';
       statusBadge = (
-        <span className="bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+        <span className="text-[10px] font-medium px-2 py-1 rounded-md bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400">
           Atual
         </span>
       );
@@ -338,7 +338,7 @@ function PricingTier({
       buttonClassName =
         'bg-yellow-500/5 hover:bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
       statusBadge = (
-        <span className="bg-yellow-500/10 text-yellow-600 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+        <span className="text-[10px] font-medium px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
           Agendado
         </span>
       );
@@ -348,7 +348,7 @@ function PricingTier({
       ringClass = isCompact ? 'ring-1 ring-primary' : 'ring-2 ring-primary';
       buttonClassName = 'bg-primary/5 hover:bg-primary/10 text-primary';
       statusBadge = (
-        <span className="bg-yellow-500/10 text-yellow-600 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+        <span className="text-[10px] font-medium px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
           Downgrade Pendente
         </span>
       );
@@ -400,7 +400,7 @@ function PricingTier({
           } else {
             buttonText = 'Upgrade';
             buttonVariant = tier.buttonColor as ButtonVariant;
-            buttonClassName = 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black';
+            buttonClassName = 'bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 dark:hover:bg-violet-600 text-white';
           }
         } else if (targetAmount < currentAmount && !(currentIsYearly && targetIsMonthly && targetAmount === currentAmount)) {
           buttonText = '-';
@@ -452,122 +452,107 @@ function PricingTier({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl',
+        'relative overflow-hidden border transition-all duration-300',
         'h-full flex flex-col',
+        'bg-white dark:bg-zinc-950',
         tier.isPopular && !insideDialog
-          ? 'border-primary/30 shadow-xl'
-          : 'hover:border-primary/20',
-        !insideDialog && ringClass,
-        isCurrentActivePlan && 'border-primary/50'
+          ? 'border-violet-500/20 dark:border-violet-400/20 shadow-lg'
+          : 'border-black/6 dark:border-white/8 hover:border-black/8 dark:hover:border-white/10',
+        isCurrentActivePlan && 'border-violet-500/30 dark:border-violet-400/30'
       )}
     >
       {/* Popular badge */}
       {tier.isPopular && !insideDialog && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[11px] font-semibold shadow-md flex items-center gap-1">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
+          <div className="bg-violet-600 dark:bg-violet-500 text-white px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3 h-3" />
-            POPULAR
+            Popular
           </div>
         </div>
       )}
       
-      {/* Background gradient */}
-      {tier.isPopular && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/0" />
-      )}
       <CardContent className={cn(
-        "flex flex-col flex-1",
-        insideDialog ? "p-4" : "p-6",
-        tier.isPopular && "pt-10"
+        "flex flex-col flex-1 p-0"
       )}>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold">
+        {/* Header Section */}
+        <div className={cn(
+          "p-6 pb-4",
+          tier.isPopular && !insideDialog && "pt-8"
+        )}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold">
               {tier.name}
             </h3>
-            {/* Show upgrade badge for yearly plans when user is on monthly */}
-            {!tier.isPopular && isAuthenticated && currentSubscription && billingPeriod === 'yearly' &&
-              currentTier && currentSubscription.price_id === currentTier.stripePriceId &&
-              tier.yearlyStripePriceId && (currentTier.name === tier.name ||
-                parseFloat(tier.price.replace('R$', '').trim()) >= parseFloat(currentTier.price.replace('R$', '').trim())) && (
-                <Badge variant="secondary" className="bg-green-500/10 text-green-700 border-0">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  Recomendado
-                </Badge>
-              )}
             {isAuthenticated && statusBadge}
           </div>
-        <div className="flex items-baseline mt-2">
-          {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0' ? (
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <PriceDisplay price={`R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}`} isCompact={insideDialog} />
-                {tier.discountPercentage && (
-                  <span className="text-xs line-through text-muted-foreground">
-                    R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') / 12)}
-                  </span>
+          {/* Price */}
+          <div className="mt-3">
+            {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== 'R$ 0' ? (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">R$ {Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}</span>
+                  {tier.discountPercentage && (
+                    <span className="text-sm line-through text-muted-foreground/60">
+                      R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') / 12)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">/mês • cobrado anualmente</p>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold">{displayPrice}</span>
+                {displayPrice !== 'R$ 0' && !tier.isContactSales && (
+                  <span className="text-sm text-muted-foreground">/mês</span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground">/mês</span>
-                <span className="text-xs text-muted-foreground">cobrado anualmente</span>
+            )}
+          </div>
+
+          {/* Description */}
+          {tier.description && (
+            <p className="text-sm text-muted-foreground mt-3">{tier.description}</p>
+          )}
+
+          {/* Savings Badge */}
+          {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage && (
+            <div className="mt-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+                <Shield className="w-3.5 h-3.5" />
+                Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))}/ano
               </div>
             </div>
-          ) : (
-            <div className="flex items-baseline">
-              <PriceDisplay price={displayPrice} isCompact={insideDialog} />
-              <span className="ml-2">{displayPrice !== '$0' && !tier.isContactSales ? '/mês' : ''}</span>
-            </div>
           )}
         </div>
-          {tier.description && (
-            <p className="text-sm text-muted-foreground">{tier.description}</p>
-          )}
-
-          {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 w-fit border border-green-500/20">
-              <Shield className="w-3.5 h-3.5" />
-              Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))} por ano
-            </div>
-          ) : (
-            <div className="hidden items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 border-primary/20 text-primary w-fit">
-              {billingPeriod === 'yearly' && tier.yearlyPrice && displayPrice !== '$0'
-                ? `R$ ${Math.round(parseFloat(tier.yearlyPrice.replace('R$', '').trim()) / 12)}/mês (cobrado anualmente)`
-                : `${displayPrice}/mês`
-              }
-            </div>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="my-4 h-px bg-border" />
         
-        {/* Features */}
-        <div className="flex-grow">
+        {/* Features Section */}
+        <div className="flex-grow px-6 py-4">
           {tier.features && tier.features.length > 0 && (
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {tier.features.map((feature, index) => (
                 <li key={index} className="flex items-start gap-2.5">
-                  <CheckIcon className="size-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm leading-relaxed text-muted-foreground">{feature}</span>
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">{feature}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        {/* CTA */}
-        <div className="mt-6">
+        {/* CTA Section */}
+        <div className="p-6 pt-4 mt-auto">
           <Button
             onClick={() => handleSubscribe(tierPriceId)}
             disabled={buttonDisabled}
             variant={buttonVariant || 'default'}
             className={cn(
-              'w-full font-medium transition-all duration-200 shadow-sm',
-              isCompact || insideDialog ? 'h-10 rounded-lg text-sm' : 'h-12 rounded-xl text-base',
+              'w-full h-10 font-medium rounded-lg transition-all duration-200',
               buttonClassName,
-              isPlanLoading && 'animate-pulse',
-              !buttonDisabled && !isCurrentActivePlan && 'hover:shadow-lg hover:scale-[1.02]'
+              isPlanLoading && 'animate-pulse cursor-wait',
+              !buttonDisabled && !isCurrentActivePlan && !tier.isContactSales && 'hover:shadow-md',
+              tier.isContactSales && 'bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200'
             )}
           >
             {buttonText}
@@ -727,12 +712,12 @@ export function PricingSection({
             </div>
 
             <div className={cn(
-              "grid gap-6 mx-auto",
+              "grid gap-4 mx-auto",
               {
                 "px-6 max-w-6xl": !insideDialog,
                 "max-w-full": insideDialog
               },
-              "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+              insideDialog ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
               "items-stretch"
             )}>
               {siteConfig.cloudPricingItems

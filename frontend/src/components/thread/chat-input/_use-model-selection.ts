@@ -141,7 +141,6 @@ export const useModelSelection = () => {
         label: 'Agente padrão', 
         requiresSubscription: false,
         priority: MODELS[DEFAULT_FREE_MODEL_ID]?.priority || 90,
-        description: 'Gemini 2.5 Pro - Rápido e eficiente',
         recommended: true
       },
       { 
@@ -149,7 +148,6 @@ export const useModelSelection = () => {
         label: 'Agente avançado', 
         requiresSubscription: true, 
         priority: MODELS[DEFAULT_PREMIUM_MODEL_ID]?.priority || 100,
-        description: 'Claude 4 Sonnet - Mais inteligente e preciso',
         recommended: true
       },
     ];
