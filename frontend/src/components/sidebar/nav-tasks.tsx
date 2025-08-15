@@ -90,6 +90,7 @@ export function NavTasks({ className }: NavTasksProps) {
   const isCollapsed = state === 'collapsed';
   
   // TODO: Substituir por dados reais via React Query
+  // Por enquanto usando mock data para demonstração
   const tasks = mockTasks;
   const displayedTasks = showAll ? tasks : tasks.slice(0, 5);
 

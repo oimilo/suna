@@ -18,6 +18,7 @@ from .trigger_service import get_trigger_service, TriggerType
 from .provider_service import get_provider_service
 from .execution_service import get_execution_service
 from .utils import get_next_run_time, get_human_readable_schedule
+from . import api_all_triggers
 from .api_all_triggers import router as all_triggers_router
 
 
@@ -131,6 +132,8 @@ def initialize(database: DBConnection):
     """Initialize the triggers module with database connection"""
     global db
     db = database
+    # Also initialize the all_triggers submodule
+    api_all_triggers.db = database
 
 
 async def verify_agent_access(agent_id: str, user_id: str):

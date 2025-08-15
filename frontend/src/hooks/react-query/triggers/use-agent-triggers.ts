@@ -2,21 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TriggerConfiguration } from '@/components/agents/triggers/types';
 import { createClient } from '@/lib/supabase/client';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
 
 const fetchAgentTriggers = async (agentId: string): Promise<TriggerConfiguration[]> => {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-        throw new Error('You must be logged in to create a trigger');
+        throw new Error('You must be logged in to view triggers');
     }
+    
     const response = await fetch(`${API_URL}/triggers/agents/${agentId}/triggers`, {
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch agent triggers');
-  }
-  return response.json();
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${session.access_token}` 
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch agent triggers');
+    }
+    
+    return response.json();
 };
 
 const createTrigger = async (data: {
@@ -31,23 +37,27 @@ const createTrigger = async (data: {
     if (!session) {
         throw new Error('You must be logged in to create a trigger');
     }
+    
     const response = await fetch(`${API_URL}/triggers/agents/${data.agentId}/triggers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-    body: JSON.stringify({
-      provider_id: data.provider_id,
-      name: data.name,
-      description: data.description,
-      config: data.config,
-    }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create trigger');
-  }
-  
-  return response.json();
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${session.access_token}` 
+      },
+      body: JSON.stringify({
+        provider_id: data.provider_id,
+        name: data.name,
+        description: data.description,
+        config: data.config,
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create trigger');
+    }
+    
+    return response.json();
 };
 
 const updateTrigger = async (data: {
@@ -60,36 +70,44 @@ const updateTrigger = async (data: {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-        throw new Error('You must be logged in to create a trigger');
+        throw new Error('You must be logged in to update a trigger');
     }
+    
     const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-    body: JSON.stringify({
-      name: data.name,
-      description: data.description,
-      config: data.config,
-      is_active: data.is_active,
-    }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update trigger');
-  }
-  
-  return response.json();
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${session.access_token}` 
+      },
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description,
+        config: data.config,
+        is_active: data.is_active,
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update trigger');
+    }
+    
+    return response.json();
 };
 
 const deleteTrigger = async (data: { triggerId: string; agentId: string }): Promise<void> => {
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    throw new Error('You must be logged in to create a trigger');
+    throw new Error('You must be logged in to delete a trigger');
   }
+  
   const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    headers: { 
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${session.access_token}` 
+    },
   });
   
   if (!response.ok) {
@@ -149,7 +167,7 @@ export const useDeleteTrigger = () => {
   
   return useMutation({
     mutationFn: deleteTrigger,
-    onSuccess: (_, { triggerId, agentId }) => {
+    onSuccess: (_, { agentId }) => {
       queryClient.invalidateQueries({ queryKey: ['agent-upcoming-runs', agentId] });
       queryClient.invalidateQueries({ queryKey: ['agent-triggers'] });
     },

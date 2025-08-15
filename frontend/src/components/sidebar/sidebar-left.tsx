@@ -249,14 +249,14 @@ export function SidebarLeft({
           )}
         </SidebarGroup>
         
-        {/* Seção de Tarefas */}
-        <NavTasks className="border-t" />
-        
-        {/* Seção de Automações */}
-        <NavAutomations className="border-t" />
-        
         {/* Agentes/Projetos anteriores */}
         <NavAgents />
+        
+        {/* Seção de Tarefas */}
+        <NavTasks />
+        
+        {/* Seção de Automações */}
+        <NavAutomations />
       </SidebarContent>
       <SidebarFooter>
         {state === 'collapsed' && (

@@ -52,7 +52,57 @@ export function NavAutomations({ className }: NavAutomationsProps) {
     sort_order: 'desc'
   });
 
-  const triggers = triggersData?.triggers || [];
+  // Mock data for testing - remove when real data is available
+  const mockTriggers = [
+    {
+      trigger_id: '1',
+      name: 'Relatório Diário',
+      trigger_type: 'schedule',
+      agent_name: 'Assistente de Vendas',
+      agent_id: 'agent-1',
+      is_active: true,
+      last_execution: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      next_execution: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+      execution_count: 24,
+      success_count: 23,
+      failure_count: 1,
+      config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      trigger_id: '2',
+      name: 'Webhook GitHub',
+      trigger_type: 'webhook',
+      agent_name: 'Code Reviewer',
+      agent_id: 'agent-2',
+      is_active: true,
+      last_execution: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      execution_count: 156,
+      success_count: 150,
+      failure_count: 6,
+      config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      trigger_id: '3',
+      name: 'Bot Telegram',
+      trigger_type: 'telegram',
+      agent_name: 'Suporte Bot',
+      agent_id: 'agent-3',
+      is_active: true,
+      last_execution: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      execution_count: 89,
+      success_count: 85,
+      failure_count: 4,
+      config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+
+  const triggers = triggersData?.triggers?.length ? triggersData.triggers : mockTriggers;
   const displayedTriggers = showAll ? triggers : triggers.slice(0, 3);
 
   const handleTriggerClick = (trigger: any) => {

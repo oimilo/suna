@@ -8,11 +8,14 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from services.supabase import get_db, DBConnection
+from services.supabase import DBConnection
 from utils.auth_utils import get_current_user_id_from_jwt
 from utils.logger import logger
 
 router = APIRouter(prefix="/api/triggers", tags=["triggers"])
+
+# Global database connection (will be set by triggers.api module)
+db: Optional[DBConnection] = None
 
 
 class TriggerWithAgent(BaseModel):
@@ -67,8 +70,7 @@ async def get_all_user_triggers(
     search: Optional[str] = Query(None, description="Search in trigger name and description"),
     sort_by: str = Query("created_at", description="Sort field"),
     sort_order: str = Query("desc", description="Sort order (asc/desc)"),
-    user_id: str = Depends(get_current_user_id_from_jwt),
-    db: DBConnection = Depends(get_db)
+    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """
     Get all triggers for the current user across all their agents
@@ -186,8 +188,7 @@ async def get_all_user_triggers(
 
 @router.get("/stats", response_model=TriggerStats)
 async def get_trigger_statistics(
-    user_id: str = Depends(get_current_user_id_from_jwt),
-    db: DBConnection = Depends(get_db)
+    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """
     Get statistics about user's triggers
@@ -291,8 +292,7 @@ async def get_trigger_statistics(
 @router.post("/{trigger_id}/toggle")
 async def toggle_trigger(
     trigger_id: str,
-    user_id: str = Depends(get_current_user_id_from_jwt),
-    db: DBConnection = Depends(get_db)
+    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """
     Toggle a trigger's active status

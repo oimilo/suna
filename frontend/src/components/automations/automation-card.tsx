@@ -102,10 +102,10 @@ export function AutomationCard({
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       <Card className={cn(
-        "group relative transition-all duration-200 hover:shadow-lg",
+        "group relative transition-all duration-200 hover:shadow-md border h-full flex flex-col",
         !trigger.is_active && "opacity-60"
       )}>
-      <CardHeader className="pb-3">
+      <CardHeader className="p-4 pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             <div className={cn(
@@ -171,7 +171,7 @@ export function AutomationCard({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
+      <CardContent className="px-4 pb-4 flex-1 flex flex-col gap-3">
         {/* Description */}
         {trigger.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">
@@ -223,8 +223,8 @@ export function AutomationCard({
           )}
         </div>
 
-        {/* Status Toggle */}
-        <div className="flex items-center justify-between pt-2 border-t">
+        {/* Status Toggle - Pushed to bottom */}
+        <div className="flex items-center justify-between pt-3 mt-auto border-t">
           <span className="text-xs font-medium">
             {trigger.is_active ? 'Ativo' : 'Inativo'}
           </span>

@@ -1,25 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn, staggerContainer } from '@/lib/animations';
 import { 
   Zap, 
-  Plus, 
-  Filter, 
   Search, 
-  Activity,
-  Clock,
-  CheckCircle,
-  XCircle,
   TrendingUp,
-  Calendar,
-  Bot
+  Lightbulb,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -32,19 +26,39 @@ import { cn } from '@/lib/utils';
 import { useAllTriggers, useTriggerStats, useToggleTrigger } from '@/hooks/react-query/triggers/use-all-triggers';
 import { AutomationCard } from '@/components/automations/automation-card';
 import { AutomationStats } from '@/components/automations/automation-stats';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AgentTriggersConfiguration } from '@/components/agents/triggers/agent-triggers-configuration';
+
+const AUTOMATION_SUGGESTIONS = [
+  "Monitore pushs no meu GitHub e envie no meu email todo dia às 6h",
+  "Poste no Discord todo movimento de cards do meu quadro do Trello",
+  "Me avise no WhatsApp sempre que o Shopify concluir uma compra",
+  "Crie tarefas no Notion quando receber emails importantes",
+  "Faça backup dos meus repositórios toda sexta-feira",
+  "Me lembre de revisar PRs abertas às 14h",
+  "Sincronize meu Google Calendar com o Slack",
+  "Envie relatório semanal de vendas para o time",
+  "Monitore menções da marca no Twitter",
+  "Archive emails antigos automaticamente",
+  "Crie issues no GitHub de mensagens do Discord",
+  "Atualize planilha com dados do banco toda manhã",
+  "Me avise quando o servidor ficar offline",
+  "Publique no Instagram stories novos posts do blog",
+  "Compile métricas de performance diariamente",
+  "Envie boas-vindas para novos usuários",
+  "Faça scraping de preços dos concorrentes",
+  "Gere relatórios de bugs semanalmente",
+  "Sincronize dados entre APIs diferentes",
+  "Me notifique sobre deploys em produção"
+];
 
 export default function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
+  const [isRotating, setIsRotating] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterAgent, setFilterAgent] = useState<string>('all');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const [selectedTrigger, setSelectedTrigger] = useState<any>(null);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   // Fetch data
   const { data: triggersData, isLoading: isLoadingTriggers } = useAllTriggers({
@@ -52,23 +66,26 @@ export default function AutomationsPage() {
     per_page: 12,
     trigger_type: filterType !== 'all' ? filterType : undefined,
     is_active: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
-    agent_id: filterAgent !== 'all' ? filterAgent : undefined,
+    agent_id: undefined,
     search: searchQuery,
     sort_by: sortBy,
     sort_order: sortOrder,
   });
 
-  const { data: statsData, isLoading: isLoadingStats } = useTriggerStats();
+  const { data: statsData } = useTriggerStats();
   const toggleTriggerMutation = useToggleTrigger();
 
-  const handleCreateNew = () => {
-    // TODO: Open create new automation modal
-    setIsConfigOpen(true);
+  const handleEditTrigger = (trigger: any) => {
+    // TODO: Navigate to agent configuration
+    console.log('Edit trigger:', trigger);
   };
 
-  const handleEditTrigger = (trigger: any) => {
-    setSelectedTrigger(trigger);
-    setIsConfigOpen(true);
+  const rotateSuggestion = () => {
+    setIsRotating(true);
+    setTimeout(() => {
+      setCurrentSuggestionIndex((prev) => (prev + 1) % AUTOMATION_SUGGESTIONS.length);
+      setIsRotating(false);
+    }, 300);
   };
 
   const handleToggleTrigger = async (triggerId: string) => {
@@ -76,10 +93,10 @@ export default function AutomationsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-        <div className="px-6 py-4">
+    <div className="container mx-auto max-w-7xl px-6 py-6">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -90,24 +107,17 @@ export default function AutomationsPage() {
                 Gerencie todas as suas automações e triggers em um só lugar
               </p>
             </div>
-            <Button onClick={handleCreateNew} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nova Automação
-            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      {statsData && (
-        <div className="px-6 py-4 border-b">
+        {/* Stats Cards */}
+        {statsData && (
           <AutomationStats stats={statsData} />
-        </div>
-      )}
+        )}
 
-      {/* Filters and Search */}
-      <div className="px-6 py-4 border-b bg-muted/30">
-        <div className="flex flex-col sm:flex-row gap-4">
+        {/* Filters and Search */}
+        <div className="p-4 rounded-lg border bg-card">
+          <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -169,11 +179,11 @@ export default function AutomationsPage() {
             </Button>
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Automations Grid */}
-      <div className="flex-1 overflow-auto p-6">
-        {isLoadingTriggers ? (
+        {/* Automations Grid */}
+        <div className="space-y-6">
+          {isLoadingTriggers ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <Card key={i} className="h-[200px]">
@@ -234,40 +244,67 @@ export default function AutomationsPage() {
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-[400px] text-center">
-            <div className="p-4 rounded-full bg-muted mb-4">
-              <Zap className="h-8 w-8 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center h-[400px] text-center space-y-8">
+            {/* Ícone e título */}
+            <div className="space-y-4">
+              <div className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm">
+                <Zap className="h-8 w-8 text-primary/60" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">Nenhuma automação encontrada</h3>
+                <p className="text-sm text-muted-foreground">
+                  Suas automações aparecerão aqui após serem criadas
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhuma automação encontrada</h3>
-            <p className="text-sm text-muted-foreground mb-4 max-w-md">
-              Crie sua primeira automação para começar a automatizar tarefas e processos
-            </p>
-            <Button onClick={handleCreateNew} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Criar primeira automação
-            </Button>
+            
+            {/* Card de dica */}
+            <div className="relative max-w-xl w-full">
+              <div className="rounded-xl border border-border/50 bg-gradient-to-b from-muted/30 to-muted/10 backdrop-blur-sm p-6 shadow-sm">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Lightbulb className="h-4 w-4 text-primary/70" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-foreground mb-1">Dica</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      As automações são criadas conversando com qualquer agente em linguagem natural.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="relative rounded-lg bg-background/50 border border-border/30 p-4">
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <span className="text-xs text-muted-foreground font-medium block text-center">
+                        Exemplos de comando que o Prophet entende:
+                      </span>
+                      <button
+                        onClick={rotateSuggestion}
+                        className="absolute right-0 top-0 group p-1 rounded-md hover:bg-muted/50 transition-all duration-200"
+                        title="Próxima sugestão"
+                      >
+                        <RefreshCw className={cn(
+                          "h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground/70 transition-colors",
+                          isRotating && "animate-spin"
+                        )} />
+                      </button>
+                    </div>
+                    <p className={cn(
+                      "text-sm text-foreground/90 italic leading-relaxed transition-all duration-300 text-center",
+                      isRotating ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"
+                    )}>
+                      "{AUTOMATION_SUGGESTIONS[currentSuggestionIndex]}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Configuration Modal */}
-      <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedTrigger 
-                ? `Configurar: ${selectedTrigger.name}`
-                : 'Nova Automação'
-              }
-            </DialogTitle>
-          </DialogHeader>
-          {selectedTrigger && (
-            <div className="mt-4">
-              <AgentTriggersConfiguration agentId={selectedTrigger.agent_id} />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

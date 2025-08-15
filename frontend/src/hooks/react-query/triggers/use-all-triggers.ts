@@ -53,17 +53,6 @@ interface UseAllTriggersParams {
 }
 
 async function fetchAllTriggers(params: UseAllTriggersParams): Promise<TriggerListResponse> {
-  const queryParams = new URLSearchParams();
-  
-  if (params.page) queryParams.append('page', params.page.toString());
-  if (params.per_page) queryParams.append('per_page', params.per_page.toString());
-  if (params.trigger_type) queryParams.append('trigger_type', params.trigger_type);
-  if (params.agent_id) queryParams.append('agent_id', params.agent_id);
-  if (params.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
-  if (params.search) queryParams.append('search', params.search);
-  if (params.sort_by) queryParams.append('sort_by', params.sort_by);
-  if (params.sort_order) queryParams.append('sort_order', params.sort_order);
-
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
   
@@ -71,7 +60,22 @@ async function fetchAllTriggers(params: UseAllTriggersParams): Promise<TriggerLi
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch(`/api/triggers/all?${queryParams}`, {
+  const queryParams = new URLSearchParams();
+  
+  if (params.page) queryParams.append('page', params.page.toString());
+  if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+  if (params.trigger_type && params.trigger_type !== 'all') {
+    queryParams.append('trigger_type', params.trigger_type);
+  }
+  if (params.agent_id) queryParams.append('agent_id', params.agent_id);
+  if (params.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+  if (params.search) queryParams.append('search', params.search);
+  if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params.sort_order) queryParams.append('sort_order', params.sort_order);
+
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
+  
+  const response = await fetch(`${API_URL}/api/triggers/all?${queryParams}`, {
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
     },
@@ -93,7 +97,9 @@ async function fetchTriggerStats(): Promise<TriggerStats> {
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch('/api/triggers/stats', {
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
+  
+  const response = await fetch(`${API_URL}/api/triggers/stats`, {
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
     },
@@ -115,19 +121,30 @@ async function toggleTrigger(triggerId: string): Promise<{ success: boolean; is_
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch(`/api/triggers/${triggerId}/toggle`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-  });
+  // Buscar o estado atual do trigger
+  const { data: trigger, error: fetchError } = await supabase
+    .from('agent_triggers')
+    .select('is_active')
+    .eq('trigger_id', triggerId)
+    .single();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to toggle trigger');
+  if (fetchError) {
+    throw new Error(fetchError.message);
   }
 
-  return response.json();
+  // Alternar o estado
+  const newState = !trigger.is_active;
+  
+  const { error: updateError } = await supabase
+    .from('agent_triggers')
+    .update({ is_active: newState, updated_at: new Date().toISOString() })
+    .eq('trigger_id', triggerId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  return { success: true, is_active: newState };
 }
 
 export function useAllTriggers(params: UseAllTriggersParams = {}) {
