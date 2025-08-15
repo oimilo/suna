@@ -452,7 +452,7 @@ function PricingTier({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border transition-all duration-300',
+        'relative border transition-all duration-300',
         'h-full flex flex-col',
         'bg-white dark:bg-zinc-950',
         tier.isPopular && !insideDialog
@@ -463,9 +463,9 @@ function PricingTier({
     >
       {/* Popular badge */}
       {tier.isPopular && !insideDialog && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3" />
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 shadow-md">
+            <Sparkles className="w-3.5 h-3.5" />
             Popular
           </div>
         </div>
@@ -477,7 +477,7 @@ function PricingTier({
         {/* Header Section */}
         <div className={cn(
           "p-6 pb-4",
-          tier.isPopular && !insideDialog && "pt-8"
+          tier.isPopular && !insideDialog && "pt-9"
         )}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold">
@@ -715,12 +715,12 @@ export function PricingSection({
             </div>
 
             <div className={cn(
-              "grid gap-4 mx-auto",
+              "grid gap-4 mx-auto pt-4",
               {
-                "px-6 max-w-6xl": !insideDialog,
+                "px-6 max-w-7xl": !insideDialog,
                 "max-w-full": insideDialog
               },
-              insideDialog ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+              "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
               "items-stretch"
             )}>
               {siteConfig.cloudPricingItems

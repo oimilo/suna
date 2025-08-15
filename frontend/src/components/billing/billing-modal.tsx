@@ -87,7 +87,7 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0">
+            <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0">
                 <DialogHeader className="px-6 py-4 border-b border-black/6 dark:border-white/8">
                     <DialogTitle className="text-lg font-semibold">Escolha seu plano</DialogTitle>
                 </DialogHeader>
