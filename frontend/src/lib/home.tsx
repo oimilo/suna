@@ -122,7 +122,7 @@ export const siteConfig = {
       features: [
         '5 créditos de IA/mês',
         'Projetos públicos',
-        'Modelos básicos (DeepSeek, Kimi)',
+        'Agente Padrão',
         '1 agente customizado',
         'Suporte comunitário',
       ],
@@ -211,7 +211,7 @@ export const siteConfig = {
         '150 créditos de IA/mês',
         '5 agentes customizados',
         'Projetos privados',
-        'Modelos Premium de IA',
+        'Agente Avançado',
         'Suporte da comunidade',
       ],
       stripePriceId: 'price_1RqK0hFNfWjTbEjsaAFuY7Cb',  // Monthly
@@ -242,7 +242,7 @@ export const siteConfig = {
     },
     {
       name: 'Enterprise',
-      price: 'Customizado',
+      price: 'Custom',
       description: 'Para grandes organizações',
       buttonText: 'Falar com Vendas',
       buttonColor: 'bg-primary text-white dark:text-black',

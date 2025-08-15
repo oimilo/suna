@@ -322,9 +322,9 @@ function PricingTier({
       buttonDisabled = true;
       buttonVariant = 'secondary';
       ringClass = isCompact ? 'ring-1 ring-primary' : 'ring-2 ring-primary';
-      buttonClassName = 'bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/30';
+      buttonClassName = 'bg-zinc-100 dark:bg-zinc-900/20 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800/30';
       statusBadge = (
-        <span className="text-[10px] font-medium px-2 py-1 rounded-md bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400">
+        <span className="text-[10px] font-medium px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900/20 text-zinc-700 dark:text-zinc-300">
           Atual
         </span>
       );
@@ -400,7 +400,7 @@ function PricingTier({
           } else {
             buttonText = 'Upgrade';
             buttonVariant = tier.buttonColor as ButtonVariant;
-            buttonClassName = 'bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 dark:hover:bg-violet-600 text-white';
+            buttonClassName = 'bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900';
           }
         } else if (targetAmount < currentAmount && !(currentIsYearly && targetIsMonthly && targetAmount === currentAmount)) {
           buttonText = '-';
@@ -456,15 +456,15 @@ function PricingTier({
         'h-full flex flex-col',
         'bg-white dark:bg-zinc-950',
         tier.isPopular && !insideDialog
-          ? 'border-violet-500/20 dark:border-violet-400/20 shadow-lg'
+          ? 'border-zinc-900/20 dark:border-zinc-100/20 shadow-lg'
           : 'border-black/6 dark:border-white/8 hover:border-black/8 dark:hover:border-white/10',
-        isCurrentActivePlan && 'border-violet-500/30 dark:border-violet-400/30'
+        isCurrentActivePlan && 'border-zinc-900/30 dark:border-zinc-100/30'
       )}
     >
       {/* Popular badge */}
       {tier.isPopular && !insideDialog && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-violet-600 dark:bg-violet-500 text-white px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider flex items-center gap-1.5">
+          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3 h-3" />
             Popular
           </div>
@@ -517,7 +517,7 @@ function PricingTier({
           {/* Savings Badge */}
           {billingPeriod === 'yearly' && tier.yearlyPrice && tier.discountPercentage && (
             <div className="mt-3">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/20 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
                 <Shield className="w-3.5 h-3.5" />
                 Economize R$ {Math.round(parseFloat(tier.originalYearlyPrice?.replace('R$', '').trim() || '0') - parseFloat(tier.yearlyPrice.replace('R$', '').trim()))}/ano
               </div>
@@ -525,14 +525,17 @@ function PricingTier({
           )}
         </div>
         
+        {/* Divider */}
+        <div className="mx-6 h-px bg-black/6 dark:bg-white/8" />
+        
         {/* Features Section */}
         <div className="flex-grow px-6 py-4">
           {tier.features && tier.features.length > 0 && (
             <ul className="space-y-3">
               {tier.features.map((feature, index) => (
                 <li key={index} className="flex items-start gap-2.5">
-                  <div className="w-4 h-4 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <CheckIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-4 h-4 rounded-full bg-zinc-900/10 dark:bg-zinc-100/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckIcon className="w-2.5 h-2.5 text-zinc-900 dark:text-zinc-100" />
                   </div>
                   <span className="text-sm text-muted-foreground">{feature}</span>
                 </li>
