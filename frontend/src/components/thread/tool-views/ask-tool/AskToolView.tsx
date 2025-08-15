@@ -111,7 +111,7 @@ export function AskToolView({
                   Pergunta
                 </h3>
                 <div className="bg-black/[0.03] dark:bg-white/[0.04] border border-black/6 dark:border-white/8 rounded-lg p-4">
-                  <p className="text-sm text-zinc-200 dark:text-zinc-300 whitespace-pre-wrap">{text}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{text}</p>
                 </div>
                 {isStreaming && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/10 dark:border-amber-400/10">
