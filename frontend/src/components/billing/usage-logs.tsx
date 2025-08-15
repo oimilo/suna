@@ -210,8 +210,8 @@ export default function UsageLogs({ accountId }: Props) {
   return (
     <div className="space-y-6">
       {/* Usage Logs Accordion */}
-      <Card>
-        <CardHeader>
+      <Card className="py-0 gap-0">
+        <CardHeader className="px-6 py-4">
           <CardTitle>Logs de Uso Diário</CardTitle>
           <CardDescription>
             <div className='flex justify-between items-center'>
@@ -224,7 +224,7 @@ export default function UsageLogs({ accountId }: Props) {
             </div>
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 pb-6">
           {dailyUsage.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No usage logs found.</p>

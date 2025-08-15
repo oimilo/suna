@@ -18,14 +18,14 @@ export default async function ManageTeams() {
   );
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="py-0 gap-0">
+      <CardHeader className="px-6 py-4">
         <CardTitle>Suas Equipes</CardTitle>
         <CardDescription>
           Equipes que você pertence ou é dono
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-6 pb-6">
         <ManageTeamsClient teams={teams} />
       </CardContent>
     </Card>

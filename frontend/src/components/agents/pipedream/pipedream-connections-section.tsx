@@ -641,9 +641,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
           <PipedreamAccountStatus />
         </div>
         
-        <Card className="border-dashed">
-          <CardContent className="p-8 text-center">
-            <div className="space-y-4">
+        <Card className="border-dashed py-0 gap-0">
+          <CardContent className="px-8 pt-8 pb-10 text-center">
+            <div className="space-y-6">
               <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
                 <User className="h-6 w-6 text-primary" />
               </div>
@@ -724,9 +724,9 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         )}
       </div>
       {Object.keys(filteredProfilesByApp).length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="p-8 text-center">
-            <div className="space-y-4">
+        <Card className="border-dashed py-0 gap-0">
+          <CardContent className="px-8 pt-8 pb-10 text-center">
+            <div className="space-y-6">
               <div className="p-3 rounded-full bg-muted/50 w-fit mx-auto">
                 <Search className="h-6 w-6 text-muted-foreground" />
               </div>
