@@ -523,6 +523,24 @@ function PricingTier({
               </div>
             </div>
           )}
+
+          {/* CTA Button */}
+          <div className="mt-4">
+            <Button
+              onClick={() => handleSubscribe(tierPriceId)}
+              disabled={buttonDisabled}
+              variant={buttonVariant || 'default'}
+              className={cn(
+                'w-full h-10 font-medium rounded-lg transition-all duration-200',
+                buttonClassName,
+                isPlanLoading && 'animate-pulse cursor-wait',
+                !buttonDisabled && !isCurrentActivePlan && !tier.isContactSales && 'hover:shadow-md',
+                tier.isContactSales && 'bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200'
+              )}
+            >
+              {buttonText}
+            </Button>
+          </div>
         </div>
         
         {/* Divider */}
@@ -542,24 +560,6 @@ function PricingTier({
               ))}
             </ul>
           )}
-        </div>
-
-        {/* CTA Section */}
-        <div className="p-6 pt-4 mt-auto">
-          <Button
-            onClick={() => handleSubscribe(tierPriceId)}
-            disabled={buttonDisabled}
-            variant={buttonVariant || 'default'}
-            className={cn(
-              'w-full h-10 font-medium rounded-lg transition-all duration-200',
-              buttonClassName,
-              isPlanLoading && 'animate-pulse cursor-wait',
-              !buttonDisabled && !isCurrentActivePlan && !tier.isContactSales && 'hover:shadow-md',
-              tier.isContactSales && 'bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200'
-            )}
-          >
-            {buttonText}
-          </Button>
         </div>
       </CardContent>
     </Card>

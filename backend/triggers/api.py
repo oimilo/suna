@@ -18,6 +18,7 @@ from .trigger_service import get_trigger_service, TriggerType
 from .provider_service import get_provider_service
 from .execution_service import get_execution_service
 from .utils import get_next_run_time, get_human_readable_schedule
+from .api_all_triggers import router as all_triggers_router
 
 
 # ===== ROUTERS =====
@@ -764,3 +765,6 @@ async def execute_agent_workflow(
 # ===== INCLUDE WORKFLOWS ROUTER =====
 
 router.include_router(workflows_router)
+
+# Include all triggers router (for unified triggers page)
+router.include_router(all_triggers_router)

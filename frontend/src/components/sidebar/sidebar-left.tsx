@@ -2,11 +2,13 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Store, Plus, Zap, Plug, ChevronRight, Loader2 } from 'lucide-react';
+import { Bot, Menu, Plus, Plug, ChevronRight, Zap } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
 import { BrandLogo } from '@/components/sidebar/brand-logo';
+import { NavAutomations } from '@/components/sidebar/nav-automations';
+import { NavTasks } from '@/components/sidebar/nav-tasks';
 import {
   Sidebar,
   SidebarContent,
@@ -46,12 +48,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFeatureFlags } from '@/lib/feature-flags';
 import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
-import { Button } from '../ui/button';
 
 export function SidebarLeft({
   ...props
@@ -72,7 +72,6 @@ export function SidebarLeft({
   const searchParams = useSearchParams();
   const { flags, loading: flagsLoading } = useFeatureFlags(['custom_agents', 'agent_marketplace']);
   const customAgentsEnabled = flags.custom_agents;
-  const marketplaceEnabled = flags.agent_marketplace;
   const createNewAgentMutation = useCreateNewAgent();
   const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
 
@@ -225,18 +224,38 @@ export function SidebarLeft({
             </SidebarMenu>
           )}
           {!flagsLoading && customAgentsEnabled && (
-            <Link href="/settings/credentials">
-              <SidebarMenuButton className={cn({
-                'bg-accent text-accent-foreground font-medium': pathname === '/settings/credentials',
-              })}>
-                <Plug className="h-4 w-4 mr-1" />
-                <span className="flex items-center justify-between w-full">
-                  Integrações
-                </span>
-              </SidebarMenuButton>
-            </Link>
+            <>
+              <Link href="/automations">
+                <SidebarMenuButton className={cn({
+                  'bg-accent text-accent-foreground font-medium': pathname === '/automations',
+                })}>
+                  <Zap className="h-4 w-4 mr-1" />
+                  <span className="flex items-center justify-between w-full">
+                    Automações
+                  </span>
+                </SidebarMenuButton>
+              </Link>
+              <Link href="/settings/credentials">
+                <SidebarMenuButton className={cn({
+                  'bg-accent text-accent-foreground font-medium': pathname === '/settings/credentials',
+                })}>
+                  <Plug className="h-4 w-4 mr-1" />
+                  <span className="flex items-center justify-between w-full">
+                    Integrações
+                  </span>
+                </SidebarMenuButton>
+              </Link>
+            </>
           )}
         </SidebarGroup>
+        
+        {/* Seção de Tarefas */}
+        <NavTasks className="border-t" />
+        
+        {/* Seção de Automações */}
+        <NavAutomations className="border-t" />
+        
+        {/* Agentes/Projetos anteriores */}
         <NavAgents />
       </SidebarContent>
       <SidebarFooter>
