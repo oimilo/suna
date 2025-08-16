@@ -9,6 +9,7 @@ import { AgentCard } from './agent-card';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 import { BRANDING } from '@/lib/branding';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { Info, Users } from 'lucide-react';
 
 interface MarketplaceTabProps {
   marketplaceSearchQuery: string;
@@ -40,7 +41,22 @@ export const MarketplaceTab = ({
   const { t } = usePtTranslations();
   
   return (
-    <div className="space-y-6 mt-8 flex flex-col min-h-full">
+    <div className="space-y-6 flex flex-col min-h-full">
+      {/* Community tip */}
+      <div className="bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03]">
+            <Users className="h-4 w-4 opacity-60" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium">Agentes da Comunidade</p>
+            <p className="text-xs text-muted-foreground/80 leading-relaxed">
+              Explore agentes criados e compartilhados pela comunidade. Cada agente mostra suas capacidades e integrações necessárias para funcionar.
+            </p>
+          </div>
+        </div>
+      </div>
+      
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <SearchBar
           placeholder={t('marketplace.searchPlaceholder')}

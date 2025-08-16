@@ -2,11 +2,11 @@ import { Metadata } from 'next';
 import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
-  title: `App Profiles | ${BRANDING.company} ${BRANDING.name}`,
-  description: 'Manage your connected app integrations',
+  title: `Perfis de Aplicativos | ${BRANDING.company} ${BRANDING.name}`,
+  description: 'Gerencie suas integrações de aplicativos conectados',
   openGraph: {
-    title: `App Profiles | ${BRANDING.company} ${BRANDING.name}`,
-    description: 'Manage your connected app integrations',
+    title: `Perfis de Aplicativos | ${BRANDING.company} ${BRANDING.name}`,
+    description: 'Gerencie suas integrações de aplicativos conectados',
     type: 'website',
   },
 };

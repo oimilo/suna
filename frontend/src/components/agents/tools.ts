@@ -6,7 +6,7 @@ export const DEFAULT_AGENTPRESS_TOOLS: Record<string, { enabled: boolean; descri
     'sb_expose_tool': { enabled: true, description: 'Expõe serviços e gerencia portas para acessibilidade de aplicações', icon: '🔌', color: 'bg-orange-100 dark:bg-orange-800/20' },
     'web_search_tool': { enabled: true, description: 'Pesquisa na web usando API Tavily e extrai dados de páginas com Firecrawl para pesquisa', icon: '🔍', color: 'bg-yellow-100 dark:bg-yellow-800/50' },
     'sb_vision_tool': { enabled: true, description: 'Capacidades de visão e processamento de imagem para análise de conteúdo visual', icon: '👁️', color: 'bg-pink-100 dark:bg-pink-800/50' },
-    'data_providers_tool': { enabled: true, description: 'Acesso a provedores de dados e APIs externas (requer chave RapidAPI)', icon: '🔗', color: 'bg-cyan-100 dark:bg-cyan-800/50' },
+    'data_providers_tool': { enabled: true, description: 'Acesso a provedores de dados e APIs externas', icon: '🔗', color: 'bg-cyan-100 dark:bg-cyan-800/50' },
 };
 
 export const getToolDisplayName = (toolName: string): string => {

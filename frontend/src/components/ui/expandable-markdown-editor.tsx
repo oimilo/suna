@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "./textarea";
 import { cn } from "@/lib/utils";
-import { Edit2, Expand, Save, X } from "lucide-react";
+import { Edit2, Expand, Save } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -61,7 +60,7 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
     setIsEditing(true);
   };
 
-  const renderMarkdown = (content: string, isPreview = false) => (
+  const renderMarkdown = (content: string) => (
     <ReactMarkdown 
       remarkPlugins={[remarkGfm]}
       components={{
@@ -75,9 +74,9 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
         code: ({ children, className }) => {
           const isInline = !className?.includes('language-');
           return isInline ? (
-            <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+            <code className="bg-black/[0.02] dark:bg-white/[0.03] px-1.5 py-0.5 rounded text-xs font-mono border border-black/6 dark:border-white/8">{children}</code>
           ) : (
-            <code className={cn('block bg-muted p-2 rounded text-xs font-mono overflow-x-auto', className)}>
+            <code className={cn('block bg-black/[0.02] dark:bg-white/[0.03] p-3 rounded-lg text-xs font-mono overflow-x-auto border border-black/6 dark:border-white/8', className)}>
               {children}
             </code>
           );
@@ -114,13 +113,13 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
     <>
       <div className={cn('relative', className)}>
         <div 
-          className="group relative pb-4 border rounded-2xl bg-muted/30 hover:opacity-80 transition-colors cursor-pointer overflow-hidden"
+          className="group relative p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200 cursor-pointer overflow-hidden"
           onClick={openDialog}
         >
-          <div className="p-4 max-h-32 overflow-hidden">
+          <div className="max-h-32 overflow-hidden">
             {value ? (
               <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                {renderMarkdown(value, true)}
+                {renderMarkdown(value)}
               </div>
             ) : (
               <div className="text-muted-foreground italic text-sm">
@@ -149,43 +148,43 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] w-[95vw] md:w-full flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{title}</span>
+        <DialogContent className="max-w-4xl max-h-[85vh] w-[95vw] md:w-full flex flex-col p-0 gap-0">
+          <div className="px-6 pt-6 pb-4 border-b border-black/6 dark:border-white/8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">{title}</h2>
               {!isEditing && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={startEditing}
-                  className="h-7 mr-4"
+                  className="h-8 px-3 hover:bg-black/5 dark:hover:bg-white/5"
                 >
-                  <Edit2 className="h-3 w-3" />
-                  Edit
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                  Editar
                 </Button>
               )}
-            </DialogTitle>
-          </DialogHeader>
+            </div>
+          </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden px-6 py-4">
             {isEditing ? (
-              <div className="h-full flex flex-col gap-2">
-                <ScrollArea className="flex-1 h-[500px]">
+              <div className="h-full flex flex-col gap-3">
+                <div className="flex-1 relative">
                   <textarea
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="w-full h-[500px] rounded-xl bg-muted/30 p-4 resize-none"
-                    style={{ minHeight: '300px' }}
+                    className="w-full h-full min-h-[400px] p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm"
+                    placeholder={placeholder}
                     disabled={disabled}
                   />
-                </ScrollArea>
-                <div className="text-xs text-muted-foreground/50 flex-shrink-0">
-                  Markdown supported • Cmd+Enter to save • Esc to cancel
+                </div>
+                <div className="text-xs text-muted-foreground/60">
+                  Markdown suportado • Cmd+Enter para salvar • Esc para cancelar
                 </div>
               </div>
             ) : (
-              <ScrollArea className="flex-1 h-[500px]">
+              <ScrollArea className="h-[500px]">
                 <div className="pr-4">
                   {value ? (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -202,26 +201,27 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
           </div>
 
           {isEditing && (
-            <DialogFooter>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCancel}
-                className="h-8"
-              >
-                <X className="h-3 w-3" />
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={handleSave}
-                className="h-8"
-              >
-                <Save className="h-3 w-3" />
-                Save
-              </Button>
-            </DialogFooter>
+            <div className="border-t border-black/6 dark:border-white/8 px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="h-9 px-4"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleSave}
+                  className="h-9 px-4"
+                >
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  Salvar
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

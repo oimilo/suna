@@ -1,13 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { 
-  Zap
-} from 'lucide-react';
 import { PipedreamConnectionsSection } from '../../../../components/agents/pipedream/pipedream-connections-section';
 import { useRouter } from 'next/navigation';
 import { useFeatureFlag } from '@/lib/feature-flags';
-import { PageHeader } from '@/components/ui/page-header';
 
 export default function AppProfilesPage() {
   const { enabled: customAgentsEnabled, loading: flagLoading } = useFeatureFlag("custom_agents");
@@ -48,9 +44,11 @@ export default function AppProfilesPage() {
   return (
     <div className="container mx-auto max-w-4xl px-6 py-6">
       <div className="space-y-6">
-        <PageHeader icon={Zap} transparent>
-          <span className="text-primary">Credenciais de Aplicativos</span>
-        </PageHeader>
+        <div className="text-center py-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Credenciais de Aplicativos
+          </h1>
+        </div>
         
         <PipedreamConnectionsSection onConnectNewApp={handleAppSelection} />
       </div>

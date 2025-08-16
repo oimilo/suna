@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, CheckCircle, Loader2, Globe, GlobeLock, GitBranch } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Download, CheckCircle, Loader2, Globe, GlobeLock, GitBranch, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 import { BrandLogo } from '@/components/sidebar/brand-logo';
@@ -25,6 +24,11 @@ interface MarketplaceData extends BaseAgentData {
   download_count: number;
   creator_name?: string;
   marketplace_published_at?: string;
+  mcp_requirements?: Array<{
+    qualified_name: string;
+    display_name: string;
+    custom_type?: string;
+  }>;
 }
 
 interface TemplateData extends BaseAgentData {
@@ -39,6 +43,14 @@ interface AgentData extends BaseAgentData {
   is_public?: boolean;
   marketplace_published_at?: string;
   download_count?: number;
+  configured_mcps?: Array<{ name: string }>;
+  custom_mcps?: Array<{ name: string }>;
+  mcp_requirements?: Array<{
+    qualified_name: string;
+    display_name: string;
+    custom_type?: string;
+  }>;
+  agentpress_tools?: Record<string, any>;
   current_version?: {
     version_id: string;
     version_name: string;
@@ -70,15 +82,18 @@ interface AgentCardProps {
   onPrimaryAction?: (data: any, e?: React.MouseEvent) => void;
   onSecondaryAction?: (data: any, e?: React.MouseEvent) => void;
   onClick?: (data: any) => void;
+  onCustomize?: (agentId: string) => void;
+  onPublish?: (agent: any) => void;
+  isPublishing?: boolean;
 }
 
 const MarketplaceBadge: React.FC<{ isKortixTeam?: boolean }> = ({ isKortixTeam }) => {
   if (isKortixTeam) {
     return (
-      <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-950 dark:text-blue-300">
-        <CheckCircle className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium">
+        <CheckCircle className="h-3 w-3 opacity-60" />
         {BRANDING.company}
-      </Badge>
+      </span>
     );
   }
   return null;
@@ -87,67 +102,186 @@ const MarketplaceBadge: React.FC<{ isKortixTeam?: boolean }> = ({ isKortixTeam }
 const TemplateBadge: React.FC<{ isPublic?: boolean }> = ({ isPublic }) => {
   if (isPublic) {
     return (
-      <Badge variant="default" className="bg-green-100 text-green-700 border-0 dark:bg-green-950 dark:text-green-300">
-        <Globe className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium">
+        <Globe className="h-3 w-3 opacity-60" />
         Public
-      </Badge>
+      </span>
     );
   }
   return (
-    <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 dark:bg-gray-800 dark:text-gray-300">
-      <GlobeLock className="h-3 w-3" />
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium text-muted-foreground">
+      <GlobeLock className="h-3 w-3 opacity-60" />
       Private
-    </Badge>
+    </span>
   );
 };
 
 const AgentBadges: React.FC<{ agent: AgentData, isSunaAgent: boolean }> = ({ agent, isSunaAgent }) => (
-  <div className="flex gap-1">
+  <div className="flex gap-1.5">
     {!isSunaAgent && agent.current_version && (
-      <Badge variant="outline" className="text-xs">
-        <GitBranch className="h-3 w-3 mr-1" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs">
+        <GitBranch className="h-3 w-3 opacity-60" />
         {agent.current_version.version_name}
-      </Badge>
+      </span>
     )}
     {!isSunaAgent && agent.is_public && (
-      <Badge variant="default" className="bg-green-100 text-green-700 border-0 dark:bg-green-950 dark:text-green-300 text-xs">
-        <Globe className="h-3 w-3 mr-1" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium">
+        <Globe className="h-3 w-3 opacity-60" />
         Published
-      </Badge>
+      </span>
     )}
   </div>
 );
 
-const MarketplaceMetadata: React.FC<{ data: MarketplaceData }> = ({ data }) => (
-  <div className="flex items-center text-xs text-muted-foreground">
-    <div className="flex items-center gap-1">
-      <Download className="h-3 w-3" />
-      <span>{data.download_count} installs</span>
+
+const MarketplaceMetadata: React.FC<{ data: MarketplaceData }> = ({ data }) => {
+  const mcpCount = data.mcp_requirements?.length || 0;
+  
+  // Processa os MCPs para exibição limpa
+  const mcpNames = data.mcp_requirements?.slice(0, 2).map(mcp => {
+    const name = mcp.display_name || mcp.qualified_name || '';
+    // Remove prefixos e formata
+    return name
+      .replace('pipedream_', '')
+      .replace('mcp_', '')
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }) || [];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground/60">
+        <div className="flex items-center gap-1">
+          <Download className="h-3 w-3 opacity-60" />
+          <span>{data.download_count} {data.download_count === 1 ? 'instalação' : 'instalações'}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
+        <Plug className="h-3 w-3 opacity-60" />
+        {mcpCount > 0 ? (
+          <span className="font-medium text-foreground/80">
+            {mcpNames.join(', ')}
+            {mcpCount > 2 && ` +${mcpCount - 2}`}
+          </span>
+        ) : (
+          <span className="italic">Nenhuma integração necessária</span>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const TemplateMetadata: React.FC<{ data: TemplateData }> = ({ data }) => (
-  <div className="space-y-1 text-xs text-muted-foreground">
-    {data.is_public && data.download_count !== undefined && data.download_count > 0 && (
-      <div className="flex items-center gap-1">
-        <Download className="h-3 w-3" />
-        <span>{data.download_count} downloads</span>
-      </div>
-    )}
-  </div>
-);
+const TemplateMetadata: React.FC<{ data: TemplateData }> = ({ data }) => {
+  if (!data.is_public || !data.download_count) return null;
+  
+  return (
+    <div className="flex items-center text-xs text-muted-foreground/60">
+      <Download className="h-3 w-3 mr-1 opacity-60" />
+      <span>{data.download_count} downloads</span>
+    </div>
+  );
+};
 
-const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => (
-  <div className="space-y-1 text-xs text-muted-foreground">
-    {data.is_public && data.marketplace_published_at && data.download_count && data.download_count > 0 && (
-      <div className="flex items-center gap-1">
-        <Download className="h-3 w-3" />
-        <span>{data.download_count} downloads</span>
+const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => {
+  // Detecta integrações de várias fontes
+  let integrations: string[] = [];
+  
+  // 1. Verifica mcp_requirements (marketplace)
+  if (data.mcp_requirements && data.mcp_requirements.length > 0) {
+    integrations = data.mcp_requirements.map(mcp => {
+      const name = mcp.display_name || mcp.qualified_name || '';
+      return name
+        .replace('pipedream_', '')
+        .replace('mcp_', '')
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    });
+  }
+  
+  // 2. Verifica configured_mcps
+  else if (data.configured_mcps && data.configured_mcps.length > 0) {
+    integrations = data.configured_mcps.map(mcp => {
+      const name = mcp.name || '';
+      return name
+        .replace('pipedream_', '')
+        .replace('mcp_', '')
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    });
+  }
+  
+  // 3. Detecta integrações das ferramentas Pipedream (agentpress_tools)
+  else if (data.agentpress_tools && Object.keys(data.agentpress_tools).length > 0) {
+    const toolKeys = Object.keys(data.agentpress_tools);
+    const integrationSet = new Set<string>();
+    
+    toolKeys.forEach(key => {
+      // Extrai o nome da integração do nome da ferramenta
+      // Ex: google_calendar_create_event -> Google Calendar
+      if (key.includes('google_calendar')) {
+        integrationSet.add('Google Calendar');
+      } else if (key.includes('gmail')) {
+        integrationSet.add('Gmail');
+      } else if (key.includes('slack')) {
+        integrationSet.add('Slack');
+      } else if (key.includes('notion')) {
+        integrationSet.add('Notion');
+      } else if (key.includes('github')) {
+        integrationSet.add('GitHub');
+      } else if (key.includes('discord')) {
+        integrationSet.add('Discord');
+      } else if (key.includes('telegram')) {
+        integrationSet.add('Telegram');
+      } else if (key.includes('whatsapp')) {
+        integrationSet.add('WhatsApp');
+      }
+      // Adicione mais conforme necessário
+    });
+    
+    integrations = Array.from(integrationSet);
+  }
+  
+  // 4. Verifica custom_mcps também
+  if (integrations.length === 0 && data.custom_mcps && data.custom_mcps.length > 0) {
+    integrations = data.custom_mcps.map(mcp => {
+      const name = mcp.name || '';
+      return name
+        .replace('pipedream_', '')
+        .replace('mcp_', '')
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    });
+  }
+  
+  const displayIntegrations = integrations.slice(0, 2);
+  const totalCount = integrations.length;
+  
+  return (
+    <div className="space-y-1.5">
+      {data.is_public && data.download_count && (
+        <div className="flex items-center text-xs text-muted-foreground/60">
+          <Download className="h-3 w-3 mr-1 opacity-60" />
+          <span>{data.download_count} downloads</span>
+        </div>
+      )}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
+        <Plug className="h-3 w-3 opacity-60" />
+        {totalCount > 0 ? (
+          <span className="font-medium text-foreground/80">
+            {displayIntegrations.join(', ')}
+            {totalCount > 2 && ` +${totalCount - 2}`}
+          </span>
+        ) : (
+          <span className="italic">Nenhuma integração configurada</span>
+        )}
       </div>
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
 const MarketplaceActions: React.FC<{ 
   onAction?: (data: any, e?: React.MouseEvent) => void;
@@ -157,18 +291,18 @@ const MarketplaceActions: React.FC<{
   <Button 
     onClick={(e) => onAction?.(data, e)}
     disabled={isActioning}
-    className="w-full"
+    className="w-full h-8 bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black rounded-md transition-all duration-200"
     size="sm"
   >
     {isActioning ? (
       <>
-        <Loader2 className="h-4 w-4 animate-spin " />
-        Installing...
+        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 opacity-80" />
+        <span className="text-xs font-medium">Instalando...</span>
       </>
     ) : (
       <>
-        <Download className="h-4 w-4 " />
-        Install Agent
+        <Download className="h-3.5 w-3.5 mr-1.5 opacity-80" />
+        <span className="text-xs font-medium">Instalar Agente</span>
       </>
     )}
   </Button>
@@ -187,18 +321,18 @@ const TemplateActions: React.FC<{
           onClick={(e) => onPrimaryAction?.(data, e)}
           disabled={isActioning}
           variant="outline"
-          className="w-full"
+          className="w-full h-8 border-black/10 dark:border-white/10 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
           size="sm"
         >
           {isActioning ? (
             <>
-              <Loader2 className="h-3 w-3 animate-spin " />
-              Unpublishing...
+              <Loader2 className="h-3.5 w-3.5 animate-spin opacity-60 mr-1.5" />
+              <span className="text-xs">Despublicando...</span>
             </>
           ) : (
             <>
-              <GlobeLock className="h-3 w-3 " />
-              Make Private
+              <GlobeLock className="h-3.5 w-3.5 opacity-60 mr-1.5" />
+              <span className="text-xs">Tornar Privado</span>
             </>
           )}
         </Button>
@@ -207,19 +341,18 @@ const TemplateActions: React.FC<{
       <Button
         onClick={(e) => onPrimaryAction?.(data, e)}
         disabled={isActioning}
-        variant="default"
-        className="w-full"
+        className="w-full h-8 bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80 text-white dark:text-black"
         size="sm"
       >
         {isActioning ? (
           <>
-            <Loader2 className="h-3 w-3 animate-spin " />
-            Publishing...
+            <Loader2 className="h-3.5 w-3.5 animate-spin opacity-80 mr-1.5" />
+            <span className="text-xs">Publicando...</span>
           </>
         ) : (
           <>
-            <Globe className="h-3 w-3 " />
-            Publish to Marketplace
+            <Globe className="h-3.5 w-3.5 opacity-80 mr-1.5" />
+            <span className="text-xs">Publicar no Marketplace</span>
           </>
         )}
       </Button>
@@ -230,48 +363,34 @@ const TemplateActions: React.FC<{
 const CardAvatar: React.FC<{ avatar: string; color: string; isSunaAgent?: boolean }> = ({ avatar, color, isSunaAgent = false }) => {
   if (isSunaAgent) {
     return (
-      <div className="h-14 w-14 bg-muted border flex items-center justify-center rounded-2xl">
-        <BrandLogo size={28} />
+      <div className="h-10 w-10 bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 flex items-center justify-center rounded-lg">
+        <BrandLogo size={20} />
       </div>
     )
   }
   return (
     <div 
-      className="relative h-14 w-14 flex items-center justify-center rounded-2xl" 
-      style={{ backgroundColor: color }}
+      className="relative h-10 w-10 flex items-center justify-center rounded-lg bg-black/[0.06] dark:bg-white/[0.06] border border-black/6 dark:border-white/8" 
     >
-      <div className="text-2xl">{avatar}</div>
-      {isSunaAgent && (
-        <div className="absolute -top-1 -right-1 h-5 w-5 bg-background rounded-full border border-border flex items-center justify-center">
-          <BrandLogo size={12} />
-        </div>
-      )}
-      <div
-        className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 dark:opacity-100 transition-opacity"
-        style={{
-          boxShadow: `0 16px 48px -8px ${color}70, 0 8px 24px -4px ${color}50`
-        }}
-      />
+      <div className="text-lg opacity-80">{avatar}</div>
     </div>
   )
 };
 
 const TagList: React.FC<{ tags?: string[] }> = ({ tags }) => {
+  if (!tags || tags.length === 0) return null;
+  
   return (
-    <div className="flex flex-wrap gap-1 min-h-[1.25rem]">
-      {tags && tags.length > 0 && (
-        <>
-          {tags.slice(0, 2).map(tag => (
-            <Badge key={tag} variant="outline" className="text-xs border-border/50">
-              {tag}
-            </Badge>
-          ))}
-          {tags.length > 2 && (
-            <Badge variant="outline" className="text-xs border-border/50">
-              +{tags.length - 2}
-            </Badge>
-          )}
-        </>
+    <div className="flex flex-wrap gap-1.5">
+      {tags.slice(0, 2).map(tag => (
+        <span key={tag} className="text-xs text-muted-foreground/60 font-mono">
+          #{tag}
+        </span>
+      ))}
+      {tags.length > 2 && (
+        <span className="text-xs text-muted-foreground/60">
+          +{tags.length - 2}
+        </span>
       )}
     </div>
   );
@@ -284,13 +403,17 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   isActioning = false,
   onPrimaryAction,
   onSecondaryAction,
-  onClick
+  onClick,
+  onCustomize,
+  onPublish,
+  isPublishing = false
 }) => {
   const { avatar, color } = styling;
   
   const isSunaAgent = mode === 'agent' && (data as AgentData).metadata?.is_suna_default === true;
   
-  const cardClassName = "group relative bg-card rounded-2xl overflow-hidden shadow-sm transition-all duration-300 border border-border/50 hover:border-primary/20 cursor-pointer flex flex-col min-h-[280px] max-h-[320px]";
+  const isAgentClickable = mode === 'agent' && onCustomize;
+  const cardClassName = `group relative bg-black/[0.02] dark:bg-white/[0.03] rounded-lg overflow-hidden transition-all duration-200 border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-black/8 dark:hover:border-white/10 ${isAgentClickable ? 'cursor-pointer' : ''} flex flex-col min-h-[220px]`;
   
   const renderBadge = () => {
     switch (mode) {
@@ -330,41 +453,125 @@ export const AgentCard: React.FC<AgentCardProps> = ({
           isActioning={isActioning} 
         />;
       case 'agent':
+        const agentData = data as AgentData;
+        const isSuna = agentData.metadata?.is_suna_default;
+        const isDefaultAgent = agentData.is_default;
+        
+        // Mostra botão desabilitado para agentes padrão do sistema
+        if (isDefaultAgent || isSuna) {
+          return (
+            <div className="relative group/button">
+              <Button
+                disabled
+                variant="outline"
+                className="w-full h-8 border-black/10 dark:border-white/10 opacity-50 cursor-not-allowed"
+                size="sm"
+              >
+                <Globe className="h-3.5 w-3.5 opacity-40 mr-1.5" />
+                <span className="text-xs opacity-60">Publicar</span>
+              </Button>
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 dark:bg-white/90 text-white dark:text-black text-xs rounded opacity-0 group-hover/button:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                Agente padrão do sistema não pode ser publicado
+              </div>
+            </div>
+          );
+        }
+        
+        // Mostra botão normal para outros agentes
+        const showPublish = !isSuna && onPublish && !agentData.is_public;
+        
+        if (showPublish) {
+          return (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPublish(agentData);
+              }}
+              disabled={isPublishing}
+              variant="outline"
+              className="w-full h-8 border-black/10 dark:border-white/10 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+              size="sm"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin opacity-60 mr-1.5" />
+                  <span className="text-xs">Publicando...</span>
+                </>
+              ) : (
+                <>
+                  <Globe className="h-3.5 w-3.5 opacity-60 mr-1.5" />
+                  <span className="text-xs">Publicar</span>
+                </>
+              )}
+            </Button>
+          );
+        }
+        
         return null;
       default:
         return null;
     }
   };
 
+  const handleCardClick = () => {
+    if (mode === 'agent' && onCustomize) {
+      const agentData = data as AgentData;
+      onCustomize(agentData.agent_id);
+    } else if (mode !== 'agent' && onClick) {
+      onClick(data);
+    }
+  };
+
   return (
-    <div className={cardClassName} onClick={() => onClick?.(data)}>
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="relative p-6 flex flex-col flex-1">
-        <div className="flex items-start justify-between mb-4">
+    <div className={cardClassName} onClick={handleCardClick}>
+      <div className="p-4 flex flex-col flex-1">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
           <CardAvatar avatar={avatar} color={color} isSunaAgent={isSunaAgent} />
-          <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-semibold tracking-tight truncate">
+                {data.name}
+              </h3>
+              {mode === 'agent' && (data as AgentData).current_version && (
+                <span className="text-xs text-muted-foreground/60 font-mono">
+                  v{(data as AgentData).current_version?.version_number}
+                </span>
+              )}
+            </div>
             {renderBadge()}
           </div>
         </div>
         
-        <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-1">
-          {data.name}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">
-          {data.description || 'No description available'}
+        {/* Description */}
+        <p className="text-xs text-muted-foreground/80 leading-relaxed mb-3 line-clamp-2 min-h-[2rem]">
+          {(() => {
+            // Traduz descrição do Prophet
+            if (data.name === 'Prophet' && data.description) {
+              if (data.description.includes('Prophet is your AI assistant')) {
+                return 'Prophet é seu assistente IA com acesso a várias ferramentas e integrações para ajudá-lo com tarefas em diferentes domínios.';
+              }
+            }
+            return data.description || 'Sem descrição disponível';
+          })()}
         </p>
         
-        <div className="flex-1 flex flex-col">
-          <div className="min-h-[1.25rem] mb-3">
+        {/* Tags */}
+        {data.tags && data.tags.length > 0 && (
+          <div className="mb-3">
             <TagList tags={data.tags} />
           </div>
-          
-          <div className="mt-auto">
-            <div className="mb-3">
-              {renderMetadata()}
+        )}
+        
+        {/* Footer */}
+        <div className="mt-auto pt-3 border-t border-black/4 dark:border-white/6">
+          {renderMetadata()}
+          {renderActions() && (
+            <div className="mt-2">
+              {renderActions()}
             </div>
-            {renderActions()}
-          </div>
+          )}
         </div>
       </div>
     </div>

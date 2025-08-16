@@ -1,16 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { X, Bot, Search, Sparkles, TrendingUp, Star, Filter, ArrowRight } from 'lucide-react';
-import { usePipedreamApps, usePipedreamPopularApps } from '@/hooks/react-query/pipedream/use-pipedream';
+import { X, Bot, Search, Sparkles, TrendingUp, Star, Filter } from 'lucide-react';
+import { usePipedreamPopularApps } from '@/hooks/react-query/pipedream/use-pipedream';
 import { usePipedreamProfiles } from '@/hooks/react-query/pipedream/use-pipedream-profiles';
 import { useAgent } from '@/hooks/react-query/agents/use-agents';
 import { PipedreamConnector } from './pipedream-connector';
 import { ToolsManager } from '../mcp/tools-manager';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { AgentSelector } from '../../thread/chat-input/agent-selector';
 import type { PipedreamApp } from '@/hooks/react-query/pipedream/utils';
@@ -45,7 +42,7 @@ const AppCardSkeleton = () => (
 );
 
 const AppsGridSkeleton = ({ count = 8 }: { count?: number }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
     {Array.from({ length: count }).map((_, index) => (
       <AppCardSkeleton key={index} />
     ))}
@@ -219,52 +216,56 @@ export const PipedreamRegistry: React.FC<PipedreamRegistryProps> = ({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="sticky flex items-center justify-between top-0 z-10 flex-shrink-0 border-b bg-background px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-muted-foreground/20 flex items-center justify-center">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-foreground">
-                  {agent?.name ? `${agent.name} Integrations` : 'Integrations'}
-                </h1>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-400">
-                  2700+ Apps
-                </Badge>
+      <div className="sticky top-0 z-10 flex-shrink-0 border-b border-black/6 dark:border-white/8 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {agent?.name ? 'Connect apps to enhance your agent\'s capabilities' : 'Connect your favorite apps and services'}
-              </p>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-lg font-semibold text-foreground">
+                    {agent?.name ? `Integrações do ${agent.name}` : 'Novas Integrações do Agente'}
+                  </h1>
+                  <div className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    2700+ Apps
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {agent?.name ? 'Conecte aplicativos para aprimorar as capacidades do seu agente' : 'Conecte seus aplicativos e serviços favoritos'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {showAgentSelector && (
+                <AgentSelector
+                  selectedAgentId={currentAgentId}
+                  onAgentSelect={handleAgentSelect}
+                  isSunaAgent={agent?.metadata?.is_suna_default}
+                />
+              )}
+              <div className="relative w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground opacity-60" />
+                <input
+                  placeholder="Buscar aplicativos..."
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full h-9 pl-9 pr-9 text-sm border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground/60"
+                />
+                {search && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearSearch}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+                  >
+                    <X className="h-3 w-3 opacity-60" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-          {showAgentSelector && (
-            <AgentSelector
-              selectedAgentId={currentAgentId}
-              onAgentSelect={handleAgentSelect}
-              isSunaAgent={agent?.metadata?.is_suna_default}
-            />
-          )}
-        </div>
-        <div className="relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search apps..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-11 w-full bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 rounded-xl transition-all"
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearSearch}
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          )}
         </div>
       </div>
       
@@ -286,17 +287,13 @@ export const PipedreamRegistry: React.FC<PipedreamRegistryProps> = ({
             )}
             {connectedApps.length > 0 && (!showAgentSelector || currentAgentId) && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="border border-green-200 dark:border-green-900 h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                    <Star className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-md font-semibold text-foreground">
-                    Your Apps
-                    </h2>
-                  </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h2 className="text-sm font-medium text-foreground">
+                    Seus Aplicativos
+                  </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
                   {connectedApps.map((app) => (
                     <AppCard 
                       key={`${app.name_slug}-${currentAgentId || 'default'}`} 
@@ -317,21 +314,17 @@ export const PipedreamRegistry: React.FC<PipedreamRegistryProps> = ({
             {(!showAgentSelector || currentAgentId) && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 border border-orange-200 dark:border-orange-900 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-md font-semibold text-foreground">
-                        {search.trim() ? 'Search Results' : showAllApps ? 'All Apps' : 'Popular Apps'}
-                      </h2>
-                    </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <h2 className="text-sm font-medium text-foreground">
+                      {search.trim() ? 'Resultados da Busca' : showAllApps ? 'Todos os Aplicativos' : 'Aplicativos Populares'}
+                    </h2>
                   </div>
                 </div>
                 {isLoading ? (
                   <AppsGridSkeleton count={8} />
                 ) : displayApps.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
                     {displayApps.map((app) => (
                       <AppCard 
                         key={`${app.name_slug}-${currentAgentId || 'default'}`} 
@@ -351,12 +344,12 @@ export const PipedreamRegistry: React.FC<PipedreamRegistryProps> = ({
                   <div className="text-center flex flex-col items-center justify-center py-12">
                     <div className="text-6xl mb-4">🔍</div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                      No apps found
+                      Nenhum aplicativo encontrado
                     </h3>
                     <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
                       {search.trim() 
-                        ? `No apps match "${search}". Try a different search term.`
-                        : 'No apps available at the moment.'
+                        ? `Nenhum aplicativo corresponde a "${search}". Tente um termo de busca diferente.`
+                        : 'Nenhum aplicativo disponível no momento.'
                       }
                     </p>
                     {search.trim() && (
@@ -367,7 +360,7 @@ export const PipedreamRegistry: React.FC<PipedreamRegistryProps> = ({
                         className="flex items-center gap-2"
                       >
                         <Filter className="h-4 w-4" />
-                        Clear Search
+                        Limpar Busca
                       </Button>
                     )}
                   </div>

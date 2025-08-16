@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { DataTable, DataTableColumn } from '@/components/ui/data-table';
-import { Switch } from '@/components/ui/switch';
 import { 
   AlertCircle, 
   Settings,
@@ -25,7 +22,6 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
-  ExternalLink
 } from 'lucide-react';
 import { usePipedreamProfiles, useCreatePipedreamProfile, useUpdatePipedreamProfile, useDeletePipedreamProfile, useConnectPipedreamProfile } from '@/hooks/react-query/pipedream/use-pipedream-profiles';
 import { usePipedreamApps, usePipedreamAppIcon } from '@/hooks/react-query/pipedream/use-pipedream';
@@ -78,7 +74,6 @@ interface AppTableProps {
   onProfileDelete: (profile: PipedreamProfile) => void;
   onProfileConnect: (profile: PipedreamProfile) => void;
   isUpdating?: string;
-  isDeleting?: string;
   isConnecting?: string;
   allAppsData?: any;
 }
@@ -93,7 +88,6 @@ const AppTable: React.FC<AppTableProps> = ({
   onProfileDelete,
   onProfileConnect,
   isUpdating,
-  isDeleting,
   isConnecting,
   allAppsData
 }) => {
@@ -177,10 +171,10 @@ const AppTable: React.FC<AppTableProps> = ({
     setEditName(profile.profile_name);
   };
 
-  const handleSaveEdit = async (profile: PipedreamProfile) => {
+  const handleSaveEdit = (profile: PipedreamProfile) => {
     if (!editName.trim()) return;
     
-    await onProfileUpdate(profile, { profile_name: editName.trim() });
+    onProfileUpdate(profile, { profile_name: editName.trim() });
     setEditingProfile(null);
     setEditName('');
   };
@@ -190,174 +184,17 @@ const AppTable: React.FC<AppTableProps> = ({
     setEditName('');
   };
 
-  const columns: DataTableColumn<PipedreamProfile>[] = [
-    {
-      id: 'name',
-      header: t('credentials.profileName'),
-      width: 'w-1/3',
-      cell: (profile) => (
-        <div className="flex items-center gap-2">
-          {editingProfile === profile.profile_id ? (
-            <div className="flex items-center gap-2 w-full">
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveEdit(profile);
-                  if (e.key === 'Escape') handleCancelEdit();
-                }}
-                className="h-8 text-sm"
-                autoFocus
-              />
-              <Button
-                size="sm"
-                onClick={() => handleSaveEdit(profile)}
-                disabled={isUpdating === profile.profile_id}
-                className="h-8 px-2"
-              >
-                {isUpdating === profile.profile_id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-3 w-3" />
-                )}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCancelEdit}
-                className="h-8 px-2"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <span className="font-medium">{profile.profile_name}</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'status',
-      header: t('credentials.status'),
-      width: 'w-1/4',
-      cell: (profile) => (
-        <div className="flex items-center gap-2">
-          {profile.is_connected ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              {t('credentials.connected')}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-destructive" />
-              {t('credentials.disconnected')}
-            </div>
-          )}
-          {profile.is_default && (
-            <Badge variant="outline" className="text-xs">
-              {t('credentials.default')}
-            </Badge>
-          )}
-          {!profile.is_active && (
-            <Badge variant="outline" className="text-xs">
-              {t('credentials.inactive')}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'actions',
-      header: t('credentials.actions'),
-      width: 'w-1/3',
-      headerClassName: 'text-right',
-      className: 'text-right',
-      cell: (profile) => (
-        <div className="flex items-center justify-end gap-2">
-          {!profile.is_connected && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onProfileConnect(profile)}
-              disabled={isConnecting === profile.profile_id}
-              className="h-8 px-2 text-xs"
-            >
-              {isConnecting === profile.profile_id ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Link className="h-3 w-3" />
-              )}
-              {t('credentials.connect')}
-            </Button>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(profile)}>
-                <Edit className="h-4 w-4" />
-                {t('credentials.editName')}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onProfileUpdate(profile, { is_default: !profile.is_default })}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {profile.is_default ? t('credentials.removeDefault') : t('credentials.setAsDefault')}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onProfileUpdate(profile, { is_active: !profile.is_active })}
-              >
-                {profile.is_active ? (
-                  <>
-                    <XCircle className="h-4 w-4" />
-                    {t('credentials.deactivate')}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    {t('credentials.activate')}
-                  </>
-                )}
-              </DropdownMenuItem>
-              {profile.is_connected && (
-                <DropdownMenuItem onClick={() => onProfileConnect(profile)}>
-                  <RefreshCw className="h-4 w-4" />
-                  {t('credentials.reconnect')}
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => setShowDeleteDialog(profile)}
-                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-                {t('credentials.delete')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
-    },
-  ];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-all duration-200 overflow-hidden">
+      <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-muted border flex items-center justify-center overflow-hidden">
+          <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0">
             {(appImage || iconData?.icon_url) ? (
               <img
                 src={appImage || iconData?.icon_url || ''}
                 alt={appName}
-                className="h-5 w-5 object-cover"
+                className="h-5 w-5 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -367,15 +204,15 @@ const AppTable: React.FC<AppTableProps> = ({
             ) : null}
             <span className={cn(
               "text-sm font-semibold text-muted-foreground",
-              (appImage || iconData?.icon_url) ? "hidden" : "block"
+              (appImage || iconData?.icon_url) ? "hidden" : "flex items-center justify-center h-5 w-5"
             )}>
               {correctedAppName.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
-            <h3 className="font-semibold text-sm">{correctedAppName}</h3>
+            <h3 className="text-sm font-medium">{correctedAppName}</h3>
             <p className="text-xs text-muted-foreground">
-              {profiles.length} {profiles.length === 1 ? t('credentials.profile') : t('credentials.profiles')}
+              {profiles.length} {profiles.length === 1 ? 'perfil' : 'perfis'} • {profiles.filter(p => p.is_connected).length} {profiles.filter(p => p.is_connected).length === 1 ? 'conectado' : 'conectados'}
             </p>
           </div>
         </div>
@@ -425,23 +262,166 @@ const AppTable: React.FC<AppTableProps> = ({
             <>
               <Button
                 size="sm"
-                variant="link"
                 onClick={() => onConnect(mockPipedreamApp)}
+                className="h-8 px-3 bg-black dark:bg-white hover:bg-black/90 dark:hover:bg-white/90 text-white dark:text-black rounded-md transition-all duration-200"
               >
-                <Plus className="h-3 w-3" />
-                {t('credentials.newProfile')}
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                <span className="text-xs font-medium">Novo Perfil</span>
               </Button>
             </>
           )}
         </div>
       </div>
       
-      <DataTable
-        columns={columns}
-        data={profiles}
-        emptyMessage={`No ${correctedAppName} profiles found`}
-        className="bg-card border rounded-lg"
-      />
+      <div className="border-t border-black/6 dark:border-white/8">
+        {profiles.map((profile, index) => (
+          <div key={profile.profile_id} className={cn(
+            "px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors duration-200",
+            index !== profiles.length - 1 && "border-b border-black/6 dark:border-white/8"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {editingProfile === profile.profile_id ? (
+                    <div className="flex items-center gap-2 w-full max-w-xs">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(profile);
+                          if (e.key === 'Escape') handleCancelEdit();
+                        }}
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveEdit(profile)}
+                        disabled={isUpdating === profile.profile_id}
+                        className="h-8 px-2"
+                      >
+                        {isUpdating === profile.profile_id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        className="h-8 px-2"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-medium text-sm truncate">{profile.profile_name}</span>
+                      {profile.is_default && (
+                        <Badge variant="outline" className="text-xs h-5 px-2">
+                          Padrão
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {profile.is_connected ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Conectado</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="text-xs font-medium text-red-600 dark:text-red-400">Desconectado</span>
+                    </div>
+                  )}
+                  {!profile.is_active && (
+                    <Badge variant="secondary" className="text-xs h-5 px-2">
+                      Inativo
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-4">
+                {!profile.is_connected && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onProfileConnect(profile)}
+                    disabled={isConnecting === profile.profile_id}
+                    className="h-8 px-3 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground"
+                  >
+                    {isConnecting === profile.profile_id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <Link className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    <span className="text-xs font-medium">Conectar</span>
+                  </Button>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors"
+                    >
+                      <Settings className="h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(profile)}>
+                      <Edit className="h-3.5 w-3.5 mr-2" />
+                      Editar Nome
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onProfileUpdate(profile, { is_default: !profile.is_default })}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                      {profile.is_default ? 'Remover Padrão' : 'Definir como Padrão'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onProfileUpdate(profile, { is_active: !profile.is_active })}
+                    >
+                      {profile.is_active ? (
+                        <>
+                          <XCircle className="h-3.5 w-3.5 mr-2" />
+                          Desativar
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                          Ativar
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    {profile.is_connected && (
+                      <DropdownMenuItem onClick={() => onProfileConnect(profile)}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                        Reconectar
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setShowDeleteDialog(profile)}
+                      className="text-destructive hover:bg-red-500/10 focus:bg-red-500/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2 text-destructive" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <AlertDialog open={!!showDeleteDialog} onOpenChange={(open) => !open && setShowDeleteDialog(null)}>
         <AlertDialogContent>
@@ -485,7 +465,6 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
   }, [selectedApp, showConnector]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -509,10 +488,10 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
     console.log('Set showConnector to true');
   };
 
-  const handleConnectionComplete = (profileId: string, selectedTools: string[], appName: string, appSlug: string) => {
+  const handleConnectionComplete = () => {
     setShowConnector(false);
     setSelectedApp(null);
-    toast.success(`Connected to ${correctAppName(appName)}!`);
+    toast.success(`Conectado com sucesso!`);
     queryClient.invalidateQueries({ queryKey: pipedreamKeys.profiles.all() });
   };
 
@@ -532,14 +511,11 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
   };
 
   const handleProfileDelete = async (profile: PipedreamProfile) => {
-    setIsDeleting(profile.profile_id);
     try {
       await deleteProfile.mutateAsync(profile.profile_id);
       toast.success(t('credentials.profileDeletedSuccessfully'));
     } catch (error) {
       console.error('Error deleting profile:', error);
-    } finally {
-      setIsDeleting(null);
     }
   };
 
@@ -641,27 +617,25 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
           <PipedreamAccountStatus />
         </div>
         
-        <Card className="border-dashed py-0 gap-0">
-          <CardContent className="px-8 pt-8 pb-10 text-center">
-            <div className="space-y-6">
-              <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
-                <User className="h-6 w-6 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-semibold text-foreground">{t('credentials.noCredentialProfilesYet')}</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {t('credentials.connectYourFavoriteApps')}
-                </p>
-              </div>
-              <Button 
-                onClick={() => setShowAppBrowser(true)}
-              >
-                <Plus className="h-4 w-4" />
-                {t('credentials.connectApp')}
-              </Button>
+        <div className="rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border-2 border-dashed border-black/10 dark:border-white/10 px-8 pt-8 pb-10">
+          <div className="space-y-6 text-center">
+            <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
+              <User className="h-6 w-6 text-primary" />
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-foreground">{t('credentials.noCredentialProfilesYet')}</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                {t('credentials.connectYourFavoriteApps')}
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowAppBrowser(true)}
+            >
+              <Plus className="h-4 w-4" />
+              {t('credentials.connectApp')}
+            </Button>
+          </div>
+        </div>
         <Dialog open={showAppBrowser} onOpenChange={setShowAppBrowser}>
           <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="sr-only">
@@ -698,54 +672,55 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
         <Button
           onClick={() => setShowAppBrowser(true)}
           size="sm"
+          className="h-9 px-4 bg-black dark:bg-white hover:bg-black/90 dark:hover:bg-white/90 text-white dark:text-black rounded-md transition-all duration-200"
         >
-          <Plus className="h-4 w-4" />
-          {t('credentials.connectNewApp')}
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          <span className="text-sm font-medium">Conectar Novo Aplicativo</span>
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="relative max-w-md">
+        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-60" />
         <Input
-          placeholder={t('credentials.searchAppsAndProfiles')}
+          placeholder="Buscar aplicativos e perfis..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 h-12 rounded-xl bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all"
+          className="pl-10 pr-10 h-10 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 focus:border-black/10 dark:focus:border-white/12 transition-all"
         />
         {searchQuery && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSearchQuery('')}
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
+            className="absolute right-1.5 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
           >
-            <X className="h-3 w-3" />
+            <X className="h-3.5 w-3.5 opacity-60" />
           </Button>
         )}
       </div>
       {Object.keys(filteredProfilesByApp).length === 0 ? (
-        <Card className="border-dashed py-0 gap-0">
-          <CardContent className="px-8 pt-8 pb-10 text-center">
-            <div className="space-y-6">
-              <div className="p-3 rounded-full bg-muted/50 w-fit mx-auto">
-                <Search className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-semibold text-foreground">{t('credentials.noResultsFound')}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t('credentials.tryAdjustingSearch')}
-                </p>
-              </div>
-              <Button 
-                onClick={() => setSearchQuery('')}
-                variant="outline"
-                size="sm"
-              >
-                {t('credentials.clearSearch')}
-              </Button>
+        <div className="p-12 rounded-2xl bg-gradient-to-br from-gray-50/50 to-white/50 dark:from-gray-900/50 dark:to-gray-850/50 border border-gray-200/50 dark:border-gray-800/50 text-center">
+          <div className="space-y-6">
+            <div className="w-14 h-14 rounded-xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mx-auto">
+              <Search className="h-6 w-6 text-amber-600 dark:text-amber-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Nenhum resultado encontrado</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Tente buscar com outros termos
+              </p>
+            </div>
+            <Button 
+              onClick={() => setSearchQuery('')}
+              variant="outline"
+              size="sm"
+              className="h-9 px-4 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+            >
+              <X className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-sm font-medium">Limpar Busca</span>
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(filteredProfilesByApp)
@@ -773,7 +748,6 @@ export const PipedreamConnectionsSection: React.FC<PipedreamConnectionsSectionPr
                   onProfileDelete={handleProfileDelete}
                   onProfileConnect={handleProfileConnect}
                   isUpdating={isUpdating}
-                  isDeleting={isDeleting}
                   isConnecting={isConnecting}
                   allAppsData={allAppsData}
                 />

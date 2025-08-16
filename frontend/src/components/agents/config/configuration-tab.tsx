@@ -118,12 +118,12 @@ export function ConfigurationTab({
           >
             <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
               <div className="flex items-center gap-3">
-                <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                  <Settings className="h-4 w-4" />
+                <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Prompt do Sistema</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Defina o comportamento e objetivos do agente</p>
+                  <h4 className="text-sm font-medium text-foreground">Prompt do Sistema</h4>
+                  <p className="text-xs text-muted-foreground">Defina o comportamento e objetivos do agente</p>
                 </div>
               </div>
             </AccordionTrigger>
@@ -145,12 +145,12 @@ export function ConfigurationTab({
           >
             <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
               <div className="flex items-center gap-3">
-                <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                  <Wrench className="h-4 w-4" />
+                <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Ferramentas Padrão</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Configure as ferramentas padrão do agentpress</p>
+                  <h4 className="text-sm font-medium text-foreground">Ferramentas Padrão</h4>
+                  <p className="text-xs text-muted-foreground">Configure as ferramentas padrão do agentpress</p>
                 </div>
               </div>
             </AccordionTrigger>
@@ -170,12 +170,12 @@ export function ConfigurationTab({
         >
           <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
             <div className="flex items-center gap-3">
-              <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                <Server className="h-4 w-4" />
+              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <Server className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Integrações</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Conecte serviços externos via MCPs</p>
+                <h4 className="text-sm font-medium text-foreground">Integrações</h4>
+                <p className="text-xs text-muted-foreground">Conecte serviços externos via MCPs</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -202,12 +202,12 @@ export function ConfigurationTab({
         >
           <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
             <div className="flex items-center gap-3">
-              <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                <BookOpen className="h-4 w-4" />
+              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Base de Conhecimento</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Envie e gerencie conhecimento para o agente</p>
+                <h4 className="text-sm font-medium text-foreground">Base de Conhecimento</h4>
+                <p className="text-xs text-muted-foreground">Envie e gerencie conhecimento para o agente</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -224,12 +224,12 @@ export function ConfigurationTab({
         >
           <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
             <div className="flex items-center gap-3">
-              <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                <Workflow className="h-4 w-4" />
+              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <Workflow className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Fluxos de Trabalho</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Automatize processos complexos</p>
+                <h4 className="text-sm font-medium text-foreground">Fluxos de Trabalho</h4>
+                <p className="text-xs text-muted-foreground">Automatize processos complexos</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -246,12 +246,12 @@ export function ConfigurationTab({
         >
           <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
             <div className="flex items-center gap-3">
-              <div className="bg-muted rounded-lg h-9 w-9 flex items-center justify-center">
-                <Zap className="h-4 w-4" />
+              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+                <Zap className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">Gatilhos</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Configure execuções automáticas do agente</p>
+                <h4 className="text-sm font-medium text-foreground">Gatilhos</h4>
+                <p className="text-xs text-muted-foreground">Configure execuções automáticas do agente</p>
               </div>
             </div>
           </AccordionTrigger>

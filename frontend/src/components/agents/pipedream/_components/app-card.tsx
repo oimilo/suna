@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   DropdownMenu, 
@@ -8,14 +7,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Plus, Settings, Zap, Bot, ChevronDown, Star, CheckCircle, Eye, ExternalLink } from 'lucide-react';
+import { Plus, Settings, Zap, Bot, ChevronDown, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getCategoryEmoji } from '../utils';
 import type { AppCardProps } from '../types';
 import { usePipedreamProfiles } from '@/hooks/react-query/pipedream/use-pipedream-profiles';
 import { usePipedreamAppIcon } from '@/hooks/react-query/pipedream/use-pipedream';
 import { usePipedreamAppTools } from '@/hooks/react-query/pipedream/use-pipedream';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -86,74 +84,72 @@ export const AppCard: React.FC<AppCardProps> = ({
   const hasAgentTools = agentProfiles.length > 0;
 
   return (
-    <Card 
-      className={cn(
-        "group relative overflow-hidden transition-all p-0 duration-300",
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <CardContent className="p-4 h-full flex flex-col">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="flex-shrink-0 relative">
-            <div className={cn(
-              "h-8 w-8 rounded-lg border bg-muted flex items-center justify-center text-primary font-semibold overflow-hidden transition-all duration-300"
-            )}>
-              {(app.img_src || iconData?.icon_url) ? (
-                <img
-                  src={app.img_src || iconData?.icon_url || ''}
-                  alt={app.name}
-                  className="w-5 h-5 object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : null}
-              <span className={cn(
-                "font-bold text-lg",
-                (app.img_src || iconData?.icon_url) ? "hidden" : "block"
-              )}>
-                {app.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            {isConnected && (
-              <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center">
-                <CheckCircle className="h-2 w-2 text-white" />
+    <>
+      <div 
+        className={cn(
+          "group p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200",
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-md bg-transparent opacity-60 shrink-0 relative">
+            {(app.img_src || iconData?.icon_url) ? (
+              <img
+                src={app.img_src || iconData?.icon_url || ''}
+                alt={app.name}
+                className="h-5 w-5 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : (
+              <div className="h-5 w-5 rounded flex items-center justify-center bg-black/5 dark:bg-white/5 hidden">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {app.name.charAt(0).toUpperCase()}
+                </span>
               </div>
+            )}
+            <span className={cn(
+              "text-xs font-semibold text-muted-foreground",
+              (app.img_src || iconData?.icon_url) ? "hidden" : "block"
+            )}>
+              {app.name.charAt(0).toUpperCase()}
+            </span>
+            {isConnected && (
+              <div className="absolute -top-2 -right-2 h-3 w-3 bg-emerald-500 rounded-full border-2 border-background" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h3 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors">
-                {app.name}
-              </h3>
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <h4 className="text-sm font-medium truncate mb-1">
+              {app.name}
+            </h4>
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {app.description}
             </p>
           </div>
         </div>
 
         {hasAgentTools && (
-          <div className="mb-3">
-            <div className="rounded-xl bg-muted py-2 border border">
+          <div className="mt-3">
+            <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="ghost" className="h-auto w-full justify-between p-0 hover:bg-transparent">
                     <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-primary" />
+                      <Bot className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                       <div className="text-left">
-                        <div className="text-sm font-medium text-foreground">
-                          {agentProfiles.length} {agentProfiles.length === 1 ? 'Profile' : 'Profiles'}
+                        <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          {agentProfiles.length} {agentProfiles.length === 1 ? 'Perfil' : 'Perfis'}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {totalToolsCount} tools configured
+                        <div className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
+                          {totalToolsCount} ferramentas configuradas
                         </div>
                       </div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-full min-w-[200px]">
@@ -179,10 +175,8 @@ export const AppCard: React.FC<AppCardProps> = ({
             </div>
           </div>
         )}
-
-        <div className="flex-1" />
         
-        <div className="mt-auto">
+        <div className="mt-3">
           <Button
             size="sm"
             onClick={handleConnectClick}
@@ -191,34 +185,33 @@ export const AppCard: React.FC<AppCardProps> = ({
           >
             {mode === 'simple' ? (
               <>
-                <Plus className="h-4 w-4" />
-                Connect
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Conectar
               </>
             ) : mode === 'profile-only' ? (
               <>
-                <Plus className="h-4 w-4" />
-                {isConnected ? 'Add Profile' : 'Connect'}
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                {isConnected ? 'Adicionar Perfil' : 'Conectar'}
               </>
             ) : (
               <>
                 {isConnected ? (
                   <>
-                    <Zap className="h-4 w-4" />
-                    Add Tools
+                    <Zap className="h-3.5 w-3.5 mr-1.5" />
+                    Adicionar Ferramentas
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4" />
-                    Connect
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Conectar
                   </>
                 )}
               </>
             )}
           </Button>
         </div>
-      </CardContent>
-
-      {/* Preview Dialog */}
+      </div>
+      
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="overflow-hidden max-w-4xl p-0 h-[600px]">
           <DialogTitle className='sr-only'>{app.name} Tools</DialogTitle>
@@ -316,29 +309,25 @@ export const AppCard: React.FC<AppCardProps> = ({
                     </div>
                   ) : tools.length > 0 ? (
                     <div className="space-y-2">
-                      {tools.map((tool, index) => (
-                        <Card 
+                      {tools.map((tool) => (
+                        <div 
                           key={tool.name} 
-                          className="group p-4 rounded-xl transition-all duration-200"
+                          className="group p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200"
                         >
-                          <CardHeader className='p-0'>
-                            <CardTitle>
-                              <div className='flex items-center gap-2'>
-                                <div className=" flex-shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <Zap className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className='flex flex-col items-start'>
-                                  <p className="text-sm font-medium text-foreground">
-                                    {tool.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2 font-normal">
-                                    {tool.description}
-                                  </p>
-                                </div>
-                              </div>
-                            </CardTitle>
-                          </CardHeader>
-                        </Card>
+                          <div className='flex items-center gap-2'>
+                            <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Zap className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className='flex flex-col items-start'>
+                              <p className="text-sm font-medium text-foreground">
+                                {tool.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground line-clamp-2 font-normal">
+                                {tool.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -358,6 +347,6 @@ export const AppCard: React.FC<AppCardProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 };

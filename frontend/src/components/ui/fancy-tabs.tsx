@@ -34,7 +34,7 @@ const TabButton = ({ value, isActive, onClick, children }: TabButtonProps) => {
     <button
       onClick={onClick}
       className={cn(
-        "relative flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
+        "relative flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-300 ease-out",
         !isActive && (isDark ? "hover:bg-white/8" : "hover:bg-muted/60"),
         isActive 
           ? isDark ? "text-white" : "text-foreground bg-background border border-border/50"
@@ -53,7 +53,7 @@ const TabButton = ({ value, isActive, onClick, children }: TabButtonProps) => {
     >
       {isActive && isDark && (
         <div 
-          className="absolute inset-0 rounded-2xl opacity-40 blur-sm"
+          className="absolute inset-0 rounded-lg opacity-40 blur-sm"
           style={{
             background: 'linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1))',
             zIndex: -1
@@ -72,7 +72,7 @@ export const FancyTabs = ({ tabs, activeTab, onTabChange, className }: FancyTabs
   return (
     <div 
       className={cn(
-        "overflow-hidden grid w-full max-w-lg mx-auto rounded-3xl p-1.5",
+        "overflow-hidden grid w-full max-w-lg mx-auto rounded-xl p-1.5",
         isDark ? "border-white/5" : "border-border/20 bg-muted",
         className
       )}

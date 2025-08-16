@@ -14,7 +14,6 @@ import type { MarketplaceTemplate } from '@/components/agents/installation/types
 import { getAgentAvatar } from '../../../lib/utils/get-agent-style';
 import { AgentsParams } from '@/hooks/react-query/agents/utils';
 
-import { AgentsPageHeader } from '@/components/agents/custom-agents-page/header';
 import { TabsNavigation } from '@/components/agents/custom-agents-page/tabs-navigation';
 import { MyAgentsTab } from '@/components/agents/custom-agents-page/my-agents-tab';
 import { MarketplaceTab } from '@/components/agents/custom-agents-page/marketplace-tab';
@@ -465,10 +464,12 @@ export default function AgentsPage() {
     return (
       <div className="min-h-screen">
         <div className="container max-w-7xl mx-auto px-4 py-8">
-          <AgentsPageHeader />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 text-center">
+            Meus Agentes
+          </h1>
         </div>
         
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-black/6 dark:border-white/8">
           <div className="container max-w-7xl mx-auto px-4 py-4">
             <TabsNavigation activeTab={activeTab} onTabChange={handleTabChange} onCreateAgent={handleCreateNewAgent} />
           </div>
@@ -488,20 +489,14 @@ export default function AgentsPage() {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto max-w-7xl px-4 py-8">
-        <AgentsPageHeader />
-      </div>
-      <div className="sticky top-0 z-50 relative">
-        <div className="absolute inset-0 backdrop-blur-md" style={{
-          maskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)'
-        }}></div>
-        <div className="relative bg-gradient-to-b from-background/95 via-background/70 to-transparent">
-          <div className="container mx-auto max-w-7xl px-4 py-4">
-            <TabsNavigation activeTab={activeTab} onTabChange={handleTabChange} onCreateAgent={handleCreateNewAgent} />
-          </div>
+        <div className="flex flex-col space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-center">
+            Agentes
+          </h1>
+          <TabsNavigation activeTab={activeTab} onTabChange={handleTabChange} onCreateAgent={handleCreateNewAgent} />
         </div>
       </div>
-      <div className="container mx-auto max-w-7xl px-4 py-2">
+      <div className="container mx-auto max-w-7xl px-4">
         {/* Fixed height container to prevent layout shifts on tab change */}
         <div className="w-full min-h-[calc(100vh-300px)]">
           {activeTab === "my-agents" && (

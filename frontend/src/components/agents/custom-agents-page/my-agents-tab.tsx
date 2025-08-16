@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Filter, Globe, ChevronDown, Users } from 'lucide-react';
+import { Filter, Globe, ChevronDown, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import {
@@ -15,7 +15,6 @@ import { EmptyState } from '../empty-state';
 import { AgentsGrid } from '../agents-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
-import { Badge } from '@/components/ui/badge';
 import { AgentCard } from './agent-card';
 
 type AgentFilter = 'all' | 'templates';
@@ -158,8 +157,8 @@ export const MyAgentsTab = ({
   };
 
   return (
-    <div className="space-y-6 mt-8 flex flex-col min-h-full">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+    <div className="space-y-6 flex flex-col min-h-full">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <SearchBar
           placeholder={t('agents.searchYourAgents')}
           value={agentsSearchQuery}
@@ -167,38 +166,38 @@ export const MyAgentsTab = ({
         />
         
         <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-xl">
-                  <CurrentFilterIcon className="h-4 w-4 mr-2" />
-                  {currentFilter?.label}
-                  <Badge variant="outline">
-                    {getCountForFilter(agentFilter)}
-                  </Badge>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {filterOptions.map((filter) => {
-                  const Icon = filter.icon;
-                  const count = getCountForFilter(filter.value);
-                  return (
-                    <DropdownMenuItem
-                      key={filter.value}
-                      onClick={() => setAgentFilter(filter.value as AgentFilter)}
-                      className="cursor-pointer"
-                    >
-                      <Icon className="h-4 w-4" />
-                      {filter.label}
-                      <Badge variant="outline" className="ml-auto">
-                        {count}
-                      </Badge>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-10 px-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]">
+                <CurrentFilterIcon className="h-4 w-4 mr-2 opacity-60" />
+                <span className="text-sm">{currentFilter?.label}</span>
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-medium">
+                  {getCountForFilter(agentFilter)}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {filterOptions.map((filter) => {
+                const Icon = filter.icon;
+                const count = getCountForFilter(filter.value);
+                return (
+                  <DropdownMenuItem
+                    key={filter.value}
+                    onClick={() => setAgentFilter(filter.value as AgentFilter)}
+                    className="cursor-pointer"
+                  >
+                    <Icon className="h-4 w-4 opacity-60" />
+                    {filter.label}
+                    <span className="ml-auto px-2 py-0.5 rounded text-xs text-muted-foreground">
+                      {count}
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex-1">

@@ -98,7 +98,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRANDING.name} - Open Source Generalist AI Agent`,
+    title: `${BRANDING.name} - Agente de IA para automações por linguagem natural`,
     description: BRANDING.description,
     creator: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,
     site: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,

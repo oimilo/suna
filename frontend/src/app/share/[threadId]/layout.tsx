@@ -5,14 +5,14 @@ import { BRANDING } from '@/lib/branding';
 export async function generateMetadata({ params }): Promise<Metadata> {
   const { threadId } = await params;
   const fallbackMetaData = {
-    title: `Shared Conversation | ${BRANDING.company} ${BRANDING.name}`,
-    description: `Replay this Agent conversation on ${BRANDING.company} ${BRANDING.name}`,
+    title: `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`,
+    description: `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`,
     alternates: {
       canonical: `${process.env.NEXT_PUBLIC_URL}/share/${threadId}`,
     },
     openGraph: {
-      title: `Shared Conversation | ${BRANDING.company} ${BRANDING.name}`,
-      description: `Replay this Agent conversation on ${BRANDING.company} ${BRANDING.name}`,
+      title: `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`,
+      description: `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`,
       images: [`${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`],
     },
   };
@@ -30,10 +30,10 @@ export async function generateMetadata({ params }): Promise<Metadata> {
       process.env.NEXT_PUBLIC_ENV_MODE === 'LOCAL' ||
       process.env.NEXT_PUBLIC_ENV_MODE === 'local';
 
-    const title = projectData.name || `Shared Conversation | ${BRANDING.company} ${BRANDING.name}`;
+    const title = projectData.name || `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`;
     const description =
       projectData.description ||
-      `Replay this Agent conversation on ${BRANDING.company} ${BRANDING.name}`;
+      `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`;
     const ogImage = isDevelopment
       ? `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`
       : `${process.env.NEXT_PUBLIC_URL}/api/share-page/og-image?title=${projectData.name}`;

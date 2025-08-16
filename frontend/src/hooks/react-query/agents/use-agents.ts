@@ -55,9 +55,9 @@ export const useCreateNewAgent = () => {
       const { avatar, avatar_color } = generateRandomAvatar();
       
       const defaultAgentData = {
-        name: 'New Agent',
+        name: 'Novo Agente',
         description: '',
-        system_prompt: 'You are a helpful assistant. Provide clear, accurate, and helpful responses to user queries.',
+        system_prompt: 'Você é um assistente útil. Forneça respostas claras, precisas e úteis às consultas do usuário.',
         avatar,
         avatar_color,
         configured_mcps: [],

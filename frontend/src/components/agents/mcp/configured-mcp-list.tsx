@@ -71,7 +71,7 @@ const MCPConfigurationItem: React.FC<{
   const hasCredentialProfile = !!profileId && !!selectedProfile;
 
   return (
-    <Card className="p-3">
+    <div className="p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <MCPLogo mcp={mcp} />
@@ -80,7 +80,7 @@ const MCPConfigurationItem: React.FC<{
               <div className="font-medium text-sm truncate">{mcp.name}</div>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>{mcp.enabledTools?.length || 0} tools enabled</span>
+              <span>{mcp.enabledTools?.length || 0} ferramentas ativas</span>
               {hasCredentialProfile && (
                 <div className="flex items-center gap-1">
                   <Key className="h-3 w-3 text-green-600" />
@@ -113,7 +113,7 @@ const MCPConfigurationItem: React.FC<{
           </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 

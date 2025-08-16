@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   creator: `${BRANDING.company} AI Corp`,
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'pt_BR',
     url: siteConfig.url,
     title: siteConfig.name,
     description: siteConfig.description,
