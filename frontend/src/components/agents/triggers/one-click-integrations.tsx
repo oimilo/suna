@@ -123,6 +123,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
   const scheduleProvider: TriggerProvider = {
     provider_id: 'schedule',
     name: 'Agendamento',
+    description: 'Configure agendamentos automáticos para executar seu agente ou fluxos de trabalho',
     trigger_type: 'schedule',
     webhook_enabled: true,
     config_schema: {}

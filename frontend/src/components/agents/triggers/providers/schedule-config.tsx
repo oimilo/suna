@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -104,7 +103,6 @@ const MONTHS = [
 ];
 
 export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps> = ({
-  provider,
   config,
   onChange,
   errors,
@@ -181,7 +179,6 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
       const { hour, minute } = oneTimeTime;
       const day = selectedDate.getDate();
       const month = selectedDate.getMonth() + 1;
-      const year = selectedDate.getFullYear();
       return `${minute} ${hour} ${day} ${month} *`;
     }
     return config.cron_expression || '';
@@ -298,18 +295,19 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
 
   return (
     <div className="space-y-6">
-      <Card className="border-none bg-transparent shadow-none p-0">
-        <CardHeader className='p-0'>
-          <CardDescription>
-            Configure quando seu agente deve ser acionado automaticamente. Escolha entre presets rápidos, agendamentos recorrentes ou configure expressões cron avançadas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 pt-4">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 p-4 mb-6">
+        <p className="text-sm text-muted-foreground">
+          Configure quando seu agente deve ser acionado automaticamente. Escolha entre presets rápidos, agendamentos recorrentes ou configure expressões cron avançadas.
+        </p>
+      </div>
+      <div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 pr-2">
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <Target className="h-4 w-4" />
+                  <div className="p-1.5 rounded-md bg-black/[0.03] dark:bg-white/[0.05]">
+                    <Target className="h-3.5 w-3.5 opacity-70" />
+                  </div>
                   Detalhes do Gatilho
                 </h3>
                 <div className="space-y-4">
@@ -353,7 +351,9 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
 
               <div>
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
+                  <div className="p-1.5 rounded-md bg-black/[0.03] dark:bg-white/[0.05]">
+                    <Zap className="h-3.5 w-3.5 opacity-70" />
+                  </div>
                   Configuração de Execução
                 </h3>
                 <div className="space-y-4">
@@ -460,7 +460,9 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
+                  <div className="p-1.5 rounded-md bg-black/[0.03] dark:bg-white/[0.05]">
+                    <Clock className="h-3.5 w-3.5 opacity-70" />
+                  </div>
                   Configuração de Agendamento
                 </h3>
                 
@@ -500,8 +502,9 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
                           timeZone: config.timezone, 
                           hour12: true,
                           weekday: 'short',
-                          month: 'short',
                           day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
@@ -510,22 +513,22 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
                   </div>
 
                   <Tabs value={scheduleType} onValueChange={(value) => setScheduleType(value as ScheduleType)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
-                      <TabsTrigger value="quick" className="flex items-center gap-1 px-2" title="Agendamentos rápidos pré-definidos">
-                        <Zap className="h-4 w-4" />
-                        <span className="hidden sm:inline">Rápido</span>
+                    <TabsList className="grid w-full grid-cols-4 bg-black/[0.02] dark:bg-white/[0.03] p-1">
+                      <TabsTrigger value="quick" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm" title="Agendamentos rápidos pré-definidos">
+                        <Zap className="h-3.5 w-3.5" />
+                        <span>Rápido</span>
                       </TabsTrigger>
-                      <TabsTrigger value="recurring" className="flex items-center gap-1 px-2" title="Agendamento recorrente personalizado">
-                        <Repeat className="h-4 w-4" />
-                        <span className="hidden sm:inline">Recorrente</span>
+                      <TabsTrigger value="recurring" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm" title="Agendamento recorrente personalizado">
+                        <Repeat className="h-3.5 w-3.5" />
+                        <span>Recorrente</span>
                       </TabsTrigger>
-                      <TabsTrigger value="one-time" className="flex items-center gap-1 px-2" title="Executar apenas uma vez">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span className="hidden sm:inline">Única vez</span>
+                      <TabsTrigger value="one-time" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm" title="Executar apenas uma vez">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                        <span>Única vez</span>
                       </TabsTrigger>
-                      <TabsTrigger value="advanced" className="flex items-center gap-1 px-2" title="Expressão cron avançada">
-                        <Target className="h-4 w-4" />
-                        <span className="hidden sm:inline">Avançado</span>
+                      <TabsTrigger value="advanced" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm" title="Expressão cron avançada">
+                        <Target className="h-3.5 w-3.5" />
+                        <span>Avançado</span>
                       </TabsTrigger>
                     </TabsList>
 
@@ -536,24 +539,24 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
                             <h4 className="text-sm font-medium mb-3 capitalize">Agendamentos {category === 'frequent' ? 'Frequentes' : category === 'daily' ? 'Diários' : category === 'weekly' ? 'Semanais' : 'Mensais'}</h4>
                             <div className="grid grid-cols-1 gap-2">
                               {presets.map((preset) => (
-                                <Card 
+                                <div
                                   key={preset.cron}
                                   className={cn(
-                                    "p-0 cursor-pointer transition-colors hover:bg-accent",
-                                    selectedPreset === preset.cron && "ring-2 ring-primary bg-accent"
+                                    "p-3 rounded-lg cursor-pointer transition-all duration-200",
+                                    selectedPreset === preset.cron 
+                                      ? "bg-primary/10 border border-primary/20" 
+                                      : "bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-muted/30"
                                   )}
                                   onClick={() => handlePresetSelect(preset)}
                                 >
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="text-primary">{preset.icon}</div>
-                                      <div className="flex-1">
-                                        <div className="font-medium text-sm">{preset.name}</div>
-                                        <div className="text-xs text-muted-foreground">{preset.description}</div>
-                                      </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="opacity-60">{preset.icon}</div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">{preset.name}</div>
+                                      <div className="text-xs text-muted-foreground">{preset.description}</div>
                                     </div>
-                                  </CardContent>
-                                </Card>
+                                  </div>
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -759,26 +762,26 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
                             ✓ {getSchedulePreview()}
                           </p>
                         )}
-                        <Card className="mt-3 p-0 py-4">
-                          <CardContent>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Info className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">Formato Cron</span>
+                        <div className="mt-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <div className="flex items-start gap-2">
+                            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Formato Cron</span>
+                              <div className="text-sm text-amber-600/80 dark:text-amber-400/80 space-y-1 mt-2">
+                                <div>Formato: <code className="bg-amber-500/20 px-1 rounded text-xs">minuto hora dia mês dia-da-semana</code></div>
+                                <div>Exemplo: <code className="bg-amber-500/20 px-1 rounded text-xs">0 9 * * 1-5</code> = Dias úteis às 9h</div>
+                                <div>Use <code className="bg-amber-500/20 px-1 rounded text-xs">*</code> para qualquer valor, <code className="bg-amber-500/20 px-1 rounded text-xs">*/5</code> para cada 5 unidades</div>
+                              </div>
                             </div>
-                            <div className="text-sm text-muted-foreground space-y-1">
-                              <div>Formato: <code className="bg-muted px-1 rounded text-xs">minuto hora dia mês dia-da-semana</code></div>
-                              <div>Exemplo: <code className="bg-muted px-1 rounded text-xs">0 9 * * 1-5</code> = Dias úteis às 9h</div>
-                              <div>Use <code className="bg-muted px-1 rounded text-xs">*</code> para qualquer valor, <code className="bg-muted px-1 rounded text-xs">*/5</code> para cada 5 unidades</div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       </div>
                     </TabsContent>
                   </Tabs>
                   {config.cron_expression && (
-                    <div className="border rounded-lg p-4 bg-muted/30">
+                    <div className="rounded-lg p-4 bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
                       <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4" />
+                        <Info className="h-3.5 w-3.5 opacity-60" />
                         Previsão do Agendamento
                       </h4>
                       <div className="space-y-2">
@@ -801,8 +804,7 @@ export const ScheduleTriggerConfigForm: React.FC<ScheduleTriggerConfigFormProps>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 };

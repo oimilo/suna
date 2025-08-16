@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { TriggerProvider, TriggerConfiguration, ScheduleTriggerConfig } from './types';
 import { ScheduleTriggerConfigForm } from './providers/schedule-config';
-import { getDialogIcon } from './utils';
 
 
 interface TriggerConfigDialogProps {
@@ -126,22 +125,18 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
   return (
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
       <DialogHeader>
-        <DialogTitle className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-muted border">
-            {getDialogIcon(provider.trigger_type)}
-          </div>
-          <div>
-            <span>Configurar {provider.name}</span>
-          </div>
+        <DialogTitle>
+          Configurar {provider.provider_id === 'schedule' ? 'Agendamento' : provider.name}
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="text-sm text-muted-foreground">
           {provider.description}
         </DialogDescription>
       </DialogHeader>
-      <div className="flex-1 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {provider.provider_id === 'schedule' ? (
-          renderProviderSpecificConfig()
-        ) : (
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-6 pr-2">
+          {provider.provider_id === 'schedule' ? (
+            renderProviderSpecificConfig()
+          ) : (
           <>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -180,46 +175,49 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
                 </Label>
               </div>
             </div>
-            <div className="border-t pt-6">
+            <div className="border-t border-black/6 dark:border-white/8 pt-6">
               <h3 className="text-sm font-medium mb-4">
                 Configuração do {provider.name}
               </h3>
               {renderProviderSpecificConfig()}
             </div>
-          </>
-        )}
-        {provider.webhook_enabled && existingConfig?.webhook_url && (
-          <div className="border-t pt-6">
+            </>
+          )}
+          {provider.webhook_enabled && existingConfig?.webhook_url && (
+          <div className="border-t border-black/6 dark:border-white/8 pt-6">
             <h3 className="text-sm font-medium mb-4">Informações do Webhook</h3>
             <div className="space-y-2">
               <Label>URL do Webhook</Label>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Input
                   value={existingConfig.webhook_url}
                   readOnly
-                  className="font-mono text-sm"
+                  className="font-mono text-sm bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8"
                 />
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => navigator.clipboard.writeText(existingConfig.webhook_url!)}
+                  className="h-8 w-8 p-0 hover:bg-black/5 dark:hover:bg-white/5"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3.5 w-3.5 opacity-60" />
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => window.open(existingConfig.webhook_url, '_blank')}
+                  className="h-8 w-8 p-0 hover:bg-black/5 dark:hover:bg-white/5"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-3.5 w-3.5 opacity-60" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Use esta URL para configurar o webhook no {provider.name}
               </p>
             </div>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={isLoading}>
