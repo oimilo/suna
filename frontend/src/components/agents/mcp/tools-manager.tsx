@@ -3,9 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Dialog, 
   DialogContent, 
@@ -18,7 +15,6 @@ import {
   Loader2, 
   CheckCircle2, 
   XCircle, 
-  Zap, 
   Info,
   RefreshCw,
   Save
@@ -119,7 +115,6 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
   const totalCount = data?.tools?.length || 0;
   
   const displayName = mode === 'pipedream' ? (props as PipedreamToolsManagerProps).appName : (props as CustomToolsManagerProps).mcpName;
-  const contextName = mode === 'pipedream' ? (props as PipedreamToolsManagerProps).profileName || 'Profile' : 'Server';
 
   const handleToolToggle = (toolName: string) => {
     setLocalTools(prev => {
@@ -194,29 +189,38 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-destructive" />
-              Error Loading Tools
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <span>Erro ao Carregar Ferramentas</span>
             </DialogTitle>
             <DialogDescription>
-              Failed to load {displayName} tools
+              Falha ao carregar ferramentas do {displayName}
             </DialogDescription>
           </DialogHeader>
           
-          <Alert variant="destructive">
-            <XCircle className="h-4 w-4" />
-            <AlertDescription>
-              {error?.message || 'An unexpected error occurred while loading tools.'}
-            </AlertDescription>
-          </Alert>
+          <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+            <div className="flex items-start gap-2">
+              <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5" />
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {error?.message || 'Ocorreu um erro inesperado ao carregar as ferramentas.'}
+              </p>
+            </div>
+          </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
+              Fechar
             </Button>
-            <Button onClick={() => refetch()}>
+            <Button 
+              onClick={() => refetch()}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
+              Tentar Novamente
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -228,23 +232,17 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            Configure {displayName} Tools
+          <DialogTitle>
+            Configurar Ferramentas do {displayName}
           </DialogTitle>
-          <DialogDescription>
-            {versionData ? (
-              <div className="flex items-center gap-2 text-amber-600">
-                <span>
-                  Changes will make a new version of the agent.
-                </span>
-              </div>
-            ) : saveMode === 'callback' ? (
-              <span>Choose which {displayName} tools are available to your agent. Changes will be saved when you save the agent configuration.</span>
-            ) : (
-              <span>Choose which {displayName} tools are available to your agent. Changes will be saved immediately.</span>
-            )}
-          </DialogDescription>
+          {versionData && (
+            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+              <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                As alterações criarão uma nova versão do agente.
+              </p>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -252,7 +250,7 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Loading available tools...</span>
+                <span>Carregando ferramentas disponíveis...</span>
               </div>
             </div>
           ) : !data?.tools?.length ? (
@@ -260,28 +258,23 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
               <div className="text-center">
                 <Info className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  No tools available for this {displayName} {mode === 'pipedream' ? 'profile' : 'server'}
+                  Nenhuma ferramenta disponível para {displayName}
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between pb-4">
+              <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
                 <div className="flex items-center gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {enabledCount} of {totalCount} tools enabled
-                      </span>
-                      {hasChanges && (
-                        <Badge className="text-xs bg-primary/10 text-primary">
-                          Unsaved changes
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {contextName}: {mode === 'pipedream' ? (props as PipedreamToolsManagerProps).profileName : displayName}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {enabledCount} de {totalCount} ferramentas ativadas
+                    </span>
+                    {hasChanges && (
+                      <div className="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        Alterações não salvas
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -290,40 +283,41 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
                   size="sm"
                   onClick={handleSelectAll}
                   disabled={isUpdating}
+                  className="h-8 px-3 text-xs"
                 >
-                  {data.tools.every((tool: any) => localTools[tool.name]) ? 'Deselect All' : 'Select All'}
+                  {data.tools.every((tool: any) => localTools[tool.name]) ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
                 </Button>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3">
+              <div className="flex-1 overflow-y-auto space-y-2">
                 {data.tools.map((tool: any) => (
-                  <Card 
+                  <div
                     key={tool.name}
                     className={cn(
-                      "transition-colors cursor-pointer",
-                      localTools[tool.name] ? "bg-muted/50 border-primary/40" : "hover:bg-muted/20"
+                      "p-3 rounded-lg cursor-pointer transition-all duration-200",
+                      localTools[tool.name] 
+                        ? "bg-muted/50 border border-primary/20" 
+                        : "bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-muted/30"
                     )}
                     onClick={() => handleToolToggle(tool.name)}
                   >
-                    <CardContent>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-sm">{tool.name}</h4>
-                            {localTools[tool.name] && (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            )}
-                          </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{tool.name}</span>
+                          {localTools[tool.name] && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
                         </div>
-                        <Switch
-                          checked={localTools[tool.name] || false}
-                          onCheckedChange={() => handleToolToggle(tool.name)}
-                          onClick={(e) => e.stopPropagation()}
-                          disabled={isUpdating}
-                        />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <Switch
+                        checked={localTools[tool.name] || false}
+                        onCheckedChange={() => handleToolToggle(tool.name)}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={isUpdating}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
@@ -334,12 +328,12 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               {!data?.has_mcp_config && data?.tools?.length > 0 && saveMode === 'direct' && (
-                <Alert className="p-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
                   <Info className="h-3 w-3" />
-                  <AlertDescription className="text-xs">
-                    This will {mode === 'pipedream' ? 'create a new' : 'update the'} MCP configuration for your agent
-                  </AlertDescription>
-                </Alert>
+                  <span>
+                    Isso irá {mode === 'pipedream' ? 'criar uma nova' : 'atualizar a'} configuração MCP do seu agente
+                  </span>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -348,7 +342,7 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
                 onClick={hasChanges ? handleCancel : () => onOpenChange(false)}
                 disabled={isUpdating}
               >
-                {hasChanges ? 'Cancel' : 'Close'}
+                {hasChanges ? 'Cancelar' : 'Fechar'}
               </Button>
               
               {hasChanges && (
@@ -359,17 +353,17 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
                   {isUpdating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
+                      Salvando...
                     </>
                   ) : saveMode === 'callback' ? (
                     <>
-                      <Save className="h-4 w-4" />
-                      Apply Changes
+                      <Save className="h-4 w-4 mr-2" />
+                      Aplicar Alterações
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4" />
-                      Save Changes
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar Alterações
                     </>
                   )}
                 </Button>

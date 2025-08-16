@@ -112,21 +112,23 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col">
-        <DialogHeader className="flex-shrink-0 border-b px-6 py-4">
+      <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col bg-background/95 backdrop-blur-sm border-black/6 dark:border-white/8">
+        <DialogHeader className="flex-shrink-0 border-b border-black/6 dark:border-white/8 px-6 py-4 bg-black/[0.02] dark:bg-white/[0.03]">
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              Configuração do Agente
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-md bg-black/[0.03] dark:bg-white/[0.05]">
+                <Bot className="h-4 w-4 opacity-70" />
+              </div>
+              <span className="text-base font-semibold">Configuração do Agente</span>
             </div>
             {selectedAgentId && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push(`/agents/config/${selectedAgentId}`)}
-                className="text-xs"
+                className="h-8 px-3 text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200"
               >
-                <Settings2 className="h-3 w-3 mr-1" />
+                <Settings2 className="h-3.5 w-3.5 mr-1.5 opacity-60" />
                 Avançado
               </Button>
             )}
