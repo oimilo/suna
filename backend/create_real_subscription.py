@@ -108,9 +108,16 @@ async def get_or_create_stripe_customer(user_id: str, email: str):
     logger.info(f"Novo customer criado no Stripe: {customer.id}")
     return customer.id
 
-def create_or_get_coupon():
+def create_or_get_coupon(duration_months=None):
     """Cria ou obtém um cupom de 100% desconto."""
-    coupon_id = "PROPHET_TEST_100_OFF"
+    if duration_months:
+        coupon_id = f"PROPHET_TEST_100_OFF_{duration_months}M"
+        duration = "repeating"
+        duration_in_months = duration_months
+    else:
+        coupon_id = "PROPHET_TEST_100_OFF"
+        duration = "forever"
+        duration_in_months = None
     
     try:
         # Tentar buscar cupom existente
@@ -119,17 +126,21 @@ def create_or_get_coupon():
         return coupon_id
     except stripe.error.InvalidRequestError:
         # Criar novo cupom
-        coupon = stripe.Coupon.create(
-            id=coupon_id,
-            percent_off=100,
-            duration="forever",
-            name="Prophet Test 100% Off",
-            metadata={"purpose": "test_subscriptions"}
-        )
+        create_params = {
+            "id": coupon_id,
+            "percent_off": 100,
+            "duration": duration,
+            "name": f"Prophet Test 100% Off {f'{duration_months} month' if duration_months else 'Forever'}",
+            "metadata": {"purpose": "test_subscriptions"}
+        }
+        if duration_in_months:
+            create_params["duration_in_months"] = duration_in_months
+            
+        coupon = stripe.Coupon.create(**create_params)
         logger.info(f"Novo cupom criado: {coupon_id}")
         return coupon_id
 
-async def create_subscription(email: str, plan: str):
+async def create_subscription(email: str, plan: str, duration_months=None):
     """Cria uma subscription real no Stripe com 100% desconto."""
     
     # Validar plano
@@ -162,7 +173,7 @@ async def create_subscription(email: str, plan: str):
             logger.info(f"Subscription existente cancelada: {sub.id}")
         
         # Obter ou criar cupom
-        coupon_id = create_or_get_coupon()
+        coupon_id = create_or_get_coupon(duration_months)
         
         # Criar nova subscription
         subscription = stripe.Subscription.create(
@@ -172,7 +183,8 @@ async def create_subscription(email: str, plan: str):
             metadata={
                 "test_subscription": "true",
                 "created_by_script": "true",
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
+                "duration_months": str(duration_months) if duration_months else "unlimited"
             }
         )
         
@@ -182,8 +194,9 @@ async def create_subscription(email: str, plan: str):
         print(f"   Subscription ID: {subscription.id}")
         print(f"   Status: {subscription.status}")
         print(f"   Customer ID: {customer_id}")
-        print(f"   Cupom aplicado: 100% desconto")
-        print(f"   Período: {datetime.fromtimestamp(subscription.current_period_start).strftime('%Y-%m-%d')} até {datetime.fromtimestamp(subscription.current_period_end).strftime('%Y-%m-%d')}")
+        print(f"   Cupom aplicado: 100% desconto{f' por {duration_months} mês(es)' if duration_months else ' (permanente)'}")
+        if hasattr(subscription, 'current_period_start') and hasattr(subscription, 'current_period_end'):
+            print(f"   Período: {datetime.fromtimestamp(subscription.current_period_start).strftime('%Y-%m-%d')} até {datetime.fromtimestamp(subscription.current_period_end).strftime('%Y-%m-%d')}")
         
         print("\n🎉 A subscription foi criada com sucesso no Stripe!")
         print("   Você pode verificar em: https://dashboard.stripe.com/subscriptions")
@@ -301,6 +314,8 @@ def main():
     create_parser.add_argument('email', help='Email do usuário')
     create_parser.add_argument('plan', choices=['pro', 'pro_yearly', 'pro_max', 'pro_max_yearly'], 
                               help='Plano a ser atribuído')
+    create_parser.add_argument('--duration', type=int, metavar='MONTHS',
+                              help='Duração em meses (ex: 1 para um mês, 3 para três meses). Sem este parâmetro, a subscription é permanente.')
     
     # Comando remove
     remove_parser = subparsers.add_parser('remove', help='Remove subscription (volta para FREE)')
@@ -320,7 +335,7 @@ def main():
     
     # Executar comando
     if args.command == 'create':
-        asyncio.run(create_subscription(args.email, args.plan))
+        asyncio.run(create_subscription(args.email, args.plan, args.duration))
     elif args.command == 'remove':
         asyncio.run(remove_subscription(args.email))
     elif args.command == 'list':

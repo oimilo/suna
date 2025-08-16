@@ -12,7 +12,7 @@ interface AgentToolsConfigurationProps {
 }
 
 export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false, isSunaAgent = false }: AgentToolsConfigurationProps) => {
-  const searchQuery = ''; // Removed search for now since it's not being used
+  const searchQuery: string = ''; // Removed search for now since it's not being used
 
   const handleToolToggle = (toolName: string, enabled: boolean) => {
     if (disabled && isSunaAgent) {
