@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronsUpDown, LogOut, Moon, Sun, Settings, CreditCard } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Moon, Sun, Settings, CreditCard, Bot, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/components/AuthProvider';
@@ -65,6 +65,28 @@ export function NavUserHover() {
               </>
             )}
           </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start h-9"
+            onClick={() => router.push('/agents')}
+          >
+            <Bot className="mr-2 h-4 w-4" />
+            Agentes
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start h-9"
+            onClick={() => router.push('/settings/credentials')}
+          >
+            <Plug className="mr-2 h-4 w-4" />
+            Integrações
+          </Button>
+
+          <Separator className="my-1" />
 
           <Button
             variant="ghost"

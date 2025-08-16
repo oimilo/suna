@@ -87,6 +87,11 @@ export type ThreadWithProject = {
   projectName: string;
   url: string;
   updatedAt: string;
+  lastMessage?: string;
+  messageCount?: number;
+  agentName?: string;
+  createdAt?: string;
+  metadata?: any;
 };
 
 export const processThreadsWithProjects = (
@@ -123,6 +128,13 @@ export const processThreadsWithProjects = (
       url: `/projects/${projectId}/thread/${thread.thread_id}`,
       updatedAt:
         thread.updated_at || project.updated_at || new Date().toISOString(),
+      createdAt: thread.created_at,
+      metadata: thread.metadata,
+      // TODO: Adicionar lastMessage e messageCount quando tivermos acesso às mensagens
+      // Por enquanto, vamos usar dados mockados para demonstração
+      lastMessage: thread.metadata?.last_message || undefined,
+      messageCount: thread.metadata?.message_count || undefined,
+      agentName: thread.metadata?.agent_name || undefined,
     });
   }
 

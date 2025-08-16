@@ -75,7 +75,7 @@ async function fetchAllTriggers(params: UseAllTriggersParams): Promise<TriggerLi
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
   
-  const response = await fetch(`${API_URL}/api/triggers/all?${queryParams}`, {
+  const response = await fetch(`${API_URL}/triggers/all?${queryParams}`, {
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
     },
@@ -99,7 +99,7 @@ async function fetchTriggerStats(): Promise<TriggerStats> {
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
   
-  const response = await fetch(`${API_URL}/api/triggers/stats`, {
+  const response = await fetch(`${API_URL}/triggers/stats`, {
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
     },
