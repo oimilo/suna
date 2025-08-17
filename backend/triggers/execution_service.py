@@ -2,12 +2,13 @@ import json
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple
+import os
+import httpx
 
 from services.supabase import DBConnection
 from services import redis
 from utils.logger import logger, structlog
 from utils.config import config
-from run_agent_background import run_agent_background
 from .trigger_service import TriggerEvent, TriggerResult
 from .utils import format_workflow_for_llm
 
@@ -332,31 +333,55 @@ class AgentExecutor:
         
         await self._register_agent_run(agent_run_id)
         
-        # Use Dramatiq for background processing (same as original Suna)
-        logger.info(f"Sending agent execution to background queue: agent_run_id={agent_run_id}, thread_id={thread_id}")
+        # Use Supabase Edge Function for async execution
+        logger.info(f"Invoking Supabase Edge Function for agent execution: agent_run_id={agent_run_id}, thread_id={thread_id}")
         
         try:
-            run_agent_background.send(
-                agent_run_id=agent_run_id,
-                thread_id=thread_id,
-                instance_id="trigger_executor",
-                project_id=project_id,
-                model_name=model_name,
-                enable_thinking=False,
-                reasoning_effort="low",
-                stream=False,
-                enable_context_manager=True,
-                agent_config=agent_config,
-                is_agent_builder=False,
-                target_agent_id=None,
-                request_id=structlog.contextvars.get_contextvars().get('request_id'),
-            )
-            logger.info(f"Successfully queued agent execution: {agent_run_id}")
+            edge_function_url = os.getenv("SUPABASE_EDGE_FUNCTION_URL")
+            trigger_secret = os.getenv("TRIGGER_SECRET")
+            
+            if not edge_function_url or not trigger_secret:
+                raise ValueError("Edge Function URL or Trigger Secret not configured")
+            
+            # Call Edge Function
+            async with httpx.AsyncClient(timeout=30.0) as client_http:
+                response = await client_http.post(
+                    f"{edge_function_url}/run-agent-trigger",
+                    headers={
+                        "x-trigger-secret": trigger_secret,
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "agent_run_id": agent_run_id,
+                        "thread_id": thread_id,
+                        "project_id": project_id,
+                        "agent_config": agent_config,
+                        "model_name": model_name,
+                        "enable_thinking": False,
+                        "reasoning_effort": "low",
+                        "trigger_variables": trigger_variables
+                    }
+                )
+                
+                if response.status_code != 200:
+                    error_detail = response.text
+                    logger.error(f"Edge Function returned error: {response.status_code} - {error_detail}")
+                    raise Exception(f"Edge Function error: {error_detail}")
+                
+                result = response.json()
+                logger.info(f"Edge Function invoked successfully: {result}")
+                
         except Exception as e:
-            logger.error(f"Failed to queue agent execution: {e}")
+            logger.error(f"Failed to invoke Edge Function: {e}")
+            # Update agent run status to failed
+            await client.table('agent_runs').update({
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(e)
+            }).eq("id", agent_run_id).execute()
             raise
         
-        logger.info(f"Agent execution queued: {agent_run_id}")
+        logger.info(f"Agent execution started via Edge Function: {agent_run_id}")
         return agent_run_id
     
     async def _register_agent_run(self, agent_run_id: str) -> None:
@@ -592,23 +617,53 @@ class WorkflowExecutor:
         
         await self._register_workflow_run(agent_run_id)
         
-        run_agent_background.send(
-            agent_run_id=agent_run_id,
-            thread_id=thread_id,
-            instance_id=getattr(config, 'INSTANCE_ID', 'default'),
-            project_id=project_id,
-            model_name=model_name,
-            enable_thinking=False,
-            reasoning_effort='medium',
-            stream=False,
-            enable_context_manager=True,
-            agent_config=agent_config,
-            is_agent_builder=False,
-            target_agent_id=None,
-            request_id=None,
-        )
+        # Use Supabase Edge Function for async execution
+        logger.info(f"Invoking Edge Function for workflow: agent_run_id={agent_run_id}")
         
-        logger.info(f"Started workflow agent execution: {agent_run_id}")
+        try:
+            edge_function_url = os.getenv("SUPABASE_EDGE_FUNCTION_URL")
+            trigger_secret = os.getenv("TRIGGER_SECRET")
+            
+            if not edge_function_url or not trigger_secret:
+                raise ValueError("Edge Function URL or Trigger Secret not configured")
+            
+            async with httpx.AsyncClient(timeout=30.0) as client_http:
+                response = await client_http.post(
+                    f"{edge_function_url}/run-agent-trigger",
+                    headers={
+                        "x-trigger-secret": trigger_secret,
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "agent_run_id": agent_run_id,
+                        "thread_id": thread_id,
+                        "project_id": project_id,
+                        "agent_config": agent_config,
+                        "model_name": model_name,
+                        "enable_thinking": False,
+                        "reasoning_effort": "medium",
+                        "trigger_variables": {}
+                    }
+                )
+                
+                if response.status_code != 200:
+                    error_detail = response.text
+                    logger.error(f"Edge Function error for workflow: {response.status_code} - {error_detail}")
+                    raise Exception(f"Edge Function error: {error_detail}")
+                
+                result = response.json()
+                logger.info(f"Workflow Edge Function invoked: {result}")
+                
+        except Exception as e:
+            logger.error(f"Failed to invoke Edge Function for workflow: {e}")
+            await client.table('agent_runs').update({
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(e)
+            }).eq("id", agent_run_id).execute()
+            raise
+        
+        logger.info(f"Started workflow agent execution via Edge Function: {agent_run_id}")
         return agent_run_id
     
     async def _register_workflow_run(self, agent_run_id: str) -> None:
