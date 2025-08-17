@@ -6,8 +6,9 @@ from typing import Dict, Any, Tuple
 from services.supabase import DBConnection
 from services import redis
 from utils.logger import logger, structlog
-from utils.config import config
+from utils.config import config, EnvMode
 from run_agent_background import run_agent_background
+from run_agent_background_simple import run_agent_async
 from .trigger_service import TriggerEvent, TriggerResult
 from .utils import format_workflow_for_llm
 
@@ -327,21 +328,40 @@ class AgentExecutor:
         
         await self._register_agent_run(agent_run_id)
         
-        run_agent_background.send(
-            agent_run_id=agent_run_id,
-            thread_id=thread_id,
-            instance_id="trigger_executor",
-            project_id=project_id,
-            model_name=model_name,
-            enable_thinking=False,
-            reasoning_effort="low",
-            stream=False,
-            enable_context_manager=True,
-            agent_config=agent_config,
-            is_agent_builder=False,
-            target_agent_id=None,
-            request_id=structlog.contextvars.get_contextvars().get('request_id'),
-        )
+        # In production, execute directly with asyncio instead of using Dramatiq
+        if config.ENV_MODE == EnvMode.PRODUCTION:
+            import asyncio
+            asyncio.create_task(run_agent_async(
+                agent_run_id=agent_run_id,
+                thread_id=thread_id,
+                instance_id="trigger_executor",
+                project_id=project_id,
+                model_name=model_name,
+                enable_thinking=False,
+                reasoning_effort="low",
+                stream=False,
+                enable_context_manager=True,
+                agent_config=agent_config,
+                is_agent_builder=False,
+                target_agent_id=None,
+                request_id=structlog.contextvars.get_contextvars().get('request_id'),
+            ))
+        else:
+            run_agent_background.send(
+                agent_run_id=agent_run_id,
+                thread_id=thread_id,
+                instance_id="trigger_executor",
+                project_id=project_id,
+                model_name=model_name,
+                enable_thinking=False,
+                reasoning_effort="low",
+                stream=False,
+                enable_context_manager=True,
+                agent_config=agent_config,
+                is_agent_builder=False,
+                target_agent_id=None,
+                request_id=structlog.contextvars.get_contextvars().get('request_id'),
+            )
         
         logger.info(f"Started agent execution: {agent_run_id}")
         return agent_run_id
