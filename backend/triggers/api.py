@@ -41,6 +41,7 @@ def setup_database(database: DBConnection):
 def initialize(database: DBConnection):
     """Initialize triggers module with database connection"""
     setup_database(database)
+    logger.info(f"Triggers module initialized with db: {database is not None}")
 
 # IMPORTANT: Include sub-routers BEFORE defining catch-all routes like /{trigger_id}
 # This ensures that specific routes like /all and /stats are matched before /{trigger_id}
