@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PanelLeft, Command, Star, Calendar, Clock, Zap, Bot, Trash2 } from 'lucide-react';
+import { Plus, PanelLeft, Command, Calendar, Clock, Zap, Bot, Trash2 } from 'lucide-react';
 import { NavUserHover } from './nav-user-hover';
 import { NavThreads } from './nav-threads';
 import Link from 'next/link';
@@ -392,11 +392,7 @@ export function HoverSidebar() {
               </TabsContent>
 
               <TabsContent value="favoritos" className="mt-4 space-y-2">
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  <Star className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  <p>Nenhum favorito ainda</p>
-                  <p className="text-xs mt-1">Marque conversas como favoritas para acessá-las rapidamente</p>
-                </div>
+                <NavThreads showOnlyFavorites={true} />
               </TabsContent>
 
               <TabsContent value="agendado" className="mt-4 space-y-1">

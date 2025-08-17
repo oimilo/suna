@@ -12,7 +12,7 @@ from services.supabase import DBConnection
 from utils.auth_utils import get_current_user_id_from_jwt
 from utils.logger import logger
 
-router = APIRouter(prefix="/api/triggers", tags=["triggers"])
+router = APIRouter(tags=["triggers"])
 
 # Global database connection (will be set by triggers.api module)
 db: Optional[DBConnection] = None

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+// import { Badge } from '@/components/ui/badge';
+// import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getAgentAvatar } from '../../lib/utils/get-agent-style';
 import {
@@ -15,11 +15,11 @@ import { useAddUserMessageMutation } from '@/hooks/react-query/threads/use-messa
 import { useStartAgentMutation, useStopAgentMutation } from '@/hooks/react-query/threads/use-agent-run';
 import { BillingError } from '@/lib/api';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { BrandLogo } from '../sidebar/brand-logo';
+// import { BrandLogo } from '../sidebar/brand-logo';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
-import { EditableText } from '@/components/ui/editable';
-import { StylePicker } from './style-picker';
-import { BRANDING } from '@/lib/branding';
+// import { EditableText } from '@/components/ui/editable';
+// import { StylePicker } from './style-picker';
+// import { BRANDING } from '@/lib/branding';
 
 interface Agent {
   agent_id: string;
@@ -52,10 +52,10 @@ interface AgentPreviewProps {
 
 export const AgentPreview = ({ 
   agent, 
-  agentMetadata,
-  onFieldChange,
-  onStyleChange,
-  isViewingOldVersion = false,
+  // agentMetadata,  // Commented out - only used in header
+  // onFieldChange,   // Commented out - only used in header
+  // onStyleChange,   // Commented out - only used in header
+  // isViewingOldVersion = false,  // Commented out - only used in header
   currentStyle
 }: AgentPreviewProps) => {
   const { t } = usePtTranslations();
@@ -67,9 +67,10 @@ export const AgentPreview = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
 
-  const isSunaAgent = agentMetadata?.is_suna_default || false;
-  const restrictions = agentMetadata?.restrictions || {};
-  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false);
+  // Commented out since header is not being displayed
+  // const isSunaAgent = agentMetadata?.is_suna_default || false;
+  // const restrictions = agentMetadata?.restrictions || {};
+  // const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandles>(null);
@@ -88,19 +89,20 @@ export const AgentPreview = ({
     return getAgentAvatar(agent.agent_id);
   };
 
-  const { avatar, color } = getAgentStyling();
+  const { avatar } = getAgentStyling();  // color is commented out since header is hidden
   
-  const handleNameChange = (value: string) => {
-    if (!isNameEditable && isSunaAgent) {
-      toast.error("Nome não pode ser editado", {
-        description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
-      });
-      return;
-    }
-    if (onFieldChange) {
-      onFieldChange('name', value);
-    }
-  };
+  // Commented out since header is not being displayed
+  // const handleNameChange = (value: string) => {
+  //   if (!isNameEditable && isSunaAgent) {
+  //     toast.error("Nome não pode ser editado", {
+  //       description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
+  //     });
+  //     return;
+  //   }
+  //   if (onFieldChange) {
+  //     onFieldChange('name', value);
+  //   }
+  // };
 
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
   const addUserMessageMutation = useAddUserMessageMutation();
@@ -374,6 +376,7 @@ export const AgentPreview = ({
 
   return (
     <div className="h-full flex flex-col bg-muted dark:bg-muted/30">
+      {/* Header with avatar, name, and preview badge commented out for cleaner UI
       <div className="flex-shrink-0 flex items-center justify-between p-8">
         <div className="flex items-center gap-3">
           {!isSunaAgent && onStyleChange ? (
@@ -421,6 +424,7 @@ export const AgentPreview = ({
         </div>
         <Badge variant="highlight" className="text-sm">{t('agents.previewMode')}</Badge>
       </div>
+      */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto scrollbar-hide">
           <ThreadContent
@@ -435,9 +439,11 @@ export const AgentPreview = ({
             agentName={agent.name}
             agentAvatar={avatar}
             emptyStateComponent={
-              <div className="flex flex-col items-center text-center text-muted-foreground/80">
-                <p className='w-[60%] text-2xl mb-3'>{t('agents.builder.startConversation')} <span className='text-primary/80 font-semibold'>{agent.name}</span></p>
-                <p className='w-[70%] text-sm text-muted-foreground/60'>{t('agents.builder.testDescription')}</p>
+              <div className="flex flex-col items-center justify-center text-center text-muted-foreground/80 h-full">
+                <div className="max-w-md">
+                  <p className='text-2xl mb-3'>{t('agents.builder.startConversation')} <span className='text-primary/80 font-semibold'>{agent.name}</span></p>
+                  <p className='text-sm text-muted-foreground/60'>{t('agents.builder.testDescription')}</p>
+                </div>
               </div>
             }
           />

@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn, staggerContainer } from '@/lib/animations';
 import { 
-  Zap, 
   Search, 
   TrendingUp,
   Lightbulb,
+  Workflow,
   RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAllTriggers, useTriggerStats, useToggleTrigger } from '@/hooks/react-query/triggers/use-all-triggers';
@@ -54,7 +60,6 @@ export default function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
-  const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -64,7 +69,7 @@ export default function AutomationsPage() {
   const { data: triggersData, isLoading: isLoadingTriggers } = useAllTriggers({
     page,
     per_page: 12,
-    trigger_type: filterType !== 'all' ? filterType : undefined,
+    trigger_type: undefined,
     is_active: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
     agent_id: undefined,
     search: searchQuery,
@@ -80,12 +85,18 @@ export default function AutomationsPage() {
     console.log('Edit trigger:', trigger);
   };
 
-  const rotateSuggestion = () => {
+  const rotateSuggestion = (direction: 'next' | 'prev' = 'next') => {
     setIsRotating(true);
     setTimeout(() => {
-      setCurrentSuggestionIndex((prev) => (prev + 1) % AUTOMATION_SUGGESTIONS.length);
+      setCurrentSuggestionIndex((prev) => {
+        if (direction === 'next') {
+          return (prev + 1) % AUTOMATION_SUGGESTIONS.length;
+        } else {
+          return prev === 0 ? AUTOMATION_SUGGESTIONS.length - 1 : prev - 1;
+        }
+      });
       setIsRotating(false);
-    }, 300);
+    }, 200);
   };
 
   const handleToggleTrigger = async (triggerId: string) => {
@@ -99,8 +110,8 @@ export default function AutomationsPage() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Zap className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+                <Workflow className="h-5 w-5 opacity-60" />
                 Automações
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
@@ -116,69 +127,105 @@ export default function AutomationsPage() {
         )}
 
         {/* Filters and Search */}
-        <div className="p-4 rounded-lg border bg-card">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search Bar */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-60" />
             <Input
               placeholder="Buscar automações..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-9 bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 focus:border-black/10 dark:focus:border-white/12"
             />
           </div>
           
+          {/* Filter Pills */}
           <div className="flex gap-2">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="schedule">Agendamento</SelectItem>
-                <SelectItem value="webhook">Webhook</SelectItem>
-                <SelectItem value="telegram">Telegram</SelectItem>
-                <SelectItem value="slack">Slack</SelectItem>
-                <SelectItem value="discord">Discord</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-              </SelectContent>
-            </Select>
-
+            {/* Status Filter */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Status" />
+              <SelectTrigger className="h-9 w-auto gap-2 bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors">
+                <span className="text-xs text-muted-foreground">Status:</span>
+                <SelectValue placeholder="Todos" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="end">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="active">Ativos</SelectItem>
                 <SelectItem value="inactive">Inativos</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_at">Data de criação</SelectItem>
-                <SelectItem value="updated_at">Última atualização</SelectItem>
-                <SelectItem value="name">Nome</SelectItem>
-                <SelectItem value="execution_count">Execuções</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            >
-              <TrendingUp className={cn(
-                "h-4 w-4 transition-transform",
-                sortOrder === 'desc' && "rotate-180"
-              )} />
-            </Button>
+            {/* Sort Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-9 gap-1.5 bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                >
+                  <TrendingUp className={cn(
+                    "h-3.5 w-3.5 opacity-60",
+                    sortOrder === 'desc' && "rotate-180"
+                  )} />
+                  <span className="text-xs">
+                    {sortBy === 'created_at' && 'Data de criação'}
+                    {sortBy === 'updated_at' && 'Última atualização'}
+                    {sortBy === 'name' && 'Nome'}
+                    {sortBy === 'execution_count' && 'Execuções'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => { setSortBy('created_at'); setSortOrder('desc'); }}
+                  className={cn(sortBy === 'created_at' && "bg-black/5 dark:bg-white/5")}
+                >
+                  <span className="text-sm">Data de criação</span>
+                  {sortBy === 'created_at' && (
+                    <TrendingUp className={cn(
+                      "ml-auto h-3 w-3 opacity-60",
+                      sortOrder === 'desc' && "rotate-180"
+                    )} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => { setSortBy('updated_at'); setSortOrder('desc'); }}
+                  className={cn(sortBy === 'updated_at' && "bg-black/5 dark:bg-white/5")}
+                >
+                  <span className="text-sm">Última atualização</span>
+                  {sortBy === 'updated_at' && (
+                    <TrendingUp className={cn(
+                      "ml-auto h-3 w-3 opacity-60",
+                      sortOrder === 'desc' && "rotate-180"
+                    )} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => { setSortBy('name'); setSortOrder('asc'); }}
+                  className={cn(sortBy === 'name' && "bg-black/5 dark:bg-white/5")}
+                >
+                  <span className="text-sm">Nome</span>
+                  {sortBy === 'name' && (
+                    <TrendingUp className={cn(
+                      "ml-auto h-3 w-3 opacity-60",
+                      sortOrder === 'desc' && "rotate-180"
+                    )} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => { setSortBy('execution_count'); setSortOrder('desc'); }}
+                  className={cn(sortBy === 'execution_count' && "bg-black/5 dark:bg-white/5")}
+                >
+                  <span className="text-sm">Execuções</span>
+                  {sortBy === 'execution_count' && (
+                    <TrendingUp className={cn(
+                      "ml-auto h-3 w-3 opacity-60",
+                      sortOrder === 'desc' && "rotate-180"
+                    )} />
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
         </div>
 
         {/* Automations Grid */}
@@ -244,58 +291,66 @@ export default function AutomationsPage() {
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-[400px] text-center space-y-8">
-            {/* Ícone e título */}
-            <div className="space-y-4">
-              <div className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm">
-                <Zap className="h-8 w-8 text-primary/60" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Nenhuma automação encontrada</h3>
-                <p className="text-sm text-muted-foreground">
-                  Suas automações aparecerão aqui após serem criadas
-                </p>
+          <div className="flex flex-col items-center justify-center min-h-[500px] py-12">
+            {/* Ícone principal */}
+            <div className="mb-6">
+              <div className="w-14 h-14 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 flex items-center justify-center">
+                <Workflow className="h-6 w-6 opacity-50" />
               </div>
             </div>
+
+            {/* Título e descrição */}
+            <div className="text-center space-y-2 mb-10 max-w-sm">
+              <h3 className="text-lg font-semibold">Nenhuma automação encontrada</h3>
+              <p className="text-sm text-muted-foreground/70">
+                Suas automações aparecerão aqui após serem criadas
+              </p>
+            </div>
             
-            {/* Card de dica */}
-            <div className="relative max-w-xl w-full">
-              <div className="rounded-xl border border-border/50 bg-gradient-to-b from-muted/30 to-muted/10 backdrop-blur-sm p-6 shadow-sm">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Lightbulb className="h-4 w-4 text-primary/70" />
+            {/* Card de dica interativo */}
+            <div className="relative max-w-lg w-full px-4">
+              <div className="rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 p-5">
+                {/* Header simples */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1 rounded bg-black/[0.04] dark:bg-white/[0.06]">
+                    <Lightbulb className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-foreground mb-1">Dica</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      As automações são criadas conversando com qualquer agente em linguagem natural.
-                    </p>
-                  </div>
+                  <span className="text-sm font-medium text-foreground">Dica</span>
                 </div>
-                
-                <div className="relative rounded-lg bg-background/50 border border-border/30 p-4">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <span className="text-xs text-muted-foreground font-medium block text-center">
-                        Exemplos de comando que o Prophet entende:
-                      </span>
-                      <button
-                        onClick={rotateSuggestion}
-                        className="absolute right-0 top-0 group p-1 rounded-md hover:bg-muted/50 transition-all duration-200"
-                        title="Próxima sugestão"
-                      >
-                        <RefreshCw className={cn(
-                          "h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground/70 transition-colors",
-                          isRotating && "animate-spin"
-                        )} />
-                      </button>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  As automações são criadas conversando com qualquer agente em linguagem natural.
+                </p>
+
+                <div className="border-t border-black/6 dark:border-white/8 pt-4">
+                  {/* Box de exemplo */}
+                  <div className="rounded-lg bg-black/[0.01] dark:bg-white/[0.02] border border-black/4 dark:border-white/6 p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground/80 uppercase tracking-wider font-medium">
+                          Exemplo de comando
+                        </span>
+                        <button
+                          onClick={() => rotateSuggestion('next')}
+                          className="p-1 rounded-md hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-all duration-200"
+                          title="Próximo exemplo"
+                        >
+                          <RefreshCw className={cn(
+                            "h-3 w-3 text-muted-foreground opacity-60 hover:opacity-100 transition-opacity",
+                            isRotating && "animate-spin"
+                          )} />
+                        </button>
+                      </div>
+                      
+                      <div className="min-h-[2.5rem] flex items-center">
+                        <p className={cn(
+                          "text-sm text-foreground/70 italic leading-relaxed transition-all duration-300",
+                          isRotating ? "opacity-0 translate-x-2" : "opacity-100 translate-x-0"
+                        )}>
+                          "{AUTOMATION_SUGGESTIONS[currentSuggestionIndex]}"
+                        </p>
+                      </div>
                     </div>
-                    <p className={cn(
-                      "text-sm text-foreground/90 italic leading-relaxed transition-all duration-300 text-center",
-                      isRotating ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"
-                    )}>
-                      "{AUTOMATION_SUGGESTIONS[currentSuggestionIndex]}"
-                    </p>
                   </div>
                 </div>
               </div>

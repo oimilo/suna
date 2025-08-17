@@ -2,6 +2,7 @@ import { maintenanceNoticeFlag } from '@/lib/edge-flags';
 import DashboardLayoutContent from '@/components/dashboard/layout-content';
 import { cookies } from 'next/headers';
 import { SidebarProvider } from '@/contexts/sidebar-context';
+import { FavoritesProvider } from '@/contexts/favorites-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,10 +19,12 @@ export default async function DashboardLayout({
   await cookies();
   const maintenanceNotice = await getMaintenanceNotice();
   return (
-    <SidebarProvider>
-      <DashboardLayoutContent maintenanceNotice={maintenanceNotice}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
+    <FavoritesProvider>
+      <SidebarProvider>
+        <DashboardLayoutContent maintenanceNotice={maintenanceNotice}>
+          {children}
+        </DashboardLayoutContent>
+      </SidebarProvider>
+    </FavoritesProvider>
   );
 }

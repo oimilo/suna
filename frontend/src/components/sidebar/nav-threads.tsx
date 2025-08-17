@@ -45,6 +45,7 @@ import {
 import { useThreads, useProjects, processThreadsWithProjects } from '@/hooks/react-query/sidebar/use-sidebar';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useFavorites } from '@/contexts/favorites-context';
 
 // Função para determinar ícone baseado no título
 function getIconFromTitle(title: string): LucideIcon {
@@ -167,6 +168,7 @@ interface ThreadItemProps {
   thread: any;
   isActive: boolean;
   isLoading: boolean;
+  isFavorite: boolean;
   onThreadClick: (e: React.MouseEvent<HTMLDivElement>, threadId: string, url: string) => void;
   onFavorite?: (threadId: string) => void;
   onDelete?: (threadId: string, threadName: string) => void;
@@ -177,16 +179,14 @@ function ThreadItem({
   thread, 
   isActive, 
   isLoading,
+  isFavorite,
   onThreadClick,
   onFavorite,
   onDelete,
   onShare
 }: ThreadItemProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
-
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
     onFavorite?.(thread.threadId);
   };
 
@@ -287,10 +287,11 @@ function ThreadItem({
   );
 }
 
-export function NavThreads() {
+export function NavThreads({ showOnlyFavorites = false }: { showOnlyFavorites?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null);
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
   const { data: threads = [], isLoading: isThreadsLoading } = useThreads();
@@ -298,6 +299,11 @@ export function NavThreads() {
   const combinedThreads = !isProjectsLoading && !isThreadsLoading
     ? processThreadsWithProjects(threads, projects)
     : [];
+
+  // Filtra favoritos se necessário
+  const displayThreads = showOnlyFavorites
+    ? combinedThreads.filter(thread => isFavorite(thread.threadId))
+    : combinedThreads;
 
   const handleThreadClick = (e: React.MouseEvent<HTMLDivElement>, threadId: string, url: string) => {
     e.preventDefault();
@@ -316,8 +322,9 @@ export function NavThreads() {
   };
 
   const handleFavorite = (threadId: string) => {
-    // TODO: Implementar lógica de favoritos
-    console.log('Toggle favorite:', threadId);
+    console.log('Toggling favorite for:', threadId);
+    toggleFavorite(threadId);
+    console.log('Is favorite now?', isFavorite(threadId));
   };
 
   const isLoading = isProjectsLoading || isThreadsLoading;
@@ -338,18 +345,28 @@ export function NavThreads() {
     );
   }
 
-  if (combinedThreads.length === 0) {
+  if (displayThreads.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm px-3">
-        <p>Nenhuma conversa ainda</p>
-        <p className="text-xs mt-1">Crie uma nova tarefa para começar</p>
+        {showOnlyFavorites ? (
+          <>
+            <Star className="h-8 w-8 mx-auto mb-2 opacity-20" />
+            <p>Nenhum favorito ainda</p>
+            <p className="text-xs mt-1">Marque conversas como favoritas para acessá-las rapidamente</p>
+          </>
+        ) : (
+          <>
+            <p>Nenhuma conversa ainda</p>
+            <p className="text-xs mt-1">Crie uma nova tarefa para começar</p>
+          </>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      {combinedThreads.map((thread) => {
+      {displayThreads.map((thread) => {
         const isActive = pathname?.includes(thread.threadId) || false;
         const isThreadLoading = loadingThreadId === thread.threadId;
 
@@ -359,6 +376,7 @@ export function NavThreads() {
             thread={thread}
             isActive={isActive}
             isLoading={isThreadLoading}
+            isFavorite={isFavorite(thread.threadId)}
             onThreadClick={handleThreadClick}
             onDelete={handleDelete}
             onShare={handleShare}
