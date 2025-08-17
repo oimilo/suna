@@ -6,9 +6,8 @@ from typing import Dict, Any, Tuple
 from services.supabase import DBConnection
 from services import redis
 from utils.logger import logger, structlog
-from utils.config import config, EnvMode
+from utils.config import config
 from run_agent_background import run_agent_background
-from run_agent_background_simple import run_agent_async
 from .trigger_service import TriggerEvent, TriggerResult
 from .utils import format_workflow_for_llm
 
@@ -333,13 +332,11 @@ class AgentExecutor:
         
         await self._register_agent_run(agent_run_id)
         
-        # Always use asyncio for trigger executions to avoid dependency on Dramatiq/RabbitMQ
-        # Triggers should execute immediately without queueing
-        import asyncio
-        logger.info(f"Starting async execution for agent_run_id={agent_run_id}, thread_id={thread_id}")
+        # Use Dramatiq for background processing (same as original Suna)
+        logger.info(f"Sending agent execution to background queue: agent_run_id={agent_run_id}, thread_id={thread_id}")
         
         try:
-            task = asyncio.create_task(run_agent_async(
+            run_agent_background.send(
                 agent_run_id=agent_run_id,
                 thread_id=thread_id,
                 instance_id="trigger_executor",
@@ -353,37 +350,13 @@ class AgentExecutor:
                 is_agent_builder=False,
                 target_agent_id=None,
                 request_id=structlog.contextvars.get_contextvars().get('request_id'),
-            ))
-            logger.info(f"Async task created successfully for agent_run_id={agent_run_id}")
+            )
+            logger.info(f"Successfully queued agent execution: {agent_run_id}")
         except Exception as e:
-            logger.error(f"Failed to create async task for agent_run_id={agent_run_id}: {e}")
-            # Try fallback to Dramatiq if available
-            try:
-                if config.ENV_MODE != EnvMode.PRODUCTION:
-                    logger.info(f"Attempting Dramatiq fallback for agent_run_id={agent_run_id}")
-                    run_agent_background.send(
-                        agent_run_id=agent_run_id,
-                        thread_id=thread_id,
-                        instance_id="trigger_executor",
-                        project_id=project_id,
-                        model_name=model_name,
-                        enable_thinking=False,
-                        reasoning_effort="low",
-                        stream=False,
-                        enable_context_manager=True,
-                        agent_config=agent_config,
-                        is_agent_builder=False,
-                        target_agent_id=None,
-                        request_id=structlog.contextvars.get_contextvars().get('request_id'),
-                    )
-                    logger.info(f"Dramatiq fallback successful for agent_run_id={agent_run_id}")
-                else:
-                    raise
-            except Exception as fallback_error:
-                logger.error(f"Both async and Dramatiq execution failed for agent_run_id={agent_run_id}: {fallback_error}")
-                raise
+            logger.error(f"Failed to queue agent execution: {e}")
+            raise
         
-        logger.info(f"Agent execution initiated: {agent_run_id}")
+        logger.info(f"Agent execution queued: {agent_run_id}")
         return agent_run_id
     
     async def _register_agent_run(self, agent_run_id: str) -> None:
