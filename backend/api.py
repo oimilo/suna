@@ -226,7 +226,8 @@ async def health_check():
     return {
         "status": "ok", 
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "instance_id": instance_id
+        "instance_id": instance_id,
+        "version": "2.1.0-edge-functions"  # Force rebuild with Edge Functions
     }
 
 @api_router.get("/health-docker")
