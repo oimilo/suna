@@ -77,6 +77,10 @@ async def get_all_user_triggers(
     Get all triggers for the current user across all their agents
     """
     try:
+        if db is None:
+            logger.error("Database connection not initialized in api_all_triggers")
+            raise HTTPException(status_code=500, detail="Database not initialized")
+        
         client = await db.client
         
         # First, get all agents for the user
