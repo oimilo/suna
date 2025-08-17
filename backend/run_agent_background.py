@@ -23,10 +23,29 @@ from utils.retry import retry
 import sentry_sdk
 from typing import Dict, Any
 
-# Use Redis as message broker (same as original Suna)
+# Use Redis as message broker with proper authentication for Upstash
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+redis_password = os.getenv('REDIS_PASSWORD')
+redis_ssl = os.getenv('REDIS_SSL', '').lower() == 'true'
+
+# Configure broker with authentication and SSL if needed
+if redis_password:
+    redis_broker = RedisBroker(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        ssl=redis_ssl,
+        ssl_cert_reqs=None,  # Disable cert verification for Upstash
+        middleware=[dramatiq.middleware.AsyncIO()]
+    )
+else:
+    # Local development without password
+    redis_broker = RedisBroker(
+        host=redis_host,
+        port=redis_port,
+        middleware=[dramatiq.middleware.AsyncIO()]
+    )
 
 dramatiq.set_broker(redis_broker)
 
