@@ -185,10 +185,13 @@ class AgentExecutor:
         trigger_result: TriggerResult,
         trigger_event: TriggerEvent
     ) -> Dict[str, Any]:
+        logger.info(f"AgentExecutor.execute_agent called for agent_id={agent_id}")
         try:
             agent_config = await self._get_agent_config(agent_id)
             if not agent_config:
+                logger.error(f"Agent {agent_id} not found")
                 raise ValueError(f"Agent {agent_id} not found")
+            logger.info(f"Agent config retrieved for {agent_id}")
             
             thread_id, project_id = await self._session_manager.create_agent_session(
                 agent_id, agent_config, trigger_event
@@ -285,6 +288,7 @@ class AgentExecutor:
         prompt: str, 
         trigger_data: Dict[str, Any]
     ) -> None:
+        logger.info(f"Creating initial message for thread {thread_id} with prompt: {prompt[:100]}...")
         client = await self._db.client
         
         message_payload = {"role": "user", "content": prompt}
@@ -297,6 +301,7 @@ class AgentExecutor:
             "content": json.dumps(message_payload),
             "created_at": datetime.now(timezone.utc).isoformat()
         }).execute()
+        logger.info(f"Initial message created successfully for thread {thread_id}")
     
     async def _start_agent_execution(
         self,
@@ -328,10 +333,13 @@ class AgentExecutor:
         
         await self._register_agent_run(agent_run_id)
         
-        # In production, execute directly with asyncio instead of using Dramatiq
-        if config.ENV_MODE == EnvMode.PRODUCTION:
-            import asyncio
-            asyncio.create_task(run_agent_async(
+        # Always use asyncio for trigger executions to avoid dependency on Dramatiq/RabbitMQ
+        # Triggers should execute immediately without queueing
+        import asyncio
+        logger.info(f"Starting async execution for agent_run_id={agent_run_id}, thread_id={thread_id}")
+        
+        try:
+            task = asyncio.create_task(run_agent_async(
                 agent_run_id=agent_run_id,
                 thread_id=thread_id,
                 instance_id="trigger_executor",
@@ -346,24 +354,36 @@ class AgentExecutor:
                 target_agent_id=None,
                 request_id=structlog.contextvars.get_contextvars().get('request_id'),
             ))
-        else:
-            run_agent_background.send(
-                agent_run_id=agent_run_id,
-                thread_id=thread_id,
-                instance_id="trigger_executor",
-                project_id=project_id,
-                model_name=model_name,
-                enable_thinking=False,
-                reasoning_effort="low",
-                stream=False,
-                enable_context_manager=True,
-                agent_config=agent_config,
-                is_agent_builder=False,
-                target_agent_id=None,
-                request_id=structlog.contextvars.get_contextvars().get('request_id'),
-            )
+            logger.info(f"Async task created successfully for agent_run_id={agent_run_id}")
+        except Exception as e:
+            logger.error(f"Failed to create async task for agent_run_id={agent_run_id}: {e}")
+            # Try fallback to Dramatiq if available
+            try:
+                if config.ENV_MODE != EnvMode.PRODUCTION:
+                    logger.info(f"Attempting Dramatiq fallback for agent_run_id={agent_run_id}")
+                    run_agent_background.send(
+                        agent_run_id=agent_run_id,
+                        thread_id=thread_id,
+                        instance_id="trigger_executor",
+                        project_id=project_id,
+                        model_name=model_name,
+                        enable_thinking=False,
+                        reasoning_effort="low",
+                        stream=False,
+                        enable_context_manager=True,
+                        agent_config=agent_config,
+                        is_agent_builder=False,
+                        target_agent_id=None,
+                        request_id=structlog.contextvars.get_contextvars().get('request_id'),
+                    )
+                    logger.info(f"Dramatiq fallback successful for agent_run_id={agent_run_id}")
+                else:
+                    raise
+            except Exception as fallback_error:
+                logger.error(f"Both async and Dramatiq execution failed for agent_run_id={agent_run_id}: {fallback_error}")
+                raise
         
-        logger.info(f"Started agent execution: {agent_run_id}")
+        logger.info(f"Agent execution initiated: {agent_run_id}")
         return agent_run_id
     
     async def _register_agent_run(self, agent_run_id: str) -> None:
