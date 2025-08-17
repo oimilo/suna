@@ -36,6 +36,7 @@ class TriggerWithAgent(BaseModel):
     execution_count: int = 0
     success_count: int = 0
     failure_count: int = 0
+    webhook_url: Optional[str] = None
 
 
 class TriggerListResponse(BaseModel):
@@ -152,6 +153,12 @@ async def get_all_user_triggers(
                 # TODO: Calculate next execution based on cron expression
                 pass
             
+            # Generate webhook URL for webhook triggers
+            webhook_url = None
+            if trigger['trigger_type'] == 'webhook':
+                backend_url = 'https://api.suna.ai'  # TODO: Get from config
+                webhook_url = f"{backend_url}/api/triggers/{trigger['trigger_id']}/webhook"
+            
             triggers.append(TriggerWithAgent(
                 trigger_id=trigger['trigger_id'],
                 agent_id=trigger['agent_id'],
@@ -168,7 +175,8 @@ async def get_all_user_triggers(
                 next_execution=next_execution,
                 execution_count=trigger_stats.get('execution_count', 0),
                 success_count=trigger_stats.get('success_count', 0),
-                failure_count=trigger_stats.get('failure_count', 0)
+                failure_count=trigger_stats.get('failure_count', 0),
+                webhook_url=webhook_url
             ))
         
         has_more = total_count > (page * per_page)

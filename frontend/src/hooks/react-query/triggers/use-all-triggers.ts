@@ -19,6 +19,7 @@ export interface TriggerWithAgent {
   execution_count: number;
   success_count: number;
   failure_count: number;
+  webhook_url?: string;
 }
 
 export interface TriggerListResponse {
