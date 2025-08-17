@@ -30,6 +30,22 @@ workflows_router = APIRouter(prefix="/workflows", tags=["workflows"])
 # Global database connection
 db: Optional[DBConnection] = None
 
+def setup_database(database: DBConnection):
+    """Setup database connection for triggers module"""
+    global db
+    db = database
+    # Also set the db for the all_triggers module
+    api_all_triggers.db = database
+
+def initialize(database: DBConnection):
+    """Initialize triggers module with database connection"""
+    setup_database(database)
+
+# IMPORTANT: Include sub-routers BEFORE defining catch-all routes like /{trigger_id}
+# This ensures that specific routes like /all and /stats are matched before /{trigger_id}
+router.include_router(all_triggers_router)
+router.include_router(workflows_router)
+
 
 # ===== REQUEST/RESPONSE MODELS =====
 
@@ -765,9 +781,4 @@ async def execute_agent_workflow(
         )
 
 
-# ===== INCLUDE WORKFLOWS ROUTER =====
-
-router.include_router(workflows_router)
-
-# Include all triggers router (for unified triggers page)
-router.include_router(all_triggers_router)
+# Sub-routers already included at the top of the file
