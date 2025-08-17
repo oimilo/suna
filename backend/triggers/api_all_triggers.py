@@ -100,9 +100,9 @@ async def get_all_user_triggers(
         
         agent_ids = [agent['agent_id'] for agent in agents_result.data]
         
-        # Build the query for triggers
+        # Build the query for triggers with count
         query = client.table('agent_triggers')\
-            .select('*, agents!inner(name, description)')\
+            .select('*, agents!inner(name, description)', count='exact')\
             .in_('agent_id', agent_ids)
         
         # Apply filters
@@ -115,11 +115,6 @@ async def get_all_user_triggers(
         if search:
             query = query.or_(f"name.ilike.%{search}%,description.ilike.%{search}%")
         
-        # Get total count
-        count_query = query.count()
-        count_result = await count_query.execute()
-        total_count = count_result.count if hasattr(count_result, 'count') else 0
-        
         # Apply sorting and pagination
         if sort_order == 'desc':
             query = query.order(sort_by, desc=True)
@@ -131,6 +126,9 @@ async def get_all_user_triggers(
         
         # Execute query
         result = await query.execute()
+        
+        # Get total count from the result
+        total_count = result.count if hasattr(result, 'count') and result.count is not None else 0
         
         # Get execution statistics for each trigger
         trigger_ids = [t['trigger_id'] for t in result.data] if result.data else []
