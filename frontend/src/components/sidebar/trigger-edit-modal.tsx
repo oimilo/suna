@@ -3,12 +3,28 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { TriggerConfigDialog } from '@/components/agents/triggers/trigger-config-dialog';
+import { TriggerProvider, TriggerConfiguration } from '@/components/agents/triggers/types';
 import { useTriggerProviders } from '@/hooks/react-query/triggers/use-trigger-providers';
 import { useUpdateTrigger } from '@/hooks/react-query/triggers/use-agent-triggers';
 import { toast } from 'sonner';
 
+interface TriggerWithAgent {
+  trigger_id: string;
+  agent_id: string;
+  agent_name: string;
+  agent_description?: string;
+  trigger_type: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  config: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  provider_id?: string;
+}
+
 interface TriggerEditModalProps {
-  trigger: any;
+  trigger: TriggerWithAgent;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -16,7 +32,7 @@ interface TriggerEditModalProps {
 export function TriggerEditModal({ trigger, isOpen, onClose }: TriggerEditModalProps) {
   const { data: providers = [] } = useTriggerProviders();
   const updateTriggerMutation = useUpdateTrigger();
-  const [provider, setProvider] = useState<any>(null);
+  const [provider, setProvider] = useState<TriggerProvider | null>(null);
 
   useEffect(() => {
     if (trigger && providers.length > 0) {
@@ -53,16 +69,17 @@ export function TriggerEditModal({ trigger, isOpen, onClose }: TriggerEditModalP
   }
 
   // Converter o trigger para o formato esperado pelo TriggerConfigDialog
-  const triggerConfig = {
+  const triggerConfig: TriggerConfiguration = {
     trigger_id: trigger.trigger_id,
     agent_id: trigger.agent_id,
+    trigger_type: trigger.trigger_type,
     provider_id: trigger.trigger_type || trigger.provider_id || 'schedule',
     name: trigger.name,
-    description: trigger.description,
-    config: trigger.config || {},
+    description: trigger.description || '',
     is_active: trigger.is_active,
     created_at: trigger.created_at,
     updated_at: trigger.updated_at,
+    config: trigger.config || {},
   };
 
   return (
