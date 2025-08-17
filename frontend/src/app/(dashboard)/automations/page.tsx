@@ -30,7 +30,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAllTriggers, useTriggerStats, useToggleTrigger } from '@/hooks/react-query/triggers/use-all-triggers';
-import { AutomationCard } from '@/components/automations/automation-card';
+import { TriggerCard } from '@/components/automations/trigger-card';
 import { AutomationStats } from '@/components/automations/automation-stats';
 
 const AUTOMATION_SUGGESTIONS = [
@@ -56,8 +56,12 @@ const AUTOMATION_SUGGESTIONS = [
   "Me notifique sobre deploys em produção"
 ];
 
+import { TriggerEditModal } from '@/components/sidebar/trigger-edit-modal';
+
 export default function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTrigger, setSelectedTrigger] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -81,8 +85,8 @@ export default function AutomationsPage() {
   const toggleTriggerMutation = useToggleTrigger();
 
   const handleEditTrigger = (trigger: any) => {
-    // TODO: Navigate to agent configuration
-    console.log('Edit trigger:', trigger);
+    setSelectedTrigger(trigger);
+    setIsEditModalOpen(true);
   };
 
   const rotateSuggestion = (direction: 'next' | 'prev' = 'next') => {
@@ -101,6 +105,11 @@ export default function AutomationsPage() {
 
   const handleToggleTrigger = async (triggerId: string) => {
     await toggleTriggerMutation.mutateAsync(triggerId);
+  };
+
+  const handleDeleteTrigger = (trigger: any) => {
+    // TODO: Implementar exclusão de trigger
+    console.log('Delete trigger:', trigger);
   };
 
   return (
@@ -265,10 +274,11 @@ export default function AutomationsPage() {
                     exit="exit"
                     custom={index}
                   >
-                    <AutomationCard
+                    <TriggerCard
                       trigger={trigger}
                       onEdit={() => handleEditTrigger(trigger)}
                       onToggle={() => handleToggleTrigger(trigger.trigger_id)}
+                      onDelete={() => handleDeleteTrigger(trigger)}
                       isToggling={toggleTriggerMutation.isPending}
                     />
                   </motion.div>
@@ -360,6 +370,17 @@ export default function AutomationsPage() {
         </div>
       </div>
 
+      {/* Modal de edição do trigger */}
+      {selectedTrigger && (
+        <TriggerEditModal
+          trigger={selectedTrigger}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedTrigger(null);
+          }}
+        />
+      )}
     </div>
   );
 }
