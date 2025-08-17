@@ -30,8 +30,8 @@ interface AgentHeaderProps {
       name_editable?: boolean;
     };
   };
-  // isPinned?: boolean;
-  // setIsPinned?: (pinned: boolean) => void;
+  isPinned?: boolean;
+  setIsPinned?: (pinned: boolean) => void;
   activeTab?: string;
   onTabChange?: (value: string) => void;
 }
@@ -44,8 +44,8 @@ export function AgentHeader({
   onFieldChange,
   onStyleChange,
   agentMetadata,
-  // isPinned,
-  // setIsPinned,
+  isPinned,
+  setIsPinned,
   activeTab,
   onTabChange,
 }: AgentHeaderProps) {
