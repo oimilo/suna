@@ -16,6 +16,8 @@ from services.llm import make_llm_api_call
 from agentpress.tool import Tool
 from agentpress.tool_registry import ToolRegistry
 from agentpress.context_manager import ContextManager
+from services.billing_credits import register_usage_with_credits
+from services.billing import calculate_token_cost
 from agentpress.response_processor import (
     ResponseProcessor,
     ProcessorConfig
@@ -95,6 +97,39 @@ class ThreadManager:
         """
         logger.debug(f"Adding message of type '{type}' to thread {thread_id} (agent: {agent_id}, version: {agent_version_id})")
         client = await self.db.client
+
+        # Check if this is an assistant_response_end message with usage data
+        if type == "status" and isinstance(content, dict) and content.get("status_type") == "assistant_response_end":
+            usage_data = content.get("usage", {})
+            if usage_data and usage_data.get("total_tokens", 0) > 0:
+                # Get the user_id from the thread
+                try:
+                    thread_result = await client.table('threads').select('account_id').eq('thread_id', thread_id).single().execute()
+                    if thread_result.data and 'account_id' in thread_result.data:
+                        user_id = thread_result.data['account_id']
+                        
+                        # Calculate the cost
+                        model = usage_data.get("model", "gpt-4o")
+                        prompt_tokens = usage_data.get("prompt_tokens", 0)
+                        completion_tokens = usage_data.get("completion_tokens", 0)
+                        
+                        # Calculate cost using the billing module
+                        cost_in_dollars = calculate_token_cost(prompt_tokens, completion_tokens, model)
+                        
+                        # Register usage with daily credits first
+                        daily_used, sub_used = await register_usage_with_credits(client, user_id, cost_in_dollars)
+                        
+                        # Add the credit usage info to the content
+                        content["credit_usage"] = {
+                            "daily_credits_used": daily_used,
+                            "subscription_credits_used": sub_used,
+                            "total_cost": cost_in_dollars
+                        }
+                        
+                        logger.info(f"Debited credits for user {user_id}: ${daily_used:.4f} from daily, ${sub_used:.4f} from subscription")
+                except Exception as e:
+                    logger.error(f"Failed to debit credits for thread {thread_id}: {str(e)}")
+                    # Continue without blocking the message save
 
         # Prepare data for insertion
         data_to_insert = {
