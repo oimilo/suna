@@ -1422,7 +1422,7 @@ async def get_credits_status(
         # Check if we're in local development mode
         if config.ENV_MODE == EnvMode.LOCAL:
             return {
-                "daily_credits": 40,
+                "daily_credits": 200,
                 "daily_credits_used": 0,
                 "daily_expires_in": "24h 0m",
                 "tier_credits_limit": 999999,

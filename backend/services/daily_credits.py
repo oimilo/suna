@@ -1,6 +1,6 @@
 """
 Daily Credits System for Suna
-Provides 40 free credits per day for all users
+Provides 200 free credits per day for all users ($2 worth)
 """
 
 from datetime import datetime, timezone, timedelta
