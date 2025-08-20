@@ -596,7 +596,7 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
         if daily_credits['credits_available'] <= 0 and subscription_remaining <= 0:
             return False, f"Limite mensal de {tier_credits} créditos atingido e créditos diários esgotados. Faça upgrade do seu plano ou aguarde até amanhã.", subscription
         elif daily_credits['credits_available'] <= 0:
-            return False, f"Créditos diários esgotados. Aguarde até amanhã para receber mais 40 créditos gratuitos.", subscription
+            return False, f"Créditos diários esgotados. Aguarde até amanhã para receber mais 200 créditos gratuitos.", subscription
         else:
             return False, f"Limite mensal de {tier_credits} créditos atingido. Faça upgrade do seu plano ou aguarde até o próximo mês.", subscription
     

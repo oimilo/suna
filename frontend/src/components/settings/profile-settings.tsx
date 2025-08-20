@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Moon, Sun, Monitor } from 'lucide-react';
 import { GetAccountResponse } from '@usebasejump/shared';
 import { User } from '@supabase/supabase-js';
@@ -15,7 +13,6 @@ import { editPersonalAccountName } from '@/lib/actions/personal-account';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { toast } from 'sonner';
 
 interface ProfileSettingsProps {
   account: GetAccountResponse;
@@ -24,7 +21,6 @@ interface ProfileSettingsProps {
 
 export default function ProfileSettings({ account, user }: ProfileSettingsProps) {
   const { theme, setTheme } = useTheme();
-  const [fontSize, setFontSize] = useState('medium');
 
   const themeOptions = [
     { value: 'light', label: 'Claro', icon: <Sun className="h-4 w-4" /> },
@@ -133,21 +129,6 @@ export default function ProfileSettings({ account, user }: ProfileSettingsProps)
               </Label>
             ))}
           </RadioGroup>
-        </div>
-
-        {/* Font Size */}
-        <div className="space-y-3">
-          <Label htmlFor="font-size">Tamanho da fonte</Label>
-          <Select value={fontSize} onValueChange={setFontSize}>
-            <SelectTrigger id="font-size">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="small">Pequeno</SelectItem>
-              <SelectItem value="medium">Médio</SelectItem>
-              <SelectItem value="large">Grande</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
     </div>

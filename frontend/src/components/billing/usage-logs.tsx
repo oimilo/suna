@@ -26,10 +26,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import { OpenInNewWindowIcon } from '@radix-ui/react-icons';
+import { ExternalLink, Loader2, Sparkles, Check } from 'lucide-react';
 import { useUsageLogs } from '@/hooks/react-query/subscriptions/use-billing';
+import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscriptions';
 import { UsageLogEntry } from '@/lib/api';
 
 
@@ -47,6 +46,45 @@ interface Props {
   accountId: string;
 }
 
+// Mapeamento de modelos seguindo a mesma lógica do seletor
+const getModelAlias = (model: string): string => {
+  // IDs exatos dos modelos conforme definido no sistema
+  const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514';
+  const DEFAULT_FREE_MODEL_ID = 'gemini-2.5-pro';
+  
+  // Verifica match exato primeiro
+  if (model === DEFAULT_FREE_MODEL_ID) {
+    return 'Agente padrão';
+  }
+  if (model === DEFAULT_PREMIUM_MODEL_ID) {
+    return 'Agente avançado';
+  }
+  
+  // Verifica por padrões conhecidos
+  const modelLower = model.toLowerCase();
+  
+  // Gemini models -> Agente padrão
+  if (modelLower.includes('gemini')) {
+    return 'Agente padrão';
+  }
+  
+  // Claude models -> Agente avançado
+  if (modelLower.includes('claude')) {
+    return 'Agente avançado';
+  }
+  
+  // GPT models
+  if (modelLower.includes('gpt-4')) {
+    return 'Agente avançado';
+  }
+  if (modelLower.includes('gpt-3')) {
+    return 'Agente padrão';
+  }
+  
+  // Default: retorna o nome original
+  return model;
+};
+
 export default function UsageLogs({ accountId }: Props) {
   const [page, setPage] = useState(0);
   const [allLogs, setAllLogs] = useState<UsageLogEntry[]>([]);
@@ -54,8 +92,9 @@ export default function UsageLogs({ accountId }: Props) {
   
   const ITEMS_PER_PAGE = 1000;
 
-  // Use React Query hook for the current page
-  const { data: currentPageData, isLoading, error, refetch } = useUsageLogs(page, ITEMS_PER_PAGE);
+  // Use React Query hooks
+  const { data: currentPageData, isLoading, error } = useUsageLogs(page, ITEMS_PER_PAGE);
+  const { data: subscriptionData } = useSubscription();
 
   // Update accumulated logs when new data arrives
   useEffect(() => {
@@ -150,14 +189,43 @@ export default function UsageLogs({ accountId }: Props) {
     );
   };
 
+  // Calculate usage summary
+  const calculateUsageSummary = () => {
+    // Get current usage and limit from subscription data
+    const currentUsageInDollars = subscriptionData?.current_usage || 0;
+    const costLimitInDollars = subscriptionData?.cost_limit || 0;
+    
+    // Convert to credits (1 dollar = 100 credits)
+    const usedCredits = Math.round(currentUsageInDollars * 100);
+    const subscriptionCredits = Math.round(costLimitInDollars * 100);
+    
+    // Daily credits (fixed for now, will be integrated with backend)
+    const dailyCredits = 200;
+    const dailyCreditsUsed = 0; // Will come from backend
+    const dailyCreditsRemaining = dailyCredits - dailyCreditsUsed;
+    
+    // Total available credits
+    const totalAvailable = subscriptionCredits + dailyCreditsRemaining;
+    
+    return {
+      usedCredits,
+      subscriptionCredits,
+      dailyCredits,
+      dailyCreditsUsed,
+      dailyCreditsRemaining,
+      totalAvailable,
+      percentageUsed: totalAvailable > 0 ? (usedCredits / totalAvailable) * 100 : 0
+    };
+  };
 
+  const summary = calculateUsageSummary();
 
   if (isLoading && page === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Usage Logs</CardTitle>
-          <CardDescription>Loading your token usage history...</CardDescription>
+          <CardTitle>Logs de Uso</CardTitle>
+          <CardDescription>Carregando seu histórico de uso...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -174,12 +242,12 @@ export default function UsageLogs({ accountId }: Props) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Usage Logs</CardTitle>
+          <CardTitle>Logs de Uso</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive">
-              Error: {error.message || 'Failed to load usage logs'}
+              Erro: {error.message || 'Falha ao carregar logs de uso'}
             </p>
           </div>
         </CardContent>
@@ -192,7 +260,7 @@ export default function UsageLogs({ accountId }: Props) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Usage Logs</CardTitle>
+          <CardTitle>Logs de Uso</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="p-4 bg-muted/30 border border-border rounded-lg text-center">
@@ -209,73 +277,125 @@ export default function UsageLogs({ accountId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Usage Logs Accordion */}
-      <Card className="py-0 gap-0">
-        <CardHeader className="px-6 py-4">
-          <CardTitle>Logs de Uso Diário</CardTitle>
-          <CardDescription>
-            <div className='flex justify-between items-center'>
-              Seu uso de tokens organizado por dia, ordenado do mais recente.{" "}
-              <Button variant='outline' asChild className='text-sm ml-4'>
-                <Link href="/model-pricing">
-                  Ver Preços dos Modelos <OpenInNewWindowIcon className='w-4 h-4' />
-                </Link>
-              </Button>
+      {/* Barra de Créditos com Design Suna */}
+      <Card className="border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium">Créditos</CardTitle>
+            <span className="text-sm text-muted-foreground">
+              {(summary.totalAvailable - summary.usedCredits).toLocaleString('pt-BR')} de {summary.totalAvailable.toLocaleString('pt-BR')} restantes
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-8">
+          {/* Barra de progresso combinada */}
+          <div className="space-y-3">
+            <div className="h-2 bg-black/[0.04] dark:bg-white/[0.04] rounded-full overflow-hidden">
+              <div className="h-full flex">
+                {/* Parte dos créditos diários (amber) */}
+                {summary.dailyCreditsRemaining > 0 && (
+                  <div 
+                    className="bg-amber-500 transition-all duration-500"
+                    style={{ 
+                      width: `${Math.min((summary.dailyCreditsRemaining / summary.totalAvailable) * 100, 100)}%` 
+                    }}
+                  />
+                )}
+                {/* Parte dos créditos da assinatura (blue) */}
+                <div 
+                  className="bg-blue-500 transition-all duration-500"
+                  style={{ 
+                    width: `${Math.max(((summary.subscriptionCredits - Math.max(0, summary.usedCredits - summary.dailyCreditsRemaining)) / summary.totalAvailable) * 100, 0)}%` 
+                  }}
+                />
+              </div>
             </div>
+            
+            {/* Legenda com design Suna minimalista */}
+            <div className="flex flex-col gap-2.5 pt-1 pb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Créditos diários usados primeiro
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {summary.subscriptionCredits.toLocaleString('pt-BR')} créditos mensais renovam em 5 de setembro
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Logs de Uso Diário com Design Suna */}
+      <Card className="border border-black/6 dark:border-white/8 bg-transparent">
+        <CardHeader className="px-6 py-4">
+          <CardTitle className="text-lg font-semibold">Histórico Detalhado</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
+            Uso de créditos organizado por dia
           </CardDescription>
         </CardHeader>
         <CardContent className="px-6 pb-6">
           {dailyUsage.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No usage logs found.</p>
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              <p>Nenhum log de uso encontrado.</p>
             </div>
           ) : (
             <>
               <Accordion type="single" collapsible className="w-full">
                 {dailyUsage.map((day) => (
-                  <AccordionItem key={day.date} value={day.date}>
-                    <AccordionTrigger className="hover:no-underline">
+                  <AccordionItem 
+                    key={day.date} 
+                    value={day.date}
+                    className="border-black/6 dark:border-white/8"
+                  >
+                    <AccordionTrigger className="hover:no-underline hover:bg-black/[0.02] dark:hover:bg-white/[0.03] px-3 py-3 rounded-lg transition-all duration-200">
                       <div className="flex justify-between items-center w-full mr-4">
                         <div className="text-left">
-                          <div className="font-semibold">
+                          <div className="font-medium text-sm">
                             {formatDateOnly(day.date)}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {day.requestCount} request
-                            {day.requestCount !== 1 ? 's' : ''} •{' '}
-                            {day.models.join(', ')}
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {day.requestCount} requisição{day.requestCount !== 1 ? 'ões' : ''} • {' '}
+                            {day.models.map(m => getModelAlias(m)).join(', ')}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-mono font-semibold">
+                          <div className="font-mono font-semibold text-sm">
                             {formatCost(day.totalCost)}
                           </div>
-                          <div className="text-sm text-muted-foreground font-mono">
-                            {day.totalTokens.toLocaleString()} tokens
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {day.totalTokens.toLocaleString('pt-BR')} tokens
                           </div>
                         </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="rounded-md border mt-4">
+                      <div className="rounded-lg border border-black/6 dark:border-white/8 mt-3 overflow-hidden">
                         <Table>
                           <TableHeader>
-                            <TableRow>
-                              <TableHead>Time</TableHead>
-                              <TableHead>Model</TableHead>
-                              <TableHead className="text-right">
-                                Tokens
-                              </TableHead>
-                              <TableHead className="text-right">Créditos</TableHead>
-                              <TableHead className="text-center">
-                                Thread
-                              </TableHead>
+                            <TableRow className="border-black/6 dark:border-white/8 hover:bg-transparent">
+                              <TableHead className="text-xs">Horário</TableHead>
+                              <TableHead className="text-xs">Modelo</TableHead>
+                              <TableHead className="text-right text-xs">Tokens</TableHead>
+                              <TableHead className="text-right text-xs">Créditos</TableHead>
+                              <TableHead className="text-center text-xs">Thread</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {day.logs.map((log) => (
-                              <TableRow key={log.message_id}>
-                                <TableCell className="font-mono text-sm">
+                              <TableRow 
+                                key={log.message_id}
+                                className="border-black/6 dark:border-white/8 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                              >
+                                <TableCell className="font-mono text-xs text-muted-foreground">
                                   {new Date(log.created_at).toLocaleTimeString('pt-BR', {
                                     timeZone: 'America/Sao_Paulo',
                                     hour: '2-digit',
@@ -284,16 +404,23 @@ export default function UsageLogs({ accountId }: Props) {
                                   })}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge className="font-mono text-xs">
-                                    {log.content.model}
+                                  <Badge 
+                                    variant="secondary"
+                                    className="font-mono text-xs bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8"
+                                  >
+                                    {getModelAlias(log.content.model)}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right font-mono font-medium text-sm">
-                                  {formatNumber(log.content.usage.prompt_tokens)}{' '}
-                                  -&gt;{' '}
-                                  {formatNumber(log.content.usage.completion_tokens)}
+                                <TableCell className="text-right font-mono text-xs">
+                                  <span className="text-muted-foreground">
+                                    {formatNumber(log.content.usage.prompt_tokens)}
+                                  </span>
+                                  <span className="text-muted-foreground/60 mx-1">→</span>
+                                  <span className="text-foreground">
+                                    {formatNumber(log.content.usage.completion_tokens)}
+                                  </span>
                                 </TableCell>
-                                <TableCell className="text-right font-mono font-medium text-sm">
+                                <TableCell className="text-right font-mono font-medium text-xs">
                                   {formatCost(log.estimated_cost)}
                                 </TableCell>
                                 <TableCell className="text-center">
@@ -306,9 +433,9 @@ export default function UsageLogs({ accountId }: Props) {
                                         log.project_id,
                                       )
                                     }
-                                    className="h-8 w-8 p-0"
+                                    className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
                                   >
-                                    <ExternalLink className="h-4 w-4" />
+                                    <ExternalLink className="h-3.5 w-3.5 opacity-60" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -327,14 +454,15 @@ export default function UsageLogs({ accountId }: Props) {
                     onClick={loadMore}
                     disabled={isLoading}
                     variant="outline"
+                    className="border-black/6 dark:border-white/8 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        Carregando...
                       </>
                     ) : (
-                      'Load More'
+                      'Carregar Mais'
                     )}
                   </Button>
                 </div>
