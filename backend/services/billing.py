@@ -16,6 +16,13 @@ from pydantic import BaseModel
 from utils.constants import MODEL_ACCESS_TIERS, MODEL_NAME_ALIASES, HARDCODED_MODEL_PRICES
 from litellm.cost_calculator import cost_per_token
 import time
+from decimal import Decimal
+from services.daily_credits import (
+    get_or_create_daily_credits, 
+    credits_to_dollars, 
+    dollars_to_credits,
+    get_daily_credits_summary
+)
 
 # Initialize Stripe
 stripe.api_key = config.STRIPE_SECRET_KEY
@@ -45,11 +52,11 @@ def get_model_pricing(model: str) -> tuple[float, float] | None:
 SUBSCRIPTION_TIERS = {
     config.STRIPE_FREE_TIER_ID: {'name': 'free', 'minutes': 60, 'cost': 5},
     
-    # New Prophet Plans
-    config.STRIPE_PRO_MONTHLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 150},  # R$99 = ~150 credits
-    config.STRIPE_PRO_YEARLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 150},  # Same limits, yearly billing
-    config.STRIPE_PRO_MAX_MONTHLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 500},  # R$249 = ~500 credits
-    config.STRIPE_PRO_MAX_YEARLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 500},  # Same limits, yearly billing
+    # New Prophet Plans - CORRECTED VALUES
+    config.STRIPE_PRO_MONTHLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 25},  # R$99 = $25 USD = 2500 credits
+    config.STRIPE_PRO_YEARLY_ID: {'name': 'pro', 'minutes': 900, 'cost': 25},  # Same limits, yearly billing
+    config.STRIPE_PRO_MAX_MONTHLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 75},  # R$249 = $75 USD = 7500 credits
+    config.STRIPE_PRO_MAX_YEARLY_ID: {'name': 'pro_max', 'minutes': 3000, 'cost': 75},  # Same limits, yearly billing
     
     # Legacy tiers (kept for backwards compatibility)
     config.STRIPE_TIER_2_20_ID: {'name': 'tier_2_20', 'minutes': 120, 'cost': 20 + 5},  # 2 hours
@@ -126,16 +133,16 @@ def get_tier_info_from_price(price_id: str, price_data: Optional[Dict] = None) -
             return {
                 'name': 'pro',
                 'minutes': 900,
-                'cost': 150
+                'cost': 25
             }
         elif price_amount <= 20:
             return {'name': 'tier_2_20', 'minutes': 120, 'cost': 25}
         elif price_amount <= 50:
             return {'name': 'tier_6_50', 'minutes': 360, 'cost': 55}
         elif price_amount <= 100:
-            return {'name': 'pro', 'minutes': 900, 'cost': 150}
+            return {'name': 'pro', 'minutes': 900, 'cost': 25}
         elif price_amount <= 250:
-            return {'name': 'pro_max', 'minutes': 3000, 'cost': 500}
+            return {'name': 'pro_max', 'minutes': 3000, 'cost': 75}
         else:
             return {'name': 'tier_200_1000', 'minutes': 12000, 'cost': 1005}
     
@@ -144,7 +151,7 @@ def get_tier_info_from_price(price_id: str, price_data: Optional[Dict] = None) -
     return {
         'name': 'pro',
         'minutes': 900,
-        'cost': 150
+        'cost': 25
     }
 
 async def get_stripe_customer_id(client, user_id: str) -> Optional[str]:
@@ -571,10 +578,38 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
     # Calculate current month's usage
     current_usage = await calculate_monthly_usage(client, user_id)
     
+    # First, check daily credits
+    daily_credits = await get_or_create_daily_credits(client, user_id)
+    daily_credits_in_dollars = credits_to_dollars(daily_credits['credits_available'])
+    
+    # Calculate total available (daily credits + remaining subscription)
+    subscription_remaining = tier_info['cost'] - current_usage
+    total_available = float(daily_credits_in_dollars) + subscription_remaining
+    
     # TODO: also do user's AAL check
-    # Check if within limits
-    if current_usage >= tier_info['cost']:
-        return False, f"Monthly limit of {tier_info['cost']} dollars reached. Please upgrade your plan or wait until next month.", subscription
+    # Check if user has any credits available (daily or subscription)
+    if total_available <= 0:
+        # Convert to credits for display
+        tier_credits = int(dollars_to_credits(Decimal(str(tier_info['cost']))))
+        
+        # No credits available at all
+        if daily_credits['credits_available'] <= 0 and subscription_remaining <= 0:
+            return False, f"Limite mensal de {tier_credits} créditos atingido e créditos diários esgotados. Faça upgrade do seu plano ou aguarde até amanhã.", subscription
+        elif daily_credits['credits_available'] <= 0:
+            return False, f"Créditos diários esgotados. Aguarde até amanhã para receber mais 40 créditos gratuitos.", subscription
+        else:
+            return False, f"Limite mensal de {tier_credits} créditos atingido. Faça upgrade do seu plano ou aguarde até o próximo mês.", subscription
+    
+    # Add daily credits info to subscription for frontend
+    subscription['daily_credits'] = float(daily_credits['credits_available'])
+    subscription['daily_expires_at'] = daily_credits['expires_at']
+    subscription['total_available_dollars'] = total_available
+    
+    # Add credit conversions for frontend
+    subscription['tier_credits_limit'] = int(dollars_to_credits(Decimal(str(tier_info['cost']))))
+    subscription['tier_credits_used'] = int(dollars_to_credits(Decimal(str(current_usage))))
+    subscription['tier_credits_remaining'] = int(dollars_to_credits(Decimal(str(subscription_remaining)))) if subscription_remaining > 0 else 0
+    subscription['total_credits_available'] = int(daily_credits['credits_available']) + subscription['tier_credits_remaining']
     
     return True, "OK", subscription
 
@@ -1373,3 +1408,63 @@ async def get_usage_logs_endpoint(
     except Exception as e:
         logger.error(f"Error getting usage logs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting usage logs: {str(e)}")
+
+@router.get("/credits-status")
+async def get_credits_status(
+    current_user_id: str = Depends(get_current_user_id_from_jwt)
+):
+    """Get the current credits status for the user, including daily credits."""
+    try:
+        # Get Supabase client
+        db = DBConnection()
+        client = await db.client
+        
+        # Check if we're in local development mode
+        if config.ENV_MODE == EnvMode.LOCAL:
+            return {
+                "daily_credits": 40,
+                "daily_credits_used": 0,
+                "daily_expires_in": "24h 0m",
+                "tier_credits_limit": 999999,
+                "tier_credits_used": 0,
+                "tier_credits_remaining": 999999,
+                "total_credits_available": 999999,
+                "subscription_name": "Local Development"
+            }
+        
+        # Get subscription info
+        subscription = await get_user_subscription(current_user_id)
+        
+        # Get tier info
+        price_id = config.STRIPE_FREE_TIER_ID
+        if subscription and subscription.get('items') and subscription['items'].get('data'):
+            price_id = subscription['items']['data'][0]['price']['id']
+        
+        tier_info = get_tier_info_from_price(price_id, 
+            subscription['items']['data'][0].get('price') if subscription and subscription.get('items') and subscription['items'].get('data') else None)
+        
+        # Get current usage
+        current_usage = await calculate_monthly_usage(client, current_user_id)
+        
+        # Get daily credits
+        daily_summary = await get_daily_credits_summary(client, current_user_id)
+        
+        # Calculate remaining subscription credits
+        subscription_remaining = tier_info['cost'] - current_usage
+        tier_credits_remaining = int(dollars_to_credits(Decimal(str(subscription_remaining)))) if subscription_remaining > 0 else 0
+        
+        return {
+            "daily_credits": daily_summary['daily_credits'],
+            "daily_credits_used": daily_summary['daily_credits_used'],
+            "daily_credits_granted": daily_summary['daily_credits_granted'],
+            "daily_expires_in": daily_summary['daily_expires_in'],
+            "tier_credits_limit": int(dollars_to_credits(Decimal(str(tier_info['cost'])))),
+            "tier_credits_used": int(dollars_to_credits(Decimal(str(current_usage)))),
+            "tier_credits_remaining": tier_credits_remaining,
+            "total_credits_available": int(daily_summary['daily_credits']) + tier_credits_remaining,
+            "subscription_name": tier_info['name']
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting credits status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting credits status: {str(e)}")

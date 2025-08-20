@@ -34,6 +34,16 @@ export default function ProfileSettings({ account, user }: ProfileSettingsProps)
 
   return (
     <div className="space-y-6">
+      {/* Informações Pessoais */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <h3 className="text-base font-medium">Informações Pessoais</h3>
+        </div>
+      </div>
+
       {/* Avatar Section */}
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16">
