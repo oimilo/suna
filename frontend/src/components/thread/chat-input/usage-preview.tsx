@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Zap } from 'lucide-react';
+import { X, Zap, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLocalMode } from '@/lib/config';
 import { Button } from '@/components/ui/button';
+import { useCreditsStatus } from '@/hooks/react-query';
 
 export interface UsagePreviewProps {
     type: 'tokens' | 'upgrade';
@@ -28,13 +29,37 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     totalCount = 1,
     onIndicatorClick,
 }) => {
+    const { data: creditsData } = useCreditsStatus();
+    
     if (isLocalMode()) return null;
 
-    const formatCurrency = (amount: number) => {
-        return `$${amount.toFixed(2)}`;
+    // Format credits display
+    const formatCredits = (credits: number) => {
+        return Math.floor(credits).toLocaleString('pt-BR');
     };
 
     const getUsageDisplay = () => {
+        // Use credits data if available
+        if (creditsData) {
+            const { tier_credits_used, tier_credits_limit, daily_credits, total_credits_available } = creditsData;
+            
+            // Show daily credits if available
+            if (daily_credits > 0) {
+                return (
+                    <span className="flex items-center gap-2">
+                        <span>{formatCredits(tier_credits_used)} / {formatCredits(tier_credits_limit)}</span>
+                        <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            +{formatCredits(daily_credits)} diários
+                        </span>
+                    </span>
+                );
+            }
+            
+            return `${formatCredits(tier_credits_used)} / ${formatCredits(tier_credits_limit)} créditos`;
+        }
+        
+        // Fallback to old display if credits data not available
         if (!subscriptionData) return 'Carregando uso...';
 
         const current = subscriptionData.current_usage || 0;
@@ -42,8 +67,12 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
 
         if (limit === 0) return 'Sem limite de uso definido';
 
+        // Convert dollars to credits (100 credits = $1)
+        const currentCredits = current * 100;
+        const limitCredits = limit * 100;
+
         const isOverLimit = current > limit;
-        const usageText = `${formatCurrency(current)} / ${formatCurrency(limit)}`;
+        const usageText = `${formatCredits(currentCredits)} / ${formatCredits(limitCredits)} créditos`;
 
         if (isOverLimit) {
             return `${usageText} (acima do limite)`;
@@ -53,6 +82,12 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     const isOverLimit = () => {
+        // Check using credits data if available
+        if (creditsData) {
+            return creditsData.total_credits_available <= 0;
+        }
+        
+        // Fallback to old check
         if (!subscriptionData) return false;
         const current = subscriptionData.current_usage || 0;
         const limit = subscriptionData.cost_limit || 0;
@@ -93,9 +128,9 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                         "w-2 h-2 rounded-full",
                         isOverLimit() ? "bg-red-500" : "bg-blue-500"
                     )} />
-                    <span className="text-xs text-muted-foreground truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                         {getUsageDisplay()}
-                    </span>
+                    </div>
                 </motion.div>
             </div>
 

@@ -7,10 +7,11 @@ import { isLocalMode } from '@/lib/config';
 import { createPortalSession } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSubscription } from '@/hooks/react-query';
+import { useSubscription, useCreditsStatus } from '@/hooks/react-query';
 import Link from 'next/link';
 import { OpenInNewWindowIcon } from '@radix-ui/react-icons';
 import { getPlanDisplayName } from '@/lib/subscription-utils';
+import { Sparkles } from 'lucide-react';
 
 type Props = {
   accountId: string;
@@ -26,6 +27,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
     isLoading,
     error: subscriptionQueryError,
   } = useSubscription();
+  const { data: creditsData } = useCreditsStatus();
 
   const handleManageSubscription = async () => {
     try {
@@ -108,17 +110,34 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
               </div>
               <div className="flex justify-between items-center gap-4">
                 <span className="text-sm font-medium text-foreground/90">
-                  Uso de Agentes Este Mês
+                  Créditos Este Mês
                 </span>
-                <span className="text-sm font-medium text-card-title">
-                  ${subscriptionData.current_usage?.toFixed(2) || '0'} /{' '}
-                  ${subscriptionData.cost_limit || '0'}
-                </span>
-                <Button variant='outline' asChild className='text-sm'>
-                  <Link href="/settings/usage-logs">
-                    Logs de uso
-                  </Link>
-                </Button>
+                <div className="flex items-center gap-3">
+                  {creditsData ? (
+                    <>
+                      <span className="text-sm font-medium text-card-title">
+                        {Math.floor(creditsData.tier_credits_used).toLocaleString('pt-BR')} /{' '}
+                        {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
+                      </span>
+                      {creditsData.daily_credits > 0 && (
+                        <span className="text-sm font-medium text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          +{Math.floor(creditsData.daily_credits)} diários
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-card-title">
+                      ${subscriptionData.current_usage?.toFixed(2) || '0'} /{' '}
+                      ${subscriptionData.cost_limit || '0'}
+                    </span>
+                  )}
+                  <Button variant='outline' asChild className='text-sm'>
+                    <Link href="/settings/usage-logs">
+                      Logs de uso
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -161,12 +180,29 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
 
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-foreground/90">
-                  Uso de Agentes Este Mês
+                  Créditos Este Mês
                 </span>
-                <span className="text-sm font-medium text-card-title">
-                  ${subscriptionData?.current_usage?.toFixed(2) || '0'} /{' '}
-                  ${subscriptionData?.cost_limit || '0'}
-                </span>
+                <div className="flex items-center gap-3">
+                  {creditsData ? (
+                    <>
+                      <span className="text-sm font-medium text-card-title">
+                        {Math.floor(creditsData.tier_credits_used).toLocaleString('pt-BR')} /{' '}
+                        {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
+                      </span>
+                      {creditsData.daily_credits > 0 && (
+                        <span className="text-sm font-medium text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          +{Math.floor(creditsData.daily_credits)} diários
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-card-title">
+                      ${subscriptionData?.current_usage?.toFixed(2) || '0'} /{' '}
+                      ${subscriptionData?.cost_limit || '0'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

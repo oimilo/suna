@@ -3,7 +3,7 @@ import { handleApiError } from './error-handler';
 import { getBackendModelName } from './model-mapping';
 
 // Get backend URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+export const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 // Set to keep track of agent runs that are known to be non-running
 const nonRunningAgentRuns = new Set<string>();
