@@ -10,7 +10,7 @@ from services.supabase import DBConnection
 from decimal import Decimal
 
 # Constants
-DAILY_CREDITS_AMOUNT = Decimal("40.00")  # 40 credits per day
+DAILY_CREDITS_AMOUNT = Decimal("200.00")  # 200 credits per day ($2 worth)
 CREDIT_TO_DOLLAR_RATE = Decimal("0.01")  # 1 credit = $0.01 (100 credits = $1)
 DAILY_CREDITS_DURATION_HOURS = 24
 
