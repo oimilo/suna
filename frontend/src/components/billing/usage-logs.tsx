@@ -81,10 +81,15 @@ export default function UsageLogs({ accountId }: Props) {
   };
 
   const formatCost = (cost: number | string) => {
-    if (typeof cost === 'string' || cost === 0) {
-      return typeof cost === 'string' ? cost : '$0.0000';
+    if (typeof cost === 'string') {
+      return cost;
     }
-    return `$${cost.toFixed(4)}`;
+    // Convert dollars to credits (1 dollar = 100 credits)
+    const credits = Math.round(cost * 100);
+    if (credits === 0) {
+      return '0 créditos';
+    }
+    return `${credits.toLocaleString('pt-BR')} créditos`;
   };
 
   const formatDateOnly = (dateString: string) => {
@@ -201,11 +206,6 @@ export default function UsageLogs({ accountId }: Props) {
   }
 
   const dailyUsage = groupLogsByDate(allLogs);
-  const totalUsage = allLogs.reduce(
-    (sum, log) =>
-      sum + (typeof log.estimated_cost === 'number' ? log.estimated_cost : 0),
-    0,
-  );
 
   return (
     <div className="space-y-6">
@@ -266,7 +266,7 @@ export default function UsageLogs({ accountId }: Props) {
                               <TableHead className="text-right">
                                 Tokens
                               </TableHead>
-                              <TableHead className="text-right">Cost</TableHead>
+                              <TableHead className="text-right">Créditos</TableHead>
                               <TableHead className="text-center">
                                 Thread
                               </TableHead>
