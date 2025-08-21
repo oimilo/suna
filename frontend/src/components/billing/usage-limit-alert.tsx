@@ -36,7 +36,7 @@ export function BillingErrorAlert({
           <div className="flex-1">
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-sm font-semibold text-foreground">
-                Créditos do plano utilizados
+                Créditos do plano esgotados
               </h3>
               <Button
                 variant="ghost"
@@ -47,7 +47,9 @@ export function BillingErrorAlert({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mb-2">{message}</p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Você pode aguardar seu reset diário ou fazer upgrade
+            </p>
             
             <div className="flex items-center gap-1 mb-3 text-xs text-amber-600 dark:text-amber-400">
               <Sparkles className="h-3 w-3" />
