@@ -1628,6 +1628,11 @@ export interface SubscriptionStatus {
   scheduled_price_id?: string; // Added
   scheduled_change_date?: string; // ISO Date string - Deprecate? Check backend usage
   schedule_effective_date?: string; // ISO Date string - Added for consistency
+  // Daily credits fields
+  daily_credits?: number;
+  daily_credits_used?: number;
+  daily_credits_granted?: number;
+  daily_expires_in?: string;
 }
 
 export interface BillingStatusResponse {
