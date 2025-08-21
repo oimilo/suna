@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, X } from 'lucide-react';
+import { Info, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -28,15 +28,15 @@ export function BillingErrorAlert({
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999]">
-      <div className="bg-destructive/15 backdrop-blur-sm border border-destructive/30 rounded-lg p-5 shadow-lg max-w-md">
+      <div className="bg-amber-500/10 backdrop-blur-sm border border-amber-500/30 rounded-lg p-5 shadow-lg max-w-md">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 bg-destructive/20 p-2 rounded-full">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
+          <div className="flex-shrink-0 bg-amber-500/20 p-2 rounded-full">
+            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-sm font-semibold text-destructive">
-                Limite de Uso Atingido
+              <h3 className="text-sm font-semibold text-foreground">
+                Créditos do plano utilizados
               </h3>
               <Button
                 variant="ghost"
@@ -47,7 +47,12 @@ export function BillingErrorAlert({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">{message}</p>
+            <p className="text-sm text-muted-foreground mb-2">{message}</p>
+            
+            <div className="flex items-center gap-1 mb-3 text-xs text-amber-600 dark:text-amber-400">
+              <Sparkles className="h-3 w-3" />
+              <span>Você ainda tem créditos diários gratuitos!</span>
+            </div>
 
             <div className="flex gap-2">
               <Button
@@ -56,16 +61,16 @@ export function BillingErrorAlert({
                 onClick={onDismiss}
                 className="text-xs"
               >
-                Dispensar
+                Entendi
               </Button>
               <Button
                 size="sm"
                 onClick={() =>
                   router.push(`/settings/billing?accountId=${accountId}`)
                 }
-                className="text-xs bg-destructive hover:bg-destructive/90"
+                className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
               >
-                Fazer Upgrade
+                Ver Opções de Upgrade
               </Button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 """
 Daily Credits System for Suna
-Provides 200 free credits per day for all users ($2 worth)
+Provides free credits per day for all users (configurable via env)
 """
 
 from datetime import datetime, timezone, timedelta
@@ -8,9 +8,10 @@ from typing import Optional, Tuple, Dict
 from utils.logger import logger
 from services.supabase import DBConnection
 from decimal import Decimal
+from utils.config import config
 
 # Constants
-DAILY_CREDITS_AMOUNT = Decimal("200.00")  # 200 credits per day ($2 worth)
+DAILY_CREDITS_AMOUNT = Decimal(str(config.DAILY_CREDITS_AMOUNT))  # Credits per day from env variable (default: 200)
 CREDIT_TO_DOLLAR_RATE = Decimal("0.01")  # 1 credit = $0.01 (100 credits = $1)
 DAILY_CREDITS_DURATION_HOURS = 24
 

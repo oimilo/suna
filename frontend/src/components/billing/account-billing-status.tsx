@@ -9,7 +9,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSubscription, useCreditsStatus } from '@/hooks/react-query';
 import Link from 'next/link';
-import { OpenInNewWindowIcon } from '@radix-ui/react-icons';
 import { getPlanDisplayName } from '@/lib/subscription-utils';
 import { Sparkles } from 'lucide-react';
 
@@ -147,15 +146,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
 
           <div className="mt-20"></div>
           {/* Manage Subscription Button */}
-          <div className='flex justify-center items-center gap-4'>
-            <Button
-              variant="outline"
-              className="border-border hover:bg-muted/50 shadow-sm hover:shadow-md transition-all whitespace-nowrap flex items-center"
-            >
-              <Link href="/model-pricing">
-                Ver Preços dos Modelos <OpenInNewWindowIcon className='w-4 h-4 inline ml-2' />
-              </Link>
-            </Button>
+          <div className='flex justify-center items-center'>
             <Button
               onClick={handleManageSubscription}
               disabled={isManaging}
@@ -211,18 +202,11 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
           <PricingSection returnUrl={returnUrl} showTitleAndTabs={false} insideDialog={true} />
 
           {/* Action Buttons */}
-          <div className="space-y-3">
-            <Button
-              onClick={() => window.open('/model-pricing', '_blank')}
-              variant="outline"
-              className="w-full border-border hover:bg-muted/50 shadow-sm hover:shadow-md transition-all"
-            >
-              Ver Preços dos Modelos
-            </Button>
+          <div className="flex justify-center items-center">
             <Button
               onClick={handleManageSubscription}
               disabled={isManaging}
-              className="w-full bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg transition-all"
+              className="bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg transition-all"
             >
               {isManaging ? 'Carregando...' : 'Gerenciar Assinatura'}
             </Button>

@@ -193,6 +193,9 @@ class Configuration:
     def STRIPE_PRO_MAX_YEARLY_ID(self) -> str:
         return self.STRIPE_PRO_MAX_YEARLY_ID_PROD
     
+    # Credits Configuration
+    DAILY_CREDITS_AMOUNT: int = int(os.getenv('DAILY_CREDITS_AMOUNT', '200'))  # Default: 200 credits per day ($2 worth)
+    
     # LLM API keys
     ANTHROPIC_API_KEY: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
     OPENAI_API_KEY: Optional[str] = os.getenv('OPENAI_API_KEY')
