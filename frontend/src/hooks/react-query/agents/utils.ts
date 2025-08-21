@@ -3,6 +3,14 @@ import { isFlagEnabled } from "@/lib/feature-flags";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
+// Helper function to translate HTTP status text to Portuguese
+function translateStatusText(status: number, statusText: string): string {
+  if (status === 402 && statusText === 'Payment Required') {
+    return 'Pagamento Necessário';
+  }
+  return statusText;
+}
+
 export type Agent = {
   agent_id: string;
   account_id: string;
@@ -185,7 +193,7 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const result = await response.json();
@@ -220,7 +228,7 @@ export const getAgent = async (agentId: string): Promise<Agent> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const agent = await response.json();
@@ -256,7 +264,7 @@ export const createAgent = async (agentData: AgentCreateRequest): Promise<Agent>
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const agent = await response.json();
@@ -292,7 +300,7 @@ export const updateAgent = async (agentId: string, agentData: AgentUpdateRequest
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: {response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const agent = await response.json();
@@ -327,7 +335,7 @@ export const deleteAgent = async (agentId: string): Promise<void> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     console.log('[API] Deleted agent:', agentId);
@@ -360,7 +368,7 @@ export const getThreadAgent = async (threadId: string): Promise<ThreadAgentRespo
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const agent = await response.json();
@@ -395,7 +403,7 @@ export const getAgentBuilderChatHistory = async (agentId: string): Promise<{mess
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const data = await response.json();
@@ -472,7 +480,7 @@ export const startAgentBuilderChat = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const reader = response.body?.getReader();
@@ -532,7 +540,7 @@ export const getAgentVersions = async (agentId: string): Promise<AgentVersion[]>
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const versions = await response.json();
@@ -571,7 +579,7 @@ export const createAgentVersion = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const version = await response.json();
@@ -611,7 +619,7 @@ export const activateAgentVersion = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     console.log('[API] Activated agent version:', versionId);
@@ -648,7 +656,7 @@ export const getAgentVersion = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}: ${translateStatusText(response.status, response.statusText)}`);
     }
 
     const version = await response.json();

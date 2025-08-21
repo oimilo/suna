@@ -41,22 +41,35 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     const getUsageDisplay = () => {
         // Use credits data if available
         if (creditsData) {
-            const { tier_credits_used, tier_credits_limit, daily_credits, total_credits_available } = creditsData;
+            const { 
+                tier_credits_used, 
+                tier_credits_limit, 
+                daily_credits, 
+                daily_credits_granted,
+                total_credits_available 
+            } = creditsData;
             
-            // Show daily credits if available
-            if (daily_credits > 0) {
-                return (
-                    <span className="flex items-center gap-2">
-                        <span>{formatCredits(tier_credits_used)} / {formatCredits(tier_credits_limit)}</span>
-                        <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            +{formatCredits(daily_credits)} diários
-                        </span>
+            // Show proper status based on what credits are available
+            return (
+                <span className="flex items-center gap-2">
+                    <span className={cn(
+                        tier_credits_used >= tier_credits_limit && "text-red-500 dark:text-red-400"
+                    )}>
+                        {formatCredits(tier_credits_used)} / {formatCredits(tier_credits_limit)}
                     </span>
-                );
-            }
-            
-            return `${formatCredits(tier_credits_used)} / ${formatCredits(tier_credits_limit)} créditos`;
+                    <span className={cn(
+                        "flex items-center gap-1",
+                        daily_credits > 0 
+                            ? "text-emerald-500 dark:text-emerald-400"
+                            : "text-muted-foreground/60"
+                    )}>
+                        <Sparkles className="h-3 w-3" />
+                        {daily_credits > 0 
+                            ? `+${formatCredits(daily_credits)} diários`
+                            : `0 / ${formatCredits(daily_credits_granted)} diários`}
+                    </span>
+                </span>
+            );
         }
         
         // Fallback to old display if credits data not available
@@ -119,7 +132,9 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
             <div className="flex-1 min-w-0">
                 <motion.div className="flex items-center gap-2 mb-1">
                     <h4 className="text-sm font-medium text-foreground truncate">
-                        Faça upgrade para mais uso e melhores modelos de IA
+                        {isOverLimit() && creditsData?.daily_credits === 0
+                            ? "Créditos esgotados - faça upgrade para continuar"
+                            : "Faça upgrade para mais uso e melhores modelos de IA"}
                     </h4>
                 </motion.div>
 

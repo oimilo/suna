@@ -106,7 +106,7 @@ const uploadFiles = async (
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        throw new Error(`Upload failed: ${response.status === 402 ? 'Pagamento Necessário' : response.statusText}`);
       }
 
       // If file was already in chat and we have queryClient, invalidate its cache

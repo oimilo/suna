@@ -98,6 +98,11 @@ class SubscriptionStatus(BaseModel):
     current_usage: Optional[float] = None
     # Fields for scheduled changes
     has_schedule: bool = False
+    # Daily credits fields
+    daily_credits: Optional[float] = None
+    daily_credits_used: Optional[float] = None
+    daily_credits_granted: Optional[float] = None
+    daily_expires_in: Optional[str] = None
     scheduled_plan_name: Optional[str] = None
     scheduled_price_id: Optional[str] = None # Added scheduled price ID
     scheduled_change_date: Optional[datetime] = None
@@ -1015,6 +1020,9 @@ async def get_subscription(
         db = DBConnection()
         client = await db.client
         current_usage = await calculate_monthly_usage(client, current_user_id)
+        
+        # Get daily credits information
+        daily_credits_summary = await get_daily_credits_summary(client, current_user_id)
 
         if not subscription:
             # Default to free tier status if no active subscription for our product
@@ -1026,7 +1034,11 @@ async def get_subscription(
                 price_id=free_tier_id,
                 minutes_limit=free_tier_info.get('minutes') if free_tier_info else 0,
                 cost_limit=free_tier_info.get('cost') if free_tier_info else 0,
-                current_usage=current_usage
+                current_usage=current_usage,
+                daily_credits=daily_credits_summary.get('daily_credits', 0),
+                daily_credits_used=daily_credits_summary.get('daily_credits_used', 0),
+                daily_credits_granted=daily_credits_summary.get('daily_credits_granted', 0),
+                daily_expires_in=daily_credits_summary.get('daily_expires_in')
             )
         
         # Extract current plan details
@@ -1044,7 +1056,11 @@ async def get_subscription(
             minutes_limit=current_tier_info['minutes'],
             cost_limit=current_tier_info['cost'],
             current_usage=current_usage,
-            has_schedule=False # Default
+            has_schedule=False, # Default
+            daily_credits=daily_credits_summary.get('daily_credits', 0),
+            daily_credits_used=daily_credits_summary.get('daily_credits_used', 0),
+            daily_credits_granted=daily_credits_summary.get('daily_credits_granted', 0),
+            daily_expires_in=daily_credits_summary.get('daily_expires_in')
         )
 
         # Check for an attached schedule (indicates pending downgrade)
