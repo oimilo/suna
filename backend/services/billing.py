@@ -1025,6 +1025,7 @@ async def get_subscription(
         
         # Get daily credits information
         daily_credits_summary = await get_daily_credits_summary(client, current_user_id)
+        logger.info(f"[SUBSCRIPTION_ENDPOINT] Daily credits summary for user {current_user_id}: {daily_credits_summary}")
 
         if not subscription:
             # Default to free tier status if no active subscription for our product

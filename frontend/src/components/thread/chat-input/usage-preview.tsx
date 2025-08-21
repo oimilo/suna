@@ -50,12 +50,16 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
             } = creditsData;
             
             // Show proper status based on what credits are available
+            // Never show values above the limit
+            const displayedUsed = Math.min(tier_credits_used, tier_credits_limit);
+            const dailyUsed = daily_credits_granted - daily_credits;
+            
             return (
                 <span className="flex items-center gap-2">
                     <span className={cn(
                         tier_credits_used >= tier_credits_limit && "text-red-500 dark:text-red-400"
                     )}>
-                        {formatCredits(tier_credits_used)} / {formatCredits(tier_credits_limit)}
+                        {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)}
                     </span>
                     <span className={cn(
                         "flex items-center gap-1",
@@ -65,8 +69,8 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                     )}>
                         <Sparkles className="h-3 w-3" />
                         {daily_credits > 0 
-                            ? `+${formatCredits(daily_credits)} diários`
-                            : `0 / ${formatCredits(daily_credits_granted)} diários`}
+                            ? `${formatCredits(daily_credits)} / ${formatCredits(daily_credits_granted)} diários`
+                            : `0 / ${formatCredits(daily_credits_granted || 200)} diários`}
                     </span>
                 </span>
             );

@@ -1253,7 +1253,6 @@ export const siteConfig = {
   ctaSection: {
     id: 'cta',
     title: 'Comece a automatizar hoje',
-    backgroundImage: '/holo.png',
     button: {
       text: 'Testar gratuitamente',
       href: '/auth',

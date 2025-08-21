@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { ExternalLink, Loader2, Sparkles, Check } from 'lucide-react';
 import { useUsageLogs } from '@/hooks/react-query/subscriptions/use-billing';
 import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscriptions';
+import { useCreditsStatus } from '@/hooks/react-query/subscriptions/use-credits-status';
 import { UsageLogEntry } from '@/lib/api';
 
 
@@ -95,6 +96,7 @@ export default function UsageLogs({ accountId }: Props) {
   // Use React Query hooks
   const { data: currentPageData, isLoading, error } = useUsageLogs(page, ITEMS_PER_PAGE);
   const { data: subscriptionData } = useSubscription();
+  const { data: creditsData } = useCreditsStatus();
 
   // Update accumulated logs when new data arrives
   useEffect(() => {
@@ -191,6 +193,45 @@ export default function UsageLogs({ accountId }: Props) {
 
   // Calculate usage summary
   const calculateUsageSummary = () => {
+    // Use credits data if available (more up-to-date), fallback to subscription data
+    const dataSource = creditsData || subscriptionData;
+    
+    // Debug log to see what we're receiving
+    if (creditsData) {
+      console.log('[DEBUG] Credits data (using this):', {
+        daily_credits: creditsData.daily_credits,
+        daily_credits_granted: creditsData.daily_credits_granted,
+        daily_credits_used: creditsData.daily_credits_used,
+        daily_expires_in: creditsData.daily_expires_in,
+        tier_credits_used: creditsData.tier_credits_used,
+        tier_credits_limit: creditsData.tier_credits_limit,
+        total_credits_available: creditsData.total_credits_available
+      });
+    } else if (subscriptionData) {
+      console.log('[DEBUG] Subscription data (fallback):', {
+        daily_credits: subscriptionData.daily_credits,
+        daily_credits_granted: subscriptionData.daily_credits_granted,
+        daily_credits_used: subscriptionData.daily_credits_used,
+        daily_expires_in: subscriptionData.daily_expires_in
+      });
+    }
+    
+    // Use credits API data if available (it's more accurate and updates more frequently)
+    if (creditsData) {
+      return {
+        usedCredits: Math.min(creditsData.tier_credits_used, creditsData.tier_credits_limit),
+        subscriptionCredits: creditsData.tier_credits_limit,
+        subscriptionCreditsRemaining: creditsData.tier_credits_remaining,
+        dailyCredits: creditsData.daily_credits_granted,
+        dailyCreditsUsed: creditsData.daily_credits_used,
+        dailyCreditsRemaining: creditsData.daily_credits,
+        totalCredits: creditsData.daily_credits_granted + creditsData.tier_credits_limit,
+        totalAvailable: creditsData.total_credits_available,
+        percentageUsed: creditsData.tier_credits_limit > 0 ? Math.min((creditsData.tier_credits_used / creditsData.tier_credits_limit) * 100, 100) : 0,
+        dailyExpiresIn: creditsData.daily_expires_in
+      };
+    }
+    
     // Get current usage and limit from subscription data
     const currentUsageInDollars = subscriptionData?.current_usage || 0;
     const costLimitInDollars = subscriptionData?.cost_limit || 0;
@@ -202,20 +243,23 @@ export default function UsageLogs({ accountId }: Props) {
     // Daily credits from backend or defaults
     const dailyCreditsGranted = subscriptionData?.daily_credits_granted || 200;
     const dailyCreditsUsed = subscriptionData?.daily_credits_used || 0;
-    const dailyCreditsRemaining = subscriptionData?.daily_credits || 0;
+    // Calculate remaining based on granted - used, not trust backend's daily_credits
+    const dailyCreditsRemaining = Math.max(0, dailyCreditsGranted - dailyCreditsUsed);
     
-    // Calculate remaining subscription credits (can be negative if overused)
-    const subscriptionCreditsRemaining = subscriptionCredits - usedCredits;
+    // Calculate remaining subscription credits (never negative for display)
+    const subscriptionCreditsRemaining = Math.max(0, subscriptionCredits - usedCredits);
+    
+    // Never show usage above limit for display
+    const displayedUsedCredits = Math.min(usedCredits, subscriptionCredits);
     
     // Total credits (daily granted + subscription total limit)
     const totalCredits = dailyCreditsGranted + subscriptionCredits;
     
-    // Total available credits: daily credits remaining + positive subscription credits remaining
-    // If subscription is negative (overused), only count daily credits
-    const totalAvailable = dailyCreditsRemaining + Math.max(0, subscriptionCreditsRemaining);
+    // Total available credits: daily credits remaining + subscription credits remaining
+    const totalAvailable = dailyCreditsRemaining + subscriptionCreditsRemaining;
     
     return {
-      usedCredits,
+      usedCredits: displayedUsedCredits,
       subscriptionCredits,
       subscriptionCreditsRemaining,
       dailyCredits: dailyCreditsGranted,
@@ -305,19 +349,15 @@ export default function UsageLogs({ accountId }: Props) {
             <div className="h-2 bg-black/[0.04] dark:bg-white/[0.04] rounded-full overflow-hidden flex">
               {/* Seção de créditos do plano (85% da largura) */}
               <div className="flex-[85] h-full bg-black/[0.04] dark:bg-white/[0.04] relative overflow-hidden">
-                {/* Barra de uso do plano */}
+                {/* Barra de créditos restantes do plano */}
                 <div 
                   className="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500"
                   style={{ 
                     width: summary.subscriptionCredits > 0 
-                      ? `${Math.max(0, 100 - (summary.usedCredits / summary.subscriptionCredits) * 100)}%`
+                      ? `${(summary.subscriptionCreditsRemaining / summary.subscriptionCredits) * 100}%`
                       : '0%'
                   }}
                 />
-                {/* Se excedeu o limite, mostra barra vermelha full */}
-                {summary.usedCredits > summary.subscriptionCredits && summary.subscriptionCredits > 0 && (
-                  <div className="absolute inset-0 bg-red-500/30" />
-                )}
               </div>
               
               {/* Divisor visual */}
@@ -325,7 +365,7 @@ export default function UsageLogs({ accountId }: Props) {
               
               {/* Seção de créditos diários (15% da largura) */}
               <div className="flex-[15] h-full bg-black/[0.04] dark:bg-white/[0.04] relative overflow-hidden">
-                {/* Barra de créditos diários */}
+                {/* Barra de créditos diários restantes */}
                 <div 
                   className="absolute inset-y-0 left-0 bg-amber-500 transition-all duration-500"
                   style={{ 
@@ -356,8 +396,8 @@ export default function UsageLogs({ accountId }: Props) {
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {summary.dailyCreditsRemaining} de {summary.dailyCredits} créditos diários
-                  {summary.dailyCreditsRemaining <= 0 && ' (esgotados)'}
+                  {summary.dailyCreditsUsed} de {summary.dailyCredits} créditos diários usados
+                  {summary.dailyCreditsRemaining > 0 && ` (${summary.dailyCreditsRemaining} disponíveis)`}
                   {summary.dailyExpiresIn && ` • Renova em ${summary.dailyExpiresIn}`}
                 </span>
               </div>
@@ -395,7 +435,7 @@ export default function UsageLogs({ accountId }: Props) {
                             {formatDateOnly(day.date)}
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {day.requestCount} requisição{day.requestCount !== 1 ? 'ões' : ''} • {' '}
+                            {day.requestCount} {day.requestCount !== 1 ? 'requisições' : 'requisição'} • {' '}
                             {day.models.map(m => getModelAlias(m)).join(', ')}
                           </div>
                         </div>

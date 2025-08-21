@@ -33,6 +33,7 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
     """
     try:
         now = datetime.now(timezone.utc)
+        logger.info(f"[DAILY_CREDITS] Checking daily credits for user {user_id} at {now.isoformat()}")
         
         # Check for existing non-expired daily credits
         result = await client.table('daily_credits') \
@@ -48,7 +49,7 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
             credit_entry = result.data[0]
             credits_available = Decimal(str(credit_entry['credits_granted'])) - Decimal(str(credit_entry['credits_used']))
             
-            logger.info(f"Found existing daily credits for user {user_id}: {credits_available} available")
+            logger.info(f"[DAILY_CREDITS] Found existing daily credits for user {user_id}: {credits_available} available (granted: {credit_entry['credits_granted']}, used: {credit_entry['credits_used']}, expires: {credit_entry['expires_at']})")  
             
             return {
                 'id': credit_entry['id'],
@@ -58,7 +59,32 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
                 'credits_used': Decimal(str(credit_entry['credits_used']))
             }
         
-        # No valid daily credits found, create new ones
+        # Before creating new credits, check if there were any credits used in the last 24 hours
+        # This prevents creating new credits when old ones were used but expired
+        last_24h = now - timedelta(hours=24)
+        recent_credits = await client.table('daily_credits') \
+            .select('*') \
+            .eq('user_id', user_id) \
+            .gte('granted_at', last_24h.isoformat()) \
+            .execute()
+        
+        if recent_credits.data and len(recent_credits.data) > 0:
+            # Check if any of the recent credits were fully used
+            for credit in recent_credits.data:
+                if Decimal(str(credit['credits_used'])) >= Decimal(str(credit['credits_granted'])):
+                    # Credits were fully used, wait for the full 24h period to pass
+                    logger.info(f"[DAILY_CREDITS] User {user_id} has fully used credits in the last 24h, not creating new ones")
+                    # Return the exhausted credits info
+                    return {
+                        'id': credit['id'],
+                        'credits_available': Decimal("0.00"),
+                        'expires_at': credit['expires_at'],
+                        'credits_granted': Decimal(str(credit['credits_granted'])),
+                        'credits_used': Decimal(str(credit['credits_used']))
+                    }
+        
+        # No valid daily credits found and no recent usage, create new ones
+        logger.info(f"[DAILY_CREDITS] No valid daily credits found for user {user_id}, creating new ones")
         expires_at = now + timedelta(hours=DAILY_CREDITS_DURATION_HOURS)
         
         new_credit = {
@@ -75,7 +101,7 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
         
         if result.data and len(result.data) > 0:
             credit_entry = result.data[0]
-            logger.info(f"Created new daily credits for user {user_id}: {DAILY_CREDITS_AMOUNT} credits")
+            logger.info(f"[DAILY_CREDITS] Created new daily credits for user {user_id}: {DAILY_CREDITS_AMOUNT} credits, expires at {expires_at.isoformat()}")
             
             return {
                 'id': credit_entry['id'],
@@ -122,6 +148,7 @@ async def debit_daily_credits(client, user_id: str, amount_in_dollars: Decimal) 
         
         if daily_credits['credits_available'] <= 0:
             # No daily credits available
+            logger.info(f"[DAILY_CREDITS_DEBIT] No daily credits available for user {user_id}, returning full amount: {amount_in_dollars}")
             return False, amount_in_dollars
         
         # Calculate how much we can debit
@@ -141,14 +168,14 @@ async def debit_daily_credits(client, user_id: str, amount_in_dollars: Decimal) 
                 .execute()
             
             if result.data and len(result.data) > 0:
-                logger.info(f"Debited {credits_to_debit} daily credits from user {user_id}")
+                logger.info(f"[DAILY_CREDITS_DEBIT] Successfully debited {credits_to_debit} credits from user {user_id}, daily_credit_id: {daily_credits['id']}, new_used: {new_credits_used}, remaining: {daily_credits['credits_available'] - credits_to_debit}")
                 
                 # Calculate remaining amount
                 remaining_dollars = amount_in_dollars - dollars_debited
                 return True, remaining_dollars
             else:
                 # Concurrent update detected, retry would be needed
-                logger.warning(f"Concurrent update detected for daily credits of user {user_id}")
+                logger.warning(f"[DAILY_CREDITS_DEBIT] Concurrent update detected for daily credits of user {user_id}, credit_id: {daily_credits['id']}")
                 return False, amount_in_dollars
         
         return False, amount_in_dollars
