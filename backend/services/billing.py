@@ -583,9 +583,9 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
     # Calculate current month's usage
     current_usage = await calculate_monthly_usage(client, user_id)
     
-    # First, check daily credits
-    daily_credits = await get_or_create_daily_credits(client, user_id)
-    daily_credits_in_dollars = credits_to_dollars(daily_credits['credits_available'])
+    # Get daily credits summary (unified approach)
+    daily_summary = await get_daily_credits_summary(client, user_id)
+    daily_credits_in_dollars = credits_to_dollars(Decimal(str(daily_summary['daily_credits'])))
     
     # Calculate total available (daily credits + remaining subscription)
     subscription_remaining = tier_info['cost'] - current_usage
@@ -598,23 +598,25 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
         tier_credits = int(dollars_to_credits(Decimal(str(tier_info['cost']))))
         
         # No credits available at all
-        if daily_credits['credits_available'] <= 0 and subscription_remaining <= 0:
+        if daily_summary['daily_credits'] <= 0 and subscription_remaining <= 0:
             return False, f"Limite mensal de {tier_credits} créditos atingido e créditos diários esgotados. Faça upgrade do seu plano ou aguarde até amanhã.", subscription
-        elif daily_credits['credits_available'] <= 0:
+        elif daily_summary['daily_credits'] <= 0:
             return False, f"Créditos diários esgotados. Aguarde até amanhã para receber mais 200 créditos gratuitos.", subscription
         else:
             return False, f"Limite mensal de {tier_credits} créditos atingido. Faça upgrade do seu plano ou aguarde até o próximo mês.", subscription
     
-    # Add daily credits info to subscription for frontend
-    subscription['daily_credits'] = float(daily_credits['credits_available'])
-    subscription['daily_expires_at'] = daily_credits['expires_at']
+    # Add daily credits info to subscription for frontend (using summary for consistency)
+    subscription['daily_credits'] = daily_summary['daily_credits']
+    subscription['daily_credits_used'] = daily_summary['daily_credits_used']
+    subscription['daily_credits_granted'] = daily_summary['daily_credits_granted']
+    subscription['daily_expires_at'] = daily_summary['daily_expires_in']  # Note: different field name
     subscription['total_available_dollars'] = total_available
     
     # Add credit conversions for frontend
     subscription['tier_credits_limit'] = int(dollars_to_credits(Decimal(str(tier_info['cost']))))
     subscription['tier_credits_used'] = int(dollars_to_credits(Decimal(str(current_usage))))
     subscription['tier_credits_remaining'] = int(dollars_to_credits(Decimal(str(subscription_remaining)))) if subscription_remaining > 0 else 0
-    subscription['total_credits_available'] = int(daily_credits['credits_available']) + subscription['tier_credits_remaining']
+    subscription['total_credits_available'] = int(daily_summary['daily_credits']) + subscription['tier_credits_remaining']
     
     return True, "OK", subscription
 
