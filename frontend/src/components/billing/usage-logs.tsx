@@ -204,17 +204,22 @@ export default function UsageLogs({ accountId }: Props) {
     const dailyCreditsUsed = 0; // Will come from backend
     const dailyCreditsRemaining = dailyCredits - dailyCreditsUsed;
     
-    // Total available credits
-    const totalAvailable = subscriptionCredits + dailyCreditsRemaining;
+    // Calculate remaining subscription credits (can be negative if overused)
+    const subscriptionCreditsRemaining = subscriptionCredits - usedCredits;
+    
+    // Total available credits: daily credits + positive subscription credits
+    // If subscription is negative (overused), only count daily credits
+    const totalAvailable = dailyCreditsRemaining + Math.max(0, subscriptionCreditsRemaining);
     
     return {
       usedCredits,
       subscriptionCredits,
+      subscriptionCreditsRemaining,
       dailyCredits,
       dailyCreditsUsed,
       dailyCreditsRemaining,
       totalAvailable,
-      percentageUsed: totalAvailable > 0 ? (usedCredits / totalAvailable) * 100 : 0
+      percentageUsed: subscriptionCredits > 0 ? Math.min((usedCredits / subscriptionCredits) * 100, 100) : 0
     };
   };
 
@@ -283,7 +288,11 @@ export default function UsageLogs({ accountId }: Props) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-medium">Créditos</CardTitle>
             <span className="text-sm text-muted-foreground">
-              {(summary.totalAvailable - summary.usedCredits).toLocaleString('pt-BR')} de {summary.totalAvailable.toLocaleString('pt-BR')} restantes
+              {summary.totalAvailable > 0 
+                ? `${summary.totalAvailable.toLocaleString('pt-BR')} restantes`
+                : summary.subscriptionCreditsRemaining < 0 
+                  ? `${Math.abs(summary.subscriptionCreditsRemaining).toLocaleString('pt-BR')} acima do limite`
+                  : '0 restantes'}
             </span>
           </div>
         </CardHeader>
@@ -292,43 +301,68 @@ export default function UsageLogs({ accountId }: Props) {
           <div className="space-y-3">
             <div className="h-2 bg-black/[0.04] dark:bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full flex">
-                {/* Parte dos créditos diários (amber) */}
-                {summary.dailyCreditsRemaining > 0 && (
-                  <div 
-                    className="bg-amber-500 transition-all duration-500"
-                    style={{ 
-                      width: `${Math.min((summary.dailyCreditsRemaining / summary.totalAvailable) * 100, 100)}%` 
-                    }}
-                  />
+                {/* Se houver créditos disponíveis, mostra a barra */}
+                {summary.totalAvailable > 0 ? (
+                  <>
+                    {/* Parte dos créditos diários (amber) */}
+                    {summary.dailyCreditsRemaining > 0 && (
+                      <div 
+                        className="bg-amber-500 transition-all duration-500"
+                        style={{ 
+                          width: `${(summary.dailyCreditsRemaining / (summary.dailyCreditsRemaining + Math.max(0, summary.subscriptionCreditsRemaining))) * 100}%` 
+                        }}
+                      />
+                    )}
+                    {/* Parte dos créditos da assinatura (blue) - só mostra se positivo */}
+                    {summary.subscriptionCreditsRemaining > 0 && (
+                      <div 
+                        className="bg-blue-500 transition-all duration-500"
+                        style={{ 
+                          width: `${(summary.subscriptionCreditsRemaining / (summary.dailyCreditsRemaining + summary.subscriptionCreditsRemaining)) * 100}%` 
+                        }}
+                      />
+                    )}
+                  </>
+                ) : (
+                  /* Se não houver créditos, mostra barra vermelha cheia */
+                  <div className="bg-red-500 w-full h-full" />
                 )}
-                {/* Parte dos créditos da assinatura (blue) */}
-                <div 
-                  className="bg-blue-500 transition-all duration-500"
-                  style={{ 
-                    width: `${Math.max(((summary.subscriptionCredits - Math.max(0, summary.usedCredits - summary.dailyCreditsRemaining)) / summary.totalAvailable) * 100, 0)}%` 
-                  }}
-                />
               </div>
             </div>
             
             {/* Legenda com design Suna minimalista */}
             <div className="flex flex-col gap-2.5 pt-1 pb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500/20 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              {summary.totalAvailable > 0 ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {summary.dailyCreditsRemaining} créditos diários disponíveis
+                    </span>
+                  </div>
+                  {summary.subscriptionCreditsRemaining > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {summary.subscriptionCreditsRemaining.toLocaleString('pt-BR')} de {summary.subscriptionCredits.toLocaleString('pt-BR')} créditos mensais restantes
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Limite excedido em {Math.abs(summary.subscriptionCreditsRemaining).toLocaleString('pt-BR')} créditos - apenas créditos diários disponíveis
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  Créditos diários usados primeiro
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {summary.subscriptionCredits.toLocaleString('pt-BR')} créditos mensais renovam em 5 de setembro
-                </span>
-              </div>
+              )}
             </div>
           </div>
         </CardContent>
