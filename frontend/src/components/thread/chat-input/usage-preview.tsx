@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Zap, Sparkles } from 'lucide-react';
+import { X, Zap, Sparkles, Coins, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLocalMode } from '@/lib/config';
 import { Button } from '@/components/ui/button';
@@ -46,32 +46,52 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                 tier_credits_limit, 
                 daily_credits, 
                 daily_credits_granted,
-                total_credits_available 
+                total_credits_available,
+                subscription_name
             } = creditsData;
+            
+            // Check if user is on free plan (no daily credits for free users)
+            const isFreeUser = subscription_name === 'free' || tier_credits_limit === 0;
             
             // Show proper status based on what credits are available
             // Never show values above the limit
             const displayedUsed = Math.min(tier_credits_used, tier_credits_limit);
             const dailyUsed = daily_credits_granted - daily_credits;
             
-            return (
-                <span className="flex items-center gap-2">
+            // For free users, only show plan credits
+            if (isFreeUser) {
+                return (
                     <span className={cn(
-                        tier_credits_used >= tier_credits_limit && "text-red-500 dark:text-red-400"
+                        "text-xs",
+                        tier_credits_used >= tier_credits_limit && "text-red-600 dark:text-red-400"
+                    )}>
+                        {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
+                    </span>
+                );
+            }
+            
+            // For paid users, show both plan and daily credits
+            return (
+                <span className="flex items-center gap-3 text-xs">
+                    <span className={cn(
+                        tier_credits_used >= tier_credits_limit && "text-amber-600 dark:text-amber-400"
                     )}>
                         {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)}
                     </span>
-                    <span className={cn(
-                        "flex items-center gap-1",
-                        daily_credits > 0 
-                            ? "text-emerald-500 dark:text-emerald-400"
-                            : "text-muted-foreground/60"
-                    )}>
-                        <Sparkles className="h-3 w-3" />
-                        {daily_credits > 0 
-                            ? `${formatCredits(daily_credits)} / ${formatCredits(daily_credits_granted)} diários`
-                            : `0 / ${formatCredits(daily_credits_granted || 200)} diários`}
-                    </span>
+                    {daily_credits_granted > 0 && (
+                        <>
+                            <span className="text-black/20 dark:text-white/20">•</span>
+                            <span className={cn(
+                                "flex items-center gap-1",
+                                daily_credits > 0 
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-muted-foreground/60"
+                            )}>
+                                <Sparkles className="h-3 w-3" />
+                                {formatCredits(daily_credits)} diários
+                            </span>
+                        </>
+                    )}
                 </span>
             );
         }
@@ -111,46 +131,43 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
         return current > limit;
     };
 
+    // Design system Suna - minimalista com transparências baixas
     return (
-        <div className="flex items-center gap-3">
-            {/* Icon */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-black/[0.02] dark:bg-white/[0.03] border-y border-black/6 dark:border-white/8">
+            {/* Icon com design Suna */}
             <div className="flex-shrink-0">
-                <motion.div
-                    className={cn(
-                        "w-10 h-10 rounded-2xl flex items-center justify-center",
-                        isOverLimit()
-                            ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-                            : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                <div className={cn(
+                    "p-2 rounded-lg",
+                    isOverLimit()
+                        ? "bg-red-500/10"
+                        : "bg-amber-500/10"
+                )}>
+                    {isOverLimit() ? (
+                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    ) : (
+                        <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     )}
-                >
-                    <Zap className={cn(
-                        "h-5 w-5",
-                        isOverLimit()
-                            ? "text-red-500 dark:text-red-400"
-                            : "text-blue-500 dark:text-blue-400"
-                    )} />
-                </motion.div>
+                </div>
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <motion.div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-sm font-medium text-foreground truncate">
+                <div className="flex items-center gap-2">
+                    <h4 className={cn(
+                        "text-sm font-medium",
+                        isOverLimit() 
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-foreground"
+                    )}>
                         {isOverLimit() && creditsData?.daily_credits === 0
-                            ? "Créditos esgotados - faça upgrade para continuar"
-                            : "Faça upgrade para mais uso e melhores modelos de IA"}
+                            ? "Créditos esgotados"
+                            : "Créditos limitados"}
                     </h4>
-                </motion.div>
-
-                <motion.div className="flex items-center gap-2">
-                    <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isOverLimit() ? "bg-red-500" : "bg-blue-500"
-                    )} />
-                    <div className="text-xs text-muted-foreground truncate">
+                    <span className="text-black/20 dark:text-white/20">•</span>
+                    <div className="text-muted-foreground">
                         {getUsageDisplay()}
                     </div>
-                </motion.div>
+                </div>
             </div>
 
             {/* Apple-style notification indicators - only for multiple notification types */}
@@ -178,8 +195,16 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                 </button>
             )}
 
-            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onClose?.(); }}>
-                <X className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 p-0 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5" 
+                onClick={(e) => { 
+                    e.stopPropagation(); 
+                    onClose?.(); 
+                }}
+            >
+                <X className="h-3.5 w-3.5 opacity-60 hover:opacity-100 transition-opacity" />
             </Button>
         </div>
     );
