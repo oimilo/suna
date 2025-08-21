@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Zap, Sparkles, Coins, AlertCircle } from 'lucide-react';
+import { X, Clock, Coins, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLocalMode } from '@/lib/config';
 import { Button } from '@/components/ui/button';
@@ -39,83 +39,57 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     const getUsageDisplay = () => {
-        // Use credits data if available
-        if (creditsData) {
-            const { 
-                tier_credits_used, 
-                tier_credits_limit, 
-                daily_credits, 
-                daily_credits_granted,
-                total_credits_available,
-                subscription_name
-            } = creditsData;
-            
-            // Check if user is on free plan (no daily credits for free users)
-            const isFreeUser = subscription_name === 'free' || tier_credits_limit === 0;
-            
-            // Show proper status based on what credits are available
-            // Never show values above the limit
-            const displayedUsed = Math.min(tier_credits_used, tier_credits_limit);
-            const dailyUsed = daily_credits_granted - daily_credits;
-            
-            // For free users, only show plan credits
-            if (isFreeUser) {
-                return (
-                    <span className={cn(
-                        "text-xs",
-                        tier_credits_used >= tier_credits_limit && "text-red-600 dark:text-red-400"
-                    )}>
-                        {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
-                    </span>
-                );
-            }
-            
-            // For paid users, show both plan and daily credits
+        // Always use the same structure to avoid layout shift
+        const tier_credits_used = creditsData?.tier_credits_used ?? (subscriptionData?.current_usage ? subscriptionData.current_usage * 100 : 0);
+        const tier_credits_limit = creditsData?.tier_credits_limit ?? (subscriptionData?.cost_limit ? subscriptionData.cost_limit * 100 : 0);
+        const daily_credits = creditsData?.daily_credits ?? 0;
+        const daily_credits_granted = creditsData?.daily_credits_granted ?? 0;
+        const subscription_name = creditsData?.subscription_name ?? subscriptionData?.subscription_name ?? '';
+        
+        // Check if user is on free plan (no daily credits for free users)
+        const isFreeUser = subscription_name === 'free' || tier_credits_limit === 0;
+        
+        // Show proper status based on what credits are available
+        // Never show values above the limit
+        const displayedUsed = Math.min(tier_credits_used, tier_credits_limit);
+        
+        // For free users, only show plan credits
+        if (isFreeUser) {
             return (
-                <span className="flex items-center gap-3 text-xs">
-                    <span className={cn(
-                        tier_credits_used >= tier_credits_limit && "text-amber-600 dark:text-amber-400"
-                    )}>
-                        {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)}
-                    </span>
-                    {daily_credits_granted > 0 && (
-                        <>
-                            <span className="text-black/20 dark:text-white/20">•</span>
-                            <span className={cn(
-                                "flex items-center gap-1",
-                                daily_credits > 0 
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-muted-foreground/60"
-                            )}>
-                                <Sparkles className="h-3 w-3" />
-                                {formatCredits(daily_credits)} diários
-                            </span>
-                        </>
-                    )}
+                <span className={cn(
+                    "text-xs",
+                    tier_credits_used >= tier_credits_limit && "text-red-600 dark:text-red-400"
+                )}>
+                    {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
+                    {tier_credits_limit > 0 && ` (acima do limite)`}
                 </span>
             );
         }
         
-        // Fallback to old display if credits data not available
-        if (!subscriptionData) return 'Carregando uso...';
-
-        const current = subscriptionData.current_usage || 0;
-        const limit = subscriptionData.cost_limit || 0;
-
-        if (limit === 0) return 'Sem limite de uso definido';
-
-        // Convert dollars to credits (100 credits = $1)
-        const currentCredits = current * 100;
-        const limitCredits = limit * 100;
-
-        const isOverLimit = current > limit;
-        const usageText = `${formatCredits(currentCredits)} / ${formatCredits(limitCredits)} créditos`;
-
-        if (isOverLimit) {
-            return `${usageText} (acima do limite)`;
-        }
-
-        return usageText;
+        // For paid users, always show the same structure
+        return (
+            <span className="inline-flex items-center gap-2 text-xs">
+                <span className={cn(
+                    tier_credits_used >= tier_credits_limit && "text-amber-600 dark:text-amber-400"
+                )}>
+                    {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
+                </span>
+                {daily_credits_granted > 0 && (
+                    <>
+                        <span className="text-black/20 dark:text-white/20">•</span>
+                        <span className={cn(
+                            "inline-flex items-center gap-1",
+                            daily_credits > 0 
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground/60"
+                        )}>
+                            <Clock className="h-3 w-3" />
+                            {formatCredits(daily_credits)} diários
+                        </span>
+                    </>
+                )}
+            </span>
+        );
     };
 
     const isOverLimit = () => {
@@ -132,7 +106,7 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-2.5 px-3 py-2">
+        <div className="flex items-center gap-2.5 px-3 py-1.5">
             {/* Icon simples sem fundo */}
             <div className="flex-shrink-0">
                 {isOverLimit() ? (
@@ -153,7 +127,7 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                     {isOverLimit() ? "Créditos esgotados" : "Créditos limitados"}
                 </span>
                 <span className="text-black/20 dark:text-white/20">•</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                     {getUsageDisplay()}
                 </span>
             </div>

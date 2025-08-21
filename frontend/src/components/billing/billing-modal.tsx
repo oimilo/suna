@@ -113,8 +113,14 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
                                             Uso de Agentes Este Mês
                                         </span>
                                         <span className="text-sm font-medium">
-                                            ${subscriptionData.current_usage?.toFixed(2) || '0'} /{' '}
-                                            ${subscriptionData.cost_limit || '0'}
+                                            {(() => {
+                                                // Convert dollars to credits (100 credits = $1)
+                                                const usedCredits = Math.round((subscriptionData.current_usage || 0) * 100);
+                                                const limitCredits = Math.round((subscriptionData.cost_limit || 0) * 100);
+                                                // Never show usage above limit
+                                                const displayedUsed = Math.min(usedCredits, limitCredits);
+                                                return `${displayedUsed.toLocaleString('pt-BR')} / ${limitCredits.toLocaleString('pt-BR')}`;
+                                            })()}
                                         </span>
                                     </div>
                                 </div>
