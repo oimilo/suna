@@ -131,43 +131,31 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
         return current > limit;
     };
 
-    // Design system Suna - minimalista com transparências baixas
     return (
-        <div className="flex items-center gap-3 px-4 py-3 bg-black/[0.02] dark:bg-white/[0.03] border-y border-black/6 dark:border-white/8">
-            {/* Icon com design Suna */}
+        <div className="flex items-center gap-2.5 px-3 py-2">
+            {/* Icon simples sem fundo */}
             <div className="flex-shrink-0">
-                <div className={cn(
-                    "p-2 rounded-lg",
-                    isOverLimit()
-                        ? "bg-red-500/10"
-                        : "bg-amber-500/10"
-                )}>
-                    {isOverLimit() ? (
-                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    ) : (
-                        <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    )}
-                </div>
+                {isOverLimit() ? (
+                    <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 opacity-80" />
+                ) : (
+                    <Coins className="h-4 w-4 text-amber-500 dark:text-amber-400 opacity-80" />
+                )}
             </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <h4 className={cn(
-                        "text-sm font-medium",
-                        isOverLimit() 
-                            ? "text-red-600 dark:text-red-400"
-                            : "text-foreground"
-                    )}>
-                        {isOverLimit() && creditsData?.daily_credits === 0
-                            ? "Créditos esgotados"
-                            : "Créditos limitados"}
-                    </h4>
-                    <span className="text-black/20 dark:text-white/20">•</span>
-                    <div className="text-muted-foreground">
-                        {getUsageDisplay()}
-                    </div>
-                </div>
+            {/* Content compacto */}
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className={cn(
+                    "text-sm font-medium",
+                    isOverLimit() 
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-foreground"
+                )}>
+                    {isOverLimit() ? "Créditos esgotados" : "Créditos limitados"}
+                </span>
+                <span className="text-black/20 dark:text-white/20">•</span>
+                <span className="text-sm text-muted-foreground">
+                    {getUsageDisplay()}
+                </span>
             </div>
 
             {/* Apple-style notification indicators - only for multiple notification types */}
@@ -195,17 +183,15 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                 </button>
             )}
 
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 p-0 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5" 
+            <button 
+                className="p-1 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors" 
                 onClick={(e) => { 
                     e.stopPropagation(); 
                     onClose?.(); 
                 }}
             >
-                <X className="h-3.5 w-3.5 opacity-60 hover:opacity-100 transition-opacity" />
-            </Button>
+                <X className="h-3.5 w-3.5 opacity-50 hover:opacity-100 transition-opacity" />
+            </button>
         </div>
     );
 }; 
