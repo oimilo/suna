@@ -59,31 +59,31 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
                 'credits_used': Decimal(str(credit_entry['credits_used']))
             }
         
-        # Before creating new credits, check if there were any credits used in the last 24 hours
-        # This prevents creating new credits when old ones were used but expired
-        last_24h = now - timedelta(hours=24)
+        # Check if we should create new credits
+        # Only prevent creation if there's a recent entry that hasn't expired yet
+        # This ensures we don't create duplicate credits for the same period
+        one_hour_ago = now - timedelta(hours=1)
         recent_credits = await client.table('daily_credits') \
             .select('*') \
             .eq('user_id', user_id) \
-            .gte('granted_at', last_24h.isoformat()) \
+            .gte('created_at', one_hour_ago.isoformat()) \
             .execute()
         
         if recent_credits.data and len(recent_credits.data) > 0:
-            # Check if any of the recent credits were fully used
-            for credit in recent_credits.data:
-                if Decimal(str(credit['credits_used'])) >= Decimal(str(credit['credits_granted'])):
-                    # Credits were fully used, wait for the full 24h period to pass
-                    logger.info(f"[DAILY_CREDITS] User {user_id} has fully used credits in the last 24h, not creating new ones")
-                    # Return the exhausted credits info
-                    return {
-                        'id': credit['id'],
-                        'credits_available': Decimal("0.00"),
-                        'expires_at': credit['expires_at'],
-                        'credits_granted': Decimal(str(credit['credits_granted'])),
-                        'credits_used': Decimal(str(credit['credits_used']))
-                    }
+            # If we created credits very recently (within 1 hour), don't create new ones
+            # This prevents duplicate creation but allows proper renewal after 24h
+            most_recent = recent_credits.data[0]
+            logger.info(f"[DAILY_CREDITS] Recent credits found for user {user_id}, created at {most_recent['created_at']}")
+            credits_available = Decimal(str(most_recent['credits_granted'])) - Decimal(str(most_recent['credits_used']))
+            return {
+                'id': most_recent['id'],
+                'credits_available': credits_available,
+                'expires_at': most_recent['expires_at'],
+                'credits_granted': Decimal(str(most_recent['credits_granted'])),
+                'credits_used': Decimal(str(most_recent['credits_used']))
+            }
         
-        # No valid daily credits found and no recent usage, create new ones
+        # No valid daily credits found, create new ones
         logger.info(f"[DAILY_CREDITS] No valid daily credits found for user {user_id}, creating new ones")
         expires_at = now + timedelta(hours=DAILY_CREDITS_DURATION_HOURS)
         
