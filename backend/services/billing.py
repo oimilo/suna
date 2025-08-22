@@ -588,8 +588,9 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
     daily_credits_in_dollars = credits_to_dollars(Decimal(str(daily_summary['daily_credits'])))
     
     # Calculate total available (daily credits + remaining subscription)
+    # Don't let negative subscription balance cancel out daily credits
     subscription_remaining = tier_info['cost'] - current_usage
-    total_available = float(daily_credits_in_dollars) + subscription_remaining
+    total_available = float(daily_credits_in_dollars) + max(0, subscription_remaining)
     
     # TODO: also do user's AAL check
     # Check if user has any credits available (daily or subscription)
