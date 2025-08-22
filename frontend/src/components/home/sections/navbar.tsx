@@ -1,17 +1,14 @@
 'use client';
 
-import { Icons } from '@/components/home/icons';
 import { BRANDING } from '@/lib/branding';
 import { NavMenu } from '@/components/home/nav-menu';
-import { ThemeToggle } from '@/components/home/theme-toggle';
 import { siteConfig } from '@/lib/home';
 import { cn } from '@/lib/utils';
-import { Menu, X, Github } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { AnimatePresence, motion, useScroll } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
 import { useAuth } from '@/components/AuthProvider';
 
 const INITIAL_WIDTH = '70rem';
@@ -58,13 +55,7 @@ export function Navbar() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
-  const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -100,11 +91,8 @@ export function Navbar() {
   const toggleDrawer = () => setIsDrawerOpen((prev) => !prev);
   const handleOverlayClick = () => setIsDrawerOpen(false);
 
-  const logoSrc = !mounted
-    ? '/preto.svg'
-    : resolvedTheme === 'dark'
-      ? '/branco.svg'
-      : '/preto.svg';
+  // Always use white logo since we're forcing dark mode on landing page
+  const logoSrc = '/branco.svg';
 
   return (
     <header
@@ -166,7 +154,6 @@ export function Navbar() {
                   </Link>
                 )}
               </div>
-              <ThemeToggle />
               <button
                 className="md:hidden border border-border size-8 rounded-md cursor-pointer flex items-center justify-center"
                 onClick={toggleDrawer}
@@ -277,9 +264,6 @@ export function Navbar() {
                       Começar
                     </Link>
                   )}
-                  <div className="flex justify-between">
-                    <ThemeToggle />
-                  </div>
                 </div>
               </div>
             </motion.div>

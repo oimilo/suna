@@ -679,7 +679,7 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-4px);
   }
 }
 
@@ -701,6 +701,27 @@
   }
 }
 
+@keyframes pulse-line {
+  0%, 40% {
+    stroke-dashoffset: 100;
+  }
+  20% {
+    stroke-dashoffset: -100;
+  }
+  100% {
+    stroke-dashoffset: 100;
+  }
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @theme {
   --animate-shimmer: shimmer 1s infinite;
   --animate-gradient-shift: gradient-shift 2s ease infinite;
@@ -712,6 +733,7 @@
   --animate-icon-rotation: icon-rotation 4s ease-in-out infinite;
   --animate-float: float 3s ease-in-out infinite;
   --animate-draw-line: draw-line 2s ease-out forwards;
+  --animate-scroll-left: scroll-left 30s linear infinite;
 }
 
 .animate-shimmer {
@@ -723,6 +745,10 @@
 
 .dark .animate-shimmer {
   @apply bg-gradient-to-r from-neutral-800 via-neutral-900 to-neutral-800;
+}
+
+.animate-scroll-left {
+  animation: var(--animate-scroll-left);
 }
 
 .animate-shimmer::before {

@@ -73,8 +73,8 @@ export const siteConfig = {
   },
   nav: {
     links: [
-      { id: 1, name: 'Home', href: '#hero' },
-      { id: 2, name: 'Pricing', href: '#pricing' },
+      { id: 1, name: 'Início', href: '#hero' },
+      { id: 2, name: 'Preços', href: '#pricing' },
     ],
   },
   hero: {

@@ -38,6 +38,7 @@ import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { getAgents } from '@/hooks/react-query/agents/utils';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
 import { FloatingPills } from './floating-pills';
+import { AppLogosSlider } from './app-logos-slider';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
@@ -47,6 +48,15 @@ const BlurredDialogOverlay = () => (
 // Constant for localStorage key to ensure consistency
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
+// Rotating text options for the subtitle
+const rotatingTexts = [
+  'sua automação',
+  'seu app',
+  'sua landing page',
+  'seu relatório',
+  'sua pesquisa'
+];
+
 export function HeroSection() {
   const { hero } = siteConfig;
   const tablet = useMediaQuery('(max-width: 1024px)');
@@ -55,6 +65,7 @@ export function HeroSection() {
   const [inputValue, setInputValue] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const { billingError, handleBillingError, clearBillingError } =
@@ -96,6 +107,14 @@ export function HeroSection() {
     setMounted(true);
   }, []);
 
+  // Rotating text effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % rotatingTexts.length);
+    }, 5000); // Change text every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (authDialogOpen && inputValue.trim()) {
@@ -196,27 +215,45 @@ export function HeroSection() {
       <div className="relative flex flex-col items-center w-full px-6">
         <div className="relative z-10 max-w-4xl mx-auto h-full w-full flex flex-col items-center justify-center">
           
-          {/* Prophet AI Badge */}
-          <div className="animate-subtle-pulse mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20">
-              <span className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-                Prophet AI
-              </span>
+          {/* Title */}
+          <div className="text-center mb-6 mt-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-5xl font-semibold text-foreground mb-4 px-4">
+              O quê vamos construir?
+            </h1>
+            <div className="text-base sm:text-lg lg:text-xl xl:text-xl text-muted-foreground flex items-center justify-center gap-1 sm:gap-2 px-4">
+              <span>Descreva</span>
+              <div className="relative overflow-hidden inline-flex items-center">
+                {rotatingTexts.map((text, index) => {
+                  const isActive = currentTextIndex === index;
+                  const isPrevious = currentTextIndex === (index + 1) % rotatingTexts.length;
+                  
+                  return (
+                    <span
+                      key={index}
+                      className="absolute inset-0 flex items-center font-semibold whitespace-nowrap px-1 transition-all duration-700 ease-in-out"
+                      style={{
+                        color: 'rgb(196, 167, 255)',
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive ? 'translateY(0)' : 
+                                  isPrevious ? 'translateY(-100%)' : 'translateY(100%)',
+                        visibility: isActive ? 'visible' : 'hidden'
+                      }}
+                    >
+                      {text}
+                    </span>
+                  );
+                })}
+                {/* Invisible span to maintain width based on current text */}
+                <span className="invisible font-semibold whitespace-nowrap px-1">
+                  {rotatingTexts[currentTextIndex]}
+                </span>
+              </div>
+              <span>de forma natural</span>
             </div>
           </div>
           
-          {/* Title */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl lg:text-5xl font-semibold text-foreground mb-4">
-              O que devemos construir?
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              usando seu contexto de design e código existente
-            </p>
-          </div>
-          
-          {/* Input Container with Floating Pills */}
-          <div className="w-full max-w-[750px] mx-auto relative" style={{ minHeight: '400px' }}>
+          {/* Input Container with Floating Pills - Single Div */}
+          <div className="w-full max-w-[750px] mx-auto relative -mt-16" style={{ minHeight: '400px' }}>
             {/* Floating Pills around the input */}
             <div className="hidden lg:block">
               <FloatingPills />
@@ -230,23 +267,34 @@ export function HeroSection() {
                   style={{ animation: 'blink 1s infinite' }} 
                 />
               )}
-              <ChatInput
-                ref={chatInputRef}
-                onSubmit={handleChatInputSubmit}
-                placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                value={inputValue}
-                onChange={setInputValue}
-                isLoggedIn={!!user}
-                selectedAgentId={selectedAgentId}
-                onAgentSelect={setSelectedAgentId}
-                autoFocus={false}
-                onFocus={() => setIsInputFocused(true)}
-                onBlur={() => setIsInputFocused(false)}
-              />
+              {/* Wrapper com borda roxa */}
+              <div className="relative" style={{ 
+                border: '1px solid rgba(168, 85, 247, 0.8)',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 25%, rgba(139, 92, 246, 0.05) 50%, rgba(15, 23, 42, 0.98) 100%)',
+                overflow: 'hidden'
+              }}>
+                <ChatInput
+                  ref={chatInputRef}
+                  onSubmit={handleChatInputSubmit}
+                  placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                  value={inputValue}
+                  onChange={setInputValue}
+                  isLoggedIn={!!user}
+                  selectedAgentId={selectedAgentId}
+                  onAgentSelect={setSelectedAgentId}
+                  autoFocus={false}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
+                />
+              </div>
             </div>
           </div>
+          
+          {/* App Logos Slider */}
+          <AppLogosSlider />
         </div>
       </div>
 
