@@ -115,7 +115,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
                   {creditsData ? (
                     <>
                       <span className="text-sm font-medium text-card-title">
-                        {Math.floor(creditsData.tier_credits_used).toLocaleString('pt-BR')} /{' '}
+                        {Math.min(Math.floor(creditsData.tier_credits_used), Math.floor(creditsData.tier_credits_limit)).toLocaleString('pt-BR')} /{' '}
                         {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
                       </span>
                       {creditsData.daily_credits > 0 && (
@@ -177,7 +177,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
                   {creditsData ? (
                     <>
                       <span className="text-sm font-medium text-card-title">
-                        {Math.floor(creditsData.tier_credits_used).toLocaleString('pt-BR')} /{' '}
+                        {Math.min(Math.floor(creditsData.tier_credits_used), Math.floor(creditsData.tier_credits_limit)).toLocaleString('pt-BR')} /{' '}
                         {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
                       </span>
                       {creditsData.daily_credits > 0 && (
