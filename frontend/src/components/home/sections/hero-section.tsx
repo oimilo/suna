@@ -37,6 +37,7 @@ import { createQueryHook } from '@/hooks/use-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { getAgents } from '@/hooks/react-query/agents/utils';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { FloatingPills } from './floating-pills';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
@@ -193,72 +194,57 @@ export function HeroSection() {
   return (
     <section id="hero" className="w-full relative overflow-hidden min-h-screen flex items-center">
       <div className="relative flex flex-col items-center w-full px-6">
-
-        <div className="relative z-10 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
-          {/* <p className="border border-border bg-accent rounded-full text-sm h-8 px-3 flex items-center gap-2">
-            {hero.badgeIcon}
-            {hero.badge}
-          </p> */}
-
-          {/* <Link
-            href={hero.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group border border-border/50 bg-background hover:bg-accent/20 hover:border-secondary/40 rounded-full text-sm h-8 px-3 flex items-center gap-2 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 hover:-translate-y-0.5"
-          >
-            {hero.badgeIcon}
-            <span className="font-medium text-muted-foreground text-xs tracking-wide group-hover:text-primary transition-colors duration-300">
-              {hero.badge}
-            </span>
-            <span className="inline-flex items-center justify-center size-3.5 rounded-full bg-muted/30 group-hover:bg-secondary/30 transition-colors duration-300">
-              <svg
-                width="8"
-                height="8"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-muted-foreground group-hover:text-primary"
-              >
-                <path
-                  d="M7 17L17 7M17 7H8M17 7V16"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          </Link> */}
-          <div className="w-full max-w-[800px] mx-auto">
-            <div className="w-full mb-8 pl-4">
-              <p className="text-3xl font-normal text-muted-foreground text-left">
-                {t('dashboard.greeting')}
-              </p>
+        <div className="relative z-10 max-w-4xl mx-auto h-full w-full flex flex-col items-center justify-center">
+          
+          {/* Prophet AI Badge */}
+          <div className="animate-subtle-pulse mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20">
+              <span className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+                Prophet AI
+              </span>
             </div>
-            <div className="w-full relative">
-              <div className="relative z-10">
-                {/* Blinking cursor when not focused */}
-                {!isInputFocused && !inputValue && (
-                  <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-20" 
-                    style={{ animation: 'blink 1s infinite' }} 
-                  />
-                )}
-                <ChatInput
-                  ref={chatInputRef}
-                  onSubmit={handleChatInputSubmit}
-                  placeholder={t('landing.hero.placeholder')}
-                  loading={isSubmitting}
-                  disabled={isSubmitting}
-                  value={inputValue}
-                  onChange={setInputValue}
-                  isLoggedIn={!!user}
-                  selectedAgentId={selectedAgentId}
-                  onAgentSelect={setSelectedAgentId}
-                  autoFocus={false}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
+          </div>
+          
+          {/* Title */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl lg:text-5xl font-semibold text-foreground mb-4">
+              O que devemos construir?
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              usando seu contexto de design e código existente
+            </p>
+          </div>
+          
+          {/* Input Container with Floating Pills */}
+          <div className="w-full max-w-[750px] mx-auto relative" style={{ minHeight: '400px' }}>
+            {/* Floating Pills around the input */}
+            <div className="hidden lg:block">
+              <FloatingPills />
+            </div>
+            
+            {/* ChatInput - centered */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] z-20">
+              {/* Blinking cursor when not focused */}
+              {!isInputFocused && !inputValue && (
+                <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-30" 
+                  style={{ animation: 'blink 1s infinite' }} 
                 />
-              </div>
+              )}
+              <ChatInput
+                ref={chatInputRef}
+                onSubmit={handleChatInputSubmit}
+                placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
+                loading={isSubmitting}
+                disabled={isSubmitting}
+                value={inputValue}
+                onChange={setInputValue}
+                isLoggedIn={!!user}
+                selectedAgentId={selectedAgentId}
+                onAgentSelect={setSelectedAgentId}
+                autoFocus={false}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+              />
             </div>
           </div>
         </div>

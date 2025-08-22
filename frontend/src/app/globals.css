@@ -614,10 +614,104 @@
   51%, 100% { opacity: 0; }
 }
 
+@keyframes float-sequence {
+  0%, 100% { 
+    opacity: 0; 
+    transform: scale(0.9) translateY(10px); 
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  90% { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { 
+    opacity: 0.8; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.02); 
+  }
+}
+
+@keyframes connect-line {
+  0% { 
+    stroke-dashoffset: 100; 
+    opacity: 0; 
+  }
+  50% { 
+    opacity: 0.2; 
+  }
+  100% { 
+    stroke-dashoffset: 0; 
+    opacity: 0.05; 
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes icon-rotation {
+  0%, 20%, 100% { 
+    transform: rotate(0deg) scale(1); 
+  }
+  10% { 
+    transform: rotate(-5deg) scale(1.05); 
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes draw-line {
+  0% {
+    stroke-dashoffset: 300;
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.4;
+  }
+  60% {
+    stroke-dashoffset: 100;
+    opacity: 0.7;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
 @theme {
   --animate-shimmer: shimmer 1s infinite;
   --animate-gradient-shift: gradient-shift 2s ease infinite;
   --animate-blink: blink 1s infinite;
+  --animate-float-sequence: float-sequence 6s infinite;
+  --animate-subtle-pulse: subtle-pulse 3s ease-in-out infinite;
+  --animate-connect-line: connect-line 4s ease-in-out infinite;
+  --animate-fade-in-up: fade-in-up 0.5s ease-out forwards;
+  --animate-icon-rotation: icon-rotation 4s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-draw-line: draw-line 2s ease-out forwards;
 }
 
 .animate-shimmer {
@@ -652,6 +746,44 @@
     rgba(255, 255, 255, 0.1) 50%,
     rgba(255, 255, 255, 0) 100%
   );
+}
+
+/* New animation classes */
+.animate-float-sequence {
+  animation: var(--animate-float-sequence);
+  will-change: transform, opacity;
+}
+
+.animate-subtle-pulse {
+  animation: var(--animate-subtle-pulse);
+  will-change: opacity, transform;
+}
+
+.animate-connect-line {
+  animation: var(--animate-connect-line);
+  stroke-dasharray: 100;
+  will-change: stroke-dashoffset, opacity;
+}
+
+.animate-fade-in-up {
+  animation: var(--animate-fade-in-up);
+  will-change: transform, opacity;
+}
+
+.animate-icon-rotation {
+  animation: var(--animate-icon-rotation);
+  will-change: transform;
+}
+
+.animate-float {
+  animation: var(--animate-float);
+  will-change: transform;
+}
+
+.animate-draw-line {
+  animation: var(--animate-draw-line);
+  stroke-dasharray: 100;
+  will-change: stroke-dashoffset, opacity;
 }
 
 .animate-shimmer-gray {
