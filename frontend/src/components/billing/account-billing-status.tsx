@@ -125,11 +125,13 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
                         </span>
                       )}
                     </>
-                  ) : (
+                  ) : subscriptionData ? (
                     <span className="text-sm font-medium text-card-title">
-                      ${subscriptionData.current_usage?.toFixed(2) || '0'} /{' '}
-                      ${subscriptionData.cost_limit || '0'}
+                      {Math.min(Math.round((subscriptionData.current_usage || 0) * 100), Math.round((subscriptionData.cost_limit || 0) * 100)).toLocaleString('pt-BR')} /{' '}
+                      {Math.round((subscriptionData.cost_limit || 0) * 100).toLocaleString('pt-BR')}
                     </span>
+                  ) : (
+                    <Skeleton className="h-4 w-24" />
                   )}
                   <Button variant='outline' asChild className='text-sm'>
                     <Link href="/settings/usage-logs">
@@ -188,10 +190,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
                       )}
                     </>
                   ) : (
-                    <span className="text-sm font-medium text-card-title">
-                      ${subscriptionData?.current_usage?.toFixed(2) || '0'} /{' '}
-                      ${subscriptionData?.cost_limit || '0'}
-                    </span>
+                    <Skeleton className="h-4 w-24" />
                   )}
                 </div>
               </div>
