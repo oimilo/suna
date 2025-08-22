@@ -396,8 +396,7 @@ export default function UsageLogs({ accountId }: Props) {
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {summary.dailyCreditsUsed} de {summary.dailyCredits} créditos diários usados
-                  {summary.dailyCreditsRemaining > 0 && ` (${summary.dailyCreditsRemaining} disponíveis)`}
+                  {summary.dailyCreditsRemaining} de {summary.dailyCredits} créditos diários disponíveis
                   {summary.dailyExpiresIn && ` • Renova em ${summary.dailyExpiresIn}`}
                 </span>
               </div>
