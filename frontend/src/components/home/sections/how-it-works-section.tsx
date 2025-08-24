@@ -1,18 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, MessageSquare, Sparkles, Check, Cpu } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Zap, MessageSquare, Sparkles, Check, Cpu, ArrowDown } from 'lucide-react';
 
 const steps = [
   {
     number: '01',
     title: 'Conecte seus apps',
-    description: 'Escolha entre mais de 100 integrações disponíveis. WhatsApp, Gmail, Notion, Sheets e muito mais.',
-    icon: <Zap className="w-6 h-6" />,
-    color: 'from-blue-500 to-blue-600',
-    bgGradient: 'from-blue-500/10 to-blue-600/5',
+    description: 'Escolha entre mais de 2700 integrações disponíveis. WhatsApp, Gmail, Notion, Sheets e muito mais.',
+    icon: Zap,
     features: ['Setup em minutos', 'Sem código necessário', 'Conexões seguras'],
     highlight: 'Integração instantânea'
   },
@@ -20,9 +16,7 @@ const steps = [
     number: '02',
     title: 'Descreva o que precisa',
     description: 'Use linguagem natural. Diga ao Prophet o que fazer como se estivesse conversando com um assistente.',
-    icon: <MessageSquare className="w-6 h-6" />,
-    color: 'from-purple-500 to-purple-600',
-    bgGradient: 'from-purple-500/10 to-purple-600/5',
+    icon: MessageSquare,
     features: ['Linguagem natural', 'IA avançada', 'Entende contexto'],
     highlight: 'Simples como conversar'
   },
@@ -30,9 +24,7 @@ const steps = [
     number: '03',
     title: 'Automação inteligente',
     description: 'O Prophet cria fluxos de trabalho que rodam 24/7, executando tarefas complexas automaticamente.',
-    icon: <Cpu className="w-6 h-6" />,
-    color: 'from-emerald-500 to-emerald-600',
-    bgGradient: 'from-emerald-500/10 to-emerald-600/5',
+    icon: Cpu,
     features: ['Execução 24/7', 'Monitoramento contínuo', 'Otimização automática'],
     highlight: 'Trabalha enquanto você dorme'
   }
@@ -43,185 +35,225 @@ const exampleCommands = [
     command: 'Me avise no WhatsApp quando tiver uma nova venda registrada na planilha',
     category: 'Vendas',
     highlight: 'WhatsApp',
-    bgColor: 'bg-green-50 dark:bg-green-950/20',
-    borderColor: 'border-green-200 dark:border-green-800',
-    textColor: 'text-green-600 dark:text-green-400',
-    gradient: 'from-green-400/20 to-emerald-400/20'
   },
   {
     command: 'Analise meus emails e crie um resumo das tarefas pendentes no Notion',
     category: 'Produtividade',
     highlight: 'Notion',
-    bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    gradient: 'from-blue-400/20 to-indigo-400/20'
   },
   {
     command: 'Gere um relatório semanal das métricas do Instagram e envie por email',
     category: 'Analytics',
     highlight: 'Instagram',
-    bgColor: 'bg-purple-50 dark:bg-purple-950/20',
-    borderColor: 'border-purple-200 dark:border-purple-800',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    gradient: 'from-purple-400/20 to-pink-400/20'
   }
 ];
 
 export function HowItWorksSection() {
-  const [hoveredStep, setHoveredStep] = useState<number | null>(null);
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [hoveredCommand, setHoveredCommand] = useState<number | null>(null);
 
   return (
-    <section className="py-32 px-6 relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/20 to-background" />
+    <section className="relative w-full py-24 px-6 overflow-hidden">
+      {/* Section background with subtle gradient */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent" />
+      </div>
       
-      {/* Decorative elements */}
-      <div className="absolute top-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 left-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-      
-      <div className="max-w-6xl mx-auto relative">
-        {/* Header with badge */}
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Header */}
         <div className="text-center mb-20">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            SETUP EM 3 PASSOS
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-600/10 border border-purple-600/20 mb-6">
+            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-xs font-medium text-purple-400">Setup em 3 Passos</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Simples como conversar
+          
+          <h2 className="text-4xl lg:text-5xl font-semibold text-white mb-4">
+            Simples como <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400">conversar</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Não precisa de código, não precisa de tutoriais. 
-            Se você sabe descrever, o Prophet sabe fazer.
+          
+          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+            Não precisa de código, não precisa de tutoriais. Se você sabe descrever, o Prophet sabe fazer.
           </p>
         </div>
 
-        {/* Steps with enhanced visual design */}
-        <div className="grid md:grid-cols-3 gap-8 mb-24">
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className="relative group"
-              onMouseEnter={() => setHoveredStep(index)}
-              onMouseLeave={() => setHoveredStep(null)}
-            >
-              {/* Connection line with gradient */}
-              {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-24 left-full w-full">
-                  <div className="h-[2px] bg-gradient-to-r from-border via-primary/20 to-transparent -translate-x-1/2" />
-                  <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary transition-all duration-300 ${
-                    hoveredStep === index ? 'scale-150 opacity-100' : 'scale-0 opacity-0'
-                  }`} />
-                </div>
-              )}
+        {/* Timeline Layout */}
+        <div className="relative max-w-4xl mx-auto mb-24">
+          {/* Central vertical line */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-px h-full bg-gradient-to-b from-purple-600/20 via-purple-600/40 to-purple-600/20" />
+          
+          {/* Steps */}
+          <div className="space-y-20">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = activeStep === index;
+              const isLeft = index % 2 === 0;
               
-              <Card className="h-full border-2 hover:border-primary/30 transition-all duration-300 overflow-hidden">
-                {/* Gradient background on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${step.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                
-                <CardContent className="relative p-8">
-                  {/* Step number with modern style */}
-                  <div className="absolute top-4 right-4">
-                    <div className="text-5xl font-bold text-muted-foreground/10">
+              return (
+                <div 
+                  key={index}
+                  className={`relative flex items-center ${isLeft ? 'flex-row' : 'flex-row-reverse'}`}
+                  onMouseEnter={() => setActiveStep(index)}
+                >
+                  {/* Content */}
+                  <div className={`w-1/2 ${isLeft ? 'pr-12 text-right' : 'pl-12 text-left'}`}>
+                    {/* Number */}
+                    <div className={`text-6xl font-bold text-white/5 mb-2 ${isLeft ? 'text-right' : 'text-left'}`}>
                       {step.number}
                     </div>
-                  </div>
-                  
-                  {/* Icon with gradient background */}
-                  <div className="mb-6">
-                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} text-white shadow-lg transform transition-transform duration-300 group-hover:scale-110`}>
-                      {step.icon}
-                    </div>
-                  </div>
-                  
-                  {/* Highlight badge */}
-                  <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary border-0">
-                    {step.highlight}
-                  </Badge>
-                  
-                  {/* Content */}
-                  <h3 className="text-xl font-bold mb-3 transition-transform duration-300 group-hover:translate-x-1">
-                    {step.title}
-                  </h3>
-                  <p className="text-muted-foreground mb-6 leading-relaxed">
-                    {step.description}
-                  </p>
-                  
-                  {/* Features list */}
-                  <div className="space-y-2">
-                    {step.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center gap-2 text-sm">
-                        <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${step.color}`} />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Visual accent */}
-                  <div className="absolute bottom-0 right-0 w-24 h-24">
-                    <div className={`w-full h-full bg-gradient-to-br ${step.color} opacity-5 rounded-tl-full`} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-        </div>
-
-        {/* Examples section - Modern mobile-first design */}
-        <div className="relative mt-24">
-          <div className="text-center mb-12">
-            <h3 className="text-2xl md:text-3xl font-bold mb-4">Comandos que o Prophet entende</h3>
-            <p className="text-muted-foreground text-sm md:text-base">Converse naturalmente e deixe a mágica acontecer</p>
-          </div>
-          
-          {/* Chat-like command list */}
-          <div className="max-w-4xl mx-auto space-y-4 px-4 md:px-6">
-            {exampleCommands.map((example, index) => (
-              <div
-                key={index}
-                className="group relative"
-              >
-                {/* Mobile-first chat bubble design */}
-                <div className={`relative ${index % 2 === 0 ? 'mr-auto' : 'ml-auto'} w-full md:w-[70%] lg:w-[60%]`}>
-                  {/* Message bubble */}
-                  <div className={`relative rounded-2xl p-5 md:p-6 border ${example.borderColor} ${example.bgColor} 
-                    ${index % 2 === 0 ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
-                  >
-                    {/* Category tag */}
-                    <div className={`inline-flex items-center gap-1.5 text-xs font-medium ${example.textColor} mb-3`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                      {example.category}
-                    </div>
                     
-                    {/* Command text with highlighted word */}
-                    <p className="text-sm md:text-base leading-relaxed text-foreground/90">
-                      {example.command.split(example.highlight).map((part, i, arr) => (
-                        <span key={i}>
-                          {part}
-                          {i < arr.length - 1 && (
-                            <span className={`font-semibold ${example.textColor}`}>
-                              {example.highlight}
-                            </span>
-                          )}
-                        </span>
-                      ))}
+                    {/* Title */}
+                    <h3 className={`text-2xl font-semibold text-white mb-3 transition-all duration-300 ${
+                      isActive ? 'transform scale-105' : ''
+                    }`}>
+                      {step.title}
+                    </h3>
+                    
+                    {/* Description */}
+                    <p className="text-gray-400 mb-4 leading-relaxed">
+                      {step.description}
                     </p>
                     
+                    {/* Highlight */}
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-600/10 border border-purple-600/20 mb-4`}>
+                      <span className="text-xs font-medium text-purple-400">{step.highlight}</span>
+                    </div>
+                    
+                    {/* Features */}
+                    <div className={`space-y-2 ${isLeft ? 'items-end' : 'items-start'} flex flex-col`}>
+                      {step.features.map((feature, featureIndex) => (
+                        <div key={featureIndex} className="flex items-center gap-2">
+                          {!isLeft && <Check className="h-3 w-3 text-purple-400" />}
+                          <span className="text-xs text-gray-500">{feature}</span>
+                          {isLeft && <Check className="h-3 w-3 text-purple-400" />}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   
-                  {/* Message tail */}
-                  <div className={`absolute top-5 ${index % 2 === 0 ? '-left-2' : '-right-2'} 
-                    w-4 h-4 ${example.bgColor} border ${example.borderColor} 
-                    transform rotate-45 ${index % 2 === 0 ? 'border-r-0 border-t-0' : 'border-l-0 border-b-0'}`} 
-                  />
+                  {/* Center Circle with Icon */}
+                  <div className="absolute left-1/2 transform -translate-x-1/2 z-10">
+                    <div className={`relative p-4 rounded-2xl border transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-purple-600/20 border-purple-600/40 scale-110' 
+                        : 'bg-white/[0.01] border-white/10 hover:bg-purple-600/10 hover:border-purple-600/30'
+                    }`}>
+                      <Icon className={`h-6 w-6 transition-colors duration-300 ${
+                        isActive ? 'text-purple-400' : 'text-gray-400'
+                      }`} />
+                      
+                      {/* Pulse animation when active */}
+                      {isActive && (
+                        <div className="absolute inset-0 rounded-2xl bg-purple-600/20 animate-ping" />
+                      )}
+                    </div>
+                    
+                    {/* Connector arrow */}
+                    {index < steps.length - 1 && (
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4">
+                        <ArrowDown className="h-4 w-4 text-purple-600/40 animate-bounce" style={{ animationDelay: `${index * 0.5}s` }} />
+                      </div>
+                    )}
+                  </div>
                   
+                  {/* Empty space for opposite side */}
+                  <div className="w-1/2" />
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Examples Section - Terminal Style */}
+        <div className="relative">
+          <div className="text-center mb-12">
+            <h3 className="text-2xl font-semibold text-white mb-2">
+              Comandos que o Prophet entende
+            </h3>
+            <p className="text-gray-400">
+              Converse naturalmente e deixe a mágica acontecer
+            </p>
           </div>
           
+          {/* Terminal-like container */}
+          <div className="max-w-3xl mx-auto">
+            <div className="rounded-2xl bg-black/40 backdrop-blur-sm border border-white/5 overflow-hidden">
+              {/* Terminal header */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.02] border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/60" />
+                </div>
+                <span className="text-xs text-gray-500 ml-2">Prophet Terminal</span>
+              </div>
+              
+              {/* Commands */}
+              <div className="p-6 space-y-4">
+                {exampleCommands.map((example, index) => (
+                  <div
+                    key={index}
+                    className="group relative"
+                    onMouseEnter={() => setHoveredCommand(index)}
+                    onMouseLeave={() => setHoveredCommand(null)}
+                  >
+                    {/* Command prompt */}
+                    <div className="flex items-start gap-3">
+                      <span className="text-purple-400 font-mono text-sm">$</span>
+                      <div className="flex-1">
+                        {/* Category */}
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-purple-600/10 border border-purple-600/20 mb-2">
+                          <span className="text-xs text-purple-400">{example.category}</span>
+                        </div>
+                        
+                        {/* Command text */}
+                        <p className={`text-sm text-gray-300 font-mono transition-all duration-300 ${
+                          hoveredCommand === index ? 'text-white translate-x-1' : ''
+                        }`}>
+                          {example.command.split(example.highlight).map((part, i, arr) => (
+                            <span key={i}>
+                              {part}
+                              {i < arr.length - 1 && (
+                                <span className="text-purple-400 font-semibold">
+                                  {example.highlight}
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Typing cursor animation */}
+                    {hoveredCommand === index && (
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <div className="w-2 h-4 bg-purple-400 animate-pulse" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* Blinking cursor at the end */}
+                <div className="flex items-center gap-3 opacity-50">
+                  <span className="text-purple-400 font-mono text-sm">$</span>
+                  <div className="w-2 h-4 bg-purple-400/60" style={{ animation: 'blink 1s infinite' }} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Subtle animated background elements */}
+      <div className="absolute top-1/2 -left-20 w-40 h-40 bg-purple-600/5 rounded-full blur-[80px] animate-pulse" />
+      <div className="absolute bottom-1/3 -right-20 w-40 h-40 bg-violet-600/5 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+      
+      {/* Add blink animation */}
+      <style jsx>{`
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+      `}</style>
     </section>
   );
 }

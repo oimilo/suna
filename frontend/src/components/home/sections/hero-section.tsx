@@ -217,26 +217,40 @@ export function HeroSection() {
           
           {/* Title */}
           <div className="text-center mb-6 mt-4">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-5xl font-semibold text-foreground mb-4 px-4">
-              O quê vamos construir?
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-5xl font-semibold text-white mb-4 px-4">
+              O que vamos construir?
             </h1>
-            <div className="text-base sm:text-lg lg:text-xl xl:text-xl text-muted-foreground flex items-center justify-center gap-1 sm:gap-2 px-4">
+            <div className="text-base sm:text-lg lg:text-xl xl:text-xl text-gray-400 flex items-center justify-center gap-1 sm:gap-2 px-4">
               <span>Descreva</span>
               <div className="relative overflow-hidden inline-flex items-center">
                 {rotatingTexts.map((text, index) => {
-                  const isActive = currentTextIndex === index;
-                  const isPrevious = currentTextIndex === (index + 1) % rotatingTexts.length;
+                  const position = (index - currentTextIndex + rotatingTexts.length) % rotatingTexts.length;
+                  const isActive = position === 0;
+                  const isNext = position === 1;
+                  const isPrevious = position === rotatingTexts.length - 1;
+                  
+                  let transform = 'translateY(100%)';
+                  let opacity = 0;
+                  
+                  if (isActive) {
+                    transform = 'translateY(0)';
+                    opacity = 1;
+                  } else if (isPrevious) {
+                    transform = 'translateY(-100%)';
+                    opacity = 0;
+                  } else if (isNext) {
+                    transform = 'translateY(100%)';
+                    opacity = 0;
+                  }
                   
                   return (
                     <span
                       key={index}
                       className="absolute inset-0 flex items-center font-semibold whitespace-nowrap px-1 transition-all duration-700 ease-in-out"
                       style={{
-                        color: 'rgb(196, 167, 255)',
-                        opacity: isActive ? 1 : 0,
-                        transform: isActive ? 'translateY(0)' : 
-                                  isPrevious ? 'translateY(-100%)' : 'translateY(100%)',
-                        visibility: isActive ? 'visible' : 'hidden'
+                        color: 'rgb(168, 85, 247)',
+                        opacity: opacity,
+                        transform: transform
                       }}
                     >
                       {text}
@@ -263,32 +277,46 @@ export function HeroSection() {
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] z-20">
               {/* Blinking cursor when not focused */}
               {!isInputFocused && !inputValue && (
-                <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground z-30" 
+                <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-gray-500 z-30" 
                   style={{ animation: 'blink 1s infinite' }} 
                 />
               )}
-              {/* Wrapper com borda roxa */}
+              {/* Wrapper usando exatamente o mesmo padrão do background com opacidade */}
               <div className="relative" style={{ 
-                border: '1px solid rgba(168, 85, 247, 0.8)',
+                border: '1px solid rgba(139, 92, 246, 0.15)',
                 borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 25%, rgba(139, 92, 246, 0.05) 50%, rgba(15, 23, 42, 0.98) 100%)',
+                position: 'relative',
                 overflow: 'hidden'
               }}>
-                <ChatInput
-                  ref={chatInputRef}
-                  onSubmit={handleChatInputSubmit}
-                  placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
-                  loading={isSubmitting}
-                  disabled={isSubmitting}
-                  value={inputValue}
-                  onChange={setInputValue}
-                  isLoggedIn={!!user}
-                  selectedAgentId={selectedAgentId}
-                  onAgentSelect={setSelectedAgentId}
-                  autoFocus={false}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
-                />
+                {/* Camada de background idêntica ao principal mas com opacidade */}
+                <div className="absolute inset-0" style={{
+                  background: 'rgba(10, 10, 10, 0.85)',
+                  backdropFilter: 'blur(20px)'
+                }} />
+                
+                {/* Pontos de luz roxa - mesmos do background mas localizados */}
+                <div className="absolute top-0 left-[10%] w-[150px] h-[150px] bg-purple-600/15 rounded-full blur-[60px]" />
+                <div className="absolute bottom-0 right-[10%] w-[120px] h-[120px] bg-violet-600/10 rounded-full blur-[50px]" />
+                <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[200px] h-[100px] bg-purple-700/8 rounded-full blur-[70px]" />
+                
+                {/* Input com z-index maior */}
+                <div className="relative z-10">
+                  <ChatInput
+                    ref={chatInputRef}
+                    onSubmit={handleChatInputSubmit}
+                    placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                    value={inputValue}
+                    onChange={setInputValue}
+                    isLoggedIn={!!user}
+                    selectedAgentId={selectedAgentId}
+                    onAgentSelect={setSelectedAgentId}
+                    autoFocus={false}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                  />
+                </div>
               </div>
             </div>
           </div>

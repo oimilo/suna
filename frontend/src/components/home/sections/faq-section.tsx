@@ -8,9 +8,8 @@ import {
 } from '@/components/home/ui/accordion';
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import { siteConfig } from '@/lib/home';
-import { HelpCircle, Plus, Minus, MessageCircle, FileText } from 'lucide-react';
+import { HelpCircle, Plus, ChevronRight, MessageCircle, FileText, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/lib/utils';
 
 export function FAQSection() {
   const { faqSection } = siteConfig;
@@ -18,45 +17,50 @@ export function FAQSection() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
-    <section
-      id="faq"
-      className="py-24 px-6 relative"
-    >
-      <div className="max-w-3xl mx-auto relative">
+    <section className="relative w-full py-24 px-6 overflow-hidden">
+      {/* Section background with subtle gradient */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent" />
+      </div>
+      
+      <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-foreground text-sm font-medium mb-6"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-600/10 border border-purple-600/20 mb-6"
           >
-            <HelpCircle className="w-4 h-4" />
-            PERGUNTAS FREQUENTES
+            <HelpCircle className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-xs font-medium text-purple-400">Perguntas Frequentes</span>
           </motion.div>
+          
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl md:text-4xl font-bold mb-4"
+            className="text-4xl lg:text-5xl font-semibold text-white mb-4"
           >
-            {faqSection.title}
+            Tudo que você <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400">precisa saber</span>
           </motion.h2>
+          
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+            className="text-lg text-gray-400 max-w-2xl mx-auto"
           >
             {faqSection.description}
           </motion.p>
         </div>
 
-        {/* FAQ Accordion - Minimal design */}
+        {/* FAQ Accordion - Ultra Minimal Design */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
+          className="space-y-1"
         >
           <Accordion
             type="single"
@@ -67,164 +71,191 @@ export function FAQSection() {
           >
             {faqSection.faQitems.map((faq, index) => {
               const isOpen = openItem === index.toString();
+              const isHovered = hoveredIndex === index;
               
               return (
                 <AccordionItem
                   key={index}
                   value={index.toString()}
-                  className="border-b border-border/50 last:border-0"
+                  className="border-0"
                   onMouseEnter={() => setHoveredIndex(index)}
                   onMouseLeave={() => setHoveredIndex(null)}
                 >
                   <AccordionPrimitive.Header className="flex">
                     <AccordionPrimitive.Trigger
-                      className={cn(
-                        "flex flex-1 items-center justify-between py-6 px-0 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group"
-                      )}
+                      className="flex flex-1 items-center justify-between py-5 px-0 text-left transition-all outline-none group"
                     >
-                      <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-4 text-left">
-                        {/* Dynamic icon */}
+                      <div className="flex items-center gap-4 flex-1">
+                        {/* Number indicator */}
                         <div className="relative">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                          <div className={`text-sm font-mono transition-all duration-300 ${
                             isOpen 
-                              ? 'bg-primary text-primary-foreground' 
-                              : hoveredIndex === index
-                                ? 'bg-muted-foreground/10 text-foreground'
-                                : 'bg-muted text-muted-foreground'
+                              ? 'text-purple-400' 
+                              : isHovered
+                                ? 'text-purple-400/60'
+                                : 'text-gray-600'
                           }`}>
-                            <AnimatePresence mode="wait">
-                              {isOpen ? (
-                                <motion.div
-                                  key="minus"
-                                  initial={{ rotate: -90, opacity: 0 }}
-                                  animate={{ rotate: 0, opacity: 1 }}
-                                  exit={{ rotate: 90, opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <Minus className="w-5 h-5" />
-                                </motion.div>
-                              ) : (
-                                <motion.div
-                                  key="plus"
-                                  initial={{ rotate: 90, opacity: 0 }}
-                                  animate={{ rotate: 0, opacity: 1 }}
-                                  exit={{ rotate: -90, opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <Plus className="w-5 h-5" />
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
+                            {String(index + 1).padStart(2, '0')}
                           </div>
                           
-                          {/* Progress indicator */}
-                          {isOpen && (
-                            <motion.div
-                              className="absolute inset-0 rounded-full"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.3 }}
-                            >
-                              <svg className="w-10 h-10 transform -rotate-90">
-                                <circle
-                                  cx="20"
-                                  cy="20"
-                                  r="18"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  fill="none"
-                                  className="text-primary/20"
-                                />
-                                <motion.circle
-                                  cx="20"
-                                  cy="20"
-                                  r="18"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  fill="none"
-                                  strokeDasharray={`${2 * Math.PI * 18}`}
-                                  strokeDashoffset={`${2 * Math.PI * 18}`}
-                                  className="text-primary"
-                                  initial={{ strokeDashoffset: 2 * Math.PI * 18 }}
-                                  animate={{ strokeDashoffset: 0 }}
-                                  transition={{ duration: 0.5, ease: "easeOut" }}
-                                />
-                              </svg>
-                            </motion.div>
-                          )}
+                          {/* Active indicator line */}
+                          <div className={`absolute -left-8 top-1/2 -translate-y-1/2 h-px transition-all duration-300 ${
+                            isOpen 
+                              ? 'w-6 bg-purple-400' 
+                              : isHovered
+                                ? 'w-4 bg-purple-400/40'
+                                : 'w-0 bg-transparent'
+                          }`} />
                         </div>
                         
-                        <h3 className={`text-base md:text-lg font-medium transition-colors duration-200 ${
-                          isOpen || hoveredIndex === index ? 'text-foreground' : 'text-muted-foreground'
+                        {/* Question */}
+                        <h3 className={`text-base md:text-lg font-medium transition-all duration-300 flex-1 ${
+                          isOpen 
+                            ? 'text-white translate-x-1' 
+                            : isHovered 
+                              ? 'text-gray-200 translate-x-0.5'
+                              : 'text-gray-400'
                         }`}>
                           {faq.question}
                         </h3>
+                        
+                        {/* Arrow indicator */}
+                        <div className={`relative transition-all duration-300 ${
+                          isOpen ? 'rotate-90' : ''
+                        }`}>
+                          <ChevronRight className={`h-4 w-4 transition-colors duration-300 ${
+                            isOpen || isHovered ? 'text-purple-400' : 'text-gray-600'
+                          }`} />
+                        </div>
                       </div>
-                    </div>
                     </AccordionPrimitive.Trigger>
                   </AccordionPrimitive.Header>
                   
-                  <AccordionContent className="pb-6 pl-14 pr-0">
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <p className="text-muted-foreground leading-relaxed">
-                        {faq.answer}
-                      </p>
-                    </motion.div>
+                  <AccordionContent className="overflow-hidden">
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
+                          className="pb-5"
+                        >
+                          <div className="pl-12 pr-8">
+                            <p className="text-gray-400 leading-relaxed">
+                              {faq.answer}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </AccordionContent>
+                  
+                  {/* Separator line */}
+                  <div className={`h-px transition-all duration-300 ${
+                    isOpen || isHovered 
+                      ? 'bg-purple-600/20' 
+                      : 'bg-white/5'
+                  }`} />
                 </AccordionItem>
               );
             })}
           </Accordion>
         </motion.div>
 
-        {/* Contact options - Minimal design */}
+        {/* Contact Section - Minimal Hover Effects */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-16 pt-16 border-t border-border/50"
+          className="mt-20"
         >
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-semibold mb-2">Ainda tem dúvidas?</h3>
-            <p className="text-muted-foreground">
+          {/* Divider with gradient */}
+          <div className="relative mb-16">
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-purple-600/20 to-transparent" />
+          </div>
+          
+          <div className="text-center mb-12">
+            <h3 className="text-2xl font-semibold text-white mb-2">
+              Ainda tem dúvidas?
+            </h3>
+            <p className="text-gray-400">
               Escolha a melhor forma de obter ajuda
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-4">
+          {/* Contact Options - No cards, just hover areas */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
             <a
               href="#"
-              className="group flex items-center gap-4 p-6 rounded-2xl border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-300"
+              className="group relative"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <MessageCircle className="w-6 h-6 text-primary" />
-              </div>
-              <div className="text-left">
-                <h4 className="font-medium mb-1">Fale com a equipe</h4>
-                <p className="text-sm text-muted-foreground">Resposta em até 24h</p>
+              <div className="flex items-start gap-4 p-6 rounded-2xl transition-all duration-300 hover:bg-purple-600/5">
+                {/* Hover gradient background */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600/0 to-violet-600/0 group-hover:from-purple-600/10 group-hover:to-violet-600/5 transition-all duration-500" />
+                
+                {/* Icon */}
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-600/20 flex items-center justify-center transition-all duration-300 group-hover:bg-purple-600/20 group-hover:border-purple-600/30">
+                    <MessageCircle className="w-5 h-5 text-purple-400" />
+                  </div>
+                </div>
+                
+                {/* Text */}
+                <div className="relative text-left">
+                  <h4 className="font-medium text-white mb-1 transition-transform duration-300 group-hover:translate-x-0.5">
+                    Fale com a equipe
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Resposta em até 24h
+                  </p>
+                </div>
+                
+                {/* Hover indicator */}
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">
+                  <ChevronRight className="h-4 w-4 text-purple-400" />
+                </div>
               </div>
             </a>
             
             <a
               href="#"
-              className="group flex items-center gap-4 p-6 rounded-2xl border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-300"
+              className="group relative"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <FileText className="w-6 h-6 text-primary" />
-              </div>
-              <div className="text-left">
-                <h4 className="font-medium mb-1">Documentação</h4>
-                <p className="text-sm text-muted-foreground">Guias detalhados</p>
+              <div className="flex items-start gap-4 p-6 rounded-2xl transition-all duration-300 hover:bg-purple-600/5">
+                {/* Hover gradient background */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600/0 to-violet-600/0 group-hover:from-purple-600/10 group-hover:to-violet-600/5 transition-all duration-500" />
+                
+                {/* Icon */}
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-600/20 flex items-center justify-center transition-all duration-300 group-hover:bg-purple-600/20 group-hover:border-purple-600/30">
+                    <FileText className="w-5 h-5 text-purple-400" />
+                  </div>
+                </div>
+                
+                {/* Text */}
+                <div className="relative text-left">
+                  <h4 className="font-medium text-white mb-1 transition-transform duration-300 group-hover:translate-x-0.5">
+                    Documentação
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Guias detalhados
+                  </p>
+                </div>
+                
+                {/* Hover indicator */}
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">
+                  <ChevronRight className="h-4 w-4 text-purple-400" />
+                </div>
               </div>
             </a>
           </div>
         </motion.div>
       </div>
+
+      {/* Subtle animated background elements */}
+      <div className="absolute bottom-1/4 -left-32 w-64 h-64 bg-purple-600/5 rounded-full blur-[100px] animate-pulse" />
+      <div className="absolute top-1/3 -right-32 w-64 h-64 bg-violet-600/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
     </section>
   );
 }
