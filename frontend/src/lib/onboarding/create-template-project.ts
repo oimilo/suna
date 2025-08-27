@@ -138,7 +138,7 @@ export async function createTemplateProject({
     
     console.log('✅ Projeto criado:', { projectId, threadId, sandboxId });
     
-    // 4. Atualizar projeto com metadata do template
+    // 4. Atualizar projeto com metadata do template e flag para não iniciar agent
     await supabase
       .from('projects')
       .update({
@@ -149,12 +149,14 @@ export async function createTemplateProject({
           profileType,
           templateId: template.id,
           onboardingAnswers,
-          templateFiles: template.files
+          templateFiles: template.files,
+          skipAutoAgent: true  // Flag importante para evitar agent automático
         }
       })
       .eq('project_id', projectId);
     
-    // 5. Finalizar agent_run como completed mas com flag especial
+    // 5. NÃO deletar o agent_run - vamos mantê-lo como completed
+    // Isso evita que o sistema crie um novo agent automático
     if (agentRunId) {
       await supabase
         .from('agent_runs')
@@ -164,12 +166,13 @@ export async function createTemplateProject({
           completed_at: new Date().toISOString(),
           metadata: {
             isTemplateRun: true,
-            skipFallback: true
+            skipFallback: true,
+            doNotProcess: true
           }
         })
         .eq('agent_run_id', agentRunId);
       
-      console.log('Agent run finalizado com flag de template para evitar fallback');
+      console.log('Agent run marcado como completed para evitar novo agent automático');
     }
     
     // 6. Limpar mensagens criadas pelo agent
@@ -237,94 +240,15 @@ export async function createTemplateProject({
       });
     }
     
-    // 8. Criar arquivos no sandbox usando a API correta
+    // 8. NÃO tentar criar arquivos no sandbox agora - deixar para depois
+    // O sandbox pode não estar pronto e isso está causando erros 404
     if (template.files && template.files.length > 0) {
-      if (sandboxId) {
-        console.log(`✅ Sandbox encontrado: ${sandboxId}. Preparando para criar ${template.files.length} arquivos...`);
-        debugLog('INICIANDO_CRIACAO_ARQUIVOS', { totalFiles: template.files.length, sandboxId });
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.access_token) {
-          // Aguardar sandbox estar totalmente pronta
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          let filesCreated = 0;
-          let filesFailed = 0;
-          
-          for (const file of template.files) {
-            try {
-              console.log(`Criando arquivo: ${file.path}`);
-              debugLog('CRIANDO_ARQUIVO', { path: file.path, size: file.content.length });
-              
-              // Usar a API JSON que é mais confiável
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/sandboxes/${sandboxId}/files/json`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    path: file.path.startsWith('/') ? file.path : `/${file.path}`,
-                    content: file.content
-                  })
-                }
-              );
-                
-                if (response.ok) {
-                  console.log(`✅ Arquivo criado: ${file.path}`);
-                  filesCreated++;
-                  debugLog('ARQUIVO_CRIADO', { path: file.path, status: response.status });
-                  
-                  // Aguardar um pouco após criar cada arquivo
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                } else {
-                  const errorText = await response.text();
-                  console.warn(`⚠️ Não foi possível criar ${file.path}:`, response.status, errorText);
-                  filesFailed++;
-                  debugLog('ERRO_CRIAR_ARQUIVO', { 
-                    path: file.path, 
-                    status: response.status,
-                    error: errorText 
-                  });
-                }
-              } catch (error) {
-                console.error(`❌ Erro ao criar ${file.path}:`, error);
-                filesFailed++;
-                debugLog('EXCECAO_CRIAR_ARQUIVO', { path: file.path, error: String(error) });
-              }
-              
-              // Pequeno delay entre arquivos
-              await new Promise(resolve => setTimeout(resolve, 200));
-            }
-            
-        debugLog('CRIACAO_ARQUIVOS_COMPLETA', { 
-          total: template.files.length,
-          created: filesCreated,
-          failed: filesFailed
-        });
-      } else {
-        console.warn('Sem sessão de autenticação para criar arquivos');
-        debugLog('ERRO_SEM_SESSAO', { hasSession: false });
-      }
-      } else {
-        // Se não temos sandbox, salvar arquivos no metadata do projeto para criar depois
-        console.warn('⚠️ Sandbox ainda não criado, salvando arquivos no metadata para criação posterior');
-        debugLog('SANDBOX_PENDENTE_SALVANDO_METADATA', { projectId, filesCount: template.files.length });
-        
-        await supabase
-          .from('projects')
-          .update({
-            sandbox: {
-              ...project.sandbox,
-              pendingFiles: template.files,
-              needsFileCreation: true
-            }
-          })
-          .eq('project_id', projectId);
-      }
+      console.log(`📝 ${template.files.length} arquivos salvos no metadata do projeto para criação posterior`);
+      debugLog('ARQUIVOS_SALVOS_METADATA', { 
+        totalFiles: template.files.length, 
+        sandboxId: sandboxId || 'pendente',
+        reason: 'Sandbox pode não estar pronto, arquivos serão criados na primeira interação'
+      });
     }
     
     // 10. Tentar salvar arquivos na tabela project_files como backup (opcional)

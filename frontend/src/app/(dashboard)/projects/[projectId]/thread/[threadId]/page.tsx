@@ -487,6 +487,13 @@ export default function ThreadPage({
         }, 2000);
         return () => clearTimeout(timer);
       } else if (messages.length > 0) {
+        // Check if first message is from template
+        const firstMessage = messages[0];
+        if ((firstMessage?.metadata as any)?.isTemplateMessage) {
+          console.log('[TEMPLATE] Template message detected, skipping auto-agent');
+          // Don't start any agent for template projects
+        }
+        
         // Small delay to ensure DOM is ready
         setTimeout(() => {
           scrollToBottom('auto');
@@ -494,11 +501,13 @@ export default function ThreadPage({
       }
       
       // Garantir que os arquivos do template sejam criados
-      ensureTemplateFiles(projectId).catch(error => {
-        console.error('[TEMPLATE] Erro ao garantir arquivos:', error);
-      });
+      if ((project?.sandbox as any)?.isOnboardingProject) {
+        ensureTemplateFiles(projectId).catch(error => {
+          console.error('[TEMPLATE] Erro ao garantir arquivos:', error);
+        });
+      }
     }
-  }, [initialLoadCompleted, messagesQuery, projectId, threadId]);
+  }, [initialLoadCompleted, messagesQuery, projectId, threadId, project]);
 
   useEffect(() => {
     if (agentRunId && agentRunId !== currentHookRunId) {
