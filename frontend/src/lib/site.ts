@@ -20,25 +20,17 @@ export const siteConfig = {
     {
       title: 'Produto',
       links: [
-        { title: 'Integrações', url: '/#integrations' },
-        { title: 'Preços', url: '/#pricing' },
-        { title: 'Empresas', url: BRANDING.contactEmail ? `mailto:${BRANDING.contactEmail}` : '#' },
+        { title: 'Integrações', url: '#integrations' },
+        { title: 'Preços', url: '#pricing' },
+        { title: 'Como funciona', url: '#how-it-works' },
       ],
     },
     {
-      title: 'Recursos',
+      title: 'Suporte',
       links: [
-        { title: 'Como funciona', url: '/#how-it-works' },
-        { title: 'Suporte', url: BRANDING.supportEmail ? `mailto:${BRANDING.supportEmail}` : '#' },
-        { title: 'Status', url: '#' },
-      ],
-    },
-    {
-      title: 'Empresa',
-      links: [
-        { title: 'Sobre', url: BRANDING.companyUrl },
-        { title: 'Blog', url: `${BRANDING.companyUrl}/blog` },
+        { title: 'Documentação', url: '/docs' },
         { title: 'Contato', url: BRANDING.contactEmail ? `mailto:${BRANDING.contactEmail}` : '#' },
+        { title: 'FAQ', url: '#faq' },
       ],
     },
     {
@@ -46,7 +38,6 @@ export const siteConfig = {
       links: [
         { title: 'Privacidade', url: BRANDING.legal.privacy },
         { title: 'Termos', url: BRANDING.legal.terms },
-        { title: 'Segurança', url: '#' },
       ],
     },
   ],

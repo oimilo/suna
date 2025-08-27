@@ -270,7 +270,7 @@ export function HeroSection() {
           <div className="w-full max-w-[750px] mx-auto relative -mt-16" style={{ minHeight: '400px' }}>
             {/* Floating Pills around the input */}
             <div className="hidden lg:block">
-              <FloatingPills />
+              <FloatingPills onPillClick={(prompt) => setInputValue(prompt)} />
             </div>
             
             {/* ChatInput - centered */}
@@ -304,7 +304,7 @@ export function HeroSection() {
                   <ChatInput
                     ref={chatInputRef}
                     onSubmit={handleChatInputSubmit}
-                    placeholder="Pergunte ao Prophet para construir uma aplicação completa..."
+                    placeholder="Escreva sua ideia e vamos construir juntos..."
                     loading={isSubmitting}
                     disabled={isSubmitting}
                     value={inputValue}

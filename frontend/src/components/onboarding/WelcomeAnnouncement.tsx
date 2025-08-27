@@ -3,34 +3,23 @@
 import { useEffect } from 'react';
 import { useAnnouncementStore } from '@/hooks/use-announcement-store';
 import { useOnboardingStore } from '@/hooks/use-onboarding-store';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
 export function WelcomeAnnouncement() {
   const { addAnnouncement } = useAnnouncementStore();
-  const router = useRouter();
   const { 
     hasSeenWelcome, 
     setHasSeenWelcome, 
-    updateChecklistStep 
+    updateChecklistStep,
+    setTourStep
   } = useOnboardingStore();
 
-  const createExampleProject = async () => {
-    try {
-      // For now, just navigate to projects page
-      // In a real implementation, this would create an actual project
-      toast.success('Preparando seu espaço de trabalho...');
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
-    } catch (error) {
-      toast.error('Erro ao criar projeto de exemplo');
-    }
-  };
 
   useEffect(() => {
-    // Only show once
-    if (!hasSeenWelcome) {
+    // Verificar se o onboarding já foi completado
+    const isCompleted = localStorage.getItem('onboarding_completed') === 'true';
+    
+    // Only show once and if not completed
+    if (!hasSeenWelcome && !isCompleted) {
       const announcementId = addAnnouncement({
         type: 'onboarding',
         title: 'Bem-vindo ao Prophet! 🌞',
@@ -71,10 +60,18 @@ export function WelcomeAnnouncement() {
             label: '🚀 Vamos lá!',
             variant: 'default',
             onClick: () => {
+              console.log('[WelcomeAnnouncement] Vamos lá clicked!');
+              
+              // Close the announcement dialog first
+              useAnnouncementStore.getState().closeDialog();
+              
+              // Then set the onboarding states
               setHasSeenWelcome(true);
               updateChecklistStep('welcome', true);
-              // Create example project and start tour
-              createExampleProject();
+              
+              // Start the onboarding tour with questions
+              setTourStep(0);
+              console.log('[WelcomeAnnouncement] tourStep set to 0, dialog closed');
             }
           },
           {
@@ -82,6 +79,9 @@ export function WelcomeAnnouncement() {
             label: 'Já conheço o Prophet',
             variant: 'outline',
             onClick: () => {
+              // Close the announcement dialog
+              useAnnouncementStore.getState().closeDialog();
+              
               setHasSeenWelcome(true);
               updateChecklistStep('welcome', true);
               // Skip tour
@@ -96,7 +96,7 @@ export function WelcomeAnnouncement() {
         useAnnouncementStore.getState().showAnnouncement(announcementId);
       }, 500);
     }
-  }, [hasSeenWelcome, addAnnouncement, setHasSeenWelcome, updateChecklistStep]);
+  }, [hasSeenWelcome, addAnnouncement, setHasSeenWelcome, updateChecklistStep, setTourStep]);
 
   return null;
 }

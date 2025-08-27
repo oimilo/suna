@@ -17,10 +17,9 @@ import type { IMaintenanceNotice } from '@/lib/edge-flags';
 import { MaintenanceNotice } from './maintenance-notice';
 import { MaintenanceBanner } from './maintenance-banner';
 import { 
-  OnboardingTour, 
-  WelcomeAnnouncement, 
-  OnboardingDevControls,
-  OnboardingFloatingButton 
+  WelcomeAnnouncement,
+  OnboardingTour,
+  OnboardingDevControls
 } from '@/components/onboarding';
 import { AnnouncementDialog } from '@/components/ui/announcement-dialog';
 
@@ -131,8 +130,8 @@ export default function DashboardLayoutContent({
       {/* Onboarding components */}
       <WelcomeAnnouncement />
       <OnboardingTour />
-      <OnboardingFloatingButton />
-      {/* <OnboardingDevControls /> */}
+      {/* <OnboardingFloatingButton /> */}
+      <OnboardingDevControls />
       <AnnouncementDialog />
     </DeleteOperationProvider>
   );

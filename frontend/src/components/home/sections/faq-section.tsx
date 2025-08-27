@@ -17,7 +17,7 @@ export function FAQSection() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
-    <section className="relative w-full py-24 px-6 overflow-hidden">
+    <section id="faq" className="relative w-full py-24 px-6 overflow-hidden">
       {/* Section background with subtle gradient */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent" />

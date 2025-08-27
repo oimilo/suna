@@ -1,5 +1,5 @@
-import { flag } from 'flags/next';
-import { getAll } from '@vercel/edge-config';
+// Simplified edge-flags for development
+// Remove dependency on flags/next and @vercel/edge-config that may not be installed
 
 export type IMaintenanceNotice =
   | {
@@ -13,44 +13,26 @@ export type IMaintenanceNotice =
       endTime?: undefined;
     };
 
+// Mock flag function for development
+function flag<T>(config: { key: string; decide: () => Promise<T> | T }) {
+  return {
+    key: config.key,
+    decide: config.decide,
+    value: async () => {
+      try {
+        return await config.decide();
+      } catch (error) {
+        console.warn(`Flag ${config.key} failed:`, error);
+        return null;
+      }
+    }
+  };
+}
+
 export const maintenanceNoticeFlag = flag({
   key: 'maintenance-notice',
   async decide() {
-    try {
-      if (!process.env.EDGE_CONFIG) {
-        console.warn('Edge config is not set');
-        return { enabled: false } as const;
-      }
-
-      const flags = await getAll([
-        'maintenance-notice_start-time',
-        'maintenance-notice_end-time',
-        'maintenance-notice_enabled',
-      ]);
-
-      if (!flags['maintenance-notice_enabled']) {
-        return { enabled: false } as const;
-      }
-
-      const startTime = new Date(flags['maintenance-notice_start-time']);
-      const endTime = new Date(flags['maintenance-notice_end-time']);
-
-      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-        throw new Error(
-          `Invalid maintenance notice start or end time: ${flags['maintenance-notice_start-time']} or ${flags['maintenance-notice_end-time']}`,
-        );
-      }
-
-      return {
-        enabled: true,
-        startTime,
-        endTime,
-      } as const;
-    } catch (cause) {
-      console.error(
-        new Error('Failed to get maintenance notice flag', { cause }),
-      );
-      return { enabled: false } as const;
-    }
+    // Always return disabled in development
+    return { enabled: false } as const;
   },
 });

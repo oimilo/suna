@@ -9,7 +9,7 @@ interface DashboardLayoutProps {
 }
 
 const getMaintenanceNotice = async () => {
-  const maintenanceNotice = await maintenanceNoticeFlag();
+  const maintenanceNotice = await maintenanceNoticeFlag.decide();
   return maintenanceNotice;
 };
 

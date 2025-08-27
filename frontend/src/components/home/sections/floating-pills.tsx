@@ -31,6 +31,7 @@ interface FloatingPill {
   id: string;
   Icon: React.ElementType;
   color?: string;
+  prompt: string;
   position: {
     top?: string;
     bottom?: string;
@@ -47,24 +48,28 @@ const pills: FloatingPill[] = [
   {
     id: 'github',
     Icon: Github,
+    prompt: 'Monitore meu repositório no GitHub e me avise no Slack quando houver novos pull requests',
     position: { top: '10%', left: '5%' },
     lineEnd: { x: '41%', y: '47%' },
   },
   {
     id: 'gmail',
     Icon: GmailIcon,
+    prompt: 'Todo dia às 8h da manhã me envie um resumo dos e-mails não lidos mais recentes',
     position: { top: '15%', right: '8%' },
     lineEnd: { x: '59%', y: '49%' },
   },
   {
     id: 'slack',
     Icon: SlackIcon,
+    prompt: 'Crie um bot no Slack que responda perguntas sobre a documentação do projeto',
     position: { bottom: '20%', left: '3%' },
     lineEnd: { x: '42%', y: '53%' },
   },
   {
     id: 'notion',
     Icon: SiNotion,
+    prompt: 'Sincronize automaticamente tarefas do Notion com o Google Calendar',
     position: { bottom: '15%', right: '5%' },
     lineEnd: { x: '58%', y: '51%' },
   },
@@ -72,6 +77,7 @@ const pills: FloatingPill[] = [
     id: 'whatsapp',
     Icon: FaWhatsapp,
     color: 'text-green-500',
+    prompt: 'Envie notificações no WhatsApp quando receber novos pedidos na loja',
     position: { top: '55%', left: '-5%' },
     lineEnd: { x: '44%', y: '51%' },
   },
@@ -79,6 +85,7 @@ const pills: FloatingPill[] = [
     id: 'sheets',
     Icon: SiGooglesheets,
     color: 'text-green-600',
+    prompt: 'Atualize minha planilha no Google Sheets sempre que houver uma nova venda',
     position: { bottom: '35%', right: '-6%' },
     lineEnd: { x: '56%', y: '52%' },
   },
@@ -86,12 +93,17 @@ const pills: FloatingPill[] = [
     id: 'trello',
     Icon: FaTrello,
     color: 'text-blue-600',
+    prompt: 'Sempre que houver movimento em uma coluna do Trello me notifique no WhatsApp',
     position: { top: '38%', left: '-5%' },
     lineEnd: { x: '43%', y: '49%' },
   },
 ];
 
-export function FloatingPills() {
+interface FloatingPillsProps {
+  onPillClick?: (prompt: string) => void;
+}
+
+export function FloatingPills({ onPillClick }: FloatingPillsProps) {
   const [visiblePills, setVisiblePills] = useState<string[]>([]);
   const [activePills, setActivePills] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -358,12 +370,14 @@ export function FloatingPills() {
         return (
           <div
             key={pill.id}
+            onClick={() => onPillClick?.(pill.prompt)}
             className={cn(
               "absolute flex items-center justify-center",
               "w-12 h-12",
               "bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm",
               "rounded-xl shadow-lg",
               "transition-all duration-700 ease-out",
+              "cursor-pointer",
               isVisible ? "scale-100" : "scale-50",
               isVisible ? (isActive ? "opacity-100" : "opacity-30") : "opacity-0",
               "hover:scale-110 hover:shadow-xl hover:opacity-100"

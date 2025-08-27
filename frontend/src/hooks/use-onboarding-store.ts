@@ -25,6 +25,9 @@ interface OnboardingStore {
     experience?: 'beginner' | 'intermediate' | 'expert';
   };
   
+  // Respostas do questionário de onboarding
+  onboardingResponses?: Record<string, any>;
+  
   // Actions
   setHasSeenWelcome: (seen: boolean) => void;
   setHasCompletedTour: (completed: boolean) => void;
@@ -33,6 +36,7 @@ interface OnboardingStore {
   setTourStep: (step: number) => void;
   updateChecklistStep: (stepId: string, completed: boolean) => void;
   setUserPreferences: (prefs: Partial<OnboardingStore['userPreferences']>) => void;
+  setOnboardingResponses: (responses: Record<string, any>) => void;
   
   // Utility functions
   resetOnboarding: () => void;
@@ -46,6 +50,7 @@ interface OnboardingStore {
 
 const initialChecklistSteps: OnboardingStep[] = [
   { id: 'welcome', title: 'Conhecer o Prophet', completed: false },
+  { id: 'questions', title: 'Responder perguntas de personalização', completed: false },
   { id: 'tour', title: 'Fazer tour rápido', completed: false },
   { id: 'project', title: 'Criar seu primeiro projeto', completed: false },
   { id: 'chat', title: 'Pedir algo ao Prophet', completed: false },
@@ -97,6 +102,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
       setUserPreferences: (prefs) => set((state) => ({
         userPreferences: { ...state.userPreferences, ...prefs }
       })),
+      
+      setOnboardingResponses: (responses) => set({ onboardingResponses: responses }),
       
       setDevMode: (enabled) => set({ devMode: enabled }),
       

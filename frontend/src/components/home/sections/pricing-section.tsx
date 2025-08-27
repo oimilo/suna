@@ -35,17 +35,6 @@ type ButtonVariant =
   | 'link'
   | null;
 
-interface PricingTabsProps {
-  activeTab: 'cloud' | 'self-hosted';
-  setActiveTab: (tab: 'cloud' | 'self-hosted') => void;
-  className?: string;
-}
-
-interface PriceDisplayProps {
-  price: string;
-  isCompact?: boolean;
-}
-
 interface PricingTierProps {
   tier: PricingTier;
   isCompact?: boolean;
@@ -62,70 +51,6 @@ interface PricingTierProps {
 }
 
 // Components
-function PricingTabs({ activeTab, setActiveTab, className }: PricingTabsProps) {
-  return (
-    <div
-      className={cn(
-        'relative flex w-fit items-center rounded-full border p-0.5 backdrop-blur-sm cursor-pointer h-9 flex-row bg-muted',
-        className,
-      )}
-    >
-      {['cloud', 'self-hosted'].map((tab) => (
-        <button
-          key={tab}
-          onClick={() => setActiveTab(tab as 'cloud' | 'self-hosted')}
-          className={cn(
-            'relative z-[1] px-3 h-8 flex items-center justify-center cursor-pointer',
-            {
-              'z-0': activeTab === tab,
-            },
-          )}
-        >
-          {activeTab === tab && (
-            <motion.div
-              layoutId="active-tab"
-              className="absolute inset-0 rounded-full bg-white dark:bg-[#3F3F46] shadow-md border border-border"
-              transition={{
-                duration: 0.2,
-                type: 'spring',
-                stiffness: 300,
-                damping: 25,
-                velocity: 2,
-              }}
-            />
-          )}
-          <span
-            className={cn(
-              'relative block text-sm font-medium duration-200 shrink-0',
-              activeTab === tab ? 'text-primary' : 'text-muted-foreground',
-            )}
-          >
-            {tab === 'cloud' ? 'Cloud' : 'Self-hosted'}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function PriceDisplay({ price, isCompact }: PriceDisplayProps) {
-  return (
-    <motion.span
-      key={price}
-      className={isCompact ? 'text-xl font-semibold' : 'text-3xl font-bold'}
-      initial={{
-        opacity: 0,
-        x: 10,
-        filter: 'blur(5px)',
-      }}
-      animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-    >
-      {price}
-    </motion.span>
-  );
-}
-
 function BillingPeriodToggle({
   billingPeriod,
   setBillingPeriod
@@ -579,9 +504,6 @@ export function PricingSection({
   hideFree = false,
   insideDialog = false
 }: PricingSectionProps) {
-  const [deploymentType, setDeploymentType] = useState<'cloud' | 'self-hosted'>(
-    'cloud',
-  );
   const { data: subscriptionData, isLoading: isFetchingPlan, error: subscriptionQueryError, refetch: refetchSubscription } = useSubscription();
 
   // Derive authentication and subscription status from the hook data
@@ -633,24 +555,6 @@ export function PricingSection({
     }, 1000);
   };
 
-  const handleTabChange = (tab: 'cloud' | 'self-hosted') => {
-    if (tab === 'self-hosted') {
-      const openSourceSection = document.getElementById('open-source');
-      if (openSourceSection) {
-        const rect = openSourceSection.getBoundingClientRect();
-        const scrollTop =
-          window.pageYOffset || document.documentElement.scrollTop;
-        const offsetPosition = scrollTop + rect.top - 100;
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth',
-        });
-      }
-    } else {
-      setDeploymentType(tab);
-    }
-  };
 
   if (isLocalMode()) {
     return (
@@ -693,19 +597,10 @@ export function PricingSection({
                 Comece com nosso plano gratuito ou faça upgrade para mais créditos de IA
               </p>
             </div>
-            <div className="relative w-full h-full mb-8">
-              <div className="flex justify-center">
-                <PricingTabs
-                  activeTab={deploymentType}
-                  setActiveTab={handleTabChange}
-                  className="mx-auto"
-                />
-              </div>
-            </div>
           </>
         )}
 
-        {deploymentType === 'cloud' && (
+        {true && (
           <>
             <div className="flex justify-center mb-12">
               <BillingPeriodToggle
