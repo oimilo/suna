@@ -16,7 +16,9 @@ import {
   CheckCircle,
   Shield,
   Plug,
-  MessageSquare
+  MessageSquare,
+  Gamepad2,
+  Workflow
 } from 'lucide-react';
 // Testando versão simples temporariamente
 import { useCreateTemplateProjectSimple as useCreateTemplateProject } from '@/lib/onboarding/use-create-template-project-simple';
@@ -51,6 +53,14 @@ const QUIZ_QUESTIONS: QuizQuestion[] = [
       { id: 'beautiful', icon: Sparkles, text: 'Bonito e impressionante', trait: 'aesthetic' },
       { id: 'functional', icon: Zap, text: 'Rápido e funcional', trait: 'pragmatic' }
     ]
+  },
+  {
+    id: 'project_type',
+    question: 'O que você mais gosta de criar?',
+    options: [
+      { id: 'interactive', icon: Gamepad2, text: 'Experiências interativas', trait: 'interactive' },
+      { id: 'automated', icon: Workflow, text: 'Processos automatizados', trait: 'automated' }
+    ]
   }
 ];
 
@@ -64,37 +74,77 @@ interface PersonalityType {
 }
 
 const PERSONALITY_TYPES: Record<string, PersonalityType> = {
-  'visual-aesthetic': {
-    id: 'visual-aesthetic',
-    title: 'Artista Visual',
-    icon: Brush,
-    description: 'Você valoriza design, UX e impacto visual. Seus projetos são obras de arte!',
-    traits: ['Design First', 'UX Focado', 'Criativo'],
+  // Visual + Aesthetic + Interactive = Game Designer
+  'visual-aesthetic-interactive': {
+    id: 'visual-aesthetic-interactive',
+    title: '🎮 Game Designer',
+    icon: Gamepad2,
+    description: 'Você cria experiências visuais interativas e envolventes. Jogos são sua paixão!',
+    traits: ['Criativo', 'Interativo', 'Visual'],
     color: 'from-purple-400 to-pink-400'
   },
-  'visual-pragmatic': {
-    id: 'visual-pragmatic',
-    title: 'Designer Pragmático',
-    icon: Wrench,
-    description: 'Você quer resultados bonitos mas funcionais. Equilíbrio perfeito!',
-    traits: ['Visual', 'Prático', 'Eficiente'],
+  // Visual + Aesthetic + Automated = Artista Visual
+  'visual-aesthetic-automated': {
+    id: 'visual-aesthetic-automated',
+    title: '🎨 Artista Visual',
+    icon: Brush,
+    description: 'Você automatiza a criação de beleza. Design systems e templates são sua arte!',
+    traits: ['Design', 'Automação', 'Estética'],
+    color: 'from-pink-400 to-rose-400'
+  },
+  // Visual + Pragmatic + Interactive = UX Developer
+  'visual-pragmatic-interactive': {
+    id: 'visual-pragmatic-interactive',
+    title: '🎯 UX Developer',
+    icon: Eye,
+    description: 'Você cria interfaces funcionais e interativas. User experience é tudo!',
+    traits: ['UX', 'Funcional', 'Interativo'],
     color: 'from-blue-400 to-purple-400'
   },
-  'logical-aesthetic': {
-    id: 'logical-aesthetic',
-    title: 'Arquiteto de Sistemas',
+  // Visual + Pragmatic + Automated = Growth Hacker
+  'visual-pragmatic-automated': {
+    id: 'visual-pragmatic-automated',
+    title: '📈 Growth Hacker',
+    icon: Zap,
+    description: 'Você automatiza conversões e otimiza resultados visuais. Marketing automation!',
+    traits: ['Conversão', 'Automação', 'Visual'],
+    color: 'from-cyan-400 to-blue-400'
+  },
+  // Logical + Aesthetic + Interactive = Full Stack Developer
+  'logical-aesthetic-interactive': {
+    id: 'logical-aesthetic-interactive',
+    title: '💻 Full Stack Developer',
     icon: Layers,
-    description: 'Você constrói sistemas elegantes e bem estruturados. Beleza na lógica!',
-    traits: ['Estruturado', 'Elegante', 'Técnico'],
+    description: 'Você constrói aplicações completas e elegantes. Do backend ao frontend!',
+    traits: ['Full Stack', 'Elegante', 'Apps'],
     color: 'from-green-400 to-teal-400'
   },
-  'logical-pragmatic': {
-    id: 'logical-pragmatic',
-    title: 'Executor Pragmático',
+  // Logical + Aesthetic + Automated = Arquiteto de Sistemas
+  'logical-aesthetic-automated': {
+    id: 'logical-aesthetic-automated',
+    title: '🏗️ Arquiteto de Sistemas',
+    icon: Workflow,
+    description: 'Você projeta sistemas automatizados e bem estruturados. Arquitetura é arte!',
+    traits: ['Arquitetura', 'Automação', 'Elegância'],
+    color: 'from-emerald-400 to-green-400'
+  },
+  // Logical + Pragmatic + Interactive = Backend Developer
+  'logical-pragmatic-interactive': {
+    id: 'logical-pragmatic-interactive',
+    title: '⚡ Backend Developer',
     icon: Lightbulb,
-    description: 'Você foca em resultados rápidos e eficientes. Direto ao ponto!',
-    traits: ['Eficiente', 'Direto', 'Resultados'],
-    color: 'from-orange-400 to-red-400'
+    description: 'Você cria APIs e serviços rápidos e eficientes. Performance é prioridade!',
+    traits: ['Backend', 'Performance', 'APIs'],
+    color: 'from-orange-400 to-yellow-400'
+  },
+  // Logical + Pragmatic + Automated = Automation Engineer
+  'logical-pragmatic-automated': {
+    id: 'logical-pragmatic-automated',
+    title: '🤖 Automation Engineer',
+    icon: Workflow,
+    description: 'Você automatiza tudo que pode. Eficiência máxima com mínimo esforço!',
+    traits: ['Automação', 'Eficiência', 'Processos'],
+    color: 'from-red-400 to-orange-400'
   }
 };
 
@@ -131,7 +181,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
     } else {
       // Show result
       setShowResult(true);
-      const personalityKey = `${newAnswers.work_style}-${newAnswers.project_ideal}`;
+      const personalityKey = `${newAnswers.work_style}-${newAnswers.project_ideal}-${newAnswers.project_type}`;
       const personality = PERSONALITY_TYPES[personalityKey];
       
       // Mostra o resultado da personalidade por 4 segundos, depois o loader
