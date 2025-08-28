@@ -37,7 +37,7 @@ export async function createTemplateProject({
   try {
     const formData = new FormData();
     
-    // Enviar prompt vazio para criar projeto sem mensagem inicial
+    // Enviar prompt simples
     formData.append('prompt', 'Projeto criado via template');
     
     // Metadados para criação do projeto
@@ -67,9 +67,9 @@ export async function createTemplateProject({
       });
     }
     
-    // Configurações
+    // Configurações - stream false para não iniciar agente automaticamente
     formData.append('enable_thinking', 'false');
-    formData.append('stream', 'true');
+    formData.append('stream', 'false');
     formData.append('enable_context_manager', 'false');
     
     console.log('🚀 [TEMPLATE SIMPLE] Chamando initiateAgent...');
@@ -125,8 +125,26 @@ export async function createTemplateProject({
         isTemplateMockMessage: true,
         templateId: template.id
       }),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date(Date.now() - 2000).toISOString(),
+      updated_at: new Date(Date.now() - 2000).toISOString()
+    });
+    
+    // Inserir segunda mensagem mock para impedir resposta do agente
+    console.log('💬 [TEMPLATE SIMPLE] Inserindo mensagem final do assistente...');
+    
+    await supabase.from('messages').insert({
+      thread_id: result.thread_id,
+      type: 'assistant',
+      content: JSON.stringify({
+        content: 'Como deseja continuar?'
+      }),
+      metadata: JSON.stringify({
+        isTemplateMockMessage: true,
+        templateId: template.id,
+        isFinalMessage: true
+      }),
+      created_at: new Date(Date.now() + 1000).toISOString(),
+      updated_at: new Date(Date.now() + 1000).toISOString()
     });
     
     console.log('🎉 [TEMPLATE SIMPLE] Sucesso!', {

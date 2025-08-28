@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Eye, 
@@ -11,7 +11,6 @@ import {
   Brush,
   Wrench,
   Layers,
-  Lightbulb,
   Loader2,
   CheckCircle,
   Shield,
@@ -39,27 +38,31 @@ interface QuizQuestion {
 
 const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
-    id: 'work_style',
-    question: 'Você prefere trabalhar...',
+    id: 'main_goal',
+    question: 'Qual é seu objetivo principal?',
     options: [
-      { id: 'visual', icon: Eye, text: 'Vendo o resultado visual', trait: 'visual' },
-      { id: 'logical', icon: Brain, text: 'Entendendo a lógica', trait: 'logical' }
-    ]
-  },
-  {
-    id: 'project_ideal',
-    question: 'Seu projeto ideal é...',
-    options: [
-      { id: 'beautiful', icon: Sparkles, text: 'Bonito e impressionante', trait: 'aesthetic' },
-      { id: 'functional', icon: Zap, text: 'Rápido e funcional', trait: 'pragmatic' }
+      { id: 'showcase', icon: Eye, text: 'Mostrar meu trabalho/empresa', trait: 'showcase' },
+      { id: 'build', icon: Brain, text: 'Desenvolver aplicações', trait: 'build' },
+      { id: 'analyze', icon: Sparkles, text: 'Analisar dados e métricas', trait: 'analyze' },
+      { id: 'automate', icon: Zap, text: 'Automatizar processos', trait: 'automate' }
     ]
   },
   {
     id: 'project_type',
-    question: 'O que você mais gosta de criar?',
+    question: 'Que tipo de projeto você quer criar?',
     options: [
-      { id: 'interactive', icon: Gamepad2, text: 'Experiências interativas', trait: 'interactive' },
-      { id: 'automated', icon: Workflow, text: 'Processos automatizados', trait: 'automated' }
+      { id: 'website', icon: Palette, text: 'Site ou landing page', trait: 'website' },
+      { id: 'store', icon: Brush, text: 'Loja online', trait: 'store' },
+      { id: 'content', icon: Wrench, text: 'Blog ou conteúdo', trait: 'content' },
+      { id: 'game', icon: Gamepad2, text: 'Jogo ou entretenimento', trait: 'game' }
+    ]
+  },
+  {
+    id: 'work_style',
+    question: 'Como você prefere trabalhar?',
+    options: [
+      { id: 'visual', icon: Layers, text: 'Foco no visual e design', trait: 'visual' },
+      { id: 'technical', icon: Workflow, text: 'Foco na parte técnica', trait: 'technical' }
     ]
   }
 ];
@@ -74,77 +77,86 @@ interface PersonalityType {
 }
 
 const PERSONALITY_TYPES: Record<string, PersonalityType> = {
-  // Visual + Aesthetic + Interactive = Game Designer
-  'visual-aesthetic-interactive': {
-    id: 'visual-aesthetic-interactive',
-    title: '🎮 Game Designer',
-    icon: Gamepad2,
-    description: 'Você cria experiências visuais interativas e envolventes. Jogos são sua paixão!',
-    traits: ['Criativo', 'Interativo', 'Visual'],
-    color: 'from-purple-400 to-pink-400'
-  },
-  // Visual + Aesthetic + Automated = Artista Visual
-  'visual-aesthetic-automated': {
-    id: 'visual-aesthetic-automated',
-    title: '🎨 Artista Visual',
-    icon: Brush,
-    description: 'Você automatiza a criação de beleza. Design systems e templates são sua arte!',
-    traits: ['Design', 'Automação', 'Estética'],
-    color: 'from-pink-400 to-rose-400'
-  },
-  // Visual + Pragmatic + Interactive = UX Developer
-  'visual-pragmatic-interactive': {
-    id: 'visual-pragmatic-interactive',
-    title: '🎯 UX Developer',
+  // Website + Showcase = Landing Page Designer
+  'website-showcase': {
+    id: 'website-showcase',
+    title: '🎨 Landing Page Designer',
     icon: Eye,
-    description: 'Você cria interfaces funcionais e interativas. User experience é tudo!',
-    traits: ['UX', 'Funcional', 'Interativo'],
+    description: 'Você cria páginas impressionantes para mostrar trabalhos e empresas!',
+    traits: ['Visual', 'Marketing', 'Design'],
     color: 'from-blue-400 to-purple-400'
   },
-  // Visual + Pragmatic + Automated = Growth Hacker
-  'visual-pragmatic-automated': {
-    id: 'visual-pragmatic-automated',
-    title: '📈 Growth Hacker',
-    icon: Zap,
-    description: 'Você automatiza conversões e otimiza resultados visuais. Marketing automation!',
-    traits: ['Conversão', 'Automação', 'Visual'],
+  // Website + Geral = Web Developer
+  'website-general': {
+    id: 'website-general',
+    title: '🌐 Web Developer',
+    icon: Palette,
+    description: 'Você constrói sites funcionais e atraentes para diversos propósitos!',
+    traits: ['Frontend', 'UX', 'Responsivo'],
     color: 'from-cyan-400 to-blue-400'
   },
-  // Logical + Aesthetic + Interactive = Full Stack Developer
-  'logical-aesthetic-interactive': {
-    id: 'logical-aesthetic-interactive',
-    title: '💻 Full Stack Developer',
-    icon: Layers,
-    description: 'Você constrói aplicações completas e elegantes. Do backend ao frontend!',
-    traits: ['Full Stack', 'Elegante', 'Apps'],
-    color: 'from-green-400 to-teal-400'
-  },
-  // Logical + Aesthetic + Automated = Arquiteto de Sistemas
-  'logical-aesthetic-automated': {
-    id: 'logical-aesthetic-automated',
-    title: '🏗️ Arquiteto de Sistemas',
-    icon: Workflow,
-    description: 'Você projeta sistemas automatizados e bem estruturados. Arquitetura é arte!',
-    traits: ['Arquitetura', 'Automação', 'Elegância'],
+  // E-commerce = E-commerce Specialist
+  'ecommerce': {
+    id: 'ecommerce',
+    title: '🛒 E-commerce Specialist',
+    icon: Brush,
+    description: 'Você domina vendas online e conversões. Cada clique é uma oportunidade!',
+    traits: ['Vendas', 'Conversão', 'UX'],
     color: 'from-emerald-400 to-green-400'
   },
-  // Logical + Pragmatic + Interactive = Backend Developer
-  'logical-pragmatic-interactive': {
-    id: 'logical-pragmatic-interactive',
-    title: '⚡ Backend Developer',
-    icon: Lightbulb,
-    description: 'Você cria APIs e serviços rápidos e eficientes. Performance é prioridade!',
-    traits: ['Backend', 'Performance', 'APIs'],
-    color: 'from-orange-400 to-yellow-400'
+  // Content Visual = Content Creator
+  'content-visual': {
+    id: 'content-visual',
+    title: '📝 Content Creator',
+    icon: Wrench,
+    description: 'Você cria conteúdo visual impactante. Storytelling é sua especialidade!',
+    traits: ['Conteúdo', 'Visual', 'Storytelling'],
+    color: 'from-pink-400 to-rose-400'
   },
-  // Logical + Pragmatic + Automated = Automation Engineer
-  'logical-pragmatic-automated': {
-    id: 'logical-pragmatic-automated',
+  // Content Technical = Technical Writer
+  'content-technical': {
+    id: 'content-technical',
+    title: '💻 Technical Writer',
+    icon: Brain,
+    description: 'Você documenta e explica tecnologia de forma clara e acessível!',
+    traits: ['Técnico', 'Documentação', 'APIs'],
+    color: 'from-green-400 to-teal-400'
+  },
+  // Game = Game Developer
+  'game': {
+    id: 'game',
+    title: '🎮 Game Developer',
+    icon: Gamepad2,
+    description: 'Você cria experiências lúdicas e envolventes. Diversão é o objetivo!',
+    traits: ['Criativo', 'Interativo', 'Lúdico'],
+    color: 'from-purple-400 to-pink-400'
+  },
+  // Analytics = Data Analyst
+  'analytics': {
+    id: 'analytics',
+    title: '📊 Data Analyst',
+    icon: Sparkles,
+    description: 'Você transforma dados em insights. Números contam histórias!',
+    traits: ['Dados', 'Insights', 'Métricas'],
+    color: 'from-amber-400 to-orange-400'
+  },
+  // Automation = Automation Engineer
+  'automation': {
+    id: 'automation',
     title: '🤖 Automation Engineer',
     icon: Workflow,
-    description: 'Você automatiza tudo que pode. Eficiência máxima com mínimo esforço!',
-    traits: ['Automação', 'Eficiência', 'Processos'],
-    color: 'from-red-400 to-orange-400'
+    description: 'Você automatiza tarefas repetitivas. Eficiência é sua obsessão!',
+    traits: ['Automação', 'Produtividade', 'Sistemas'],
+    color: 'from-violet-400 to-purple-400'
+  },
+  // Developer = Full Stack Developer
+  'developer': {
+    id: 'developer',
+    title: '⚡ Full Stack Developer',
+    icon: Layers,
+    description: 'Você constrói aplicações completas do zero. Backend e frontend!',
+    traits: ['Full Stack', 'APIs', 'Sistemas'],
+    color: 'from-orange-400 to-yellow-400'
   }
 };
 
@@ -153,7 +165,7 @@ interface PersonalityQuizProps {
   disabled?: boolean;
 }
 
-export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
+export function PersonalityQuiz({ disabled }: Omit<PersonalityQuizProps, 'onAnswer'>) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResult, setShowResult] = useState(false);
@@ -164,7 +176,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
   const createTemplateProject = useCreateTemplateProject();
   const hasCreatedProject = useRef(false);
 
-  const handleSelectOption = (optionId: string, trait: string) => {
+  const handleSelectOption = (_optionId: string, trait: string) => {
     if (disabled) return;
 
     const newAnswers = {
@@ -196,13 +208,13 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
           
           console.log('[PersonalityQuiz] Criando projeto template com:', {
             userId: user.id,
-            profileType: personality.id,
+            profileType: personality?.id || 'website-general',
             answers: newAnswers
           });
           
           createTemplateProject.mutate({
             userId: user.id,
-            profileType: personality.id,
+            profileType: personality?.id || 'website-general',
             onboardingAnswers: newAnswers
           }, {
             onSuccess: (data) => {
@@ -259,8 +271,26 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
   };
 
   const getPersonalityResult = () => {
-    const key = `${answers.work_style}-${answers.project_ideal}-${answers.project_type}`;
-    return PERSONALITY_TYPES[key] || PERSONALITY_TYPES['visual-aesthetic-interactive'];
+    // Nova lógica: usar goal + type para mapeamento direto
+    const goal = answers.main_goal;
+    const type = answers.project_type;
+    const style = answers.work_style;
+    
+    // Mapeamento mais intuitivo baseado nas respostas
+    let profileType = '';
+    
+    if (type === 'website' && goal === 'showcase') profileType = 'website-showcase';
+    else if (type === 'website') profileType = 'website-general';
+    else if (type === 'store') profileType = 'ecommerce';
+    else if (type === 'content' && style === 'visual') profileType = 'content-visual';
+    else if (type === 'content') profileType = 'content-technical';
+    else if (type === 'game') profileType = 'game';
+    else if (goal === 'analyze') profileType = 'analytics';
+    else if (goal === 'automate') profileType = 'automation';
+    else if (goal === 'build' && style === 'technical') profileType = 'developer';
+    else profileType = 'website-general'; // fallback
+    
+    return PERSONALITY_TYPES[profileType] || PERSONALITY_TYPES['website-general'];
   };
 
   // Definir os passos do loader
