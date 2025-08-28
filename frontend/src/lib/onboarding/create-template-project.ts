@@ -1,7 +1,6 @@
-import { createClient } from '@/lib/supabase/client';
-import { getTemplateForProfile, OnboardingTemplate } from './templates';
-import { v4 as uuidv4 } from 'uuid';
 import { initiateAgent } from '@/lib/api';
+import { getTemplateForProfile, OnboardingTemplate } from './templates';
+import { createClient } from '@/lib/supabase/client';
 
 export interface CreateTemplateProjectParams {
   userId: string;
@@ -15,38 +14,12 @@ export interface CreateTemplateProjectResult {
   template: OnboardingTemplate;
 }
 
-// Sistema de debug com localStorage
-const debugLog = (step: string, data: any) => {
-  const logs = JSON.parse(localStorage.getItem('template_debug') || '[]');
-  logs.push({ 
-    step, 
-    data, 
-    time: new Date().toISOString(),
-    url: window.location.href 
-  });
-  // Manter apenas últimos 50 logs
-  if (logs.length > 50) logs.shift();
-  localStorage.setItem('template_debug', JSON.stringify(logs));
-  console.log(`[TEMPLATE DEBUG] ${step}:`, data);
-};
-
-// Função para limpar logs
-export function clearTemplateDebugLogs() {
-  localStorage.removeItem('template_debug');
-  console.log('[TEMPLATE DEBUG] Logs limpos');
-}
-
-// Função para obter logs
-export function getTemplateDebugLogs() {
-  return JSON.parse(localStorage.getItem('template_debug') || '[]');
-}
-
 export async function createTemplateProject({
   userId,
   profileType,
   onboardingAnswers
 }: CreateTemplateProjectParams): Promise<CreateTemplateProjectResult> {
-  const supabase = createClient();
+  console.log('🚀 [TEMPLATE] Iniciando criação de projeto com template:', { userId, profileType });
   
   // Buscar o template baseado no perfil
   const template = getTemplateForProfile(profileType);
@@ -55,255 +28,173 @@ export async function createTemplateProject({
     throw new Error(`Template não encontrado para o perfil: ${profileType}`);
   }
   
-  debugLog('INICIO', { userId, profileType, templateId: template.id });
+  console.log('📋 [TEMPLATE] Template selecionado:', template.name);
   
   try {
-    console.log('Criando projeto template...');
-    debugLog('INICIANDO_CRIACAO', { templateName: template.name });
-    
-    // 1. Usar initiate agent para criar tudo corretamente
-    // Mas com uma mensagem especial que será removida depois
+    // Criar FormData como no dashboard normal
     const formData = new FormData();
-    formData.append('prompt', '[TEMPLATE_INIT]');  // Marcador especial
-    formData.append('enable_thinking', 'false');
-    formData.append('reasoning_effort', 'low');
-    formData.append('stream', 'false');
-    formData.append('enable_context_manager', 'false');
+    
+    // Usar prompt vazio para criar o projeto sem mensagem inicial
+    formData.append('prompt', '');
+    
+    // Adicionar metadados do template e nome do projeto
+    formData.append('metadata', JSON.stringify({
+      isOnboardingProject: true,
+      templateId: template.id,
+      profileType,
+      onboardingAnswers,
+      projectName: template.name
+    }));
+    
+    // Adicionar nome do projeto explicitamente
     formData.append('project_name', template.name);
     
-    console.log('Iniciando agent para criar projeto completo...');
-    const agentResult = await initiateAgent(formData);
-    
-    if (!agentResult.thread_id) {
-      throw new Error('Falha ao criar projeto');
+    // Se o template tiver arquivos, adicioná-los como files
+    if (template.files && template.files.length > 0) {
+      console.log(`📁 [TEMPLATE] Adicionando ${template.files.length} arquivos ao FormData`);
+      
+      template.files.forEach((file, index) => {
+        // Criar um Blob/File a partir do conteúdo do template
+        const blob = new Blob([file.content], { type: 'text/plain' });
+        const fileName = file.path.split('/').pop() || `file${index}.txt`;
+        const fileObj = new File([blob], fileName, {
+          type: 'text/plain'
+        });
+        
+        formData.append('files', fileObj);
+        console.log(`📄 [TEMPLATE] Arquivo adicionado: ${file.path}`);
+      });
     }
     
-    const threadId = agentResult.thread_id;
-    const agentRunId = agentResult.agent_run_id;
+    // Configurações padrão para templates
+    formData.append('enable_thinking', 'false');
+    formData.append('stream', 'true');
+    formData.append('enable_context_manager', 'false');
     
-    debugLog('AGENT_INICIADO', { threadId, agentRunId });
+    console.log('🚀 [TEMPLATE] Chamando initiateAgent com FormData');
     
-    // 2. Aguardar criação completa
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Usar initiateAgent como o dashboard faz
+    const result = await initiateAgent(formData);
     
-    // 3. Buscar projeto e thread criados com retry
-    let threadData = null;
+    console.log('✅ [TEMPLATE] Resultado do initiateAgent:', {
+      threadId: result.thread_id,
+      agentRunId: result.agent_run_id
+    });
+    
+    if (!result.thread_id) {
+      throw new Error('initiateAgent não retornou thread_id');
+    }
+    
+    // Buscar o project_id da thread criada
+    const supabase = createClient();
+    let projectId: string | null = null;
     let retries = 0;
     const maxRetries = 5;
     
-    while (!threadData && retries < maxRetries) {
-      const { data, error } = await supabase
+    while (!projectId && retries < maxRetries) {
+      const { data: thread } = await supabase
         .from('threads')
-        .select('*, projects(*)')
-        .eq('thread_id', threadId)
+        .select('project_id')
+        .eq('thread_id', result.thread_id)
         .single();
       
-      if (!error && data?.projects) {
-        threadData = data;
-      } else {
-        retries++;
-        console.log(`Tentativa ${retries}/${maxRetries} para buscar projeto...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (thread?.project_id) {
+        projectId = thread.project_id;
+        console.log('✅ [TEMPLATE] Project ID encontrado:', projectId);
+        break;
       }
-    }
-    
-    if (!threadData?.projects) {
-      throw new Error('Projeto não encontrado após múltiplas tentativas');
-    }
-    
-    const project = threadData.projects;
-    const projectId = project.project_id;
-    let sandboxId = project.sandbox?.id;
-    
-    // Retry para buscar sandbox ID se não existir
-    if (!sandboxId) {
-      console.log('Sandbox ID não encontrado, tentando buscar...');
-      for (let i = 0; i < 5; i++) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        const { data: projectData } = await supabase
-          .from('projects')
-          .select('sandbox')
-          .eq('project_id', projectId)
-          .single();
-        
-        if (projectData?.sandbox?.id) {
-          sandboxId = projectData.sandbox.id;
-          console.log(`✅ Sandbox encontrado na tentativa ${i + 1}: ${sandboxId}`);
-          break;
-        }
-        console.log(`Tentativa ${i + 1}/5 para buscar sandbox...`);
-      }
-    }
-    
-    console.log('✅ Projeto criado:', { projectId, threadId, sandboxId });
-    
-    // 4. Atualizar projeto com metadata do template e flag para não iniciar agent
-    await supabase
-      .from('projects')
-      .update({
-        name: template.name,
-        sandbox: {
-          ...project.sandbox,
-          isOnboardingProject: true,
-          profileType,
-          templateId: template.id,
-          onboardingAnswers,
-          templateFiles: template.files,
-          skipAutoAgent: true  // Flag importante para evitar agent automático
-        }
-      })
-      .eq('project_id', projectId);
-    
-    // 5. NÃO deletar o agent_run - vamos mantê-lo como completed
-    // Isso evita que o sistema crie um novo agent automático
-    if (agentRunId) {
-      await supabase
-        .from('agent_runs')
-        .update({
-          status: 'completed',
-          is_completed: true,
-          completed_at: new Date().toISOString(),
-          metadata: {
-            isTemplateRun: true,
-            skipFallback: true,
-            doNotProcess: true
-          }
-        })
-        .eq('agent_run_id', agentRunId);
       
-      console.log('Agent run marcado como completed para evitar novo agent automático');
+      retries++;
+      console.log(`⏳ [TEMPLATE] Aguardando project_id... tentativa ${retries}/${maxRetries}`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // 6. Limpar mensagens criadas pelo agent
-    const { data: messagesToDelete } = await supabase
-      .from('messages')
-      .select('message_id')
-      .eq('thread_id', threadId);
+    if (!projectId) {
+      throw new Error('Não foi possível obter o project_id');
+    }
     
-    if (messagesToDelete && messagesToDelete.length > 0) {
-      await supabase
+    // Aguardar o agente processar (se houver algum processamento)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Deletar mensagens vazias que possam ter sido criadas
+    try {
+      const { data: existingMessages } = await supabase
         .from('messages')
-        .delete()
-        .in('message_id', messagesToDelete.map(m => m.message_id));
-      console.log('Mensagens iniciais removidas');
-    }
-    
-    console.log('Preparando mensagens do template...');
-    
-    // 7. NÃO criar tool calls por enquanto - vamos focar em fazer a mensagem aparecer
-    // As tool calls podem estar causando problemas
-    const toolCallMessages = [];
-    
-    // Inserir mensagem do template com informação sobre os arquivos
-    let messageContent = template.messages[0].content;
-    
-    // Se houver arquivos, adicionar informação sobre eles na mensagem
-    if (template.files && template.files.length > 0) {
-      const filesInfo = template.files.map(f => `📄 ${f.path}`).join('\n');
-      messageContent = `## 📁 Arquivos criados no workspace:\n${filesInfo}\n\n---\n\n${messageContent}`;
-    }
-    
-    const templateMessage = {
-      message_id: uuidv4(),
-      thread_id: threadId,
-      type: 'assistant' as const,
-      is_llm_message: true,
-      content: messageContent,
-      created_at: new Date().toISOString(),
-      metadata: {
-        isTemplateMessage: true,
-        templateId: template.id,
-        profileType,
-        isFromTemplate: true,
-        templateFiles: template.files // Guardar arquivos no metadata
+        .select('message_id, type, content')
+        .eq('thread_id', result.thread_id)
+        .order('created_at', { ascending: true });
+      
+      if (existingMessages) {
+        for (const msg of existingMessages) {
+          // Deletar mensagens vazias ou muito curtas
+          if (!msg.content || msg.content.trim().length < 2) {
+            await supabase
+              .from('messages')
+              .delete()
+              .eq('message_id', msg.message_id);
+            console.log('🗑️ [TEMPLATE] Mensagem vazia removida');
+          }
+        }
       }
-    };
+    } catch (error) {
+      console.log('⚠️ [TEMPLATE] Erro ao limpar mensagens vazias:', error);
+    }
     
-    const messagesToInsert = [...toolCallMessages, templateMessage];
-    
-    // Inserir todas as mensagens de uma vez
-    const { data: insertedMessages, error: messageError } = await supabase
+    // Agora inserir a mensagem do template como assistente
+    const templateContent = template.messages[0].content;
+    const { data: templateMessage, error: messageError } = await supabase
       .from('messages')
-      .insert(messagesToInsert)
-      .select();
+      .insert({
+        message_id: crypto.randomUUID(),
+        thread_id: result.thread_id,
+        type: 'assistant',  // IMPORTANTE: tipo assistente
+        is_llm_message: true,
+        content: templateContent,
+        created_at: new Date().toISOString(),
+        metadata: JSON.stringify({
+          isTemplateMessage: true,
+          templateId: template.id,
+          profileType,
+          templateFiles: template.files
+        })
+      })
+      .select()
+      .single();
     
     if (messageError) {
-      console.error('Erro ao inserir mensagens do template:', messageError);
-      debugLog('ERRO_MENSAGENS', { messageError, messagesToInsert });
+      console.error('⚠️ [TEMPLATE] Erro ao inserir mensagem do template:', messageError);
     } else {
-      console.log(`✅ ${insertedMessages.length} mensagens inseridas (${template.files?.length || 0} tool calls + 1 mensagem)`);
-      debugLog('MENSAGENS_INSERIDAS', { 
-        total: insertedMessages.length,
-        threadId,
-        messages: insertedMessages
-      });
+      console.log('✅ [TEMPLATE] Mensagem do template inserida como assistente');
     }
     
-    // 8. NÃO tentar criar arquivos no sandbox agora - deixar para depois
-    // O sandbox pode não estar pronto e isso está causando erros 404
-    if (template.files && template.files.length > 0) {
-      console.log(`📝 ${template.files.length} arquivos salvos no metadata do projeto para criação posterior`);
-      debugLog('ARQUIVOS_SALVOS_METADATA', { 
-        totalFiles: template.files.length, 
-        sandboxId: sandboxId || 'pendente',
-        reason: 'Sandbox pode não estar pronto, arquivos serão criados na primeira interação'
-      });
-    }
-    
-    // 10. Tentar salvar arquivos na tabela project_files como backup (opcional)
-    // Nota: Esta tabela pode não existir ainda, então não falharemos se der erro
-    if (template.files && template.files.length > 0) {
-      try {
-        console.log(`Tentando salvar ${template.files.length} arquivos como backup...`);
-        debugLog('SALVANDO_BACKUP_ARQUIVOS', { totalFiles: template.files.length });
-        
-        const projectFiles = template.files.map(file => ({
-          project_id: projectId,
-          path: file.path, // Mudado de file_path para path
-          content: file.content, // Mudado de file_content para content
-          language: file.path.split('.').pop() || 'text', // Adicionar language baseado na extensão
-          created_at: new Date().toISOString()
-        }));
-        
-        const { error: filesError } = await supabase
-          .from('project_files')
-          .insert(projectFiles);
-        
-        if (filesError) {
-          // Não é crítico - apenas log como warning
-          console.warn('Info: Tabela project_files não disponível (não é crítico):', filesError.message || 'Tabela pode não existir');
-          debugLog('INFO_BACKUP_NAO_DISPONIVEL', { 
-            message: 'Tabela project_files não existe ainda - isso é normal',
-            error: filesError.message 
-          });
-        } else {
-          console.log('✅ Backup dos arquivos salvo com sucesso');
-          debugLog('BACKUP_COMPLETO', { totalFiles: template.files.length });
-        }
-      } catch (backupError) {
-        // Silenciosamente ignorar erros de backup
-        console.log('Info: Backup opcional não disponível');
-        debugLog('BACKUP_OPCIONAL_IGNORADO', { reason: 'Tabela pode não existir' });
-      }
-    }
-    
-    console.log('✅ Projeto template criado com sucesso!');
-    debugLog('SUCESSO_FINAL', { projectId, threadId, templateId: template.id });
-    
-    // Pequeno delay para garantir persistência antes do redirecionamento
-    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('🎉 [TEMPLATE] Projeto template criado com sucesso!');
+    console.log('📊 [TEMPLATE] Resumo:', {
+      projectId,
+      threadId: result.thread_id,
+      templateId: template.id,
+      templateName: template.name,
+      filesCount: template.files?.length || 0,
+      messageInserted: !messageError
+    });
     
     return {
       projectId,
-      threadId,
+      threadId: result.thread_id,
       template
     };
     
   } catch (error) {
-    console.error('Erro ao criar projeto com template:', error);
-    debugLog('ERRO_GERAL', { error: error instanceof Error ? error.message : error });
+    console.error('❌ [TEMPLATE] Erro ao criar projeto com template:', error);
     throw error;
   }
 }
 
+// Funções auxiliares para debug
+export function clearTemplateDebugLogs() {
+  localStorage.removeItem('template_debug');
+  console.log('[TEMPLATE DEBUG] Logs limpos');
+}
+
+export function getTemplateDebugLogs() {
+  return JSON.parse(localStorage.getItem('template_debug') || '[]');
+}

@@ -7,17 +7,17 @@ import { createClient } from '@/lib/supabase/client';
 export async function refreshWorkspaceFiles(projectId: string, sandboxId: string): Promise<boolean> {
   try {
     if (!sandboxId || sandboxId === 'undefined') {
-      console.log('❌ Sandbox ID inválido, não é possível fazer refresh');
+      console.log('[REFRESH] ❌ Sandbox ID inválido');
       return false;
     }
     
-    console.log('🔄 Forçando refresh do workspace...');
+    console.log('[REFRESH] 🔄 Atualizando workspace...');
     
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.access_token) {
-      console.error('Sem sessão ativa');
+      console.error('[REFRESH] Sem sessão ativa');
       return false;
     }
     
@@ -33,7 +33,7 @@ export async function refreshWorkspaceFiles(projectId: string, sandboxId: string
     
     if (response.ok) {
       const files = await response.json();
-      console.log('📁 Arquivos no workspace:', files);
+      console.log('[REFRESH] 📁 Arquivos encontrados:', files.length);
       
       // Forçar um evento customizado para atualizar o workspace
       window.dispatchEvent(new CustomEvent('workspace-files-updated', { 
@@ -41,11 +41,13 @@ export async function refreshWorkspaceFiles(projectId: string, sandboxId: string
       }));
       
       return true;
+    } else {
+      console.log('[REFRESH] ⚠️ Sandbox ainda não está pronto:', response.status);
     }
     
     return false;
   } catch (error) {
-    console.error('Erro ao fazer refresh do workspace:', error);
+    console.error('[REFRESH] Erro:', error);
     return false;
   }
 }
@@ -53,13 +55,15 @@ export async function refreshWorkspaceFiles(projectId: string, sandboxId: string
 /**
  * Verifica se o projeto tem arquivos template e força criação se necessário
  */
-export async function ensureTemplateFiles(projectId: string): Promise<void> {
+export async function ensureTemplateFiles(projectId: string): Promise<boolean> {
   const supabase = createClient();
+  
+  console.log('[TEMPLATE FILES] 🔍 Verificando arquivos do template para projeto:', projectId);
   
   // Buscar o projeto com retry
   let project = null;
   let retries = 0;
-  const maxRetries = 3;
+  const maxRetries = 5; // Aumentado para dar mais tempo ao sandbox
   
   while (!project && retries < maxRetries) {
     const { data } = await supabase
@@ -70,36 +74,42 @@ export async function ensureTemplateFiles(projectId: string): Promise<void> {
     
     if (data?.sandbox?.id) {
       project = data;
+      console.log('[TEMPLATE FILES] ✅ Sandbox encontrado:', data.sandbox.id);
       break;
     }
     
     retries++;
-    console.log(`Tentativa ${retries}/${maxRetries} para buscar sandbox...`);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log(`[TEMPLATE FILES] ⏳ Tentativa ${retries}/${maxRetries} para buscar sandbox...`);
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Aumentado para 3s
   }
   
   if (!project?.sandbox?.id) {
-    console.log('Sandbox ainda não disponível após múltiplas tentativas');
-    return;
+    console.log('[TEMPLATE FILES] ❌ Sandbox não disponível após tentativas');
+    return false;
   }
   
   const sandboxId = project.sandbox.id;
-  const templateFiles = project.sandbox.templateFiles || project.sandbox.pendingFiles || [];
+  const templateFiles = project.sandbox.templateFiles || [];
   
   if (templateFiles.length === 0) {
-    console.log('Sem arquivos template para criar');
-    return;
+    console.log('[TEMPLATE FILES] ⚠️ Sem arquivos template para criar');
+    return true; // Não é erro, apenas não há arquivos
   }
   
-  console.log(`📝 Garantindo ${templateFiles.length} arquivos template no workspace...`);
+  console.log(`[TEMPLATE FILES] 📝 Criando ${templateFiles.length} arquivos no workspace...`);
   
-  // Verificar se os arquivos já existem
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return;
+  if (!session?.access_token) {
+    console.error('[TEMPLATE FILES] ❌ Sem sessão ativa');
+    return false;
+  }
   
-  try {
-    // Tentar listar arquivos existentes (pode falhar se sandbox não estiver pronto)
-    let existingFiles = [];
+  // Aguardar sandbox estar pronto
+  let sandboxReady = false;
+  let sandboxRetries = 0;
+  const maxSandboxRetries = 10;
+  
+  while (!sandboxReady && sandboxRetries < maxSandboxRetries) {
     try {
       const listResponse = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/sandboxes/${sandboxId}/files/list?path=/`,
@@ -111,29 +121,46 @@ export async function ensureTemplateFiles(projectId: string): Promise<void> {
       );
       
       if (listResponse.ok) {
-        existingFiles = await listResponse.json();
+        sandboxReady = true;
+        console.log('[TEMPLATE FILES] ✅ Sandbox está pronto!');
+        break;
+      } else if (listResponse.status === 404) {
+        sandboxRetries++;
+        console.log(`[TEMPLATE FILES] ⏳ Sandbox ainda não pronto, tentativa ${sandboxRetries}/${maxSandboxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } else {
-        console.log('Sandbox ainda não está pronto para listar arquivos');
-        return; // Sair se sandbox não estiver pronto
+        console.error('[TEMPLATE FILES] ❌ Erro inesperado:', listResponse.status);
+        return false;
       }
     } catch (error) {
-      console.log('Erro ao listar arquivos, sandbox pode não estar pronto:', error);
-      return;
+      sandboxRetries++;
+      console.log(`[TEMPLATE FILES] ⏳ Erro ao verificar sandbox, tentativa ${sandboxRetries}/${maxSandboxRetries}`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
-    const existingPaths = new Set(existingFiles.map((f: any) => f.path || f.name));
+  }
+  
+  if (!sandboxReady) {
+    console.error('[TEMPLATE FILES] ❌ Sandbox não ficou pronto a tempo');
+    return false;
+  }
+  
+  // Agora criar os arquivos
+  try {
+    let createdCount = 0;
     
-    // Criar apenas arquivos que não existem
     for (const file of templateFiles) {
-      if (!existingPaths.has(file.path)) {
-        console.log(`Criando arquivo ausente: ${file.path}`);
-        
+      console.log(`[TEMPLATE FILES] 📄 Criando: ${file.path}`);
+      
+      try {
         const formData = new FormData();
         const blob = new Blob([file.content], { type: 'text/plain' });
-        formData.append('file', blob, file.path);
-        // Não adicionar /workspace/ prefix - já está no path ou não é necessário
-        formData.append('path', file.path.startsWith('/') ? file.path : `/${file.path}`);
+        formData.append('file', blob, file.path.split('/').pop() || 'file.txt');
         
-        await fetch(
+        // Garantir que o path está correto
+        const filePath = file.path.startsWith('/') ? file.path : `/${file.path}`;
+        formData.append('path', filePath);
+        
+        const response = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/sandboxes/${sandboxId}/files`,
           {
             method: 'POST',
@@ -144,15 +171,29 @@ export async function ensureTemplateFiles(projectId: string): Promise<void> {
           }
         );
         
+        if (response.ok) {
+          createdCount++;
+          console.log(`[TEMPLATE FILES] ✅ Arquivo criado: ${file.path}`);
+        } else {
+          console.error(`[TEMPLATE FILES] ❌ Erro ao criar ${file.path}:`, response.status);
+        }
+        
         // Pequeno delay entre criações
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`[TEMPLATE FILES] ❌ Erro ao criar arquivo ${file.path}:`, error);
       }
     }
+    
+    console.log(`[TEMPLATE FILES] 📊 Criados ${createdCount}/${templateFiles.length} arquivos`);
     
     // Forçar refresh final
     await refreshWorkspaceFiles(projectId, sandboxId);
     
+    return createdCount > 0;
+    
   } catch (error) {
-    console.error('Erro ao garantir template files:', error);
+    console.error('[TEMPLATE FILES] ❌ Erro geral:', error);
+    return false;
   }
 }

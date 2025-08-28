@@ -31,10 +31,6 @@ import { useVncPreloader } from '@/hooks/useVncPreloader';
 import { useThreadAgent } from '@/hooks/react-query/agents/use-agents';
 import { useTranslations } from '@/hooks/use-translations';
 import { useSidebarContext } from '@/contexts/sidebar-context';
-import { TemplateDebugPanel } from '@/components/template-debug-panel';
-import { getTemplateDebugLogs } from '@/lib/onboarding/create-template-project';
-import { checkAndFixTemplateMessages } from '@/lib/onboarding/check-template-messages';
-import { ensureTemplateFiles } from '@/lib/onboarding/refresh-workspace-files';
 
 export default function ThreadPage({
   params,
@@ -471,23 +467,8 @@ export default function ThreadPage({
   // Auto-scroll to bottom when initial load is completed
   useEffect(() => {
     if (initialLoadCompleted) {
-      // Check if this might be a template project
-      if (messages.length === 0) {
-        console.log('[TEMPLATE] No messages on initial load, checking for template...');
-        
-        // Check if it's a template project
-        checkAndFixTemplateMessages(projectId, threadId).then(result => {
-          console.log('[TEMPLATE] Template check result:', result);
-        });
-        
-        // Force a refetch after a delay in case the message was just inserted
-        const timer = setTimeout(() => {
-          console.log('[TEMPLATE] Forcing messages refetch...');
-          messagesQuery.refetch();
-        }, 2000);
-        return () => clearTimeout(timer);
-      } else if (messages.length > 0) {
-        // Check if first message is from template
+      if (messages.length > 0) {
+        // Normal project flow
         const firstMessage = messages[0];
         if ((firstMessage?.metadata as any)?.isTemplateMessage) {
           console.log('[TEMPLATE] Template message detected, skipping auto-agent');
@@ -502,9 +483,9 @@ export default function ThreadPage({
       
       // Garantir que os arquivos do template sejam criados
       if ((project?.sandbox as any)?.isOnboardingProject) {
-        ensureTemplateFiles(projectId).catch(error => {
-          console.error('[TEMPLATE] Erro ao garantir arquivos:', error);
-        });
+        // Template files are now created during initiateAgent
+        // No need to ensure them here
+        console.log('[TEMPLATE] Template project detected, files should be in sandbox');
       }
     }
   }, [initialLoadCompleted, messagesQuery, projectId, threadId, project]);
@@ -609,12 +590,7 @@ export default function ThreadPage({
     const debugParam = searchParams.get('debug');
     setDebugMode(debugParam === 'true');
     
-    // Check for template debug logs
-    const templateLogs = getTemplateDebugLogs();
-    if (templateLogs.length > 0) {
-      setShowDebugPanel(true);
-      console.log('[TEMPLATE] Debug logs found:', templateLogs.length);
-    }
+    // Template logs removed - using normal flow now
   }, [searchParams]);
 
   const hasCheckedUpgradeDialog = useRef(false);
@@ -806,14 +782,15 @@ export default function ThreadPage({
         onDismiss={handleDismissUpgradeDialog}
       />
       
-      <TemplateDebugPanel
+      {/* Template debug panel removed - using normal flow now */}
+      {/* <TemplateDebugPanel
         show={showDebugPanel}
         onClose={() => setShowDebugPanel(false)}
         onRefresh={() => {
           messagesQuery.refetch();
           agentRunsQuery.refetch();
         }}
-      />
+      /> */}
     </>
   );
 } 
