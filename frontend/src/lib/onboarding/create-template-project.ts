@@ -116,32 +116,66 @@ export async function createTemplateProject({
     // Aguardar o agente processar (se houver algum processamento)
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Deletar mensagens vazias que possam ter sido criadas
+    // Deletar TODAS as mensagens criadas pelo initiateAgent para começar limpo
     try {
+      console.log('🗑️ [TEMPLATE] Deletando todas as mensagens iniciais...');
+      
+      // Primeiro buscar as mensagens para log
       const { data: existingMessages } = await supabase
         .from('messages')
-        .select('message_id, type, content')
-        .eq('thread_id', result.thread_id)
-        .order('created_at', { ascending: true });
+        .select('message_id, type')
+        .eq('thread_id', result.thread_id);
       
-      if (existingMessages) {
-        for (const msg of existingMessages) {
-          // Deletar mensagens vazias ou muito curtas
-          if (!msg.content || msg.content.trim().length < 2) {
-            await supabase
-              .from('messages')
-              .delete()
-              .eq('message_id', msg.message_id);
-            console.log('🗑️ [TEMPLATE] Mensagem vazia removida');
-          }
+      if (existingMessages && existingMessages.length > 0) {
+        console.log(`🗑️ [TEMPLATE] Encontradas ${existingMessages.length} mensagens para deletar`);
+        
+        // Deletar TODAS as mensagens da thread
+        const { error: deleteError } = await supabase
+          .from('messages')
+          .delete()
+          .eq('thread_id', result.thread_id);
+        
+        if (deleteError) {
+          console.error('❌ [TEMPLATE] Erro ao deletar mensagens:', deleteError);
+        } else {
+          console.log('✅ [TEMPLATE] Todas as mensagens iniciais foram removidas');
         }
+      } else {
+        console.log('ℹ️ [TEMPLATE] Nenhuma mensagem inicial encontrada');
       }
     } catch (error) {
-      console.log('⚠️ [TEMPLATE] Erro ao limpar mensagens vazias:', error);
+      console.error('⚠️ [TEMPLATE] Erro ao limpar mensagens iniciais:', error);
     }
     
-    // Agora inserir a mensagem do template como assistente
+    // Pequeno delay para garantir que a deleção foi processada
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Agora inserir a mensagem do template como assistente usando tool call complete
     const templateContent = template.messages[0].content;
+    
+    // Criar lista de nomes de arquivos para o parâmetro attachments
+    const attachmentsList = template.files
+      ?.map(file => {
+        // Extrair apenas o nome do arquivo sem path
+        const fileName = file.path.includes('/') 
+          ? file.path.split('/').pop() 
+          : file.path;
+        return fileName || 'file';
+      })
+      .join(',') || '';
+    
+    console.log('📎 [TEMPLATE] Attachments list:', attachmentsList);
+    console.log('📝 [TEMPLATE] Template files:', template.files?.map(f => f.path));
+    
+    // Envolver o conteúdo do template no formato de tool call complete
+    const messageWithToolCall = `<function_calls>
+<complete attachments="${attachmentsList}">
+${templateContent}
+</complete>
+</function_calls>`;
+    
+    console.log('💬 [TEMPLATE] Message with tool call format created');
+    
     const { data: templateMessage, error: messageError } = await supabase
       .from('messages')
       .insert({
@@ -149,7 +183,7 @@ export async function createTemplateProject({
         thread_id: result.thread_id,
         type: 'assistant',  // IMPORTANTE: tipo assistente
         is_llm_message: true,
-        content: templateContent,
+        content: messageWithToolCall,
         created_at: new Date().toISOString(),
         metadata: JSON.stringify({
           isTemplateMessage: true,
@@ -164,7 +198,8 @@ export async function createTemplateProject({
     if (messageError) {
       console.error('⚠️ [TEMPLATE] Erro ao inserir mensagem do template:', messageError);
     } else {
-      console.log('✅ [TEMPLATE] Mensagem do template inserida como assistente');
+      console.log('✅ [TEMPLATE] Mensagem do template inserida como assistente com tool call complete');
+      console.log('📄 [TEMPLATE] Arquivos incluídos no attachments:', attachmentsList);
     }
     
     console.log('🎉 [TEMPLATE] Projeto template criado com sucesso!');

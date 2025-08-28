@@ -18,7 +18,8 @@ import {
   Plug,
   MessageSquare
 } from 'lucide-react';
-import { useCreateTemplateProject } from '@/lib/onboarding/use-create-template-project';
+// Testando versão simples temporariamente
+import { useCreateTemplateProjectSimple as useCreateTemplateProject } from '@/lib/onboarding/use-create-template-project-simple';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useOnboardingStore } from '@/hooks/use-onboarding-store';
