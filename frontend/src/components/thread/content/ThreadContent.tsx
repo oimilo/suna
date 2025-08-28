@@ -616,6 +616,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                             }
                                         })();
 
+
                                         // In debug mode, display raw message content
                                         if (debugMode) {
                                             return (
@@ -754,6 +755,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         const msgKey = message.message_id || `submsg-assistant-${msgIndex}`;
 
                                                                         if (!parsedContent.content) return;
+
 
                                                                         const renderedContent = renderMarkdownContent(
                                                                             parsedContent.content,

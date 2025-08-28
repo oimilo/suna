@@ -37,12 +37,10 @@ export async function createTemplateProject({
   try {
     const formData = new FormData();
     
-    // Usar a mensagem do template como prompt
-    // Sim, vai aparecer como mensagem do usuário, mas é mais confiável
-    const templatePrompt = template.messages[0].content;
-    formData.append('prompt', templatePrompt);
+    // Enviar prompt vazio para criar projeto sem mensagem inicial
+    formData.append('prompt', 'Projeto criado via template');
     
-    // Metadados
+    // Metadados para criação do projeto
     formData.append('metadata', JSON.stringify({
       isOnboardingProject: true,
       templateId: template.id,
@@ -113,6 +111,23 @@ export async function createTemplateProject({
     if (!projectId) {
       throw new Error('Não foi possível obter o project_id');
     }
+    
+    // Inserir mensagem mock do template como mensagem do assistente
+    console.log('💬 [TEMPLATE SIMPLE] Inserindo mensagem mock do template...');
+    
+    await supabase.from('messages').insert({
+      thread_id: result.thread_id,
+      type: 'assistant',
+      content: JSON.stringify({
+        content: template.messages[0].content
+      }),
+      metadata: JSON.stringify({
+        isTemplateMockMessage: true,
+        templateId: template.id
+      }),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
     
     console.log('🎉 [TEMPLATE SIMPLE] Sucesso!', {
       projectId,

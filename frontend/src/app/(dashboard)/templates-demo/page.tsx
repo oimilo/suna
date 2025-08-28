@@ -198,11 +198,8 @@ export default function TemplatesDemoPage() {
     
     // Injetar JS inline (com wrapper para evitar conflitos)
     if (jsFiles.length > 0) {
-      const allJS = jsFiles.map(f => `
-        (function() {
-          ${f.content}
-        })();
-      `).join('\n');
+      // Não envolver em IIFE para manter as funções globais acessíveis
+      const allJS = jsFiles.map(f => f.content).join('\n');
       
       const scriptTag = `<script>${allJS}</script>`;
       

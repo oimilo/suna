@@ -259,8 +259,8 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
   };
 
   const getPersonalityResult = () => {
-    const key = `${answers.work_style}-${answers.project_ideal}`;
-    return PERSONALITY_TYPES[key] || PERSONALITY_TYPES['visual-aesthetic'];
+    const key = `${answers.work_style}-${answers.project_ideal}-${answers.project_type}`;
+    return PERSONALITY_TYPES[key] || PERSONALITY_TYPES['visual-aesthetic-interactive'];
   };
 
   // Definir os passos do loader
@@ -303,7 +303,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
         {!showLoader ? (
           <div className={`
             relative p-8 rounded-2xl text-center
-            bg-gradient-to-br ${personality.color}
+            bg-gradient-to-br ${personality?.color || 'from-purple-400 to-pink-400'}
             text-white shadow-2xl
           `}>
             {/* Decorative circles */}
@@ -323,7 +323,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
                 className="mb-4"
               >
                 <div className="w-20 h-20 mx-auto rounded-full bg-white/20 backdrop-blur p-4 flex items-center justify-center">
-                  <personality.icon className="w-full h-full text-white" />
+                  {personality?.icon && <personality.icon className="w-full h-full text-white" />}
                 </div>
               </motion.div>
               
@@ -333,7 +333,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
                 transition={{ delay: 0.3 }}
                 className="text-2xl font-bold mb-3"
               >
-                Você é um {personality.title}!
+                Você é um {personality?.title || 'Game Designer'}!
               </motion.h2>
               
               <motion.p
@@ -342,7 +342,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
                 transition={{ delay: 0.4 }}
                 className="text-white/90 mb-6"
               >
-                {personality.description}
+                {personality?.description || 'Você cria experiências visuais interativas e envolventes.'}
               </motion.p>
               
               <motion.div
@@ -351,7 +351,7 @@ export function PersonalityQuiz({ onAnswer, disabled }: PersonalityQuizProps) {
                 transition={{ delay: 0.5 }}
                 className="flex flex-wrap gap-2 justify-center"
               >
-                {personality.traits.map((trait, index) => (
+                {(personality?.traits || []).map((trait, index) => (
                   <motion.span
                     key={trait}
                     initial={{ opacity: 0, scale: 0 }}
