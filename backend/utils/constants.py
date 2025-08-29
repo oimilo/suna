@@ -58,6 +58,14 @@ MODELS = {
         },
         "tier_availability": ["paid"]
     },
+    "openrouter/deepseek/deepseek-chat-v3.1": {
+        "aliases": ["deepseek/deepseek-chat-v3.1", "deepseek-chat-v3.1"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.20,
+            "output_cost_per_million_tokens": 0.80
+        },
+        "tier_availability": ["free", "paid"]
+    },
     "xai/grok-4": {
         "aliases": ["grok-4", "x-ai/grok-4"],
         "pricing": {

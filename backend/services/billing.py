@@ -27,8 +27,43 @@ from services.daily_credits import (
 # Initialize Stripe
 stripe.api_key = config.STRIPE_SECRET_KEY
 
-# Token price multiplier
-TOKEN_PRICE_MULTIPLIER = 1.5
+# Token price multipliers - Different margins for different models
+DEFAULT_TOKEN_PRICE_MULTIPLIER = 1.5  # Default for most models
+MODEL_SPECIFIC_MULTIPLIERS = {
+    # DeepSeek models - 2x multiplier (100% margin)
+    "deepseek/deepseek-chat-v3.1": 2.0,
+    "openrouter/deepseek/deepseek-chat-v3.1": 2.0,
+    "deepseek-chat-v3.1": 2.0,
+    "deepseek/deepseek-chat-v3-0324": 2.0,
+    "openrouter/deepseek/deepseek-chat-v3-0324": 2.0,
+    "deepseek-v3": 2.0,
+    "deepseek/deepseek-chat": 2.0,
+    "openrouter/deepseek/deepseek-chat": 2.0,
+    "deepseek-chat": 2.0,
+    
+    # Claude models - Keep 1.5x multiplier (50% margin)
+    "anthropic/claude-sonnet-4-20250514": 1.5,
+    "claude-sonnet-4-20250514": 1.5,
+    "anthropic/claude-sonnet-4": 1.5,
+    "claude-sonnet-4": 1.5,
+    "anthropic/claude-3-7-sonnet-latest": 1.5,
+    "anthropic/claude-3-5-sonnet-latest": 1.5,
+    "anthropic/claude-3-5-haiku-latest": 1.5,
+}
+
+def get_model_multiplier(model: str) -> float:
+    """Get the price multiplier for a specific model."""
+    # Check if model has a specific multiplier
+    if model in MODEL_SPECIFIC_MULTIPLIERS:
+        return MODEL_SPECIFIC_MULTIPLIERS[model]
+    
+    # Check with resolved name
+    resolved_model = MODEL_NAME_ALIASES.get(model, model)
+    if resolved_model in MODEL_SPECIFIC_MULTIPLIERS:
+        return MODEL_SPECIFIC_MULTIPLIERS[resolved_model]
+    
+    # Default multiplier
+    return DEFAULT_TOKEN_PRICE_MULTIPLIER
 
 # Initialize router
 router = APIRouter(prefix="/billing", tags=["billing"])
@@ -498,8 +533,9 @@ def calculate_token_cost(prompt_tokens: int, completion_tokens: int, model: str)
                 logger.warning(f"Could not get pricing for model {model} (resolved: {resolved_model}): {str(e)}, returning 0 cost")
                 return 0.0
         
-        # Apply the TOKEN_PRICE_MULTIPLIER
-        return message_cost * TOKEN_PRICE_MULTIPLIER
+        # Apply the model-specific price multiplier
+        multiplier = get_model_multiplier(model)
+        return message_cost * multiplier
     except Exception as e:
         logger.error(f"Error calculating token cost for model {model}: {str(e)}")
         return 0.0
