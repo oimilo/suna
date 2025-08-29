@@ -193,8 +193,6 @@ export function PersonalityQuiz({ disabled }: Omit<PersonalityQuizProps, 'onAnsw
     } else {
       // Show result
       setShowResult(true);
-      const personalityKey = `${newAnswers.work_style}-${newAnswers.project_ideal}-${newAnswers.project_type}`;
-      const personality = PERSONALITY_TYPES[personalityKey];
       
       // Mostra o resultado da personalidade por 4 segundos, depois o loader
       setTimeout(() => {
@@ -206,15 +204,18 @@ export function PersonalityQuiz({ disabled }: Omit<PersonalityQuizProps, 'onAnsw
         if (user?.id && !hasCreatedProject.current) {
           hasCreatedProject.current = true;
           
+          // Usar a função getPersonalityResult para obter o perfil correto
+          const correctPersonality = getPersonalityResult();
+          
           console.log('[PersonalityQuiz] Criando projeto template com:', {
             userId: user.id,
-            profileType: personality?.id || 'website-general',
+            profileType: correctPersonality?.id || 'website-general',
             answers: newAnswers
           });
           
           createTemplateProject.mutate({
             userId: user.id,
-            profileType: personality?.id || 'website-general',
+            profileType: correctPersonality?.id || 'website-general',
             onboardingAnswers: newAnswers
           }, {
             onSuccess: (data) => {
