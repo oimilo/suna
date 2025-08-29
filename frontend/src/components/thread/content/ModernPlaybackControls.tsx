@@ -8,10 +8,8 @@ import {
   RotateCcw, 
   ChevronRight,
   FileText,
-  Layers,
-  Sparkles,
   Clock,
-  MessageSquare
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -46,6 +44,8 @@ interface PlaybackControlsProps {
   setCurrentToolIndex: (index: number) => void;
   onFileViewerOpen: (filePath?: string, filePathList?: string[]) => void;
   projectName: string;
+  onOpenSidePanel?: () => void; // Função para abrir o painel
+  onCloseSidePanel?: () => void; // Função para fechar o painel
 }
 
 export const ModernPlaybackControls = ({
@@ -56,6 +56,8 @@ export const ModernPlaybackControls = ({
   setCurrentToolIndex,
   onFileViewerOpen,
   projectName,
+  onOpenSidePanel,
+  onCloseSidePanel,
 }: PlaybackControlsProps): PlaybackControllerResult => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -85,15 +87,33 @@ export const ModernPlaybackControls = ({
     }
   }, [currentMessageIndex, messages.length]);
 
+  // Close panel when showing welcome screen
+  useEffect(() => {
+    if (showWelcome && onCloseSidePanel) {
+      onCloseSidePanel();
+    }
+  }, [showWelcome]); // Removido onCloseSidePanel da dependência para evitar loops
+
   const togglePlayback = useCallback(() => {
     if (currentMessageIndex >= messages.length && !isPlaying) {
       // Reset if at the end
       setCurrentMessageIndex(0);
       setIsPlaying(true);
+      setShowWelcome(false); // Hide welcome when starting playback
     } else {
       setIsPlaying(!isPlaying);
+      if (!isPlaying) {
+        setShowWelcome(false); // Hide welcome when starting playback
+      }
     }
-  }, [isPlaying, currentMessageIndex, messages.length]);
+    
+    // Abrir o painel de ferramentas quando iniciar a reprodução
+    if (!isPlaying && toolCalls.length > 0 && onOpenSidePanel) {
+      setTimeout(() => {
+        onOpenSidePanel(); // Abrir painel se houver tool calls
+      }, 100); // Pequeno delay para evitar conflitos com o fechamento
+    }
+  }, [isPlaying, currentMessageIndex, messages.length, toolCalls.length, onOpenSidePanel]);
 
   const resetPlayback = useCallback(() => {
     setIsPlaying(false);
@@ -103,7 +123,12 @@ export const ModernPlaybackControls = ({
     setIsStreamingText(false);
     setCurrentToolCall(null);
     setShowWelcome(true);
-  }, []);
+    
+    // Fechar o painel quando voltar para a tela inicial
+    if (onCloseSidePanel) {
+      onCloseSidePanel();
+    }
+  }, [onCloseSidePanel]);
 
   const skipToEnd = useCallback(() => {
     setIsPlaying(false);
@@ -112,7 +137,12 @@ export const ModernPlaybackControls = ({
     setStreamingText('');
     setIsStreamingText(false);
     setCurrentToolCall(null);
-  }, [messages]);
+    
+    // Abrir o painel de ferramentas ao pular para o fim
+    if (toolCalls.length > 0 && onOpenSidePanel) {
+      onOpenSidePanel();
+    }
+  }, [messages, toolCalls.length, onOpenSidePanel]);
 
   // Playback logic
   useEffect(() => {
@@ -140,7 +170,7 @@ export const ModernPlaybackControls = ({
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 group-hover:border-indigo-500/30 transition-colors">
-                <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <MessageCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
                 <h1 className="text-sm font-semibold text-foreground">
@@ -207,19 +237,6 @@ export const ModernPlaybackControls = ({
               <FileText className="h-3.5 w-3.5 mr-1.5 opacity-60" />
               <span className="text-sm">Arquivos</span>
             </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleSidePanel}
-              className={cn(
-                "h-8 px-3 hover:bg-black/5 dark:hover:bg-white/5",
-                isSidePanelOpen && "bg-black/5 dark:bg-white/5"
-              )}
-            >
-              <Layers className="h-3.5 w-3.5 mr-1.5 opacity-60" />
-              <span className="text-sm">Ferramentas</span>
-            </Button>
           </div>
         </div>
 
@@ -236,12 +253,10 @@ export const ModernPlaybackControls = ({
     </div>
   ), [
     isPlaying,
-    isSidePanelOpen,
     currentMessageIndex,
     messages.length,
     progress,
     projectName,
-    onToggleSidePanel,
     onFileViewerOpen,
     togglePlayback,
     resetPlayback,
@@ -315,66 +330,97 @@ export const ModernPlaybackControls = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-30 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-30 flex items-center justify-center p-6 bg-gradient-to-br from-background via-background to-background/95"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ delay: 0.1 }}
-            className="w-full max-w-md"
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+              delay: 0.1 
+            }}
+            className="w-full max-w-lg"
           >
-            <div className="relative bg-card/50 backdrop-blur border rounded-2xl p-8 shadow-2xl">
-              {/* Decorative gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl" />
+            <div className="relative">
+              {/* Glow effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl opacity-50" />
               
-              <div className="relative space-y-6">
-                {/* Icon */}
-                <div className="flex justify-center">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-                    <MessageSquare className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                  </div>
+              {/* Main card */}
+              <div className="relative bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl p-10 shadow-2xl">
+                {/* Background pattern */}
+                <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                  <div className="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-transparent rounded-full blur-3xl" />
+                  <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-gradient-to-tr from-purple-500/10 via-pink-500/10 to-transparent rounded-full blur-3xl" />
                 </div>
-
-                {/* Content */}
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-semibold">
-                    Reproduzir Conversa
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Esta conversa tem {messages.length} mensagens. 
-                    Clique em reproduzir para começar a visualização.
-                  </p>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                    <div className="text-xs text-muted-foreground mb-1">Mensagens</div>
-                    <div className="text-lg font-semibold">{messages.length}</div>
+                
+                <div className="relative space-y-8">
+                  {/* Logo and Title */}
+                  <div className="text-center space-y-4">
+                    {/* Welcome text */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="space-y-2"
+                    >
+                      <span className="inline-block text-xs font-medium text-muted-foreground/60 uppercase tracking-[0.3em]">
+                        Replay de conversa
+                      </span>
+                      
+                      {/* Prophet Title with Dancing Script */}
+                      <h1 className="text-6xl lg:text-7xl font-dancing text-foreground/90 dark:text-foreground/80 leading-none">
+                        Prophet
+                      </h1>
+                    </motion.div>
                   </div>
-                  <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                    <div className="text-xs text-muted-foreground mb-1">Ferramentas</div>
-                    <div className="text-lg font-semibold">{toolCalls.length}</div>
-                  </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <Button
-                    onClick={togglePlayback}
-                    className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0"
+                  {/* Description */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-center space-y-3"
                   >
-                    <Play className="h-4 w-4 mr-2" />
-                    Iniciar Reprodução
-                  </Button>
-                  <Button
-                    onClick={skipToEnd}
-                    variant="outline"
-                    className="flex-1"
+                    <p className="text-base text-foreground/70 leading-relaxed max-w-md mx-auto">
+                      Você está prestes a assistir o replay de uma conversa com um agente inteligente do Prophet
+                    </p>
+                    <p className="text-sm text-muted-foreground/80 max-w-sm mx-auto">
+                      Acompanhe passo a passo como o agente processou e executou as tarefas
+                    </p>
+                  </motion.div>
+
+                  {/* Action Buttons */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="space-y-3"
                   >
-                    Ver Tudo
-                  </Button>
+                    <Button
+                      onClick={togglePlayback}
+                      size="lg"
+                      className="group relative w-full h-12 overflow-hidden bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0 shadow-lg shadow-indigo-500/25 transition-all duration-200"
+                    >
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        <Play className="h-4 w-4" />
+                        Iniciar Reprodução
+                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </span>
+                    </Button>
+                    
+                    <Button
+                      onClick={skipToEnd}
+                      variant="ghost"
+                      size="lg"
+                      className="w-full h-12 text-muted-foreground hover:text-foreground transition-all duration-200"
+                    >
+                      Pular para o final
+                    </Button>
+                  </motion.div>
+
                 </div>
               </div>
             </div>

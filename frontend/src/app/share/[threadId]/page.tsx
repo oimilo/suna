@@ -74,7 +74,7 @@ export default function ThreadPage({
   const [agentStatus, setAgentStatus] = useState<
     'idle' | 'running' | 'connecting' | 'error'
   >('idle');
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false); // Fechado inicialmente
   const [toolCalls, setToolCalls] = useState<ToolCallInput[]>([]);
   const [currentToolIndex, setCurrentToolIndex] = useState<number>(0);
   const [autoOpenedPanel, setAutoOpenedPanel] = useState(false);
@@ -108,8 +108,10 @@ export default function ThreadPage({
 
   const userClosedPanelRef = useRef(false);
 
+  // Não abrir o painel automaticamente no início
   useEffect(() => {
-    userClosedPanelRef.current = true;
+    // Painel começa fechado
+    userClosedPanelRef.current = false;
     setIsSidePanelOpen(false);
   }, []);
 
@@ -599,6 +601,11 @@ export default function ThreadPage({
     setFileViewerOpen(true);
   }, []);
 
+  const openSidePanel = useCallback(() => {
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, []);
+
   const playbackController: PlaybackController = PlaybackControls({
     messages,
     isSidePanelOpen,
@@ -607,6 +614,8 @@ export default function ThreadPage({
     setCurrentToolIndex,
     onFileViewerOpen: handleOpenFileViewer,
     projectName: projectName || 'Conversa Compartilhada',
+    onOpenSidePanel: openSidePanel,
+    onCloseSidePanel: () => setIsSidePanelOpen(false),
   });
 
   const {
@@ -714,7 +723,8 @@ export default function ThreadPage({
             );
             for (let j = 0; j < toolCalls.length; j++) {
               const content = toolCalls[j].assistantCall?.content || '';
-              if (content.includes(assistantId)) {
+              // Verificar se content é uma string antes de usar includes
+              if (typeof content === 'string' && content.includes(assistantId)) {
                 console.log(
                   `Found matching tool call at index ${j}, updating panel`,
                 );
@@ -740,10 +750,10 @@ export default function ThreadPage({
     return (
       <div className="flex h-screen">
         <div
-          className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${isSidePanelOpen ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]' : ''}`}
+          className={`flex flex-col overflow-hidden transition-all duration-200 ease-in-out ${isSidePanelOpen ? 'w-[calc(100%-400px)] md:w-[calc(100%-500px)] lg:w-[calc(100%-550px)] xl:w-[calc(100%-600px)]' : 'flex-1'}`}
         >
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-[100]">
-            <div className="flex h-14 items-center gap-4 px-4">
+                    <div className="flex h-14 items-center gap-4 px-4">
               <div className="flex-1">
                 <span className="text-foreground font-medium">
                   Conversa Compartilhada
@@ -769,12 +779,18 @@ export default function ThreadPage({
   }
 
   return (
-    <div className="flex h-screen">
-      <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${isSidePanelOpen ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]' : ''}`}
-      >
-        {renderHeader()}
-        <ThreadContent
+    <div className="flex flex-col h-screen">
+      {renderHeader()}
+      <div className="flex flex-1 overflow-hidden relative">
+        <div
+          className={`flex flex-col overflow-hidden transition-all duration-200 ease-in-out`}
+          style={{
+            width: isSidePanelOpen 
+              ? 'calc(40% - 8px)' // Panel starts at 40% + 16px, so chat gets 40% - 8px for spacing
+              : '100%',
+          }}
+        >
+          <ThreadContent
           messages={messages}
           agentStatus={agentStatus}
           handleToolClick={handleToolClick}
@@ -787,11 +803,11 @@ export default function ThreadPage({
           sandboxId={sandboxId || ''}
           project={project}
         />
-        {renderWelcomeOverlay()}
-        {renderFloatingControls()}
-      </div>
+          {renderWelcomeOverlay()}
+          {renderFloatingControls()}
+        </div>
 
-      <ToolCallSidePanel
+        <ToolCallSidePanel
         isOpen={isSidePanelOpen}
         onClose={() => {
           setIsSidePanelOpen(false);
@@ -806,6 +822,8 @@ export default function ThreadPage({
         project={project}
         onFileClick={handleOpenFileViewer}
       />
+
+      </div>
 
       <FileViewerModal
         open={fileViewerOpen}
