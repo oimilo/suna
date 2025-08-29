@@ -20,7 +20,7 @@ import { ThreadContent } from '@/components/thread/content/ThreadContent';
 import {
   PlaybackControls,
   PlaybackController,
-} from '@/components/thread/content/PlaybackControls';
+} from '@/components/thread/content/ModernPlaybackControls';
 import {
   UnifiedMessage,
   ParsedMetadata,
@@ -390,7 +390,7 @@ export default function ThreadPage({
 
             setProjectName(projectData.name || '');
           } else {
-            setProjectName('Shared Conversation');
+            setProjectName('Conversa Compartilhada');
           }
 
           const unifiedMessages = (messagesData || [])
@@ -606,7 +606,7 @@ export default function ThreadPage({
     toolCalls,
     setCurrentToolIndex,
     onFileViewerOpen: handleOpenFileViewer,
-    projectName: projectName || 'Shared Conversation',
+    projectName: projectName || 'Conversa Compartilhada',
   });
 
   const {
@@ -746,20 +746,20 @@ export default function ThreadPage({
             <div className="flex h-14 items-center gap-4 px-4">
               <div className="flex-1">
                 <span className="text-foreground font-medium">
-                  Shared Conversation
+                  Conversa Compartilhada
                 </span>
               </div>
             </div>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
             <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border bg-card p-6 text-center">
-              <h2 className="text-lg font-semibold text-destructive">Error</h2>
+              <h2 className="text-lg font-semibold text-destructive">Erro</h2>
               <p className="text-sm text-muted-foreground">{error}</p>
               <button
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                 onClick={() => router.push('/')}
               >
-                Back to Home
+                Voltar ao Início
               </button>
             </div>
           </div>
