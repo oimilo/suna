@@ -6,10 +6,10 @@ import { isLocalMode } from '@/lib/config';
 import { useAvailableModels } from '@/hooks/react-query/subscriptions/use-model';
 import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscription-utils';
 
-export const STORAGE_KEY_MODEL = 'suna-preferred-model-v4'; // Changed version to force reset
+export const STORAGE_KEY_MODEL = 'suna-preferred-model-v5'; // Changed version to force reset with new models
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514'; // Claude 4 Sonnet - Agente avançado
-export const DEFAULT_FREE_MODEL_ID = 'gemini-2.5-pro'; // Gemini 2.5 Pro - Agente padrão
+export const DEFAULT_PREMIUM_MODEL_ID = 'openai/gpt-5'; // GPT-5 - Agente avançado
+export const DEFAULT_FREE_MODEL_ID = 'deepseek/deepseek-chat-v3.1'; // DeepSeek V3.1 - Agente padrão
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
 
@@ -30,16 +30,16 @@ export interface CustomModel {
 
 // SINGLE SOURCE OF TRUTH for all model data - aligned with backend constants
 export const MODELS = {
-  // Agente padrão - Gemini 2.5 Pro (Free for all users)
-  'gemini-2.5-pro': {
+  // Agente padrão - DeepSeek V3.1 (Free for all users)
+  'deepseek/deepseek-chat-v3.1': {
     tier: 'free',
     priority: 90,
     recommended: true,
     lowQuality: false
   },
   
-  // Agente avançado - Claude 4 Sonnet (Premium only)
-  'claude-sonnet-4-20250514': {
+  // Agente avançado - GPT-5 (Premium only)
+  'openai/gpt-5': {
     tier: 'premium',
     priority: 100,
     recommended: true,

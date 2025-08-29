@@ -89,6 +89,10 @@ def get_openrouter_fallback(model_name: str) -> Optional[str]:
         "gemini/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
         "google/gemini-2.5-pro": "openrouter/google/gemini-2.5-pro",
         "deepseek/deepseek-chat": "openrouter/deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1": "openrouter/deepseek/deepseek-chat-v3.1",
+        "deepseek-chat-v3.1": "openrouter/deepseek/deepseek-chat-v3.1",
+        "openai/gpt-5": "openrouter/openai/gpt-5",
+        "gpt-5": "openrouter/openai/gpt-5",
     }
     
     # Check for exact match first

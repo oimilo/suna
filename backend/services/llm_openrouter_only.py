@@ -8,7 +8,7 @@ def force_openrouter_prefix(model_name: str) -> str:
     NOTA: LiteLLM requer o prefixo 'openrouter/' para rotear corretamente
     """
     if not model_name:
-        return "openrouter/google/gemini-2.5-pro"  # Agente padrão
+        return "openrouter/deepseek/deepseek-chat-v3.1"  # Agente padrão - DeepSeek V3.1
     
     # Se já tem o prefixo openrouter/, retorna como está
     if model_name.startswith("openrouter/"):
@@ -35,6 +35,8 @@ def force_openrouter_prefix(model_name: str) -> str:
         "openai/gpt-4o": "openrouter/openai/gpt-4o",
         "gpt-4.1": "openrouter/openai/gpt-4.1",
         "openai/gpt-4.1": "openrouter/openai/gpt-4.1",
+        "gpt-5": "openrouter/openai/gpt-5",
+        "openai/gpt-5": "openrouter/openai/gpt-5",
         "gpt-4.1-mini": "openrouter/openai/gpt-4.1-mini",
         "openai/gpt-4.1-mini": "openrouter/openai/gpt-4.1-mini",
         "gpt-4.1-nano": "openrouter/openai/gpt-4.1-nano",
@@ -62,6 +64,8 @@ def force_openrouter_prefix(model_name: str) -> str:
         "deepseek-chat": "openrouter/deepseek/deepseek-chat",
         "deepseek/deepseek-chat-v3-0324": "openrouter/deepseek/deepseek-chat",
         "deepseek-v3": "openrouter/deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1": "openrouter/deepseek/deepseek-chat-v3.1",
+        "deepseek-chat-v3.1": "openrouter/deepseek/deepseek-chat-v3.1",
         
         # Moonshot/Kimi
         "moonshotai/kimi-k2": "openrouter/moonshotai/kimi-k2",
@@ -79,5 +83,5 @@ def force_openrouter_prefix(model_name: str) -> str:
     if "/" in model_name:
         return f"openrouter/{model_name}"
     
-    # Fallback - usa Gemini 2.5 Pro (agente padrão)
-    return "openrouter/google/gemini-2.5-pro"
+    # Fallback - usa DeepSeek V3.1 (agente padrão)
+    return "openrouter/deepseek/deepseek-chat-v3.1"
