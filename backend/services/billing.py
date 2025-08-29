@@ -1331,9 +1331,10 @@ async def get_available_models(
             hardcoded_pricing = get_model_pricing(model)
             if hardcoded_pricing:
                 input_cost_per_million, output_cost_per_million = hardcoded_pricing
+                multiplier = get_model_multiplier(model)
                 pricing_info = {
-                    "input_cost_per_million_tokens": input_cost_per_million * TOKEN_PRICE_MULTIPLIER,
-                    "output_cost_per_million_tokens": output_cost_per_million * TOKEN_PRICE_MULTIPLIER,
+                    "input_cost_per_million_tokens": input_cost_per_million * multiplier,
+                    "output_cost_per_million_tokens": output_cost_per_million * multiplier,
                     "max_tokens": None
                 }
             else:
@@ -1388,9 +1389,10 @@ async def get_available_models(
                             continue
                     
                     if input_cost_per_token is not None and output_cost_per_token is not None:
+                        multiplier = get_model_multiplier(model)
                         pricing_info = {
-                            "input_cost_per_million_tokens": input_cost_per_token * TOKEN_PRICE_MULTIPLIER,
-                            "output_cost_per_million_tokens": output_cost_per_token * TOKEN_PRICE_MULTIPLIER,
+                            "input_cost_per_million_tokens": input_cost_per_token * multiplier,
+                            "output_cost_per_million_tokens": output_cost_per_token * multiplier,
                             "max_tokens": None  # cost_per_token doesn't provide max_tokens info
                         }
                     else:
