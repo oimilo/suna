@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Info, ExternalLink, CircleX } from 'lucide-react';
-
-const DISMISSED_KEY = 'pipedream-account-status-dismissed';
-
 export function PipedreamAccountStatus() {
+  // Component desabilitado - Pipedream configurado em produção
+  // Não é mais necessário avisar sobre conta Pipedream
+  return null;
+  
+  // Código original mantido para referência futura se necessário
+  /*
+  import React, { useState, useEffect } from 'react';
+  import { Button } from '@/components/ui/button';
+  import { Info, ExternalLink, CircleX } from 'lucide-react';
+  
+  const DISMISSED_KEY = 'pipedream-account-status-dismissed';
+  
   const [isDismissed, setIsDismissed] = useState(true);
 
   useEffect(() => {
@@ -71,4 +77,5 @@ export function PipedreamAccountStatus() {
       </div>
     </div>
   );
+  */
 }
