@@ -38,7 +38,7 @@ class AdminAuth:
             return None
     
     @staticmethod
-    async def verify_admin_role(
+    def verify_admin_role(
         required_role: Optional[AdminRole] = None,
         minimum_role: Optional[AdminRole] = None
     ):
