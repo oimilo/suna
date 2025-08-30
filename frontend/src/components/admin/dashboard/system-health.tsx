@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2, CheckCircle, AlertTriangle, XCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -35,7 +36,7 @@ export function SystemHealth() {
       
       if (!session) return
 
-      const response = await fetch("/api/admin/analytics/system-health", {
+      const response = await fetchAdminApi("admin/analytics/system-health", {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }

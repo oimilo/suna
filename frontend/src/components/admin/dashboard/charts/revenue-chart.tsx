@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -33,7 +34,7 @@ export function RevenueChart() {
       
       if (!session) return
 
-      const response = await fetch("/api/admin/analytics/billing", {
+      const response = await fetchAdminApi("admin/analytics/billing", {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }

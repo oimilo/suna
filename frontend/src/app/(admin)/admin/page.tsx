@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { fetchAdminApi } from "@/lib/api/admin"
 
 interface DashboardData {
   users: {
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
         return
       }
 
-      const response = await fetch("/api/admin/analytics/dashboard", {
+      const response = await fetchAdminApi('admin/analytics/dashboard', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }

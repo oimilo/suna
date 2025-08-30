@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -31,7 +32,7 @@ export function UserGrowthChart({ period = "30d" }: UserGrowthChartProps) {
       if (!session) return
 
       const days = parseInt(period) || 30
-      const response = await fetch(`/api/admin/analytics/charts/user-growth?days=${days}`, {
+      const response = await fetchAdminApi(`admin/analytics/charts/user-growth?days=${days}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
