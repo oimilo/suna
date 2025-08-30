@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { UsersTable } from "@/components/admin/users/users-table"
 import { UserSearch } from "@/components/admin/users/user-search"
 import { createClient } from "@/lib/supabase/client"
+import { fetchAdminApi } from "@/lib/api/admin"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -60,7 +61,7 @@ export default function UsersPage() {
         params.append("search", searchQuery)
       }
 
-      const response = await fetch(`/api/admin/users?${params}`, {
+      const response = await fetchAdminApi(`admin/users?${params}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
@@ -105,24 +106,24 @@ export default function UsersPage() {
 
       switch (action) {
         case "suspend":
-          endpoint = `/api/admin/users/${userId}/suspend`
+          endpoint = `admin/users/${userId}/suspend`
           body = JSON.stringify({ reason: data.reason })
           break
         case "reactivate":
-          endpoint = `/api/admin/users/${userId}/reactivate`
+          endpoint = `admin/users/${userId}/reactivate`
           break
         case "reset-password":
-          endpoint = `/api/admin/users/${userId}/reset-password`
+          endpoint = `admin/users/${userId}/reset-password`
           break
         case "update-credits":
-          endpoint = `/api/admin/users/${userId}/credits`
+          endpoint = `admin/users/${userId}/credits`
           body = JSON.stringify(data)
           break
         default:
           throw new Error(`Unknown action: ${action}`)
       }
 
-      const response = await fetch(endpoint, {
+      const response = await fetchAdminApi(endpoint, {
         method,
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
