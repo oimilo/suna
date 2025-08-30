@@ -108,38 +108,49 @@ class UserManagementService:
         
         # Get users from auth.users using admin API
         try:
-            # Get all users (Supabase Admin API doesn't have great filtering)
+            # Get all users using the Supabase admin client
             users_response = await client.auth.admin.list_users()
-            all_users = users_response if isinstance(users_response, list) else users_response.users if hasattr(users_response, 'users') else []
+            
+            # Handle the response properly
+            if hasattr(users_response, 'users'):
+                all_users = users_response.users
+            elif isinstance(users_response, list):
+                all_users = users_response
+            else:
+                logger.error(f"Unexpected users_response type: {type(users_response)}")
+                all_users = []
             
             # Manual filtering
             filtered_users = all_users
             
             if params.query:
                 query_lower = params.query.lower()
-                filtered_users = [
-                    u for u in filtered_users 
-                    if query_lower in (u.email or '').lower() or 
-                       query_lower in (u.user_metadata.get('name', '') if hasattr(u, 'user_metadata') else '').lower()
-                ]
+                filtered_users = []
+                for u in all_users:
+                    user_email = getattr(u, 'email', '') or ''
+                    user_metadata = getattr(u, 'user_metadata', {}) or {}
+                    user_name = user_metadata.get('name', '') if isinstance(user_metadata, dict) else ''
+                    
+                    if query_lower in user_email.lower() or query_lower in user_name.lower():
+                        filtered_users.append(u)
             
             if params.created_after:
                 filtered_users = [
                     u for u in filtered_users 
-                    if u.created_at >= params.created_after.isoformat()
+                    if getattr(u, 'created_at', '') >= params.created_after.isoformat()
                 ]
             
             if params.created_before:
                 filtered_users = [
                     u for u in filtered_users 
-                    if u.created_at <= params.created_before.isoformat()
+                    if getattr(u, 'created_at', '') <= params.created_before.isoformat()
                 ]
             
             # Apply sorting
             if pagination.sort_by == 'email':
-                filtered_users.sort(key=lambda x: x.email or '', reverse=(pagination.sort_order == 'desc'))
+                filtered_users.sort(key=lambda x: getattr(x, 'email', '') or '', reverse=(pagination.sort_order == 'desc'))
             else:  # Default to created_at
-                filtered_users.sort(key=lambda x: x.created_at or '', reverse=(pagination.sort_order == 'desc'))
+                filtered_users.sort(key=lambda x: getattr(x, 'created_at', '') or '', reverse=(pagination.sort_order == 'desc'))
             
             # Apply pagination
             total_count = len(filtered_users)
@@ -150,17 +161,23 @@ class UserManagementService:
             users_with_stats = []
             for user in paginated_users:
                 try:
-                    stats = await self.get_user_stats(user.id)
-                    users_with_stats.append(stats)
-                except:
+                    user_id = getattr(user, 'id', None)
+                    if user_id:
+                        stats = await self.get_user_stats(user_id)
+                        users_with_stats.append(stats)
+                    else:
+                        raise Exception("User has no ID")
+                except Exception as e:
+                    logger.warning(f"Failed to get stats for user: {e}")
                     # Basic info if stats fail
+                    user_metadata = getattr(user, 'user_metadata', {}) or {}
                     users_with_stats.append({
-                        'user_id': user.id,
-                        'email': user.email,
-                        'created_at': user.created_at,
+                        'user_id': getattr(user, 'id', 'unknown'),
+                        'email': getattr(user, 'email', 'unknown'),
+                        'created_at': getattr(user, 'created_at', None),
                         'plan': 'free',
                         'metadata': {
-                            'name': user.user_metadata.get('name') if hasattr(user, 'user_metadata') else None
+                            'name': user_metadata.get('name') if isinstance(user_metadata, dict) else None
                         }
                     })
             

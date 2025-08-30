@@ -6,6 +6,9 @@ export function getAdminApiUrl(path: string): string {
   // Use the backend URL from environment
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://prophet-milo-f3hr5.ondigitalocean.app/api'
   
+  console.log('Admin API - Backend URL:', baseUrl)
+  console.log('Admin API - Path:', path)
+  
   // Remove leading slash from path if present
   const cleanPath = path.startsWith('/') ? path.slice(1) : path
   
@@ -14,7 +17,10 @@ export function getAdminApiUrl(path: string): string {
     ? baseUrl.slice(0, -4)
     : baseUrl
   
-  return `${finalBase}/${cleanPath}`
+  const fullUrl = `${finalBase}/${cleanPath}`
+  console.log('Admin API - Full URL:', fullUrl)
+  
+  return fullUrl
 }
 
 export async function fetchAdminApi(

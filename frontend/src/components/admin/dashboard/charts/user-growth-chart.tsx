@@ -32,13 +32,19 @@ export function UserGrowthChart({ period = "30d" }: UserGrowthChartProps) {
       if (!session) return
 
       const days = parseInt(period) || 30
+      
+      console.log('Fetching chart data with token:', session.access_token ? 'Token exists' : 'No token')
+      
       const response = await fetchAdminApi(`admin/analytics/charts/user-growth?days=${days}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
       })
 
-      if (!response.ok) throw new Error("Failed to fetch chart data")
+      if (!response.ok) {
+        console.error('Chart fetch failed:', response.status, response.statusText)
+        throw new Error("Failed to fetch chart data")
+      }
 
       const result = await response.json()
       setData(result.data || [])
