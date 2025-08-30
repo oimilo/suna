@@ -22,7 +22,7 @@ import redis.asyncio as redis
 from utils.config import config
 import json
 
-router = APIRouter(prefix="/admin/analytics", tags=["admin-analytics"])
+router = APIRouter(prefix="/analytics", tags=["admin-analytics"])
 
 class AnalyticsService:
     """Service for fetching and processing analytics data."""

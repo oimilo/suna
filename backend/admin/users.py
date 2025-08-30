@@ -28,7 +28,7 @@ from services.daily_credits import (
 from utils.logger import logger
 import uuid
 
-router = APIRouter(prefix="/admin/users", tags=["admin-users"])
+router = APIRouter(prefix="/users", tags=["admin-users"])
 
 class UserManagementService:
     """Service for managing users."""
