@@ -106,54 +106,80 @@ class UserManagementService:
         db = DBConnection()
         client = await db.client
         
-        # Build query
-        query = client.table('accounts').select('*', count='exact')
-        
-        # Apply filters
-        if params.query:
-            # Search in email and name
-            query = query.or_(f"email.ilike.%{params.query}%,name.ilike.%{params.query}%")
-        
-        if params.created_after:
-            query = query.gte('created_at', params.created_after.isoformat())
-        
-        if params.created_before:
-            query = query.lte('created_at', params.created_before.isoformat())
-        
-        # Apply sorting
-        if pagination.sort_by:
-            query = query.order(pagination.sort_by, desc=(pagination.sort_order == 'desc'))
-        else:
-            query = query.order('created_at', desc=True)
-        
-        # Apply pagination
-        offset = (pagination.page - 1) * pagination.page_size
-        query = query.range(offset, offset + pagination.page_size - 1)
-        
-        result = await query.execute()
-        
-        # Get additional stats for each user
-        users_with_stats = []
-        for account in (result.data or []):
-            try:
-                stats = await self.get_user_stats(account['id'])
-                users_with_stats.append(stats)
-            except:
-                # Basic info if stats fail
-                users_with_stats.append({
-                    'user_id': account['id'],
-                    'email': account.get('email', ''),
-                    'created_at': account.get('created_at'),
-                    'plan': 'unknown'
-                })
-        
-        return {
-            'users': users_with_stats,
-            'total': result.count or 0,
-            'page': pagination.page,
-            'page_size': pagination.page_size,
-            'has_more': (result.count or 0) > offset + pagination.page_size
-        }
+        # Get users from auth.users using admin API
+        try:
+            # Get all users (Supabase Admin API doesn't have great filtering)
+            users_response = await client.auth.admin.list_users()
+            all_users = users_response if isinstance(users_response, list) else users_response.users if hasattr(users_response, 'users') else []
+            
+            # Manual filtering
+            filtered_users = all_users
+            
+            if params.query:
+                query_lower = params.query.lower()
+                filtered_users = [
+                    u for u in filtered_users 
+                    if query_lower in (u.email or '').lower() or 
+                       query_lower in (u.user_metadata.get('name', '') if hasattr(u, 'user_metadata') else '').lower()
+                ]
+            
+            if params.created_after:
+                filtered_users = [
+                    u for u in filtered_users 
+                    if u.created_at >= params.created_after.isoformat()
+                ]
+            
+            if params.created_before:
+                filtered_users = [
+                    u for u in filtered_users 
+                    if u.created_at <= params.created_before.isoformat()
+                ]
+            
+            # Apply sorting
+            if pagination.sort_by == 'email':
+                filtered_users.sort(key=lambda x: x.email or '', reverse=(pagination.sort_order == 'desc'))
+            else:  # Default to created_at
+                filtered_users.sort(key=lambda x: x.created_at or '', reverse=(pagination.sort_order == 'desc'))
+            
+            # Apply pagination
+            total_count = len(filtered_users)
+            offset = (pagination.page - 1) * pagination.page_size
+            paginated_users = filtered_users[offset:offset + pagination.page_size]
+            
+            # Get additional stats for each user
+            users_with_stats = []
+            for user in paginated_users:
+                try:
+                    stats = await self.get_user_stats(user.id)
+                    users_with_stats.append(stats)
+                except:
+                    # Basic info if stats fail
+                    users_with_stats.append({
+                        'user_id': user.id,
+                        'email': user.email,
+                        'created_at': user.created_at,
+                        'plan': 'free',
+                        'metadata': {
+                            'name': user.user_metadata.get('name') if hasattr(user, 'user_metadata') else None
+                        }
+                    })
+            
+            return {
+                'users': users_with_stats,
+                'total': total_count,
+                'page': pagination.page,
+                'page_size': pagination.page_size,
+                'has_more': total_count > offset + pagination.page_size
+            }
+        except Exception as e:
+            logger.error(f"Error searching users: {e}")
+            return {
+                'users': [],
+                'total': 0,
+                'page': pagination.page,
+                'page_size': pagination.page_size,
+                'has_more': False
+            }
     
     async def update_user_credits(
         self,
