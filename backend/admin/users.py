@@ -17,7 +17,14 @@ from admin.models import (
     PaginationParams,
     AdminActionRequest
 )
-from services.billing_credits import BillingCreditsService
+from services.billing_credits import register_usage_with_credits
+from services.daily_credits import (
+    get_daily_credits_balance,
+    credit_daily_credits,
+    debit_daily_credits,
+    credits_to_dollars,
+    dollars_to_credits
+)
 from utils.logger import logger
 import uuid
 
@@ -62,8 +69,11 @@ class UserManagementService:
             avg_session_duration = total_duration / total_sessions
         
         # Get credits info
-        credits_service = BillingCreditsService()
-        credits_info = await credits_service.get_user_credits(user_id)
+        daily_balance = await get_daily_credits_balance(client, user_id)
+        credits_info = {
+            'daily_remaining': float(daily_balance) if daily_balance else 0,
+            'monthly_remaining': None  # Would need to calculate from subscription
+        }
         
         return {
             'user_id': user_id,
@@ -154,17 +164,27 @@ class UserManagementService:
         admin_id: str
     ) -> Dict:
         """Update user credits."""
-        credits_service = BillingCreditsService()
+        db = DBConnection()
+        client = await db.client
         
         if operation == 'set':
-            # Set credits to specific value
-            result = await credits_service.set_user_credits(user_id, credits)
+            # Set credits to specific value (reset and add)
+            # First get current balance to calculate difference
+            current = await get_daily_credits_balance(client, user_id)
+            await credit_daily_credits(client, user_id, credits - float(current))
+            result = credits
         elif operation == 'add':
             # Add credits
-            result = await credits_service.add_user_credits(user_id, credits)
+            await credit_daily_credits(client, user_id, credits)
+            new_balance = await get_daily_credits_balance(client, user_id)
+            result = float(new_balance)
         elif operation == 'subtract':
             # Subtract credits
-            result = await credits_service.deduct_credits(user_id, credits)
+            success, remaining = await debit_daily_credits(client, user_id, credits)
+            if not success:
+                raise ValueError(f"Insufficient credits")
+            new_balance = await get_daily_credits_balance(client, user_id)
+            result = float(new_balance)
         else:
             raise ValueError(f"Invalid operation: {operation}")
         
