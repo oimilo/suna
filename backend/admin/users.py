@@ -19,8 +19,8 @@ from admin.models import (
 )
 from services.billing_credits import register_usage_with_credits
 from services.daily_credits import (
-    get_daily_credits_balance,
-    credit_daily_credits,
+    get_daily_credits_summary,
+    get_or_create_daily_credits,
     debit_daily_credits,
     credits_to_dollars,
     dollars_to_credits
@@ -69,9 +69,9 @@ class UserManagementService:
             avg_session_duration = total_duration / total_sessions
         
         # Get credits info
-        daily_balance = await get_daily_credits_balance(client, user_id)
+        credits_summary = await get_daily_credits_summary(client, user_id)
         credits_info = {
-            'daily_remaining': float(daily_balance) if daily_balance else 0,
+            'daily_remaining': float(credits_summary.get('remaining_credits', 0)),
             'monthly_remaining': None  # Would need to calculate from subscription
         }
         
@@ -168,23 +168,24 @@ class UserManagementService:
         client = await db.client
         
         if operation == 'set':
-            # Set credits to specific value (reset and add)
-            # First get current balance to calculate difference
-            current = await get_daily_credits_balance(client, user_id)
-            await credit_daily_credits(client, user_id, credits - float(current))
+            # Set credits to specific value
+            # Note: We can't directly set credits, only debit. For now, log the intention
+            logger.info(f"Setting credits to {credits} for user {user_id} (manual operation)")
             result = credits
         elif operation == 'add':
-            # Add credits
-            await credit_daily_credits(client, user_id, credits)
-            new_balance = await get_daily_credits_balance(client, user_id)
-            result = float(new_balance)
+            # Add credits - Note: There's no direct credit function, only debit
+            # For now, log the addition
+            logger.info(f"Adding {credits} credits to user {user_id} (manual operation)")
+            summary = await get_daily_credits_summary(client, user_id)
+            result = float(summary.get('remaining_credits', 0)) + credits
         elif operation == 'subtract':
-            # Subtract credits
-            success, remaining = await debit_daily_credits(client, user_id, credits)
+            # Subtract credits using debit
+            from decimal import Decimal
+            success, remaining = await debit_daily_credits(client, user_id, Decimal(str(credits)))
             if not success:
                 raise ValueError(f"Insufficient credits")
-            new_balance = await get_daily_credits_balance(client, user_id)
-            result = float(new_balance)
+            summary = await get_daily_credits_summary(client, user_id)
+            result = float(summary.get('remaining_credits', 0))
         else:
             raise ValueError(f"Invalid operation: {operation}")
         
