@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { subDays, format, startOfDay } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface ChartData {
   timestamp: string
@@ -27,29 +28,51 @@ export function UserGrowthChart({ period = "30d" }: UserGrowthChartProps) {
 
   async function fetchChartData() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoading(true)
       
-      if (!session) return
-
       const days = parseInt(period) || 30
+      const startDate = subDays(new Date(), days)
       
-      console.log('Fetching chart data with token:', session.access_token ? 'Token exists' : 'No token')
+      // Buscar todas as contas criadas no período
+      const { data: accounts, error } = await supabase
+        .from('accounts')
+        .select('created_at')
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: true })
       
-      const response = await fetchAdminApi(`admin/analytics/charts/user-growth?days=${days}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
+      if (error) throw error
+      
+      // Agrupar por dia
+      const dailyData: Record<string, number> = {}
+      
+      // Inicializar todos os dias com 0
+      for (let i = 0; i < days; i++) {
+        const date = subDays(new Date(), i)
+        const dateKey = format(startOfDay(date), 'yyyy-MM-dd')
+        dailyData[dateKey] = 0
+      }
+      
+      // Contar usuários por dia
+      accounts?.forEach(account => {
+        const dateKey = format(new Date(account.created_at), 'yyyy-MM-dd')
+        if (dailyData[dateKey] !== undefined) {
+          dailyData[dateKey]++
         }
       })
-
-      if (!response.ok) {
-        console.error('Chart fetch failed:', response.status, response.statusText)
-        throw new Error("Failed to fetch chart data")
-      }
-
-      const result = await response.json()
-      setData(result.data || [])
+      
+      // Converter para formato do gráfico
+      const chartData: ChartData[] = Object.entries(dailyData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, count]) => ({
+          timestamp: date,
+          value: count,
+          label: format(new Date(date), 'dd/MM', { locale: ptBR })
+        }))
+      
+      setData(chartData)
     } catch (error) {
       console.error("Error fetching chart data:", error)
+      setData([])
     } finally {
       setIsLoading(false)
     }

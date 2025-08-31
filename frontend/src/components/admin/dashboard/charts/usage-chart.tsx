@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { subDays, format, startOfDay } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface ChartData {
   timestamp: string
@@ -19,10 +20,10 @@ interface UsageChartProps {
 
 export function UsageChart({ period = "7d" }: UsageChartProps) {
   const [messagesData, setMessagesData] = useState<ChartData[]>([])
-  const [tokensData, setTokensData] = useState<ChartData[]>([])
-  const [creditsData, setCreditsData] = useState<ChartData[]>([])
+  const [threadsData, setThreadsData] = useState<ChartData[]>([])
+  const [agentsData, setAgentsData] = useState<ChartData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedMetric, setSelectedMetric] = useState("messages_sent")
+  const [selectedMetric, setSelectedMetric] = useState("messages")
   const supabase = createClient()
 
   useEffect(() => {
@@ -32,30 +33,47 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
   async function fetchChartData() {
     try {
       setIsLoading(true)
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) return
-
       const days = parseInt(period) || 7
-      const response = await fetchAdminApi(
-        `admin/analytics/charts/usage?metric=${selectedMetric}&days=${days}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
-      )
-
-      if (!response.ok) throw new Error("Failed to fetch chart data")
-
-      const result = await response.json()
+      const startDate = subDays(new Date(), days)
       
-      if (selectedMetric === "messages_sent") {
-        setMessagesData(result.data || [])
-      } else if (selectedMetric === "tokens_used") {
-        setTokensData(result.data || [])
-      } else {
-        setCreditsData(result.data || [])
+      if (selectedMetric === "messages") {
+        // Buscar mensagens criadas no período
+        const { data: messages, error } = await supabase
+          .from('messages')
+          .select('created_at')
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: true })
+        
+        if (error) throw error
+        
+        const chartData = processDataByDay(messages || [], days)
+        setMessagesData(chartData)
+        
+      } else if (selectedMetric === "threads") {
+        // Buscar threads criadas no período
+        const { data: threads, error } = await supabase
+          .from('threads')
+          .select('created_at')
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: true })
+        
+        if (error) throw error
+        
+        const chartData = processDataByDay(threads || [], days)
+        setThreadsData(chartData)
+        
+      } else if (selectedMetric === "agents") {
+        // Buscar agentes criados no período
+        const { data: agents, error } = await supabase
+          .from('agents')
+          .select('created_at')
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: true })
+        
+        if (error) throw error
+        
+        const chartData = processDataByDay(agents || [], days)
+        setAgentsData(chartData)
       }
     } catch (error) {
       console.error("Error fetching chart data:", error)
@@ -63,18 +81,46 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
       setIsLoading(false)
     }
   }
+  
+  function processDataByDay(items: any[], days: number): ChartData[] {
+    const dailyData: Record<string, number> = {}
+    
+    // Inicializar todos os dias com 0
+    for (let i = 0; i < days; i++) {
+      const date = subDays(new Date(), i)
+      const dateKey = format(startOfDay(date), 'yyyy-MM-dd')
+      dailyData[dateKey] = 0
+    }
+    
+    // Contar itens por dia
+    items.forEach(item => {
+      const dateKey = format(new Date(item.created_at), 'yyyy-MM-dd')
+      if (dailyData[dateKey] !== undefined) {
+        dailyData[dateKey]++
+      }
+    })
+    
+    // Converter para formato do gráfico
+    return Object.entries(dailyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, count]) => ({
+        timestamp: date,
+        value: count,
+        label: format(new Date(date), 'dd/MM', { locale: ptBR })
+      }))
+  }
 
   const getCurrentData = () => {
     switch (selectedMetric) {
-      case "messages_sent": return messagesData
-      case "tokens_used": return tokensData
-      case "credits_used": return creditsData
+      case "messages": return messagesData
+      case "threads": return threadsData
+      case "agents": return agentsData
       default: return []
     }
   }
 
   const currentData = getCurrentData()
-  const maxValue = Math.max(...currentData.map(d => d.value), 1)
+  const maxValue = Math.max(...currentData.map((d: ChartData) => d.value), 1)
 
   return (
     <Card>
@@ -87,9 +133,9 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
       <CardContent>
         <Tabs value={selectedMetric} onValueChange={setSelectedMetric}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="messages_sent">Mensagens</TabsTrigger>
-            <TabsTrigger value="tokens_used">Tokens</TabsTrigger>
-            <TabsTrigger value="credits_used">Créditos</TabsTrigger>
+            <TabsTrigger value="messages">Mensagens</TabsTrigger>
+            <TabsTrigger value="threads">Conversas</TabsTrigger>
+            <TabsTrigger value="agents">Agentes</TabsTrigger>
           </TabsList>
 
           <TabsContent value={selectedMetric} className="mt-4">
@@ -101,7 +147,7 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
               <div className="space-y-4">
                 {/* Bar chart */}
                 <div className="h-48 flex items-end gap-1">
-                  {currentData.map((point, index) => (
+                  {currentData.map((point: ChartData, index: number) => (
                     <div
                       key={index}
                       className="flex-1 flex flex-col items-center gap-2"
@@ -127,7 +173,7 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
                     <p className="text-xs text-muted-foreground">Total</p>
                     <p className="text-lg font-semibold">
                       {formatMetricValue(
-                        currentData.reduce((sum, d) => sum + d.value, 0),
+                        currentData.reduce((sum: number, d: ChartData) => sum + d.value, 0),
                         selectedMetric
                       )}
                     </p>
@@ -136,7 +182,7 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
                     <p className="text-xs text-muted-foreground">Média</p>
                     <p className="text-lg font-semibold">
                       {formatMetricValue(
-                        Math.round(currentData.reduce((sum, d) => sum + d.value, 0) / currentData.length),
+                        Math.round(currentData.reduce((sum: number, d: ChartData) => sum + d.value, 0) / currentData.length),
                         selectedMetric
                       )}
                     </p>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -30,22 +29,61 @@ export function RevenueChart() {
 
   async function fetchBillingStats() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoading(true)
       
-      if (!session) return
-
-      const response = await fetchAdminApi("admin/analytics/billing", {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-
-      if (!response.ok) throw new Error("Failed to fetch billing data")
-
-      const result = await response.json()
-      setStats(result)
+      // Buscar todas as assinaturas
+      const { data: subscriptions, error: subsError } = await supabase
+        .from('billing_subscriptions')
+        .select(`
+          *,
+          billing_prices (
+            amount
+          )
+        `)
+      
+      if (subsError) throw subsError
+      
+      // Buscar total de contas
+      const { count: totalAccounts } = await supabase
+        .from('accounts')
+        .select('*', { count: 'exact', head: true })
+      
+      // Calcular estatísticas
+      const activeSubscriptions = subscriptions?.filter(s => s.status === 'active') || []
+      const trialSubscriptions = subscriptions?.filter(s => s.status === 'trialing') || []
+      const canceledSubscriptions = subscriptions?.filter(s => s.status === 'canceled') || []
+      
+      // Calcular MRR
+      const mrr = activeSubscriptions.reduce((sum, sub) => {
+        const amount = sub.billing_prices?.amount || 0
+        return sum + (amount / 100) // Converter de centavos para reais
+      }, 0)
+      
+      const totalUsers = totalAccounts || 1
+      const conversionRate = (activeSubscriptions.length / totalUsers) * 100
+      const churnRate = canceledSubscriptions.length / (subscriptions?.length || 1)
+      const arpu = activeSubscriptions.length > 0 ? mrr / activeSubscriptions.length : 0
+      
+      // Estimativa simples de LTV (assumindo 12 meses de retenção média)
+      const ltv = arpu * 12
+      
+      const billingStats: BillingStats = {
+        mrr,
+        arr: mrr * 12,
+        total_revenue: mrr * 3, // Estimativa (3 meses operacional)
+        active_subscriptions: activeSubscriptions.length,
+        trial_users: trialSubscriptions.length,
+        paying_users: activeSubscriptions.length,
+        churn_rate: churnRate,
+        average_revenue_per_user: arpu,
+        lifetime_value: ltv,
+        conversion_rate: conversionRate
+      }
+      
+      setStats(billingStats)
     } catch (error) {
       console.error("Error fetching billing stats:", error)
+      setStats(null)
     } finally {
       setIsLoading(false)
     }
