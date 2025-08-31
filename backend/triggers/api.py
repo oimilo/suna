@@ -616,28 +616,6 @@ async def get_agent_workflows(
     return result.data
 
 
-@workflows_router.get("/{workflow_id}")
-async def get_workflow(
-    workflow_id: str,
-    user_id: str = Depends(get_current_user_id_from_jwt)
-):
-    """Get a single workflow by ID"""
-    client = await db.client
-    
-    # Get the workflow
-    result = await client.table('agent_workflows').select('*').eq('id', workflow_id).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    
-    workflow = result.data[0]
-    
-    # Verify user has access to this workflow's agent
-    await verify_agent_access(workflow['agent_id'], user_id)
-    
-    return workflow
-
-
 @workflows_router.post("/agents/{agent_id}/workflows")
 async def create_agent_workflow(
     agent_id: str,
@@ -814,6 +792,28 @@ async def execute_agent_workflow(
                 "details": execution_result.get("error", "Unknown error")
             }
         )
+
+
+@workflows_router.get("/{workflow_id}")
+async def get_workflow(
+    workflow_id: str,
+    user_id: str = Depends(get_current_user_id_from_jwt)
+):
+    """Get a single workflow by ID"""
+    client = await db.client
+    
+    # Get the workflow
+    result = await client.table('agent_workflows').select('*').eq('id', workflow_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    workflow = result.data[0]
+    
+    # Verify user has access to this workflow's agent
+    await verify_agent_access(workflow['agent_id'], user_id)
+    
+    return workflow
 
 
 # Sub-routers already included at the top of the file
