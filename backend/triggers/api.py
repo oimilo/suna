@@ -42,6 +42,17 @@ def initialize(database: DBConnection):
     """Initialize triggers module with database connection"""
     setup_database(database)
     logger.info(f"Triggers module initialized with db: {database is not None}")
+    
+    # Log registered routes for debugging
+    logger.info("=== TRIGGERS ROUTES REGISTERED ===")
+    for route in router.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            logger.info(f"  {list(route.methods)} {router.prefix}{route.path}")
+    
+    logger.info("=== WORKFLOWS ROUTES REGISTERED ===")
+    for route in workflows_router.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            logger.info(f"  {list(route.methods)} {router.prefix}{workflows_router.prefix}{route.path}")
 
 # IMPORTANT: Include sub-routers BEFORE defining catch-all routes like /{trigger_id}
 # This ensures that specific routes like /all and /stats are matched before /{trigger_id}
@@ -155,6 +166,12 @@ async def verify_agent_access(agent_id: str, user_id: str):
 
 
 # ===== PROVIDER ENDPOINTS =====
+
+@router.get("/test")
+async def test_triggers_route():
+    """Test endpoint to verify triggers router is working"""
+    return {"status": "ok", "message": "Triggers router is working", "db_initialized": db is not None}
+
 
 @router.get("/providers")
 async def get_providers():
@@ -591,6 +608,12 @@ def convert_steps_to_json(steps: List[WorkflowStepRequest]) -> List[Dict[str, An
             step_dict['children'] = convert_steps_to_json(step.children)
         result.append(step_dict)
     return result
+
+
+@workflows_router.get("/test")
+async def test_workflows_route():
+    """Test endpoint to verify workflows router is working"""
+    return {"status": "ok", "message": "Workflows router is working"}
 
 
 @workflows_router.get("/agents/{agent_id}/workflows")
