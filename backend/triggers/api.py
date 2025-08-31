@@ -57,7 +57,7 @@ def initialize(database: DBConnection):
 # IMPORTANT: Include sub-routers BEFORE defining catch-all routes like /{trigger_id}
 # This ensures that specific routes like /all and /stats are matched before /{trigger_id}
 router.include_router(all_triggers_router)
-router.include_router(workflows_router)
+# NOTE: workflows_router will be included at the end of the file after all routes are defined
 
 
 # ===== REQUEST/RESPONSE MODELS =====
@@ -830,4 +830,5 @@ async def get_workflow(
     return workflow
 
 
-# Sub-routers already included at the top of the file
+# Include workflows router AFTER all routes are defined
+router.include_router(workflows_router)
