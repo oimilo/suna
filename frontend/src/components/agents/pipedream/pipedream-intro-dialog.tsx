@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ExternalLink, Info, Zap, Shield, Clock } from 'lucide-react';
+import { Info, Zap, Shield, Clock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
@@ -78,8 +78,8 @@ export function PipedreamIntroDialog({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Importante:</strong> Você precisará de uma conta Pipedream (gratuita) para conectar integrações. 
-              O Pipedream é um serviço confiável usado por milhares de desenvolvedores.
+              <strong>Importante:</strong> Suas integrações são gerenciadas de forma segura. 
+              O sistema utiliza OAuth e outros protocolos seguros para proteger suas credenciais.
             </AlertDescription>
           </Alert>
 
@@ -103,25 +103,10 @@ export function PipedreamIntroDialog({
           <div className="space-y-3">
             <p className="text-sm font-medium">Como funciona:</p>
             <ol className="space-y-2 text-sm text-muted-foreground">
-              <li>1. Você será direcionado para o Pipedream</li>
-              <li>2. Faça login ou crie uma conta gratuita</li>
-              <li>3. Autorize a conexão com {appName || 'o aplicativo'}</li>
-              <li>4. Volte para o Prophet e use a integração</li>
+              <li>1. Você será direcionado para autorização</li>
+              <li>2. Autorize a conexão com {appName || 'o aplicativo'}</li>
+              <li>3. Volte para o Prophet e use a integração</li>
             </ol>
-          </div>
-
-          {/* Link para criar conta */}
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm mb-2">Não tem uma conta Pipedream?</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => window.open('https://pipedream.com/auth/signup', '_blank')}
-            >
-              <ExternalLink className="h-3 w-3" />
-              Criar Conta Gratuita
-            </Button>
           </div>
 
           {/* Checkbox de entendimento */}
@@ -135,7 +120,7 @@ export function PipedreamIntroDialog({
               htmlFor="understood"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Entendi que preciso de uma conta Pipedream para continuar
+              Entendi como funciona o processo de conexão
             </label>
           </div>
 

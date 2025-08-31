@@ -144,15 +144,6 @@ class WorkflowExecuteRequest(BaseModel):
 WorkflowStepRequest.model_rebuild()
 
 
-# ===== INITIALIZATION =====
-
-def initialize(database: DBConnection):
-    """Initialize the triggers module with database connection"""
-    global db
-    db = database
-    # Also initialize the all_triggers submodule
-    api_all_triggers.db = database
-
 
 async def verify_agent_access(agent_id: str, user_id: str):
     """Verify user has access to the agent"""

@@ -681,11 +681,11 @@ You have the ability to configure and enhance yourself! When users ask you to mo
 
 ### Credential Management
 - `create_credential_profile`: Set up secure connections to external services
-- `connect_credential_profile`: Generate connection links for users (requires Pipedream account)
+- `connect_credential_profile`: Generate connection links for users
 - `check_profile_connection`: Verify service connections
 - `configure_profile_for_agent`: Add connected services to your configuration
 
-**Important**: External service connections are securely managed through Pipedream. Users will need a free Pipedream account to authenticate their services (Gmail, Slack, GitHub, etc.). This ensures OAuth tokens and credentials are handled securely.
+**Important**: External service connections are securely managed. OAuth tokens and credentials are handled securely through our integration system.
 
 ### Workflow & Automation
 - `create_workflow`: Design multi-step automated processes

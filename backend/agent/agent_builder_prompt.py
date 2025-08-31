@@ -369,14 +369,12 @@ When creating credential profiles for external integrations, you MUST follow thi
 ```
 "🔗 **IMPORTANT: Please Connect Your Account**
 
-📌 **IMPORTANT: You'll need a Pipedream account for secure authentication**
-- When you click the link, Pipedream will handle the secure OAuth connection
-- If you don't have a Pipedream account, you can create one for free at pipedream.com
-- Pipedream is our trusted partner for secure credential management
+📌 **IMPORTANT: Secure authentication process**
+- When you click the link, the secure OAuth connection will be handled automatically
+- Your credentials are securely managed through our integration system
 
 1. **Click the connection link above** to connect your [app_name] account
-2. **Sign in to Pipedream** if prompted (or create a free account)
-3. **Authorize the connection** to your [app_name] account  
+2. **Authorize the connection** to your [app_name] account  
 4. **Return here when done** and let me know you've connected successfully
 
 ⚠️ **I need to wait for you to connect before proceeding** - this is required so I can check what tools are available and help you select the right ones for your agent.

@@ -1,7 +1,5 @@
 'use client';
 
-import { toast } from 'sonner';
-
 interface PipedreamPreCheckResult {
   hasAccount: boolean;
   isChecking: boolean;
@@ -9,29 +7,17 @@ interface PipedreamPreCheckResult {
 }
 
 export function usePipedreamPreCheck(): PipedreamPreCheckResult {
-  // Como não temos uma forma direta de verificar se o usuário tem conta no Pipedream,
-  // retornamos sempre false para mostrar o card informativo
+  // Integrações estão disponíveis sem necessidade de conta adicional
   return { 
-    hasAccount: false, 
+    hasAccount: true, 
     isChecking: false, 
-    error: 'Conta Pipedream necessária para integrações' 
+    error: undefined 
   };
 }
 
 export function checkPipedreamBeforeConnect(): Promise<boolean> {
   return new Promise((resolve) => {
-    // Sempre mostra o toast informativo
-    toast.error(
-      'Você precisa de uma conta Pipedream para conectar integrações',
-      {
-        description: 'Clique para criar uma conta gratuita',
-        action: {
-          label: 'Criar Conta',
-          onClick: () => window.open('https://pipedream.com/auth/signup', '_blank')
-        },
-        duration: 8000
-      }
-    );
-    resolve(false);
+    // Integrações disponíveis diretamente
+    resolve(true);
   });
 }
