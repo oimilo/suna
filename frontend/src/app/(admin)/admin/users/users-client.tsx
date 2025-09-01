@@ -66,20 +66,33 @@ export default function UsersClient({ initialData }: UsersClientProps) {
   }
 
   const getPlanBadge = (plan: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
-      free: "secondary",
-      pro: "default",
-      pro_max: "outline"
+    // Mapear planos para classes personalizadas com melhor contraste
+    const getClassName = (plan: string) => {
+      switch(plan) {
+        case 'pro':
+          return "bg-blue-500 text-white hover:bg-blue-600"
+        case 'pro_max':
+          return "bg-purple-500 text-white hover:bg-purple-600"
+        case 'custom':
+        case 'Personalizado':
+          return "bg-emerald-500 text-white hover:bg-emerald-600"
+        case 'free':
+          return "bg-gray-500 text-white hover:bg-gray-600"
+        default:
+          return "bg-zinc-600 text-white hover:bg-zinc-700"
+      }
     }
     
     const labels: Record<string, string> = {
       free: "Free",
       pro: "Pro",
-      pro_max: "Pro Max"
+      pro_max: "Pro Max",
+      custom: "Personalizado",
+      Personalizado: "Personalizado"
     }
     
     return (
-      <Badge variant={variants[plan] || "secondary"}>
+      <Badge className={getClassName(plan)}>
         {labels[plan] || plan}
       </Badge>
     )
@@ -88,16 +101,32 @@ export default function UsersClient({ initialData }: UsersClientProps) {
   const getStatusBadge = (status: string | null) => {
     if (!status) return null
     
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      active: "default",
-      canceled: "destructive",
-      past_due: "destructive",
-      trialing: "secondary"
+    // Usar classes personalizadas para melhor contraste
+    const getClassName = (status: string) => {
+      switch(status) {
+        case 'active':
+          return "bg-green-500 text-white hover:bg-green-600"
+        case 'canceled':
+          return "bg-red-500 text-white hover:bg-red-600"
+        case 'past_due':
+          return "bg-orange-500 text-white hover:bg-orange-600"
+        case 'trialing':
+          return "bg-yellow-500 text-white hover:bg-yellow-600"
+        default:
+          return "bg-gray-500 text-white hover:bg-gray-600"
+      }
+    }
+    
+    const labels: Record<string, string> = {
+      active: "Ativo",
+      canceled: "Cancelado",
+      past_due: "Vencido",
+      trialing: "Teste"
     }
     
     return (
-      <Badge variant={variants[status] || "outline"}>
-        {status}
+      <Badge className={getClassName(status)}>
+        {labels[status] || status}
       </Badge>
     )
   }

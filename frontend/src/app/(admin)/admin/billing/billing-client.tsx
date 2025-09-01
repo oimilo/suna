@@ -10,18 +10,25 @@ import { ptBR } from "date-fns/locale"
 interface BillingStats {
   totalRevenue: number
   activeSubscriptions: number
+  uniquePayingUsers: number
   churnRate: number
   averageRevenue: number
+  totalUsers: number
+  conversionRate: number
 }
 
 interface Subscription {
   user_id: string
   account_id: string
   email: string
+  account_name: string
   plan: string
   subscription_status: string | null
   created_at: string
+  subscription_created: string
   stripe_subscription_id: string | null
+  amount: number
+  interval: string
 }
 
 interface BillingClientProps {
@@ -50,18 +57,33 @@ export default function BillingClient({ initialData }: BillingClientProps) {
   }
 
   const getPlanBadge = (plan: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
-      pro: "default",
-      pro_max: "outline"
+    // Mapear planos para classes personalizadas com melhor contraste
+    const getClassName = (plan: string) => {
+      switch(plan) {
+        case 'pro':
+          return "bg-blue-500 text-white hover:bg-blue-600"
+        case 'pro_max':
+          return "bg-purple-500 text-white hover:bg-purple-600"
+        case 'custom':
+        case 'Personalizado':
+          return "bg-emerald-500 text-white hover:bg-emerald-600"
+        case 'free':
+          return "bg-gray-500 text-white hover:bg-gray-600"
+        default:
+          return "bg-zinc-600 text-white hover:bg-zinc-700"
+      }
     }
     
     const labels: Record<string, string> = {
       pro: "Pro",
-      pro_max: "Pro Max"
+      pro_max: "Pro Max",
+      custom: "Personalizado",
+      Personalizado: "Personalizado",
+      free: "Free"
     }
     
     return (
-      <Badge variant={variants[plan] || "secondary"}>
+      <Badge className={getClassName(plan)}>
         {labels[plan] || plan}
       </Badge>
     )
@@ -70,16 +92,32 @@ export default function BillingClient({ initialData }: BillingClientProps) {
   const getStatusBadge = (status: string | null) => {
     if (!status) return null
     
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      active: "default",
-      canceled: "destructive",
-      past_due: "destructive",
-      trialing: "secondary"
+    // Usar classes personalizadas para melhor contraste
+    const getClassName = (status: string) => {
+      switch(status) {
+        case 'active':
+          return "bg-green-500 text-white hover:bg-green-600"
+        case 'canceled':
+          return "bg-red-500 text-white hover:bg-red-600"
+        case 'past_due':
+          return "bg-orange-500 text-white hover:bg-orange-600"
+        case 'trialing':
+          return "bg-yellow-500 text-white hover:bg-yellow-600"
+        default:
+          return "bg-gray-500 text-white hover:bg-gray-600"
+      }
+    }
+    
+    const labels: Record<string, string> = {
+      active: "Ativo",
+      canceled: "Cancelado",
+      past_due: "Vencido",
+      trialing: "Teste"
     }
     
     return (
-      <Badge variant={variants[status] || "outline"}>
-        {status}
+      <Badge className={getClassName(status)}>
+        {labels[status] || status}
       </Badge>
     )
   }
@@ -96,7 +134,7 @@ export default function BillingClient({ initialData }: BillingClientProps) {
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">MRR (Receita Mensal)</CardTitle>
@@ -112,13 +150,13 @@ export default function BillingClient({ initialData }: BillingClientProps) {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
+            <CardTitle className="text-sm font-medium">Usuários Pagantes</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+            <div className="text-2xl font-bold">{stats.uniquePayingUsers}</div>
             <p className="text-xs text-muted-foreground">
-              Clientes pagantes
+              {stats.totalUsers > 0 ? `${stats.conversionRate.toFixed(1)}% de conversão` : 'Calculando...'}
             </p>
           </CardContent>
         </Card>
@@ -132,6 +170,19 @@ export default function BillingClient({ initialData }: BillingClientProps) {
             <div className="text-2xl font-bold">{formatCurrency(stats.averageRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               Por assinatura
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de assinaturas
             </p>
           </CardContent>
         </Card>
@@ -167,27 +218,32 @@ export default function BillingClient({ initialData }: BillingClientProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Email do Usuário</TableHead>
+                  <TableHead>Conta</TableHead>
                   <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Valor Mensal</TableHead>
-                  <TableHead>Cliente Desde</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Usuário Desde</TableHead>
+                  <TableHead>Assinatura Desde</TableHead>
                   <TableHead>ID Stripe</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {subscriptions.map((sub) => (
-                  <TableRow key={sub.user_id}>
+                  <TableRow key={`${sub.user_id}-${sub.account_id}`}>
                     <TableCell className="font-medium">{sub.email}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{sub.account_name}</TableCell>
                     <TableCell>{getPlanBadge(sub.plan)}</TableCell>
                     <TableCell>{getStatusBadge(sub.subscription_status)}</TableCell>
                     <TableCell>
-                      {formatCurrency(sub.plan === 'pro' ? 97 : sub.plan === 'pro_max' ? 297 : 0)}
+                      {formatCurrency(sub.amount)}
+                      <span className="text-xs text-muted-foreground">/{sub.interval === 'month' ? 'mês' : 'ano'}</span>
                     </TableCell>
-                    <TableCell>{formatDate(sub.created_at)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(sub.created_at)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(sub.subscription_created)}</TableCell>
                     <TableCell className="font-mono text-xs">
                       {sub.stripe_subscription_id ? (
-                        <span className="truncate max-w-[150px] inline-block">
+                        <span className="truncate max-w-[100px] inline-block">
                           {sub.stripe_subscription_id}
                         </span>
                       ) : (
@@ -215,7 +271,7 @@ export default function BillingClient({ initialData }: BillingClientProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge>Pro</Badge>
+                  <Badge className="bg-blue-500 text-white hover:bg-blue-600">Pro</Badge>
                   <span className="text-sm text-muted-foreground">R$ 97/mês</span>
                 </div>
                 <span className="font-medium">
@@ -224,11 +280,20 @@ export default function BillingClient({ initialData }: BillingClientProps) {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">Pro Max</Badge>
+                  <Badge className="bg-purple-500 text-white hover:bg-purple-600">Pro Max</Badge>
                   <span className="text-sm text-muted-foreground">R$ 297/mês</span>
                 </div>
                 <span className="font-medium">
                   {subscriptions.filter(s => s.plan === 'pro_max').length} assinaturas
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Personalizado</Badge>
+                  <span className="text-sm text-muted-foreground">Valor customizado</span>
+                </div>
+                <span className="font-medium">
+                  {subscriptions.filter(s => s.plan === 'custom' || s.plan === 'Personalizado').length} assinaturas
                 </span>
               </div>
             </div>

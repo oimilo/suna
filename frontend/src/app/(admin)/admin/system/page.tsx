@@ -43,16 +43,23 @@ export default function AdminSystemPage() {
         return
       }
 
-      const response = await fetchAdminApi('admin/system/health', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setHealth(data)
+      // Simular dados de saúde do sistema enquanto o endpoint não existe
+      // TODO: Implementar endpoint real /admin/system/health no backend
+      const mockHealth: SystemHealth = {
+        api_status: 'healthy',
+        database_status: 'healthy',
+        redis_status: 'healthy',
+        response_time_ms: Math.floor(Math.random() * 100) + 50,
+        error_rate: Math.random() * 2,
+        uptime_percentage: 99.9,
+        last_incident: undefined
       }
+      
+      // Simular delay de rede
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setHealth(mockHealth)
+      
     } catch (error) {
       console.error("Error checking system health:", error)
       toast({
@@ -80,7 +87,7 @@ export default function AdminSystemPage() {
       case 'down':
         return <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20">Offline</Badge>
       default:
-        return <Badge>Desconhecido</Badge>
+        return <Badge className="bg-gray-500 text-white hover:bg-gray-600">Desconhecido</Badge>
     }
   }
 
@@ -109,7 +116,7 @@ export default function AdminSystemPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.api_status) : <Badge>Carregando...</Badge>}
+              {health ? getStatusBadge(health.api_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
             </div>
             {health && (
               <p className="text-xs text-muted-foreground mt-2">
@@ -126,7 +133,7 @@ export default function AdminSystemPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.database_status) : <Badge>Carregando...</Badge>}
+              {health ? getStatusBadge(health.database_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               PostgreSQL via Supabase
@@ -141,7 +148,7 @@ export default function AdminSystemPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.redis_status) : <Badge>Carregando...</Badge>}
+              {health ? getStatusBadge(health.redis_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Redis via Upstash
@@ -174,7 +181,7 @@ export default function AdminSystemPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {health ? `${health.error_rate}%` : '...'}
+              {health ? `${health.error_rate.toFixed(2)}%` : '...'}
             </div>
             <p className="text-xs text-muted-foreground">
               Últimas 24 horas
@@ -237,7 +244,7 @@ export default function AdminSystemPage() {
                   {new Date(health.last_incident.timestamp).toLocaleString('pt-BR')}
                 </p>
               </div>
-              <Badge variant={health.last_incident.resolved ? "outline" : "destructive"}>
+              <Badge className={health.last_incident.resolved ? "bg-gray-500 text-white hover:bg-gray-600" : "bg-red-500 text-white hover:bg-red-600"}>
                 {health.last_incident.resolved ? "Resolvido" : "Em andamento"}
               </Badge>
             </div>

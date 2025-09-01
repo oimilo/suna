@@ -1197,16 +1197,13 @@ async def stripe_webhook(request: Request):
             client = await db.client
             
             if event.type == 'customer.subscription.created' or event.type == 'customer.subscription.updated':
-                # Check if subscription is active
+                # First, update customer's active status as before
                 if subscription.get('status') in ['active', 'trialing']:
-                    # Update customer's active status to true
                     await client.schema('basejump').from_('billing_customers').update(
                         {'active': True}
                     ).eq('id', customer_id).execute()
                     logger.info(f"Webhook: Updated customer {customer_id} active status to TRUE based on {event.type}")
                 else:
-                    # Subscription is not active (e.g., past_due, canceled, etc.)
-                    # Check if customer has any other active subscriptions before updating status
                     has_active = len(stripe.Subscription.list(
                         customer=customer_id,
                         status='active',
@@ -1218,6 +1215,82 @@ async def stripe_webhook(request: Request):
                             {'active': False}
                         ).eq('id', customer_id).execute()
                         logger.info(f"Webhook: Updated customer {customer_id} active status to FALSE based on {event.type}")
+                
+                # Now sync the subscription to billing_subscriptions table
+                # Get the user_id from billing_customers
+                customer_result = await client.schema('basejump').from_('billing_customers')\
+                    .select('account_id').eq('id', customer_id).execute()
+                
+                if not customer_result.data:
+                    # Customer not found, try to get from Stripe and create
+                    stripe_customer = stripe.Customer.retrieve(customer_id)
+                    if stripe_customer and stripe_customer.email:
+                        # Find user by email
+                        auth_result = await client.auth.admin.list_users()
+                        user = next((u for u in auth_result.users if u.email == stripe_customer.email), None)
+                        
+                        if user:
+                            user_id = user.id
+                            # Create billing_customer in basejump
+                            await client.schema('basejump').from_('billing_customers').upsert({
+                                'id': customer_id,
+                                'account_id': user_id,
+                                'email': stripe_customer.email,
+                                'provider': 'stripe',
+                                'active': subscription.get('status') in ['active', 'trialing']
+                            }, on_conflict='id').execute()
+                            # Create in public schema too (different structure)
+                            await client.from_('billing_customers').upsert({
+                                'customer_id': customer_id,
+                                'account_id': user_id,
+                                'email': stripe_customer.email
+                            }, on_conflict='customer_id').execute()
+                        else:
+                            logger.warning(f"User not found for email {stripe_customer.email}")
+                            return {"status": "error", "message": "User not found"}
+                    else:
+                        logger.warning(f"Could not retrieve customer {customer_id} from Stripe")
+                        return {"status": "error", "message": "Customer not found"}
+                else:
+                    user_id = customer_result.data[0]['account_id']
+                
+                # Ensure account exists in public schema
+                account_exists = await client.from_('accounts')\
+                    .select('id').eq('id', user_id).execute()
+                
+                if not account_exists.data:
+                    # Get user email for account name
+                    user_result = await client.auth.admin.get_user_by_id(user_id)
+                    email = user_result.user.email if user_result else 'User'
+                    
+                    await client.from_('accounts').insert({
+                        'id': user_id,
+                        'name': email.split('@')[0] if email else 'User',
+                        'personal_account': True
+                    }).execute()
+                
+                # Sync subscription to billing_subscriptions
+                from datetime import datetime
+                subscription_data = {
+                    'id': subscription['id'],
+                    'account_id': user_id,
+                    'customer_id': customer_id,
+                    'status': subscription['status'],
+                    'price_id': subscription['items']['data'][0]['price']['id'] if subscription.get('items', {}).get('data') else None,
+                    'quantity': subscription['items']['data'][0]['quantity'] if subscription.get('items', {}).get('data') else 1,
+                    'current_period_start': datetime.fromtimestamp(subscription['current_period_start']).isoformat() if subscription.get('current_period_start') else None,
+                    'current_period_end': datetime.fromtimestamp(subscription['current_period_end']).isoformat() if subscription.get('current_period_end') else None,
+                    'cancel_at_period_end': subscription.get('cancel_at_period_end', False),
+                    'created_at': datetime.fromtimestamp(subscription['created']).isoformat() if subscription.get('created') else datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat(),
+                    'metadata': {'synced_from_webhook': True}
+                }
+                
+                await client.from_('billing_subscriptions')\
+                    .upsert(subscription_data, on_conflict='id')\
+                    .execute()
+                
+                logger.info(f"Webhook: Synced subscription {subscription['id']} for customer {customer_id}")
             
             elif event.type == 'customer.subscription.deleted':
                 # Check if customer has any other active subscriptions
@@ -1233,6 +1306,13 @@ async def stripe_webhook(request: Request):
                         {'active': False}
                     ).eq('id', customer_id).execute()
                     logger.info(f"Webhook: Updated customer {customer_id} active status to FALSE after subscription deletion")
+                
+                # Mark subscription as canceled in billing_subscriptions
+                await client.from_('billing_subscriptions')\
+                    .update({'status': 'canceled', 'updated_at': datetime.now().isoformat()})\
+                    .eq('id', subscription['id']).execute()
+                
+                logger.info(f"Webhook: Marked subscription {subscription['id']} as canceled")
             
             logger.info(f"Processed {event.type} event for customer {customer_id}")
         

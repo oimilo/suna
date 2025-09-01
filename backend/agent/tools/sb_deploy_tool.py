@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from agentpress.tool import ToolResult, openapi_schema, xml_schema
 from sandbox.tool_base import SandboxToolsBase
@@ -100,22 +101,52 @@ class SandboxDeployTool(SandboxToolsBase):
                 if not self.cloudflare_api_token:
                     return self.fail_response("CLOUDFLARE_API_TOKEN environment variable not set")
                     
+                # Create a valid project name for Cloudflare Pages
+                # Use first 8 characters of sandbox_id
+                sandbox_prefix = self.sandbox_id[:8].lower()
+                
+                # If it starts with a number, prepend 'p' and remove first char
+                if sandbox_prefix[0].isdigit():
+                    sandbox_prefix = f"p{sandbox_prefix[1:]}"
+                
+                # Clean the user-provided name
+                clean_name = re.sub(r'[^a-z0-9-]', '-', name.lower())
+                clean_name = re.sub(r'-+', '-', clean_name)  # Remove duplicate hyphens
+                clean_name = clean_name.strip('-')  # Remove leading/trailing hyphens
+                
+                # Ensure total name doesn't exceed 58 characters
+                max_length = 58 - len(sandbox_prefix) - 1  # -1 for the hyphen separator
+                if len(clean_name) > max_length:
+                    clean_name = clean_name[:max_length].rstrip('-')
+                
+                project_name = f"{sandbox_prefix}-{clean_name}"
+                
+                # Log for debugging
+                print(f"Original sandbox_id: {self.sandbox_id}")
+                print(f"User provided name: {name}")
+                print(f"Generated project name: {project_name}")
+                print(f"Project name length: {len(project_name)}")
+                
                 # Single command that creates the project if it doesn't exist and then deploys
-                project_name = f"{self.sandbox_id}-{name}"
                 deploy_cmd = f'''cd {self.workspace_path} && export CLOUDFLARE_API_TOKEN={self.cloudflare_api_token} && 
                     (npx wrangler pages deploy {full_path} --project-name {project_name} || 
                     (npx wrangler pages project create {project_name} --production-branch production && 
                     npx wrangler pages deploy {full_path} --project-name {project_name}))'''
 
                 # Execute the command directly using the sandbox's process.exec method
-                response = await self.sandbox.process.exec(f"/bin/sh -c \"{deploy_cmd}\"",
+                response = await self.sandbox.process.exec(f'/bin/sh -c "{deploy_cmd}"',
                                  timeout=300)
                 
                 print(f"Deployment command output: {response.result}")
                 
                 if response.exit_code == 0:
+                    # Extract the deployment URL from the output
+                    deployment_url = f"https://{project_name}.pages.dev"
+                    
                     return self.success_response({
-                        "message": f"Website deployed successfully",
+                        "message": f"Website deployed successfully to {deployment_url}",
+                        "project_name": project_name,
+                        "url": deployment_url,
                         "output": response.result
                     })
                 else:
