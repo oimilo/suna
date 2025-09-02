@@ -203,12 +203,13 @@ function ThreadItem({
 
   const startEditing = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setEditName(thread.projectName);
     setIsEditing(true);
     setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
-    }, 0);
+    }, 50);
   };
 
   const cancelEditing = () => {
@@ -216,7 +217,12 @@ function ThreadItem({
     setEditName(thread.projectName);
   };
 
-  const saveNewName = async () => {
+  const saveNewName = async (e?: React.FocusEvent) => {
+    // Prevent saving when clicking on cancel button
+    if (e?.relatedTarget?.getAttribute('data-cancel') === 'true') {
+      return;
+    }
+    
     if (editName.trim() === '') {
       setEditName(thread.projectName);
       setIsEditing(false);
@@ -279,7 +285,7 @@ function ThreadItem({
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
-              onBlur={saveNewName}
+              onBlur={(e) => saveNewName(e)}
               className="h-6 text-sm px-1.5 py-0.5"
               maxLength={50}
             />
@@ -287,7 +293,7 @@ function ThreadItem({
               variant="ghost"
               size="icon"
               className="h-5 w-5 p-0 hover:bg-black/5 dark:hover:bg-white/5"
-              onClick={saveNewName}
+              onClick={() => saveNewName()}
               disabled={updateProjectMutation.isPending}
             >
               {updateProjectMutation.isPending ? (
@@ -301,6 +307,7 @@ function ThreadItem({
               size="icon"
               className="h-5 w-5 p-0 hover:bg-black/5 dark:hover:bg-white/5"
               onClick={cancelEditing}
+              data-cancel="true"
             >
               <X className="h-3 w-3" />
             </Button>
@@ -349,7 +356,13 @@ function ThreadItem({
               <Share2 className="h-3.5 w-3.5 mr-2" />
               Compartilhar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={startEditing}>
+            <DropdownMenuItem 
+              onClick={startEditing}
+              onSelect={(e) => {
+                e.preventDefault();
+                startEditing(e as any);
+              }}
+            >
               <Edit2 className="h-3.5 w-3.5 mr-2" />
               Renomear
             </DropdownMenuItem>
