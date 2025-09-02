@@ -3,19 +3,15 @@
  * Uses backend endpoints instead of direct Supabase access with service role
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/api'
+import { getFallbackAnalyticsData } from './fallback-api'
 
-interface AdminHeaders {
-  'Content-Type': string
-  'Authorization'?: string
-  'X-Admin-Token'?: string
-}
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/api'
 
 /**
  * Get auth headers for admin requests
  */
-async function getAdminHeaders(): Promise<AdminHeaders> {
-  const headers: AdminHeaders = {
+async function getAdminHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   }
 
@@ -50,41 +46,59 @@ export async function fetchAnalyticsData(period: string = "30d") {
     // Parse period to days
     const days = period === '7d' ? 7 : period === '30d' ? 30 : 90
 
-    // Fetch dashboard stats
-    const dashboardResponse = await fetch(`${BACKEND_URL}/admin/analytics/dashboard`, {
-      headers,
-      cache: 'no-store'
-    })
+    // Fetch dashboard stats with better error handling
+    let dashboardData = null
+    try {
+      const dashboardResponse = await fetch(`${BACKEND_URL}/admin/analytics/dashboard`, {
+        headers,
+        cache: 'no-store'
+      })
 
-    if (!dashboardResponse.ok) {
-      throw new Error(`Dashboard stats failed: ${dashboardResponse.statusText}`)
+      if (dashboardResponse.ok) {
+        dashboardData = await dashboardResponse.json()
+      } else {
+        console.warn(`Dashboard stats failed: ${dashboardResponse.status} ${dashboardResponse.statusText}`)
+      }
+    } catch (error) {
+      console.warn('Dashboard fetch error:', error)
     }
 
-    const dashboardData = await dashboardResponse.json()
-
-    // Fetch charts data in parallel
-    const [userGrowthRes, usageRes, billingRes, healthRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/admin/analytics/charts/user-growth?days=${days}`, { headers }),
-      fetch(`${BACKEND_URL}/admin/analytics/charts/usage?metric=messages_sent&days=${days}`, { headers }),
-      fetch(`${BACKEND_URL}/admin/analytics/billing`, { headers }),
-      fetch(`${BACKEND_URL}/admin/analytics/system-health`, { headers })
-    ])
+    // Fetch charts data in parallel with error handling
+    const fetchWithFallback = async (url: string, headers: Record<string, string>) => {
+      try {
+        const response = await fetch(url, { headers })
+        if (response.ok) {
+          return await response.json()
+        }
+        console.warn(`Failed to fetch ${url}: ${response.status}`)
+        return null
+      } catch (error) {
+        console.warn(`Error fetching ${url}:`, error)
+        return null
+      }
+    }
 
     const [userGrowth, usage, billing, health] = await Promise.all([
-      userGrowthRes.ok ? userGrowthRes.json() : null,
-      usageRes.ok ? usageRes.json() : null,
-      billingRes.ok ? billingRes.json() : null,
-      healthRes.ok ? healthRes.json() : []
+      fetchWithFallback(`${BACKEND_URL}/admin/analytics/charts/user-growth?days=${days}`, headers),
+      fetchWithFallback(`${BACKEND_URL}/admin/analytics/charts/usage?metric=messages_sent&days=${days}`, headers),
+      fetchWithFallback(`${BACKEND_URL}/admin/analytics/billing`, headers),
+      fetchWithFallback(`${BACKEND_URL}/admin/analytics/system-health`, headers)
     ])
+
+    // If all backend calls failed, use fallback
+    if (!dashboardData && !userGrowth && !usage && !billing && !health) {
+      console.warn('All backend analytics endpoints failed, using fallback')
+      return await getFallbackAnalyticsData()
+    }
 
     // Transform backend data to match frontend format
     return {
       userMetrics: {
-        totalUsers: dashboardData.users?.total || 0,
-        activeUsers: dashboardData.users?.active_week || 0,
-        newUsersToday: dashboardData.users?.active_today || 0,
-        newUsersThisWeek: dashboardData.users?.active_week || 0,
-        newUsersThisMonth: dashboardData.users?.total || 0,
+        totalUsers: dashboardData?.users?.total || 0,
+        activeUsers: dashboardData?.users?.active_week || 0,
+        newUsersToday: dashboardData?.users?.active_today || 0,
+        newUsersThisWeek: dashboardData?.users?.active_week || 0,
+        newUsersThisMonth: dashboardData?.users?.total || 0,
         userGrowthData: userGrowth?.data?.map((p: any) => ({
           date: p.timestamp,
           count: p.value
@@ -106,8 +120,8 @@ export async function fetchAnalyticsData(period: string = "30d") {
       },
       conversationMetrics: {
         totalThreads: 0,
-        totalMessages: dashboardData.usage?.messages_today || 0,
-        averageMessagesPerThread: dashboardData.usage?.avg_messages_per_user || 0,
+        totalMessages: dashboardData?.usage?.messages_today || 0,
+        averageMessagesPerThread: dashboardData?.usage?.avg_messages_per_user || 0,
         messageVolumeByHour: [],
         messageGrowthData: usage?.data?.map((p: any) => ({
           date: p.timestamp,
@@ -126,7 +140,7 @@ export async function fetchAnalyticsData(period: string = "30d") {
         successfulRuns: 0,
         failedRuns: 0,
         averageRunDuration: 0,
-        errorRate: dashboardData.system?.error_rate || 0,
+        errorRate: dashboardData?.system?.error_rate || 0,
         commonErrors: []
       },
       toolUsageData: [],
@@ -141,7 +155,7 @@ export async function fetchAnalyticsData(period: string = "30d") {
         revenueGrowthData: []
       },
       systemHealth: health || [],
-      errors: dashboardData.recent_activity?.filter((a: any) => 
+      errors: dashboardData?.recent_activity?.filter((a: any) => 
         a.action?.toLowerCase().includes('error')
       ) || []
     }
