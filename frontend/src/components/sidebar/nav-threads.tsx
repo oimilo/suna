@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, KeyboardEvent } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Star, 
@@ -10,6 +10,9 @@ import {
   ArrowUpRight, 
   Loader2,
   FileText,
+  Edit2,
+  Check,
+  X,
   Lightbulb,
   MessageSquare,
   Calendar,
@@ -46,6 +49,9 @@ import { useThreads, useProjects, processThreadsWithProjects } from '@/hooks/rea
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useFavorites } from '@/contexts/favorites-context';
+import { Input } from '@/components/ui/input';
+import { useUpdateProject } from '@/hooks/react-query/sidebar/use-project-mutations';
+import { toast } from 'sonner';
 
 // Função para determinar ícone baseado no título
 function getIconFromTitle(title: string): LucideIcon {
@@ -185,9 +191,61 @@ function ThreadItem({
   onDelete,
   onShare
 }: ThreadItemProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(thread.projectName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const updateProjectMutation = useUpdateProject();
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onFavorite?.(thread.threadId);
+  };
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditName(thread.projectName);
+    setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditName(thread.projectName);
+  };
+
+  const saveNewName = async () => {
+    if (editName.trim() === '') {
+      setEditName(thread.projectName);
+      setIsEditing(false);
+      return;
+    }
+
+    if (editName !== thread.projectName) {
+      try {
+        await updateProjectMutation.mutateAsync({
+          projectId: thread.projectId,
+          data: { name: editName }
+        });
+        toast.success('Nome atualizado com sucesso');
+      } catch (error) {
+        console.error('Failed to rename:', error);
+        toast.error('Falha ao renomear');
+        setEditName(thread.projectName);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      saveNewName();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
   };
 
   return (
@@ -214,9 +272,44 @@ function ThreadItem({
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         {/* Título */}
-        <h4 className="text-sm font-medium truncate leading-tight mb-0.5">
-          {thread.projectName}
-        </h4>
+        {isEditing ? (
+          <div className="flex items-center gap-1 mb-0.5" onClick={(e) => e.stopPropagation()}>
+            <Input
+              ref={inputRef}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={saveNewName}
+              className="h-6 text-sm px-1.5 py-0.5"
+              maxLength={50}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={saveNewName}
+              disabled={updateProjectMutation.isPending}
+            >
+              {updateProjectMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Check className="h-3 w-3" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 p-0 hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={cancelEditing}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <h4 className="text-sm font-medium truncate leading-tight mb-0.5">
+            {thread.projectName}
+          </h4>
+        )}
         
         {/* Linha inferior com tempo e ações */}
         <div className="flex items-center justify-between">
@@ -255,6 +348,10 @@ function ThreadItem({
             <DropdownMenuItem onClick={() => onShare?.(thread.threadId, thread.projectId)}>
               <Share2 className="h-3.5 w-3.5 mr-2" />
               Compartilhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={startEditing}>
+              <Edit2 className="h-3.5 w-3.5 mr-2" />
+              Renomear
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a
