@@ -2688,15 +2688,15 @@ async def get_agent_tools(
 async def preview_proxy(
     project_id: str,
     path: str,
-    user_id: str = Depends(get_current_user_id_from_jwt),
-    db: DBConnection = Depends(get_db)
+    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """
     Proxy endpoint to serve sandbox files without Daytona preview warning.
     This allows iframes to load content directly from our backend.
     """
     try:
-        client = await db.client
+        db_connection = DBConnection()
+        client = await db_connection.client
         
         # 1. Verify user has access to the project
         project_result = await client.table('projects').select('*')\
