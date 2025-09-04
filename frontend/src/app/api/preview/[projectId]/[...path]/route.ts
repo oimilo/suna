@@ -5,9 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 // This just redirects to Daytona with the skip-warning header
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string; path: string[] } }
+  { params }: { params: Promise<{ projectId: string; path: string[] }> }
 ) {
-  const { projectId, path } = params
+  const { projectId, path } = await params
   const filePath = path.join('/')
   
   // Get current user
