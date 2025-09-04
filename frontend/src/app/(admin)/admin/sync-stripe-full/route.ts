@@ -2,9 +2,15 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil'
-})
+// Initialize Stripe only when the route is called, not at build time
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not set')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil'
+  })
+}
 
 /**
  * Script completo de sincronização Stripe -> Banco de Dados
@@ -20,6 +26,7 @@ export async function GET(request: Request) {
     console.log('🔄 Iniciando sincronização Stripe -> Banco de Dados')
     
     // 1. Buscar TODAS as assinaturas ativas no Stripe
+    const stripe = getStripeClient()
     const subscriptions = await stripe.subscriptions.list({
       status: 'active',
       limit: 100,

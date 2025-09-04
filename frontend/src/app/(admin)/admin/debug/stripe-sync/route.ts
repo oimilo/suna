@@ -2,9 +2,15 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil'
-})
+// Initialize Stripe only when the route is called, not at build time
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not set')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil'
+  })
+}
 
 // Mapeamento de price IDs para planos
 const PRICE_MAP: Record<string, { name: string, amount: number }> = {
@@ -24,6 +30,7 @@ export async function GET(request: Request) {
   try {
     // 1. Buscar todas as assinaturas ativas no Stripe
     console.log('Buscando assinaturas no Stripe...')
+    const stripe = getStripeClient()
     const subscriptions = await stripe.subscriptions.list({
       status: 'active',
       limit: 100,
