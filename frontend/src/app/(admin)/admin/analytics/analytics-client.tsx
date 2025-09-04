@@ -407,7 +407,7 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {initialData.toolMetrics.toolUsageDistribution.slice(0, 5).map((tool) => (
+                {initialData.toolUsageData.slice(0, 5).map((tool) => (
                   <div key={tool.tool} className="flex items-center justify-between p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{tool.tool}</span>
@@ -417,11 +417,11 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
                       <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-emerald-500"
-                          style={{ width: `${tool.successRate}%` }}
+                          style={{ width: `${Math.min(100, (tool.avgDuration / 10) * 100)}%` }}
                         />
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {tool.successRate.toFixed(0)}%
+                        {tool.avgDuration.toFixed(1)}s
                       </span>
                     </div>
                   </div>
@@ -562,13 +562,13 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
               <CardDescription>Tools que mais apresentaram erros</CardDescription>
             </CardHeader>
             <CardContent>
-              {initialData.toolMetrics.failuresByTool.length > 0 ? (
+              {initialData.errors.length > 0 ? (
                 <div className="space-y-3">
-                  {initialData.toolMetrics.failuresByTool.map((tool) => (
-                    <div key={tool.tool} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                      <span className="text-sm font-medium">{tool.tool}</span>
+                  {initialData.errors.slice(0, 5).map((error) => (
+                    <div key={error.timestamp} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                      <span className="text-sm font-medium">{error.error}</span>
                       <Badge className="bg-amber-500 text-white hover:bg-amber-600">
-                        {tool.failures} falhas
+                        {error.count} ocorrências
                       </Badge>
                     </div>
                   ))}
@@ -616,7 +616,7 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
                 <Zap className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{initialData.toolMetrics.failuresByTool.length}</div>
+                <div className="text-2xl font-bold">{initialData.errors.length}</div>
                 <p className="text-xs text-muted-foreground">
                   ferramentas com falhas
                 </p>
