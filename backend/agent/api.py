@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Body, File, UploadFile, Form, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 import asyncio
 import json
 import traceback
@@ -2682,6 +2682,124 @@ async def get_agent_tools(
         for tool_name in enabled_tools:
             mcp_tools.append({"name": tool_name, "server": server, "enabled": True})
     return {"agentpress_tools": agentpress_tools, "mcp_tools": mcp_tools}
+
+
+@router.get("/preview/{project_id}/{path:path}")
+async def preview_proxy(
+    project_id: str,
+    path: str,
+    user_id: str = Depends(get_current_user_id_from_jwt),
+    db: DBConnection = Depends(get_db)
+):
+    """
+    Proxy endpoint to serve sandbox files without Daytona preview warning.
+    This allows iframes to load content directly from our backend.
+    """
+    try:
+        client = await db.client
+        
+        # 1. Verify user has access to the project
+        project_result = await client.table('projects').select('*')\
+            .eq('project_id', project_id)\
+            .eq('account_id', user_id)\
+            .single()\
+            .execute()
+        
+        if not project_result.data:
+            raise HTTPException(status_code=403, detail="Access denied to project")
+        
+        project_data = project_result.data
+        
+        # 2. Check if project has a sandbox
+        if not project_data.get('sandbox') or not project_data['sandbox'].get('id'):
+            raise HTTPException(status_code=404, detail="No sandbox found for this project")
+        
+        sandbox_id = project_data['sandbox']['id']
+        
+        # 3. Get or start the sandbox
+        try:
+            sandbox = await get_or_start_sandbox(sandbox_id)
+        except Exception as e:
+            logger.error(f"Failed to get/start sandbox {sandbox_id}: {str(e)}")
+            raise HTTPException(status_code=503, detail="Sandbox unavailable")
+        
+        # 4. Clean and prepare the file path
+        # Remove any ../ attempts and leading slashes
+        clean_path = path.replace('../', '').strip('/')
+        
+        # If path is empty or ends with /, try index.html
+        if not clean_path or clean_path.endswith('/'):
+            clean_path = f"{clean_path}index.html" if clean_path else "index.html"
+        
+        full_path = f"/workspace/{clean_path}"
+        
+        # 5. Try to download the file
+        try:
+            file_content = await sandbox.fs.download_file(full_path)
+        except Exception as e:
+            # If file not found and no extension, try adding index.html
+            if '.' not in clean_path.split('/')[-1]:
+                try:
+                    full_path = f"/workspace/{clean_path}/index.html"
+                    file_content = await sandbox.fs.download_file(full_path)
+                    clean_path = f"{clean_path}/index.html"
+                except:
+                    raise HTTPException(status_code=404, detail=f"File not found: {path}")
+            else:
+                raise HTTPException(status_code=404, detail=f"File not found: {path}")
+        
+        # 6. Determine content type based on file extension
+        content_type = "application/octet-stream"  # default
+        
+        if clean_path.endswith('.html'):
+            content_type = "text/html; charset=utf-8"
+        elif clean_path.endswith('.css'):
+            content_type = "text/css; charset=utf-8"
+        elif clean_path.endswith('.js'):
+            content_type = "application/javascript; charset=utf-8"
+        elif clean_path.endswith('.json'):
+            content_type = "application/json"
+        elif clean_path.endswith('.png'):
+            content_type = "image/png"
+        elif clean_path.endswith('.jpg') or clean_path.endswith('.jpeg'):
+            content_type = "image/jpeg"
+        elif clean_path.endswith('.gif'):
+            content_type = "image/gif"
+        elif clean_path.endswith('.svg'):
+            content_type = "image/svg+xml"
+        elif clean_path.endswith('.ico'):
+            content_type = "image/x-icon"
+        elif clean_path.endswith('.txt'):
+            content_type = "text/plain; charset=utf-8"
+        elif clean_path.endswith('.xml'):
+            content_type = "application/xml"
+        elif clean_path.endswith('.pdf'):
+            content_type = "application/pdf"
+        elif clean_path.endswith('.woff'):
+            content_type = "font/woff"
+        elif clean_path.endswith('.woff2'):
+            content_type = "font/woff2"
+        elif clean_path.endswith('.ttf'):
+            content_type = "font/ttf"
+        elif clean_path.endswith('.otf'):
+            content_type = "font/otf"
+        
+        # 7. Return the file content with appropriate headers
+        return Response(
+            content=file_content,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+                "X-Frame-Options": "SAMEORIGIN",  # Allow iframe from same origin
+                "X-Content-Type-Options": "nosniff"  # Prevent MIME type sniffing
+            }
+        )
+        
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logger.error(f"Error in preview proxy: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 

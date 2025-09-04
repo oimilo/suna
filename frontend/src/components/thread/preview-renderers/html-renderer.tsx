@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Code, Monitor, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import type { Project } from '@/lib/api';
 
 interface HtmlRendererProps {
@@ -55,13 +54,17 @@ export function HtmlRenderer({
         }
     }, [previewUrl]);
 
-    // Construct HTML file preview URL using the same logic as FileRenderer
+    // Construct HTML file preview URL using our preview proxy
     const htmlPreviewUrl = useMemo(() => {
-        if (project?.sandbox?.sandbox_url && fileName) {
-            return constructHtmlPreviewUrl(project.sandbox.sandbox_url, fileName);
+        // Use our preview proxy endpoint instead of Daytona's direct URL
+        if (project?.project_id && fileName) {
+            // Clean the filename path
+            const cleanFileName = fileName.replace(/^\/workspace\//, '').replace(/^\//, '');
+            return `/api/agents/preview/${project.project_id}/${cleanFileName}`;
         }
+        // Fallback to blob URL if no project
         return blobHtmlUrl || previewUrl;
-    }, [project?.sandbox?.sandbox_url, fileName, blobHtmlUrl, previewUrl]);
+    }, [project?.project_id, fileName, blobHtmlUrl, previewUrl]);
 
     // Clean up blob URL on unmount
     useEffect(() => {
