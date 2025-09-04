@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia'
+  apiVersion: '2025-08-27.basil'
 })
 
 // Mapeamento de price IDs para planos
@@ -61,8 +61,8 @@ export async function GET(request: Request) {
         price_id: priceId,
         amount: priceInfo.amount,
         status: sub.status,
-        current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        current_period_start: new Date((sub as any).current_period_start * 1000).toISOString(),
+        current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
         created: new Date(sub.created * 1000).toISOString()
       }
       

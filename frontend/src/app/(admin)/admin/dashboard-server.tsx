@@ -121,8 +121,8 @@ export async function getDashboardData() {
       totalAgents: agents?.length || 0,
       totalMessages: messagesCount || 0,
       proUsers: proUsersCount,
-      newUsersToday: authUsers?.users?.filter(u => new Date(u.created_at) >= todayStart).length || 0,
-      newUsersWeek: authUsers?.users?.filter(u => new Date(u.created_at) >= weekAgo).length || 0,
+      newUsersToday: authUsers?.users?.filter((u: any) => u.created_at && new Date(u.created_at) >= todayStart).length || 0,
+      newUsersWeek: authUsers?.users?.filter((u: any) => u.created_at && new Date(u.created_at) >= weekAgo).length || 0,
       totalAccounts: accounts?.length || 0  // Total de contas/organizações
     }
     

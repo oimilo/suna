@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia'
+  apiVersion: '2025-08-27.basil'
 })
 
 /**
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     
     // 2. Buscar todos os usuários do sistema
     const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const usersByEmail = new Map(authUsers?.users?.map(u => [u.email, u]) || [])
+    const usersByEmail = new Map(authUsers?.users?.map((u: any) => [u.email, u] as [string, any]) || [])
     
     const results = {
       total: subscriptions.data.length,
@@ -152,8 +152,8 @@ export async function GET(request: Request) {
           price_id: priceId,
           quantity: sub.items.data[0]?.quantity || 1,
           cancel_at_period_end: sub.cancel_at_period_end,
-          current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          current_period_start: new Date((sub as any).current_period_start * 1000).toISOString(),
+          current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
           created: new Date(sub.created * 1000).toISOString(),
           created_at: new Date(sub.created * 1000).toISOString(),
           updated_at: new Date().toISOString(),
@@ -208,7 +208,7 @@ export async function GET(request: Request) {
     }
     
     // 7. Verificar resultado final
-    const { data: finalCount } = await supabase
+    const { count: finalCount } = await supabase
       .from('billing_subscriptions')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
@@ -244,7 +244,7 @@ export async function GET(request: Request) {
       executed: execute,
       results,
       database_status: {
-        total_active_subscriptions: finalCount?.count || 0
+        total_active_subscriptions: finalCount || 0
       },
       target_users: targetUsersStatus,
       instructions: execute 

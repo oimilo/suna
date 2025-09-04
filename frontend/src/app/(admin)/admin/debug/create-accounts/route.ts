@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     
     // Buscar usuários
     const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const targetUsers = authUsers?.users?.filter(u => 
+    const targetUsers = authUsers?.users?.filter((u: any) => 
       targetEmails.includes(u.email || '')
     ) || []
     

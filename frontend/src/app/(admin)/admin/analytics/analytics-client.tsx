@@ -714,9 +714,9 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
               <CardDescription>Potencial de conversão</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{initialData.revenueMetrics.trialUsers}</div>
+              <div className="text-3xl font-bold">{Math.max(0, initialData.userMetrics.totalUsers - Math.round(initialData.revenueMetrics.mrr / 99))}</div>
               <p className="text-xs text-muted-foreground mt-2">
-                Potencial MRR adicional: R$ {(initialData.revenueMetrics.trialUsers * 97).toFixed(2)}
+                Potencial MRR adicional: R$ {(Math.max(0, initialData.userMetrics.totalUsers - Math.round(initialData.revenueMetrics.mrr / 99)) * 97).toFixed(2)}
               </p>
             </CardContent>
           </Card>

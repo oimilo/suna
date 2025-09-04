@@ -1,5 +1,4 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/supabase'
 
 /**
  * Creates a Supabase client with service role key for admin operations
@@ -14,7 +13,7 @@ export function createAdminClient() {
     throw new Error('Supabase admin credentials not configured')
   }
 
-  return createSupabaseClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+  return createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
