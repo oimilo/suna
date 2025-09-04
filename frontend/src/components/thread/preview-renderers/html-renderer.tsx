@@ -56,13 +56,25 @@ export function HtmlRenderer({
 
     // Construct HTML file preview URL using our preview proxy
     const htmlPreviewUrl = useMemo(() => {
+        console.log('[HtmlRenderer] Computing preview URL:', {
+            hasProject: !!project,
+            projectId: project?.project_id,
+            fileName,
+            previewUrl,
+            blobHtmlUrl
+        });
+        
         // Use our preview proxy endpoint instead of Daytona's direct URL
         if (project?.project_id && fileName) {
             // Clean the filename path
             const cleanFileName = fileName.replace(/^\/workspace\//, '').replace(/^\//, '');
-            return `/api/agents/preview/${project.project_id}/${cleanFileName}`;
+            const proxyUrl = `/api/preview/${project.project_id}/${cleanFileName}`;
+            console.log('[HtmlRenderer] Using proxy URL:', proxyUrl);
+            return proxyUrl;
         }
+        
         // Fallback to blob URL if no project
+        console.log('[HtmlRenderer] Falling back to:', blobHtmlUrl || previewUrl);
         return blobHtmlUrl || previewUrl;
     }, [project?.project_id, fileName, blobHtmlUrl, previewUrl]);
 
