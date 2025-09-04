@@ -169,7 +169,7 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
         <MetricCard
           title="MRR"
           value={`R$ ${initialData.revenueMetrics.mrr.toFixed(2)}`}
-          change={`${initialData.revenueMetrics.activeSubscriptions} assinaturas`}
+          change={`${Math.round(initialData.revenueMetrics.mrr / 99)} assinaturas ativas`}
           icon={DollarSign}
           trend="up"
         />
@@ -229,7 +229,7 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
                   {initialData.revenueMetrics.conversionRate.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {initialData.revenueMetrics.activeSubscriptions} de {initialData.userMetrics.totalUsers} usuários
+                  {Math.round(initialData.revenueMetrics.mrr / 99)} de {initialData.userMetrics.totalUsers} usuários
                 </p>
               </CardContent>
             </Card>
@@ -650,7 +650,7 @@ export function AnalyticsClient({ initialData, initialPeriod }: AnalyticsClientP
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {initialData.revenueMetrics.activeSubscriptions}
+                  {Math.round(initialData.revenueMetrics.mrr / 99)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   usuários pagantes
