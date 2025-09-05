@@ -86,3 +86,29 @@ class SandboxToolsBase(Tool):
         cleaned_path = clean_path(path, self.workspace_path)
         logger.debug(f"Cleaned path: {path} -> {cleaned_path}")
         return cleaned_path
+
+    async def get_proxy_preview_url(self, file_path: str = "", port: int = 8080) -> str:
+        """Get the proxy preview URL for a file that avoids Daytona warning.
+        
+        Args:
+            file_path: Path to the file relative to /workspace (default: empty for root)
+            port: Port number (default: 8080, currently only 8080 is supported)
+        
+        Returns:
+            The proxy URL that will be handled by our Next.js API route
+        """
+        # Clean the file path
+        if file_path:
+            file_path = file_path.replace('/workspace/', '').replace('/workspace', '').lstrip('/')
+        
+        # For now, we only support port 8080 through our proxy
+        if port != 8080:
+            # If not port 8080, fall back to Daytona URL (for VNC etc)
+            preview_link = await self.sandbox.get_preview_link(port)
+            return preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+        
+        # Build the proxy URL using our API route
+        if file_path:
+            return f"https://www.prophet.build/api/preview/{self.project_id}/{file_path}"
+        else:
+            return f"https://www.prophet.build/api/preview/{self.project_id}/"

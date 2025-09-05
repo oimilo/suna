@@ -79,11 +79,12 @@ class SandboxExposeTool(SandboxToolsBase):
                     # If we can't check, proceed anyway - the user might be starting a service
                     pass
 
-            # Get the preview link for the specified port
-            preview_link = await self.sandbox.get_preview_link(port)
-            
-            # Extract the actual URL from the preview link object
-            url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            # Get the preview URL using our proxy for port 8080, or Daytona for other ports
+            if port == 8080:
+                url = await self.get_proxy_preview_url("", port)
+            else:
+                preview_link = await self.sandbox.get_preview_link(port)
+                url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
             
             return self.success_response({
                 "url": url,
