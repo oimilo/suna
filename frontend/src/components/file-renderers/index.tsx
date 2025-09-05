@@ -9,7 +9,6 @@ import { ImageRenderer } from './image-renderer';
 import { BinaryRenderer } from './binary-renderer';
 // Use the HtmlRenderer with proxy support from thread components
 import { HtmlRenderer } from '../thread/preview-renderers/html-renderer';
-import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CsvRenderer } from './csv-renderer';
 
 export type FileType =
@@ -170,10 +169,10 @@ export function FileRenderer({
     return undefined;
   }, [isHtmlFile, content, project?.sandbox?.sandbox_url]);
 
-  // Construct HTML file preview URL if we have a sandbox and the file is HTML
+  // Construct HTML file preview URL using proxy to avoid Daytona warning
   const htmlPreviewUrl =
-    isHtmlFile && project?.sandbox?.sandbox_url && fileName
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, fileName)
+    isHtmlFile && project && fileName
+      ? `/api/preview/${(project as any)?.project_id || (project as any)?.id}/${fileName.replace(/^\/workspace\//, '').replace(/^\//, '')}`
       : blobHtmlUrl; // Use blob URL as fallback
 
   // Clean up blob URL on unmount

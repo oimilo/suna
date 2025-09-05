@@ -25,7 +25,6 @@ import { CsvRenderer } from '@/components/file-renderers/csv-renderer';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
-import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import {
   Card,
   CardContent,
@@ -116,9 +115,10 @@ export function FileOperationToolView({
   const hasHighlighting = hasLanguageHighlighting(language);
   const contentLines = splitContentIntoLines(fileContent);
 
+  // Use proxy URL instead of Daytona URL to avoid warning
   const htmlPreviewUrl =
-    isHtml && project?.sandbox?.sandbox_url && processedFilePath
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath)
+    isHtml && project && processedFilePath
+      ? `/api/preview/${(project as any)?.project_id || (project as any)?.id}/${processedFilePath.replace(/^\/workspace\//, '').replace(/^\//, '')}`
       : undefined;
 
   const FileIcon = getFileIcon(fileName);
