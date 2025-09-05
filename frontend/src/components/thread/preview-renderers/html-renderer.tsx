@@ -56,19 +56,21 @@ export function HtmlRenderer({
 
     // Construct HTML file preview URL using our preview proxy
     const htmlPreviewUrl = useMemo(() => {
+        // Note: Project type uses 'id' not 'project_id'
+        const projectId = (project as any)?.project_id || (project as any)?.id;
+        
         console.log('[HtmlRenderer] Computing preview URL:', {
             hasProject: !!project,
-            projectId: project?.project_id,
+            projectId: projectId,
+            projectKeys: project ? Object.keys(project) : [],
             fileName,
             previewUrl,
             blobHtmlUrl
         });
-        
-        // Use our preview proxy endpoint instead of Daytona's direct URL
-        if (project?.project_id && fileName) {
+        if (projectId && fileName) {
             // Clean the filename path
             const cleanFileName = fileName.replace(/^\/workspace\//, '').replace(/^\//, '');
-            const proxyUrl = `/api/preview/${project.project_id}/${cleanFileName}`;
+            const proxyUrl = `/api/preview/${projectId}/${cleanFileName}`;
             console.log('[HtmlRenderer] Using proxy URL:', proxyUrl);
             return proxyUrl;
         }
@@ -76,7 +78,7 @@ export function HtmlRenderer({
         // Fallback to blob URL if no project
         console.log('[HtmlRenderer] Falling back to:', blobHtmlUrl || previewUrl);
         return blobHtmlUrl || previewUrl;
-    }, [project?.project_id, fileName, blobHtmlUrl, previewUrl]);
+    }, [project, fileName, blobHtmlUrl, previewUrl]);
 
     // Clean up blob URL on unmount
     useEffect(() => {
