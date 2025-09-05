@@ -7,7 +7,8 @@ import { CodeRenderer } from './code-renderer';
 import { PdfRenderer } from './pdf-renderer';
 import { ImageRenderer } from './image-renderer';
 import { BinaryRenderer } from './binary-renderer';
-import { HtmlRenderer } from './html-renderer';
+// Use the HtmlRenderer with proxy support from thread components
+import { HtmlRenderer } from '../thread/preview-renderers/html-renderer';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CsvRenderer } from './csv-renderer';
 
@@ -26,12 +27,13 @@ interface FileRendererProps {
   fileName: string;
   className?: string;
   project?: {
+    project_id?: string;
     sandbox?: {
       sandbox_url?: string;
       vnc_preview?: string;
       pass?: string;
     };
-  };
+  } | any;
   markdownRef?: React.RefObject<HTMLDivElement>;
   onDownload?: () => void;
   isDownloading?: boolean;
@@ -200,6 +202,7 @@ export function FileRenderer({
           content={content || ''}
           previewUrl={htmlPreviewUrl || ''}
           className="w-full h-full"
+          project={project}
         />
       ) : fileType === 'code' || fileType === 'text' ? (
         <CodeRenderer
