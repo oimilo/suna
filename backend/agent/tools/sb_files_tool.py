@@ -152,11 +152,13 @@ class SandboxFilesTool(SandboxToolsBase):
             # Check if index.html was created and add 8080 server info (only in root workspace)
             if file_path.lower() == 'index.html':
                 try:
+                    logger.info(f"Detected index.html creation, getting proxy URL for project {self.project_id}")
                     website_url = await self.get_proxy_preview_url(file_path)
+                    logger.info(f"Got proxy URL: {website_url}")
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.error(f"Failed to get website URL for index.html: {str(e)}", exc_info=True)
             
             return self.success_response(message)
         except Exception as e:
@@ -310,11 +312,13 @@ class SandboxFilesTool(SandboxToolsBase):
             # Check if index.html was rewritten and add 8080 server info (only in root workspace)
             if file_path.lower() == 'index.html':
                 try:
+                    logger.info(f"Detected index.html rewrite, getting proxy URL for project {self.project_id}")
                     website_url = await self.get_proxy_preview_url(file_path)
+                    logger.info(f"Got proxy URL: {website_url}")
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.error(f"Failed to get website URL for index.html: {str(e)}", exc_info=True)
             
             return self.success_response(message)
         except Exception as e:

@@ -97,6 +97,9 @@ class SandboxToolsBase(Tool):
         Returns:
             The proxy URL that will be handled by our Next.js API route
         """
+        # Debug log
+        logger.info(f"get_proxy_preview_url called with file_path={file_path}, port={port}, project_id={self.project_id}")
+        
         # Clean the file path
         if file_path:
             file_path = file_path.replace('/workspace/', '').replace('/workspace', '').lstrip('/')
@@ -108,7 +111,7 @@ class SandboxToolsBase(Tool):
             return preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
         
         # Build the proxy URL using our API route
-        if file_path:
-            return f"https://www.prophet.build/api/preview/{self.project_id}/{file_path}"
-        else:
-            return f"https://www.prophet.build/api/preview/{self.project_id}/"
+        proxy_url = f"https://www.prophet.build/api/preview/{self.project_id}/{file_path}" if file_path else f"https://www.prophet.build/api/preview/{self.project_id}/"
+        logger.info(f"Returning proxy URL: {proxy_url}")
+        
+        return proxy_url
