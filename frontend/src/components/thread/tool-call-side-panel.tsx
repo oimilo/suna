@@ -3,17 +3,18 @@
 import { Project } from '@/lib/api';
 import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
 import React from 'react';
-import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Radio, Maximize2, Minimize2 } from 'lucide-react';
+import { CircleDashed, X, Computer, Radio, Maximize2, Minimize2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ToolView } from './tool-views/wrapper';
+import { formatTimestamp } from './tool-views/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BRANDING } from '@/lib/branding';
 import { useSidebarContext } from '@/contexts/sidebar-context';
+import { ToolNavigationDropdown } from './tool-navigation-dropdown';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -51,6 +52,7 @@ interface ToolCallSidePanelProps {
   agentName?: string;
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
+  onRequestOpen?: () => void;
 }
 
 interface ToolCallSnapshot {
@@ -77,12 +79,16 @@ export function ToolCallSidePanel({
   agentName,
   onFileClick,
   disableInitialAnimation,
+  onRequestOpen,
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
   const [navigationMode, setNavigationMode] = React.useState<'live' | 'manual'>('live');
   const [toolCallSnapshots, setToolCallSnapshots] = React.useState<ToolCallSnapshot[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [mainDeliveryIndex, setMainDeliveryIndex] = React.useState<number>(-1);
+  const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = React.useState(false);
 
   const isMobile = useIsMobile();
   
@@ -98,6 +104,113 @@ export function ToolCallSidePanel({
   const handleClose = React.useCallback(() => {
     onClose();
   }, [onClose]);
+
+  // Padrões de arquivos principais por tipo de projeto
+  const FILE_PATTERNS = {
+    web: ['index.html', 'home.html', 'main.html', 'app.html'],
+    game: ['game.html', 'play.html', 'index.html', 'main.js'],
+    python: ['main.py', 'app.py', 'server.py', 'bot.py', 'script.py'],
+    node: ['index.js', 'app.js', 'server.js', 'main.js', 'index.ts'],
+    dashboard: ['dashboard.html', 'admin.html', 'panel.html', 'index.html'],
+    api: ['webhook.js', 'api.py', 'handler.js', 'function.js']
+  };
+
+  // Detecta se é um momento de entrega relevante
+  const isDeliveryMoment = (toolCall: ToolCallInput): boolean => {
+    const name = toolCall.assistantCall?.name;
+    if (!name) return false;
+
+    // Prioridade 1: Arquivos criados
+    if (name === 'create-file' || name === 'full-file-rewrite') {
+      const rawContent = toolCall.assistantCall?.content;
+      // Converte para string se necessário
+      const content = typeof rawContent === 'string' 
+        ? rawContent 
+        : rawContent ? JSON.stringify(rawContent) : '';
+      
+      // Verifica se é um arquivo potencialmente principal
+      const allPatterns = Object.values(FILE_PATTERNS).flat();
+      return allPatterns.some(pattern => content.includes(pattern));
+    }
+
+    // Prioridade 2: Deploy ou exposição de serviço
+    if (name === 'deploy' || name === 'expose-port') {
+      return true;
+    }
+
+    // Prioridade 3: Configurações de integração
+    if (name === 'create-credential-profile' || name === 'connect-credential-profile') {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Detecta o arquivo principal baseado no contexto do projeto
+  const detectMainFile = (calls: ToolCallInput[]): number => {
+    const fileCreations = calls
+      .map((tc, idx) => ({ tc, idx }))
+      .filter(({ tc }) => {
+        const name = tc.assistantCall?.name;
+        return name === 'create-file' || name === 'full-file-rewrite';
+      });
+
+    if (fileCreations.length === 0) return -1;
+
+    // Converte content para string de forma segura
+    const getContentAsString = (content: any): string => {
+      if (typeof content === 'string') return content;
+      if (content) return JSON.stringify(content);
+      return '';
+    };
+
+    // Tenta detectar o contexto do projeto baseado em todos os arquivos criados
+    const allFiles = fileCreations.map(({ tc }) => 
+      getContentAsString(tc.assistantCall?.content)
+    ).join(' ');
+    
+    // Procura por padrões na ordem de prioridade
+    const patterns = [
+      ...FILE_PATTERNS.web,    // Prioridade para web
+      ...FILE_PATTERNS.game,   // Depois jogos
+      ...FILE_PATTERNS.python, // Depois Python
+      ...FILE_PATTERNS.node,   // Depois Node
+      ...FILE_PATTERNS.dashboard,
+      ...FILE_PATTERNS.api
+    ];
+
+    // Procura arquivo principal nos padrões
+    for (const pattern of patterns) {
+      const match = fileCreations.find(({ tc }) => {
+        const content = getContentAsString(tc.assistantCall?.content);
+        return content.includes(pattern);
+      });
+      if (match) return match.idx;
+    }
+
+    // Fallback: último arquivo HTML ou primeiro arquivo criado
+    const htmlFile = fileCreations.findLast(({ tc }) => {
+      const content = getContentAsString(tc.assistantCall?.content);
+      return content.includes('.html');
+    });
+    
+    return htmlFile?.idx ?? fileCreations[0]?.idx ?? -1;
+  };
+
+  // Verifica se é uma operação técnica que deve ser ocultada
+  const isTechnicalOperation = (name?: string): boolean => {
+    if (!name) return false;
+    const technicalOps = [
+      'execute-command',
+      'str-replace',
+      'edit-file',
+      'read-file',
+      'check-command-output',
+      'list-commands',
+      'terminate-command'
+    ];
+    return technicalOps.includes(name);
+  };
 
   React.useEffect(() => {
     const newSnapshots = toolCalls.map((toolCall, index) => ({
@@ -162,6 +275,39 @@ export function ToolCallSidePanel({
       setInternalIndex(Math.min(currentIndex, toolCallSnapshots.length - 1));
     }
   }, [isOpen, currentIndex, isInitialized, toolCallSnapshots.length]);
+
+  // Auto-abertura inteligente e navegação para arquivo principal
+  React.useEffect(() => {
+    if (!toolCalls.length || hasUserInteracted || isLoading) return;
+
+    // Detecta se há entregas relevantes
+    const hasDelivery = toolCalls.some(tc => isDeliveryMoment(tc));
+    
+    if (hasDelivery) {
+      // Encontra o arquivo principal
+      const mainIdx = detectMainFile(toolCalls);
+      
+      // Se não encontrou arquivo principal, procura por outras entregas importantes
+      const deliveryIdx = mainIdx > -1 ? mainIdx : toolCalls.findIndex(tc => {
+        const name = tc.assistantCall?.name;
+        return name === 'deploy' || name === 'expose-port' || 
+               name === 'create-credential-profile';
+      });
+      
+      if (deliveryIdx > -1) {
+        setMainDeliveryIndex(deliveryIdx);
+        // Navega para a entrega principal
+        setInternalIndex(deliveryIdx);
+        
+        // Se o painel está fechado e detectamos uma entrega importante,
+        // solicita abertura do painel
+        if (!isOpen && navigationMode === 'live' && onRequestOpen) {
+          onNavigate(deliveryIdx);
+          onRequestOpen();
+        }
+      }
+    }
+  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isLoading, onNavigate, onRequestOpen]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];
@@ -270,9 +416,34 @@ export function ToolCallSidePanel({
   const showJumpToLatest = navigationMode === 'manual' && agentStatus !== 'running';
 
   const navigateToPrevious = React.useCallback(() => {
+    setHasUserInteracted(true); // Marca que o usuário interagiu
+    
     if (displayIndex > 0) {
-      const targetCompletedIndex = displayIndex - 1;
-      const targetSnapshot = completedToolCalls[targetCompletedIndex];
+      let targetIndex = displayIndex - 1;
+      
+      // Se estamos ocultando detalhes técnicos, pula operações técnicas
+      if (!showTechnicalDetails) {
+        while (targetIndex > 0) {
+          const snapshot = completedToolCalls[targetIndex];
+          const name = snapshot?.toolCall?.assistantCall?.name;
+          
+          // Pula operações técnicas
+          if (isTechnicalOperation(name)) {
+            targetIndex--;
+            continue;
+          }
+          
+          // Pula 'complete' se não for a entrega principal
+          if (name === 'complete' && mainDeliveryIndex > -1 && targetIndex !== mainDeliveryIndex) {
+            targetIndex--;
+            continue;
+          }
+          
+          break;
+        }
+      }
+      
+      const targetSnapshot = completedToolCalls[targetIndex];
       if (targetSnapshot) {
         const actualIndex = toolCallSnapshots.findIndex(s => s.id === targetSnapshot.id);
         if (actualIndex >= 0) {
@@ -281,16 +452,44 @@ export function ToolCallSidePanel({
         }
       }
     }
-  }, [displayIndex, completedToolCalls, toolCallSnapshots, internalNavigate]);
+  }, [displayIndex, completedToolCalls, toolCallSnapshots, internalNavigate, showTechnicalDetails, mainDeliveryIndex]);
 
   const navigateToNext = React.useCallback(() => {
+    setHasUserInteracted(true); // Marca que o usuário interagiu
+    
     if (displayIndex < displayTotalCalls - 1) {
-      const targetCompletedIndex = displayIndex + 1;
-      const targetSnapshot = completedToolCalls[targetCompletedIndex];
+      let targetIndex = displayIndex + 1;
+      
+      // Se estamos ocultando detalhes técnicos, pula operações técnicas
+      if (!showTechnicalDetails) {
+        while (targetIndex < displayTotalCalls) {
+          const snapshot = completedToolCalls[targetIndex];
+          const name = snapshot?.toolCall?.assistantCall?.name;
+          
+          // Pula operações técnicas
+          if (isTechnicalOperation(name)) {
+            targetIndex++;
+            continue;
+          }
+          
+          // Pula 'complete' se não for a entrega principal e houver arquivo principal
+          if (name === 'complete' && mainDeliveryIndex > -1 && targetIndex !== mainDeliveryIndex) {
+            targetIndex++;
+            continue;
+          }
+          
+          break;
+        }
+        
+        // Garante que não ultrapassa o limite
+        targetIndex = Math.min(targetIndex, displayTotalCalls - 1);
+      }
+      
+      const targetSnapshot = completedToolCalls[targetIndex];
       if (targetSnapshot) {
         const actualIndex = toolCallSnapshots.findIndex(s => s.id === targetSnapshot.id);
         if (actualIndex >= 0) {
-          const isLatestCompleted = targetCompletedIndex === completedToolCalls.length - 1;
+          const isLatestCompleted = targetIndex === completedToolCalls.length - 1;
           if (isLatestCompleted) {
             setNavigationMode('live');
           } else {
@@ -300,7 +499,7 @@ export function ToolCallSidePanel({
         }
       }
     }
-  }, [displayIndex, displayTotalCalls, completedToolCalls, toolCallSnapshots, internalNavigate]);
+  }, [displayIndex, displayTotalCalls, completedToolCalls, toolCallSnapshots, internalNavigate, showTechnicalDetails, mainDeliveryIndex]);
 
   const jumpToLive = React.useCallback(() => {
     setNavigationMode('live');
@@ -722,79 +921,30 @@ export function ToolCallSidePanel({
                 isMobile ? 'p-2' : 'px-4 py-2.5',
               )}
             >
-              {isMobile ? (
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={navigateToPrevious}
-                    disabled={displayIndex <= 0}
-                    className="h-8 px-2.5 text-xs"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tabular-nums min-w-[44px]">
-                      {displayIndex + 1}/{displayTotalCalls}
-                    </span>
-                    {renderStatusButton()}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={navigateToNext}
-                    disabled={displayIndex >= displayTotalCalls - 1}
-                    className="h-8 px-2.5 text-xs"
-                  >
-                    <span>Próximo</span>
-                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                  </Button>
+              <div className="flex items-center justify-between w-full">
+                <ToolNavigationDropdown
+                  toolCallSnapshots={toolCallSnapshots}
+                  currentIndex={safeInternalIndex}
+                  mainDeliveryIndex={mainDeliveryIndex}
+                  onNavigate={(index) => {
+                    setNavigationMode('manual');
+                    internalNavigate(index, 'user_explicit');
+                    setHasUserInteracted(true);
+                  }}
+                  showTechnicalDetails={showTechnicalDetails}
+                  onToggleTechnicalDetails={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                  isTechnicalOperation={isTechnicalOperation}
+                  isDeliveryMoment={isDeliveryMoment}
+                />
+                
+                <div className="text-xs text-muted-foreground/60">
+                  {displayToolCall?.toolResult?.timestamp && !isStreaming
+                    ? formatTimestamp(displayToolCall.toolResult.timestamp)
+                    : displayToolCall?.assistantCall?.timestamp
+                      ? formatTimestamp(displayToolCall.assistantCall.timestamp)
+                      : ""}
                 </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={navigateToPrevious}
-                      disabled={displayIndex <= 0}
-                      className="h-7 w-7 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tabular-nums px-1 min-w-[44px] text-center">
-                      {displayIndex + 1}/{displayTotalCalls}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={navigateToNext}
-                      disabled={displayIndex >= displayTotalCalls - 1}
-                      className="h-7 w-7 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex-1 relative">
-                    <Slider
-                      min={0}
-                      max={displayTotalCalls - 1}
-                      step={1}
-                      value={[displayIndex]}
-                      onValueChange={handleSliderChange}
-                      className="w-full [&>span:first-child]:h-1.5 [&>span:first-child]:bg-zinc-200 dark:[&>span:first-child]:bg-zinc-800 [&>span:first-child>span]:bg-zinc-500 dark:[&>span:first-child>span]:bg-zinc-400 [&>span:first-child>span]:h-1.5"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {renderStatusButton()}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           )}
         </motion.div>

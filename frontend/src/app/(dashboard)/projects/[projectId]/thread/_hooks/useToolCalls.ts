@@ -213,11 +213,10 @@ export function useToolCalls(
         setCurrentToolIndex(historicalToolPairs.length - 1);
       } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
-      } else if (!isSidePanelOpen && !autoOpenedPanel && !userClosedPanelRef.current) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
-        setIsSidePanelOpen(true);
-        setAutoOpenedPanel(true);
       }
+      // Removido: auto-abertura genérica do painel
+      // O painel agora só abre automaticamente quando o ToolCallSidePanel
+      // detecta uma entrega relevante (arquivo principal, deploy, etc.)
     }
   }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus]);
 

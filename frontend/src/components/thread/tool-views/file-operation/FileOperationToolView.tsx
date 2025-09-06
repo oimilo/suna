@@ -7,6 +7,7 @@ import {
   Code,
   Eye,
   File,
+  RefreshCw,
 } from 'lucide-react';
 import {
   extractFilePath,
@@ -66,6 +67,9 @@ export function FileOperationToolView({
 }: ToolViewProps) {
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
+  const [iframeError, setIframeError] = React.useState(false);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
   const operation = getOperationType(name, assistantContent);
   const configs = getOperationConfigs();
@@ -123,6 +127,27 @@ export function FileOperationToolView({
 
   const FileIcon = getFileIcon(fileName);
 
+  // Auto-retry logic for iframe loading errors
+  React.useEffect(() => {
+    if (iframeError && retryCount < 3) {
+      const timer = setTimeout(() => {
+        setIframeError(false);
+        setRetryCount(prev => prev + 1);
+        if (iframeRef.current) {
+          iframeRef.current.src = htmlPreviewUrl || '';
+        }
+      }, 3000); // Retry after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [iframeError, retryCount, htmlPreviewUrl]);
+
+  // Reset error state when htmlPreviewUrl changes
+  React.useEffect(() => {
+    setIframeError(false);
+    setRetryCount(0);
+  }, [htmlPreviewUrl]);
+
   if (!isStreaming && !processedFilePath && !fileContent) {
     return (
       <GenericToolView
@@ -150,13 +175,67 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
+      if (iframeError) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full py-12 px-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-amber-500/10">
+              <RefreshCw className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
+              Sandbox Iniciando...
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
+              O ambiente de desenvolvimento está sendo preparado. Isso pode levar alguns segundos na primeira vez.
+            </p>
+            {retryCount < 3 ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Tentando novamente em alguns segundos... (Tentativa {retryCount + 1}/3)</span>
+                </div>
+              </div>
+            ) : (
+              <Button
+                onClick={() => {
+                  setIframeError(false);
+                  setRetryCount(0);
+                  if (iframeRef.current) {
+                    iframeRef.current.src = htmlPreviewUrl;
+                  }
+                }}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Tentar Novamente
+              </Button>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
+            ref={iframeRef}
             src={htmlPreviewUrl}
             title={`Visualização HTML de ${fileName}`}
             className="flex-grow border-0"
             sandbox="allow-same-origin allow-scripts"
+            onError={() => setIframeError(true)}
+            onLoad={(e) => {
+              // Check if the iframe loaded successfully
+              const iframe = e.target as HTMLIFrameElement;
+              try {
+                // This will throw if we can't access the contentDocument (CORS)
+                // But that's OK for external content
+                const doc = iframe.contentDocument;
+                if (doc?.body?.innerHTML?.includes('File not found: 502')) {
+                  setIframeError(true);
+                }
+              } catch {
+                // CORS error is expected for external content, ignore it
+              }
+            }}
           />
         </div>
       );
@@ -329,7 +408,7 @@ export function FileOperationToolView({
 
         <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
           <TabsContent value="code" className="flex-1 h-full mt-0 p-0 overflow-hidden">
-            <ScrollArea className="h-screen w-full min-h-0">
+            <ScrollArea className="h-full w-full min-h-0">
               {isStreaming && !fileContent ? (
                 <LoadingState
                   icon={Icon}
@@ -388,23 +467,6 @@ export function FileOperationToolView({
             </ScrollArea>
           </TabsContent>
         </CardContent>
-
-        <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
-          <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-              <FileIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
-              <span className="text-xs font-medium text-muted-foreground">{hasHighlighting ? language.toUpperCase() : fileExtension.toUpperCase() || 'TEXT'}</span>
-            </div>
-          </div>
-
-          <div className="text-xs text-zinc-500 dark:text-zinc-400">
-            {toolTimestamp && !isStreaming
-              ? formatTimestamp(toolTimestamp)
-              : assistantTimestamp
-                ? formatTimestamp(assistantTimestamp)
-                : ''}
-          </div>
-        </div>
       </Tabs>
     </Card>
   );

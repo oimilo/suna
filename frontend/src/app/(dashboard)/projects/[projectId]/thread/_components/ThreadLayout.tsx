@@ -30,6 +30,7 @@ interface ThreadLayoutProps {
   currentToolIndex: number;
   onSidePanelNavigate: (index: number) => void;
   onSidePanelClose: () => void;
+  onSidePanelRequestOpen?: () => void;
   renderAssistantMessage: (assistantContent?: string, toolContent?: string) => React.ReactNode;
   renderToolResult: (toolContent?: string, isSuccess?: boolean) => React.ReactNode;
   isLoading: boolean;
@@ -65,6 +66,7 @@ export function ThreadLayout({
   currentToolIndex,
   onSidePanelNavigate,
   onSidePanelClose,
+  onSidePanelRequestOpen,
   renderAssistantMessage,
   renderToolResult,
   isLoading,
@@ -124,6 +126,7 @@ export function ThreadLayout({
         onFileClick={onViewFiles}
         agentName={agentName}
         disableInitialAnimation={disableInitialAnimation}
+        onRequestOpen={onSidePanelRequestOpen}
       />
 
       {sandboxId && (

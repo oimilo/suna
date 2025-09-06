@@ -653,6 +653,10 @@ export default function ThreadPage({
           userClosedPanelRef.current = true;
           setAutoOpenedPanel(true);
         }}
+        onSidePanelRequestOpen={() => {
+          setIsSidePanelOpen(true);
+          userClosedPanelRef.current = false;
+        }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -695,6 +699,10 @@ export default function ThreadPage({
           setIsSidePanelOpen(false);
           userClosedPanelRef.current = true;
           setAutoOpenedPanel(true);
+        }}
+        onSidePanelRequestOpen={() => {
+          setIsSidePanelOpen(true);
+          userClosedPanelRef.current = false;
         }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
