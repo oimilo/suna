@@ -454,16 +454,17 @@ export default function ThreadPage({
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
 
+      // Removido: auto-abertura genérica do painel
+      // O painel agora só abre quando o ToolCallSidePanel detecta uma
+      // entrega relevante (arquivo principal, deploy, etc.) via onRequestOpen
+      // Isto segue a hierarquia definida no workspace_ui_structure.md
+      
+      // Apenas atualiza o índice se já houver toolCalls
       if (toolCalls.length > 0) {
-        setIsSidePanelOpen(true);
         setCurrentToolIndex(toolCalls.length - 1);
-      } else {
-        if (messages.length > 0) {
-          setIsSidePanelOpen(true);
-        }
       }
     }
-  }, [initialPanelOpenAttempted, messages, toolCalls, initialLoadCompleted, setIsSidePanelOpen, setCurrentToolIndex]);
+  }, [initialPanelOpenAttempted, toolCalls, initialLoadCompleted, setCurrentToolIndex]);
 
   // Auto-scroll to bottom when initial load is completed
   useEffect(() => {

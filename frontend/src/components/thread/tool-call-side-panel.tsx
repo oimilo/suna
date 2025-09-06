@@ -132,7 +132,7 @@ export function ToolCallSidePanel({
     const name = toolCall.assistantCall?.name;
     if (!name) return false;
 
-    // Prioridade 1: Arquivos criados
+    // Prioridade 1: Arquivos principais criados (não arquivos auxiliares)
     if (name === 'create-file' || name === 'full-file-rewrite') {
       const rawContent = toolCall.assistantCall?.content;
       // Converte para string se necessário
@@ -140,22 +140,40 @@ export function ToolCallSidePanel({
         ? rawContent 
         : rawContent ? JSON.stringify(rawContent) : '';
       
-      // Verifica se é um arquivo potencialmente principal
-      const allPatterns = Object.values(FILE_PATTERNS).flat();
-      return allPatterns.some(pattern => content.includes(pattern));
+      // Verifica se é um arquivo principal (não CSS, config, etc.)
+      const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
+      const isMainFile = mainFilePatterns.some(pattern => content.includes(pattern));
+      
+      // Exclui arquivos auxiliares comuns
+      const auxiliaryPatterns = [
+        'style.css', 'styles.css', 'config.js', 'config.json', 
+        'package.json', 'requirements.txt', '.env', '.gitignore',
+        'README.md', 'test.', 'spec.', '_test.', '.test.'
+      ];
+      const isAuxiliary = auxiliaryPatterns.some(pattern => content.includes(pattern));
+      
+      // Só considera entrega se for arquivo principal e não auxiliar
+      return isMainFile && !isAuxiliary;
     }
 
-    // Prioridade 2: Deploy ou exposição de serviço
+    // Prioridade 2: Deploy ou exposição de serviço (sempre importante)
     if (name === 'deploy' || name === 'expose-port') {
       return true;
     }
 
-    // Prioridade 3: Configurações de integração
+    // Prioridade 3: Configurações de integração importantes
     if (name === 'create-credential-profile' || name === 'connect-credential-profile') {
       return true;
     }
 
-    return false;
+    // Ignora operações técnicas e mensagens genéricas
+    const technicalOps = [
+      'execute-command', 'str-replace', 'edit-file', 'read-file',
+      'check-command-output', 'list-commands', 'terminate-command',
+      'complete', 'ask'
+    ];
+    
+    return !technicalOps.includes(name);
   };
 
   // Detecta o arquivo principal baseado no contexto do projeto
@@ -292,7 +310,7 @@ export function ToolCallSidePanel({
   React.useEffect(() => {
     if (!toolCalls.length || hasUserInteracted || isLoading) return;
 
-    // Detecta se há entregas relevantes
+    // Detecta se há entregas relevantes (não apenas qualquer toolcall)
     const hasDelivery = toolCalls.some(tc => isDeliveryMoment(tc));
     
     if (hasDelivery) {
@@ -311,15 +329,20 @@ export function ToolCallSidePanel({
         // Navega para a entrega principal
         setInternalIndex(deliveryIdx);
         
-        // Se o painel está fechado e detectamos uma entrega importante,
-        // solicita abertura do painel
-        if (!isOpen && navigationMode === 'live' && onRequestOpen) {
+        // Só solicita abertura se:
+        // 1. O painel está fechado
+        // 2. Não está minimizado (ou seja, isPanelMinimized === false)
+        // 3. Estamos em modo live
+        // 4. Há uma função de callback para abrir
+        // Isso garante que o painel só abre em entregas principais importantes
+        if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
           onNavigate(deliveryIdx);
           onRequestOpen();
         }
       }
     }
-  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isLoading, onNavigate, onRequestOpen]);
+    // Se não há entregas relevantes, mantém o painel como está (fechado ou minimizado)
+  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];
