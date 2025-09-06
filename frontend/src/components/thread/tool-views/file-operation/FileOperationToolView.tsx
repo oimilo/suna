@@ -69,6 +69,7 @@ export function FileOperationToolView({
   const isDarkTheme = resolvedTheme === 'dark';
   const [iframeError, setIframeError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [isRetrying, setIsRetrying] = React.useState(false);
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
@@ -128,6 +129,17 @@ export function FileOperationToolView({
 
   const FileIcon = getFileIcon(fileName);
 
+  // Initial load delay to give sandbox time to start
+  React.useEffect(() => {
+    if (isHtml && htmlPreviewUrl && isInitialLoad) {
+      const timer = setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 2000); // Wait 2 seconds before first load
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isHtml, htmlPreviewUrl, isInitialLoad]);
+
   // Auto-retry logic for iframe loading errors
   React.useEffect(() => {
     if (iframeError && retryCount < 3) {
@@ -151,6 +163,7 @@ export function FileOperationToolView({
   React.useEffect(() => {
     setIframeError(false);
     setRetryCount(0);
+    setIsInitialLoad(true);
     setIsRetrying(false);
   }, [htmlPreviewUrl]);
 
@@ -181,15 +194,31 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
-      if (isRetrying) {
-        // Show subtle loading state while retrying
+      // Show loading during initial load or retry
+      if (isInitialLoad || isRetrying) {
         return (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin opacity-50" />
+          <div className="flex flex-col items-center justify-center h-full py-12 px-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-amber-500/10">
+              <RefreshCw className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
+              Sandbox Iniciando...
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
+              O ambiente de desenvolvimento está sendo preparado. Isso pode levar alguns segundos na primeira vez.
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>{isInitialLoad ? 'Preparando ambiente...' : `Tentando novamente... (Tentativa ${retryCount + 1}/3)`}</span>
+              </div>
+            </div>
           </div>
         );
-      } else if (iframeError && retryCount >= 3) {
-        // Show error state after max retries
+      }
+      
+      // Show error state after max retries
+      if (iframeError && retryCount >= 3) {
         return (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-red-500/10">
@@ -219,6 +248,7 @@ export function FileOperationToolView({
         );
       }
 
+      // Only render iframe when not loading or retrying
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
@@ -235,7 +265,11 @@ export function FileOperationToolView({
                 // This will throw if we can't access the contentDocument (CORS)
                 // But that's OK for external content
                 const doc = iframe.contentDocument;
-                if (doc?.body?.innerHTML?.includes('File not found: 502')) {
+                const bodyContent = doc?.body?.innerHTML || '';
+                // Check for both 502 and 404 errors
+                if (bodyContent.includes('File not found: 502') || 
+                    bodyContent.includes('File not found: 404') ||
+                    bodyContent.includes('"error":"File not found: 404"')) {
                   setIframeError(true);
                 } else {
                   // Successfully loaded
