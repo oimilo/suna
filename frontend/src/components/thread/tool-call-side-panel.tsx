@@ -33,6 +33,7 @@ export interface ToolCallInput {
 
 interface ToolCallSidePanelProps {
   isOpen: boolean;
+  isPanelMinimized?: boolean;
   onClose: () => void;
   onMinimize?: () => void;
   toolCalls: ToolCallInput[];
@@ -69,6 +70,7 @@ const CONTENT_LAYOUT_ID = 'tool-panel-content';
 
 export function ToolCallSidePanel({
   isOpen,
+  isPanelMinimized = false,
   onClose,
   onMinimize,
   toolCalls,
@@ -810,6 +812,7 @@ export function ToolCallSidePanel({
         currentIndex={displayIndex}
         totalCalls={displayTotalCalls}
         onFileClick={onFileClick}
+        isPanelMinimized={isPanelMinimized}
       />
     );
 
@@ -892,7 +895,7 @@ export function ToolCallSidePanel({
           {(displayTotalCalls > 1 || (isCurrentToolStreaming && totalCompletedCalls > 0)) && (
             <div
               className={cn(
-                'border-t border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02]',
+                'border-t border-black/6 dark:border-white/8 bg-background',
                 isMobile ? 'p-2' : 'px-4 py-2.5',
               )}
             >

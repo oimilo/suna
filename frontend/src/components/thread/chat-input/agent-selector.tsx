@@ -434,7 +434,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
             exit={{ opacity: 0, scale: 0.8, x: -10 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl",
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md",
               "bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8",
               "cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
             )}

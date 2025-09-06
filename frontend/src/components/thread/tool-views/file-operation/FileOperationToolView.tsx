@@ -65,6 +65,7 @@ export function FileOperationToolView({
   isStreaming = false,
   name,
   project,
+  isPanelMinimized = false,
 }: ToolViewProps) {
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
@@ -130,20 +131,20 @@ export function FileOperationToolView({
 
   const FileIcon = getFileIcon(fileName);
 
-  // Initial load delay to give sandbox time to start
+  // Initial load delay to give sandbox time to start - only if not minimized
   React.useEffect(() => {
-    if (isHtml && htmlPreviewUrl && isInitialLoad) {
+    if (isHtml && htmlPreviewUrl && isInitialLoad && !isPanelMinimized) {
       const timer = setTimeout(() => {
         setIsInitialLoad(false);
       }, 5000); // Wait 5 seconds before first load to ensure sandbox is ready
       
       return () => clearTimeout(timer);
     }
-  }, [isHtml, htmlPreviewUrl, isInitialLoad]);
+  }, [isHtml, htmlPreviewUrl, isInitialLoad, isPanelMinimized]);
 
-  // Auto-retry logic for iframe loading errors with progressive delays
+  // Auto-retry logic for iframe loading errors with progressive delays - only if not minimized
   React.useEffect(() => {
-    if (iframeError && retryCount < 5) {
+    if (iframeError && retryCount < 5 && !isPanelMinimized) {
       setIsRetrying(true);
       // Progressive delays: 3s, 5s, 7s, 9s, 11s
       const delay = 3000 + (retryCount * 2000);
@@ -160,15 +161,17 @@ export function FileOperationToolView({
       // Stop retrying after max attempts
       setIsRetrying(false);
     }
-  }, [iframeError, retryCount, htmlPreviewUrl]);
+  }, [iframeError, retryCount, htmlPreviewUrl, isPanelMinimized]);
 
-  // Reset error state when htmlPreviewUrl changes
+  // Reset error state when htmlPreviewUrl changes or when panel is expanded
   React.useEffect(() => {
-    setIframeError(false);
-    setRetryCount(0);
-    setIsInitialLoad(true);
-    setIsRetrying(false);
-  }, [htmlPreviewUrl]);
+    if (!isPanelMinimized) {
+      setIframeError(false);
+      setRetryCount(0);
+      setIsInitialLoad(true);
+      setIsRetrying(false);
+    }
+  }, [htmlPreviewUrl, isPanelMinimized]);
 
   if (!isStreaming && !processedFilePath && !fileContent) {
     return (
@@ -197,6 +200,23 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
+      // Don't render iframe when panel is minimized
+      if (isPanelMinimized) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full py-12 px-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-zinc-500/10">
+              <Eye className="h-10 w-10 text-zinc-600 dark:text-zinc-400" />
+            </div>
+            <h3 className="text-lg font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
+              Preview Pausado
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md">
+              Expanda o painel para visualizar o preview
+            </p>
+          </div>
+        );
+      }
+      
       // Show loading during initial load or retry
       if (isInitialLoad || isRetrying) {
         return (

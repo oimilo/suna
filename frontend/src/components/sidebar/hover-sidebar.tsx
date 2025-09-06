@@ -235,28 +235,47 @@ export function HoverSidebar() {
   const [activeTab, setActiveTab] = React.useState('todos');
   const { isPinned, setIsPinned: setPinnedContext } = useSidebarContext();
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const leaveTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   React.useEffect(() => {
     setIsExpanded(isPinned);
   }, [isPinned]);
 
+  // Cleanup timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      clearTimeout(hoverTimeoutRef.current);
+      clearTimeout(leaveTimeoutRef.current);
+    };
+  }, []);
+
   const handleMouseEnter = () => {
     if (!isPinned) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsHovered(true);
-        setIsExpanded(true);
-      }, 200);
+      // Clear any pending leave timeout
+      clearTimeout(leaveTimeoutRef.current);
+      
+      // Only start hover timer if not already expanded
+      if (!isExpanded) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = setTimeout(() => {
+          setIsHovered(true);
+          setIsExpanded(true);
+        }, 400); // Increased delay to prevent accidental activation
+      }
     }
   };
 
   const handleMouseLeave = () => {
     if (!isPinned) {
+      // Clear any pending enter timeout
       clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = setTimeout(() => {
+      
+      // Add small delay before closing to prevent flickering
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = setTimeout(() => {
         setIsHovered(false);
         setIsExpanded(false);
-      }, 300);
+      }, 150); // Small delay to prevent flickering when moving mouse quickly
     }
   };
 
@@ -281,7 +300,7 @@ export function HoverSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={togglePin}
-                onMouseEnter={handleMouseEnter}
+                onMouseEnter={!isPinned ? handleMouseEnter : undefined}
                 className="h-8 w-8 mr-2"
               >
                 <PanelLeft className="h-4 w-4" />
@@ -299,10 +318,10 @@ export function HoverSidebar() {
         </div>
       )}
 
-      {/* Área invisível para detectar hover na lateral - apenas metade superior */}
-      {!isPinned && (
+      {/* Área de ativação quadrada no canto superior esquerdo */}
+      {!isPinned && !isExpanded && (
         <div
-          className="fixed left-0 top-0 h-[50vh] w-12 z-[99]"
+          className="fixed left-0 top-0 h-20 w-20 z-[99]"
           onMouseEnter={handleMouseEnter}
         />
       )}
@@ -310,12 +329,14 @@ export function HoverSidebar() {
       {/* Sidebar expandida - flutuante sobre TODO o conteúdo */}
       <aside
         className={cn(
-          "fixed z-[110] bg-background transition-all duration-200",
+          "fixed z-[110] bg-background",
           "border-r border-black/6 dark:border-white/8",
           isPinned ? (
-            "left-0 top-0 w-64 h-full"
+            "left-0 top-0 w-64 h-full transition-all duration-200"
           ) : (
-            isExpanded ? "left-3 top-3 w-64 h-[calc(100vh-1.5rem)] shadow-2xl rounded-lg border border-black/6 dark:border-white/8" : "left-0 top-0 w-0 h-0 overflow-hidden pointer-events-none"
+            isExpanded ? 
+              "left-3 top-3 w-64 h-[calc(100vh-1.5rem)] shadow-2xl rounded-lg border border-black/6 dark:border-white/8 transition-all duration-300 ease-out" : 
+              "left-0 top-0 w-0 h-0 overflow-hidden pointer-events-none transition-all duration-200"
           )
         )}
         onMouseEnter={handleMouseEnter}

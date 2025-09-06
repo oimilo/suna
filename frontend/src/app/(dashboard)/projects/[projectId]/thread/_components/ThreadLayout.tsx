@@ -116,6 +116,7 @@ export function ThreadLayout({
 
       <ToolCallSidePanel
         isOpen={isSidePanelOpen && initialLoadCompleted}
+        isPanelMinimized={isPanelMinimized}
         onClose={onSidePanelClose}
         onMinimize={onSidePanelMinimize}
         toolCalls={toolCalls}
