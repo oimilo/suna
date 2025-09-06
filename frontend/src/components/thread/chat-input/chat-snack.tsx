@@ -5,17 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UsagePreview } from './usage-preview';
-import { FloatingToolPreview, ToolCallInput } from './floating-tool-preview';
 import { isLocalMode } from '@/lib/config';
 
 export interface ChatSnackProps {
-    // Tool preview props
-    toolCalls?: ToolCallInput[];
-    toolCallIndex?: number;
-    onExpandToolPreview?: () => void;
-    onNavigateToolPreview?: (index: number) => void;
-    agentName?: string;
-    showToolPreview?: boolean;
 
     // Usage preview props
     showUsagePreview?: 'tokens' | 'upgrade' | false;
@@ -31,12 +23,6 @@ const SNACK_LAYOUT_ID = 'chat-snack-float';
 const SNACK_CONTENT_LAYOUT_ID = 'chat-snack-content';
 
 export const ChatSnack: React.FC<ChatSnackProps> = ({
-    toolCalls = [],
-    toolCallIndex = 0,
-    onExpandToolPreview,
-    onNavigateToolPreview,
-    agentName,
-    showToolPreview = false,
     showUsagePreview = false,
     subscriptionData,
     onCloseUsage,
@@ -47,11 +33,6 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
 
     // Determine what notifications we have - match exact rendering conditions
     const notifications = [];
-
-    // Tool notification: only if we have tool calls and showToolPreview is true
-    if (showToolPreview && toolCalls.length > 0) {
-        notifications.push('tool');
-    }
 
     // Usage notification: must match ALL rendering conditions
     if (showUsagePreview && !isLocalMode() && subscriptionData) {
@@ -86,23 +67,6 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
     const currentNotification = notifications[currentView];
 
     const renderContent = () => {
-        if (currentNotification === 'tool' && showToolPreview) {
-            return (
-                <FloatingToolPreview
-                    toolCalls={toolCalls}
-                    currentIndex={toolCallIndex}
-                    onExpand={onExpandToolPreview || (() => { })}
-                    onNavigate={onNavigateToolPreview}
-                    agentName={agentName}
-                    isVisible={true}
-                    showIndicators={hasMultiple}
-                    indicatorIndex={currentView}
-                    indicatorTotal={totalNotifications}
-                    onIndicatorClick={(index) => setCurrentView(index)}
-                />
-            );
-        }
-
         if (currentNotification === 'usage' && showUsagePreview && !isLocalMode()) {
             return (
                 <motion.div
@@ -143,14 +107,6 @@ export const ChatSnack: React.FC<ChatSnackProps> = ({
                             onClose={() => {
                                 // First close the usage notification
                                 if (onCloseUsage) onCloseUsage();
-
-                                // Check what notifications will remain after closing usage
-                                const willHaveToolNotification = showToolPreview && toolCalls.length > 0;
-
-                                // If there will be other notifications, switch to them
-                                if (willHaveToolNotification) {
-                                    setCurrentView(0); // Switch to tool notification
-                                }
                             }}
                             hasMultiple={hasMultiple}
                             showIndicators={hasMultiple}

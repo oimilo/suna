@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, ChevronRight, Star, FileText, Code, Terminal, Globe, Rocket, CheckCircle, CircleDashed, X } from 'lucide-react';
+import { ChevronUp, ChevronRight, FileText, Code, Terminal, Globe, Rocket, CheckCircle, CircleDashed, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getToolIcon, getUserFriendlyToolName } from './utils';
@@ -125,10 +125,16 @@ export function ToolNavigationDropdown({
       }
 
       const IconComponent = getToolIcon(name);
+      // Para create-file, mostra apenas o nome do arquivo
+      let displayName = getUserFriendlyToolName(name);
+      if ((name === 'create-file' || name === 'full-file-rewrite') && fileName) {
+        displayName = fileName;
+      }
+      
       const processed: ProcessedToolCall = {
         index: idx,
         name,
-        displayName: fileName || getUserFriendlyToolName(name),
+        displayName,
         category: isTechnicalOperation(name) ? 'technical' : 'delivery',
         isMainDelivery: idx === mainDeliveryIndex,
         icon: <IconComponent className="h-3.5 w-3.5 opacity-60" />,
@@ -167,9 +173,13 @@ export function ToolNavigationDropdown({
     if (current?.isMainDelivery) {
       return (
         <span className="flex items-center gap-2">
-          <Star className="h-3.5 w-3.5 text-emerald-500" />
-          <span>{current.displayName}</span>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">Principal</span>
+          <div className="opacity-70">
+            {current.icon}
+          </div>
+          <span className="text-[13px]">{current.displayName}</span>
+          <div className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            Principal
+          </div>
         </span>
       );
     }
@@ -177,8 +187,10 @@ export function ToolNavigationDropdown({
     if (current?.category === 'delivery') {
       return (
         <span className="flex items-center gap-2">
-          {current.icon}
-          <span>{current.displayName}</span>
+          <div className="opacity-60">
+            {current.icon}
+          </div>
+          <span className="text-[13px]">{current.displayName}</span>
         </span>
       );
     }
@@ -186,11 +198,13 @@ export function ToolNavigationDropdown({
     // Para operações técnicas, mostra com contador
     const technicalIndex = technical.findIndex(t => t.index === currentIndex) + 1;
     return (
-      <span className="flex items-center gap-2 text-muted-foreground">
-        {current?.icon || <Terminal className="h-3.5 w-3.5 opacity-60" />}
-        <span>{current?.displayName || 'Processando'}</span>
+      <span className="flex items-center gap-2 text-muted-foreground/70">
+        <div className="opacity-50">
+          {current?.icon || <Terminal className="h-3.5 w-3.5" />}
+        </div>
+        <span className="text-[13px]">{current?.displayName || 'Processando'}</span>
         {technical.length > 0 && (
-          <span className="text-xs opacity-60">({technicalIndex}/{technical.length})</span>
+          <span className="text-[10px] opacity-50">({technicalIndex}/{technical.length})</span>
         )}
       </span>
     );
@@ -226,17 +240,17 @@ export function ToolNavigationDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex items-center gap-2 px-3 py-1.5 rounded-lg",
-          "bg-black/[0.02] dark:bg-white/[0.03]",
-          "border border-black/6 dark:border-white/8",
-          "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
+          "bg-black/[0.01] dark:bg-white/[0.02]",
+          "border border-black/4 dark:border-white/5",
+          "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]",
+          "hover:border-black/6 dark:hover:border-white/8",
           "transition-all duration-200",
-          "text-sm font-medium",
-          "min-w-[200px] justify-between"
+          "min-w-[180px] justify-between"
         )}
       >
         {getClosedLabel()}
         <ChevronUp className={cn(
-          "h-4 w-4 opacity-60 transition-transform duration-200",
+          "h-3.5 w-3.5 opacity-40 transition-transform duration-200",
           isOpen && "rotate-180"
         )} />
       </button>
@@ -250,92 +264,105 @@ export function ToolNavigationDropdown({
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              "absolute bottom-full mb-1 min-w-[280px] max-w-[360px]",
-              "bg-background border border-black/6 dark:border-white/8",
-              "rounded-lg shadow-lg overflow-hidden",
+              "absolute bottom-full mb-2 min-w-[280px] max-w-[360px]",
+              "bg-background/95 backdrop-blur-sm",
+              "border border-black/5 dark:border-white/6",
+              "rounded-xl shadow-xl overflow-hidden",
               "z-50"
             )}
           >
             {/* Seção de Entregas */}
             {deliveries.length > 0 && (
-              <div className="border-b border-black/6 dark:border-white/8">
-                <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="border-b border-black/4 dark:border-white/6">
+                <div className="px-4 py-2.5 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest">
                   Entregas Principais
                 </div>
-                {deliveries.map((item) => (
-                  <button
-                    key={item.index}
-                    onClick={() => handleItemClick(item.index)}
-                    className={cn(
-                      "w-full px-3 py-2 flex items-center gap-2 text-left",
-                      "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
-                      "transition-colors duration-150",
-                      item.index === currentIndex && "bg-black/[0.06] dark:bg-white/[0.08]",
-                      item.isMainDelivery && "bg-emerald-500/5 border-l-2 border-emerald-500"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 flex-1">
-                      {item.icon}
-                      <span className={cn(
-                        "text-sm",
-                        item.isMainDelivery && "font-medium"
-                      )}>
-                        {item.displayName}
-                      </span>
-                      {item.isMainDelivery && (
-                        <Star className="h-3 w-3 text-emerald-500 ml-1" />
+                <div className="py-1">
+                  {deliveries.map((item) => (
+                    <button
+                      key={item.index}
+                      onClick={() => handleItemClick(item.index)}
+                      className={cn(
+                        "w-full px-4 py-2.5 flex items-center gap-3 text-left",
+                        "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
+                        "transition-colors duration-150",
+                        item.index === currentIndex && "bg-black/[0.05] dark:bg-white/[0.06]",
+                        item.isMainDelivery && "bg-emerald-500/[0.03] border-l-2 border-emerald-500/40"
                       )}
-                    </div>
-                    {getStatusIcon(item.status, item.isMainDelivery)}
-                  </button>
-                ))}
+                    >
+                      <div className="flex items-center gap-2.5 flex-1">
+                        <div className="opacity-70">
+                          {item.icon}
+                        </div>
+                        <span className={cn(
+                          "text-[13px] leading-relaxed",
+                          item.isMainDelivery ? "font-medium text-foreground" : "text-foreground/90"
+                        )}>
+                          {item.displayName}
+                        </span>
+                        {/* Tag principal para arquivo principal */}
+                        {item.isMainDelivery && (
+                          <div className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ml-1">
+                            Principal
+                          </div>
+                        )}
+                      </div>
+                      <div className="opacity-50">
+                        {getStatusIcon(item.status, item.isMainDelivery)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Seção Técnica */}
             {technical.length > 0 && (
-              <div>
+              <div className="py-1">
                 <button
                   onClick={onToggleTechnicalDetails}
                   className={cn(
-                    "w-full px-3 py-2 flex items-center gap-1",
-                    "text-xs text-muted-foreground",
+                    "w-full px-4 py-2.5 flex items-center gap-2",
+                    "text-[11px] text-muted-foreground/60",
                     "hover:bg-black/[0.02] dark:hover:bg-white/[0.02]",
                     "transition-colors duration-150"
                   )}
                 >
                   <ChevronRight className={cn(
-                    "h-3 w-3 transition-transform duration-200",
+                    "h-3 w-3 transition-transform duration-200 opacity-50",
                     showTechnicalDetails && "rotate-90"
                   )} />
                   <span>Processo Técnico ({technical.length} operações)</span>
                 </button>
                 
                 {showTechnicalDetails && (
-                  <div className="max-h-[200px] overflow-y-auto">
+                  <div className="max-h-[180px] overflow-y-auto pb-1">
                     {technical.map((item, idx) => (
                       <button
                         key={item.index}
                         onClick={() => handleItemClick(item.index)}
                         className={cn(
-                          "w-full px-5 py-1.5 flex items-center gap-2 text-left",
-                          "text-xs text-muted-foreground opacity-70",
-                          "hover:opacity-100 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]",
+                          "w-full px-6 py-2 flex items-center gap-2.5 text-left",
+                          "text-[11px] text-muted-foreground/50",
+                          "hover:text-muted-foreground/70 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]",
                           "transition-all duration-150",
-                          item.index === currentIndex && "opacity-100 bg-black/[0.04] dark:bg-white/[0.04]"
+                          item.index === currentIndex && "text-muted-foreground/80 bg-black/[0.03] dark:bg-white/[0.03]"
                         )}
                       >
-                        <span className="opacity-50">{idx + 1}.</span>
-                        {item.icon}
+                        <span className="opacity-40 text-[10px] w-4">{idx + 1}.</span>
+                        <div className="opacity-60">
+                          {item.icon}
+                        </div>
                         <span className="truncate flex-1">{item.displayName}</span>
-                        {item.status === 'running' ? (
-                          <CircleDashed className="h-3 w-3 animate-spin text-muted-foreground opacity-60" />
-                        ) : item.status === 'error' ? (
-                          <X className="h-3 w-3 text-red-500 opacity-30" />
-                        ) : (
-                          // Sucesso (padrão para tudo que não é erro ou running)
-                          <CheckCircle className="h-3 w-3 text-muted-foreground opacity-40" />
-                        )}
+                        <div className="opacity-40">
+                          {item.status === 'running' ? (
+                            <CircleDashed className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                          ) : item.status === 'error' ? (
+                            <X className="h-2.5 w-2.5 text-red-500/50" />
+                          ) : (
+                            <CheckCircle className="h-2.5 w-2.5 text-muted-foreground" />
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -345,7 +372,7 @@ export function ToolNavigationDropdown({
 
             {/* Se não houver nada */}
             {deliveries.length === 0 && technical.length === 0 && (
-              <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+              <div className="px-4 py-6 text-xs text-muted-foreground/50 text-center">
                 Nenhuma operação disponível
               </div>
             )}

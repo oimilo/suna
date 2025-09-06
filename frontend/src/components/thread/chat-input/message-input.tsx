@@ -57,6 +57,11 @@ interface MessageInputProps {
   onFocus?: () => void;
   onBlur?: () => void;
   isFocused?: boolean;
+  // Tool preview props
+  toolCalls?: any[];
+  toolCallIndex?: number;
+  showToolPreview?: boolean;
+  onExpandToolPreview?: () => void;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -99,6 +104,10 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       onFocus,
       onBlur,
       isFocused = false,
+      toolCalls,
+      toolCallIndex,
+      showToolPreview,
+      onExpandToolPreview,
     },
     ref,
   ) => {
@@ -176,6 +185,10 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 disabled={loading || (disabled && !isAgentRunning)}
                 isSunaAgent={isSunaAgent}
                 isFocused={isFocused}
+                toolCalls={toolCalls}
+                toolCallIndex={toolCallIndex}
+                showToolPreview={showToolPreview}
+                onExpandToolPreview={onExpandToolPreview}
               />
             )}
             <ModelSelector

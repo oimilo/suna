@@ -657,6 +657,7 @@ export default function ThreadPage({
         }}
         onSidePanelMinimize={() => {
           setIsPanelMinimized(true);
+          setIsSidePanelOpen(false);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -709,6 +710,7 @@ export default function ThreadPage({
         }}
         onSidePanelMinimize={() => {
           setIsPanelMinimized(true);
+          setIsSidePanelOpen(false);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -786,6 +788,7 @@ export default function ThreadPage({
               showToolPreview={isPanelMinimized && toolCalls.length > 0}
               onExpandToolPreview={() => {
                 setIsPanelMinimized(false);
+                setIsSidePanelOpen(true);
                 userClosedPanelRef.current = false;
               }}
               defaultShowSnackbar="tokens"

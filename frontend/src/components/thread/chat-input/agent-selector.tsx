@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Settings, ChevronRight, Bot, Presentation, FileSpreadsheet, Search, Plus, User, Check, ChevronDown } from 'lucide-react';
+import { Settings, ChevronRight, Bot, Presentation, FileSpreadsheet, Search, Plus, User, Check, ChevronDown, CircleDashed, Maximize2, ChevronLeft } from 'lucide-react';
 import { BRANDING } from '@/lib/branding';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +58,11 @@ interface AgentSelectorProps {
   disabled?: boolean;
   isSunaAgent?: boolean;
   isFocused?: boolean;
+  // Tool preview props
+  toolCalls?: any[];
+  toolCallIndex?: number;
+  showToolPreview?: boolean;
+  onExpandToolPreview?: () => void;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = ({
@@ -63,7 +70,11 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   onAgentSelect,
   disabled = false,
   isSunaAgent,
-  isFocused = false
+  isFocused = false,
+  toolCalls = [],
+  toolCallIndex = 0,
+  showToolPreview = false,
+  onExpandToolPreview
 }) => {
   const { t } = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
@@ -266,9 +277,38 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   };
 
   const agentDisplay = getAgentDisplay();
+  
+  // Get current tool for display
+  const currentToolCall = toolCalls[toolCallIndex];
+  const hasTools = toolCalls.length > 0 && showToolPreview;
+  const isToolStreaming = currentToolCall?.toolResult?.content === 'STREAMING';
+  
+  const getToolStatus = (toolCall: any) => {
+    const content = toolCall?.toolResult?.content;
+    if (!content) return toolCall?.toolResult?.isSuccess ?? true;
+    if (content === 'STREAMING') return true;
+    
+    try {
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      if (parsed?.content) {
+        const inner = typeof parsed.content === 'string' ? JSON.parse(parsed.content) : parsed.content;
+        if (inner?.tool_execution?.result?.success !== undefined) {
+          return inner.tool_execution.result.success;
+        }
+      }
+      return parsed?.tool_execution?.result?.success ?? 
+             parsed?.result?.success ?? 
+             parsed?.success ?? 
+             toolCall?.toolResult?.isSuccess ?? true;
+    } catch {
+      return toolCall?.toolResult?.isSuccess ?? true;
+    }
+  };
+  
+  const isToolSuccess = isToolStreaming ? true : getToolStatus(currentToolCall);
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <TooltipProvider>
           <Tooltip>
@@ -281,7 +321,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                     "px-2.5 py-1.5 text-sm font-normal hover:bg-accent/40 transition-all duration-200 rounded-xl",
                     "focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:outline-none",
                     isOpen && "bg-accent/40",
-                    !isFocused && "opacity-20"
+                    !isFocused && !hasTools && "opacity-20"
                   )}
                   disabled={disabled}
                 >
@@ -384,7 +424,56 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-
-    </>
+      
+      {/* Compact Tool Indicator */}
+      <AnimatePresence>
+        {hasTools && currentToolCall && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, x: -10 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.8, x: -10 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl",
+              "bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8",
+              "cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
+            )}
+            onClick={onExpandToolPreview}
+          >
+            {/* Tool Icon */}
+            {(() => {
+              const ToolIcon = getToolIcon(currentToolCall.assistantCall?.name || 'unknown');
+              return <ToolIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />;
+            })()}
+            
+            {/* Tool Name */}
+            <span className="text-xs font-medium text-foreground truncate max-w-[100px]">
+              {getUserFriendlyToolName(currentToolCall.assistantCall?.name || 'Tool')}
+            </span>
+            
+            {/* Tool Count if multiple */}
+            {toolCalls.length > 1 && (
+              <span className="text-[10px] text-muted-foreground bg-black/[0.02] dark:bg-white/[0.03] px-1.5 py-0.5 rounded-full">
+                {toolCallIndex + 1}/{toolCalls.length}
+              </span>
+            )}
+            
+            {/* Status Indicator */}
+            {isToolStreaming ? (
+              <div className="flex items-center gap-1">
+                <CircleDashed className="h-2.5 w-2.5 animate-spin text-amber-500" />
+              </div>
+            ) : isToolSuccess ? (
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            ) : (
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+            )}
+            
+            {/* Expand Button */}
+            <Maximize2 className="h-3 w-3 opacity-40 ml-1" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }; 

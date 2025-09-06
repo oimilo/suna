@@ -5,7 +5,7 @@ import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils'
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { CircleDashed, X, Computer, Radio, Maximize2, Minimize2, ChevronRight } from 'lucide-react';
+import { CircleDashed, Computer, Radio, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BRANDING } from '@/lib/branding';
 import { useSidebarContext } from '@/contexts/sidebar-context';
 import { ToolNavigationDropdown } from './tool-navigation-dropdown';
+import { WindowControls } from './window-controls';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -91,6 +92,7 @@ export function ToolCallSidePanel({
   const [mainDeliveryIndex, setMainDeliveryIndex] = React.useState<number>(-1);
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
   const [hasUserInteracted, setHasUserInteracted] = React.useState(false);
+  const [isMaximized, setIsMaximized] = React.useState(false);
 
   const isMobile = useIsMobile();
   
@@ -110,10 +112,8 @@ export function ToolCallSidePanel({
   const handleMinimize = React.useCallback(() => {
     if (onMinimize) {
       onMinimize();
-    } else {
-      onClose();
     }
-  }, [onMinimize, onClose]);
+  }, [onMinimize]);
 
   // Padrões de arquivos principais por tipo de projeto
   const FILE_PATTERNS = {
@@ -651,23 +651,20 @@ export function ToolCallSidePanel({
           >
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex flex-col h-full">
-                <div className="pt-4 pl-4 pr-4">
-                  <div className="flex items-center justify-between">
-                    <div className="ml-2 flex items-center gap-2">
-                      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                        {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
-                      </h2>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleMinimize}
-                      className="h-8 w-8"
-                      title="Minimizar para visualização flutuante"
-                    >
-                      <Minimize2 className="h-4 w-4" />
-                    </Button>
+                {/* Native window header */}
+                <div className="h-10 bg-gradient-to-b from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-3 select-none cursor-default">
+                  <WindowControls
+                    onMinimize={handleMinimize}
+                    onMaximize={() => setIsMaximized(!isMaximized)}
+                    isMaximized={isMaximized}
+                    variant="macos"
+                  />
+                  <div className="flex-1 flex items-center justify-center">
+                    <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
+                    </h2>
                   </div>
+                  <div className="w-[34px]" /> {/* Spacer for balance */}
                 </div>
                 <div className="flex-1 p-4 overflow-auto">
                   <div className="space-y-4">
@@ -689,22 +686,20 @@ export function ToolCallSidePanel({
     if (!displayToolCall && toolCallSnapshots.length === 0) {
       return (
         <div className="flex flex-col h-full">
-          <div className="pt-4 pl-4 pr-4">
-            <div className="flex items-center justify-between">
-              <div className="ml-2 flex items-center gap-2">
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Native window header */}
+          <div className="h-10 bg-gradient-to-b from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-3 select-none cursor-default">
+            <WindowControls
+              onMinimize={handleMinimize}
+              onMaximize={() => setIsMaximized(!isMaximized)}
+              isMaximized={isMaximized}
+              variant="macos"
+            />
+            <div className="flex-1 flex items-center justify-center">
+              <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
+              </h2>
             </div>
+            <div className="w-[34px]" /> {/* Spacer for balance */}
           </div>
           <div className="flex flex-col items-center justify-center flex-1 p-8">
             <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
@@ -732,28 +727,25 @@ export function ToolCallSidePanel({
       if (firstStreamingTool && totalCompletedCalls === 0) {
         return (
           <div className="flex flex-col h-full">
-            <div className="pt-4 pl-4 pr-4">
-              <div className="flex items-center justify-between">
-                <div className="ml-2 flex items-center gap-2">
-                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                    {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="px-2.5 py-1 rounded-lg text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1.5">
-                    <CircleDashed className="h-3.5 w-3.5 animate-spin opacity-60" />
-                    <span>Executando</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleClose}
-                    className="h-8 w-8 ml-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            {/* Native window header */}
+            <div className="h-10 bg-gradient-to-b from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-3 select-none cursor-default">
+              <WindowControls
+                onClose={handleClose}
+                onMinimize={handleMinimize}
+                onMaximize={() => setIsMaximized(!isMaximized)}
+                isMaximized={isMaximized}
+                variant="macos"
+              />
+              <div className="flex-1 flex items-center justify-center gap-2">
+                <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
+                </h2>
+                <div className="px-2 py-0.5 rounded text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1">
+                  <CircleDashed className="h-3 w-3 animate-spin opacity-60" />
+                  <span>Executando</span>
                 </div>
               </div>
+              <div className="w-[34px]" /> {/* Spacer for balance */}
             </div>
             <div className="flex flex-col items-center justify-center flex-1 p-8">
               <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
@@ -778,22 +770,20 @@ export function ToolCallSidePanel({
 
       return (
         <div className="flex flex-col h-full">
-          <div className="pt-4 pl-4 pr-4">
-            <div className="flex items-center justify-between">
-              <div className="ml-2 flex items-center gap-2">
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Native window header */}
+          <div className="h-10 bg-gradient-to-b from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-3 select-none cursor-default">
+            <WindowControls
+              onMinimize={handleMinimize}
+              onMaximize={() => setIsMaximized(!isMaximized)}
+              isMaximized={isMaximized}
+              variant="macos"
+            />
+            <div className="flex-1 flex items-center justify-center">
+              <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
+              </h2>
             </div>
+            <div className="w-[34px]" /> {/* Spacer for balance */}
           </div>
           <div className="flex-1 p-4 overflow-auto">
             <div className="space-y-4">
@@ -825,61 +815,29 @@ export function ToolCallSidePanel({
 
     return (
       <div className="flex flex-col h-full">
+        {/* Native window header */}
         <motion.div
           layoutId={CONTENT_LAYOUT_ID}
-          className="p-3"
+          className="h-10 bg-gradient-to-b from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-3 select-none cursor-default"
         >
-          <div className="flex items-center justify-between">
-            <motion.div layoutId="tool-icon" className="ml-2 flex items-center gap-2">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
-              </h2>
-            </motion.div>
-
-            {displayToolCall.toolResult?.content && !isStreaming && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleMinimize}
-                  className="h-8 w-8 ml-1"
-                  title="Minimizar para visualização flutuante"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-
+          <WindowControls
+            onMinimize={handleMinimize}
+            onMaximize={() => setIsMaximized(!isMaximized)}
+            isMaximized={isMaximized}
+            variant="macos"
+          />
+          <div className="flex-1 flex items-center justify-center gap-2">
+            <motion.h2 layoutId="tool-icon" className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+              {agentName ? `Área de trabalho de ${agentName}` : `Área de trabalho de ${BRANDING.name}`}
+            </motion.h2>
             {isStreaming && (
-              <div className="flex items-center gap-2">
-                <div className="px-2.5 py-1 rounded-lg text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1.5">
-                  <CircleDashed className="h-3 w-3 animate-spin opacity-60" />
-                  <span>Executando</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleMinimize}
-                  className="h-8 w-8 ml-1"
-                  title="Minimizar para visualização flutuante"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
+              <div className="px-2 py-0.5 rounded text-xs font-medium bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-muted-foreground flex items-center gap-1">
+                <CircleDashed className="h-3 w-3 animate-spin opacity-60" />
+                <span>Executando</span>
               </div>
-            )}
-
-            {!displayToolCall.toolResult?.content && !isStreaming && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleMinimize}
-                className="h-8 w-8"
-                title="Minimizar para visualização flutuante"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
             )}
           </div>
+          <div className="w-[34px]" /> {/* Spacer for balance */}
         </motion.div>
 
         <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
@@ -907,18 +865,25 @@ export function ToolCallSidePanel({
             }
           }}
           className={cn(
-            'fixed border border-black/6 dark:border-white/8 rounded-2xl flex flex-col z-30 right-4',
+            'fixed border border-black/6 dark:border-white/8 rounded-2xl flex flex-col z-30',
             'shadow-lg dark:shadow-none',
-            isMobile
-              ? 'left-4'
-              : isPinned 
-                ? 'left-[calc(256px+(100%-256px)*0.4+16px)]' // Quando pinned: sidebar + 40% do espaço restante + gap
-                : 'left-[calc(40%+16px)]', // Quando não pinned: 40% da tela + gap
+            isMaximized
+              ? 'inset-4' // Maximizado: ocupa quase toda a tela
+              : cn(
+                  'right-4',
+                  isMobile
+                    ? 'left-4'
+                    : isPinned 
+                      ? 'left-[calc(256px+(100%-256px)*0.4+16px)]' // Quando pinned: sidebar + 40% do espaço restante + gap
+                      : 'left-[calc(40%+16px)]', // Quando não pinned: 40% da tela + gap
+                ),
           )}
           style={{
             overflow: 'hidden',
-            top: '25px',
-            bottom: '25px',
+            ...(isMaximized ? {} : {
+              top: '25px',
+              bottom: '25px',
+            })
           }}
         >
           <div className="flex-1 flex flex-col overflow-hidden bg-background">

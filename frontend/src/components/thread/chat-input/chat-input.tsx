@@ -367,22 +367,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       <div className="w-full relative">
         <div className="relative flex flex-col gap-2">
           <ChatSnack
-            toolCalls={toolCalls}
-            toolCallIndex={toolCallIndex}
-            onExpandToolPreview={onExpandToolPreview}
-            onNavigateToolPreview={(index) => {
-              // Update the parent component's tool call index
-              if (onExpandToolPreview) {
-                // Optionally handle navigation
-              }
-            }}
-            agentName={agentName}
-            showToolPreview={showToolPreview}
             showUsagePreview={showSnackbar}
             subscriptionData={subscriptionData}
             onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
             onOpenUpgrade={() => setBillingModalOpen(true)}
-            isVisible={showToolPreview || !!showSnackbar}
+            isVisible={!!showSnackbar}
           />
           <div
             className={`w-full overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-2xl'} relative`}
@@ -475,6 +464,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   selectedAgentId={selectedAgentId}
                   onAgentSelect={onAgentSelect}
                   hideAgentSelection={hideAgentSelection}
+                  
+                  toolCalls={toolCalls}
+                  toolCallIndex={toolCallIndex}
+                  showToolPreview={showToolPreview}
+                  onExpandToolPreview={onExpandToolPreview}
                 />
               </div>
 

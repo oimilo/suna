@@ -165,26 +165,11 @@ export function SiteHeader({
           )}
 
           <div className="flex flex-1 items-center gap-2">
-          {/* Side panel toggle button - only visible when sidebar is not pinned */}
-          {!isPinned && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onToggleSidePanel}
-                    className="h-9 w-9 cursor-pointer"
-                    aria-label="Toggle side panel"
-                  >
-                    <PanelRightOpen className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Área de Trabalho</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          {/* Visual-only side panel button */}
+          {!isMobile && (
+            <div className="h-9 w-9 flex items-center justify-center opacity-40 cursor-default">
+              <PanelRightOpen className="h-4 w-4" />
+            </div>
           )}
           
           {isEditing ? (

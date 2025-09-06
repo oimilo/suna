@@ -126,7 +126,7 @@ export function WebCrawlToolView({
   const contentStats = webpageContent?.text ? getContentStats(webpageContent.text) : null;
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
       <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
@@ -322,24 +322,6 @@ export function WebCrawlToolView({
       </CardContent>
 
       {/* Footer */}
-      <div className="h-10 px-4 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
-        <div className="h-full flex items-center gap-2">
-          {!isStreaming && webpageContent?.text && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-              <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
-              <span className="text-xs font-medium text-muted-foreground">Conteúdo extraído</span>
-            </div>
-          )}
-        </div>
-
-        <div className="text-xs text-muted-foreground/60">
-          {toolTimestamp && !isStreaming
-            ? formatTimestamp(toolTimestamp)
-            : assistantTimestamp
-              ? formatTimestamp(assistantTimestamp)
-              : ''}
-        </div>
-      </div>
     </Card>
   );
 }
