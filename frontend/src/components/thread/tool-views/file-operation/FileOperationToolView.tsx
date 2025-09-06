@@ -175,40 +175,39 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
-      if (iframeError) {
+      if (iframeError && retryCount < 3) {
+        // Show subtle loading state while retrying
+        return (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin opacity-50" />
+          </div>
+        );
+      } else if (iframeError && retryCount >= 3) {
+        // Show error state after max retries
         return (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-amber-500/10">
-              <RefreshCw className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-red-500/10">
+              <ExternalLink className="h-10 w-10 text-red-600 dark:text-red-400" />
             </div>
             <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
-              Sandbox Iniciando...
+              Não foi possível carregar o preview
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
-              O ambiente de desenvolvimento está sendo preparado. Isso pode levar alguns segundos na primeira vez.
+              O sandbox pode estar demorando mais que o esperado para iniciar.
             </p>
-            {retryCount < 3 ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Tentando novamente em alguns segundos... (Tentativa {retryCount + 1}/3)</span>
-                </div>
-              </div>
-            ) : (
-              <Button
-                onClick={() => {
-                  setIframeError(false);
-                  setRetryCount(0);
-                  if (iframeRef.current) {
-                    iframeRef.current.src = htmlPreviewUrl;
-                  }
-                }}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Tentar Novamente
-              </Button>
-            )}
+            <Button
+              onClick={() => {
+                setIframeError(false);
+                setRetryCount(0);
+                if (iframeRef.current) {
+                  iframeRef.current.src = htmlPreviewUrl;
+                }
+              }}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Tentar Novamente
+            </Button>
           </div>
         );
       }
