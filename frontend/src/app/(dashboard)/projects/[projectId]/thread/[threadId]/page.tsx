@@ -58,6 +58,7 @@ export default function ThreadPage({
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [isPanelMinimized, setIsPanelMinimized] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -652,6 +653,10 @@ export default function ThreadPage({
           setIsSidePanelOpen(false);
           userClosedPanelRef.current = true;
           setAutoOpenedPanel(true);
+          setIsPanelMinimized(false);
+        }}
+        onSidePanelMinimize={() => {
+          setIsPanelMinimized(true);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -682,6 +687,7 @@ export default function ThreadPage({
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
+        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onProjectRenamed={handleProjectRenamed}
         onViewFiles={handleOpenFileViewer}
@@ -699,6 +705,10 @@ export default function ThreadPage({
           setIsSidePanelOpen(false);
           userClosedPanelRef.current = true;
           setAutoOpenedPanel(true);
+          setIsPanelMinimized(false);
+        }}
+        onSidePanelMinimize={() => {
+          setIsPanelMinimized(true);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -745,8 +755,8 @@ export default function ThreadPage({
             "fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent pt-8",
             isSidePanelAnimating ? "" : "transition-all duration-200 ease-in-out",
             isPinned && !isMobile ? 'left-64' : leftSidebarState === 'expanded' ? 'left-4 md:left-6' : 'left-4',
-            isSidePanelOpen 
-              ? (isPinned && !isMobile ? 'right-[50%]' : 'right-[60%]') // Ajusta apenas quando pinned
+            isSidePanelOpen && !isPanelMinimized
+              ? (isPinned && !isMobile ? 'right-[50%]' : 'right-[60%]') // Ajusta apenas quando pinned e não minimizado
               : 'right-0',
             isMobile ? 'left-0 right-0' : ''
           )}
@@ -773,9 +783,9 @@ export default function ThreadPage({
               onAgentSelect={setSelectedAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+              showToolPreview={isPanelMinimized && toolCalls.length > 0}
               onExpandToolPreview={() => {
-                setIsSidePanelOpen(true);
+                setIsPanelMinimized(false);
                 userClosedPanelRef.current = false;
               }}
               defaultShowSnackbar="tokens"

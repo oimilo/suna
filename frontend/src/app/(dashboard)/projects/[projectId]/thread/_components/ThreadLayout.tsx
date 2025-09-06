@@ -16,6 +16,7 @@ interface ThreadLayoutProps {
   project: Project | null;
   sandboxId: string | null;
   isSidePanelOpen: boolean;
+  isPanelMinimized?: boolean;
   onToggleSidePanel: () => void;
   onProjectRenamed?: (newName: string) => void;
   onViewFiles: (filePath?: string, filePathList?: string[]) => void;
@@ -30,6 +31,7 @@ interface ThreadLayoutProps {
   currentToolIndex: number;
   onSidePanelNavigate: (index: number) => void;
   onSidePanelClose: () => void;
+  onSidePanelMinimize?: () => void;
   onSidePanelRequestOpen?: () => void;
   renderAssistantMessage: (assistantContent?: string, toolContent?: string) => React.ReactNode;
   renderToolResult: (toolContent?: string, isSuccess?: boolean) => React.ReactNode;
@@ -52,6 +54,7 @@ export function ThreadLayout({
   project,
   sandboxId,
   isSidePanelOpen,
+  isPanelMinimized = false,
   onToggleSidePanel,
   onProjectRenamed,
   onViewFiles,
@@ -66,6 +69,7 @@ export function ThreadLayout({
   currentToolIndex,
   onSidePanelNavigate,
   onSidePanelClose,
+  onSidePanelMinimize,
   onSidePanelRequestOpen,
   renderAssistantMessage,
   renderToolResult,
@@ -90,8 +94,8 @@ export function ThreadLayout({
       )}
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || isSidePanelOpen)
-          ? 'mr-[60%]' // Sempre deixa 60% para a área de trabalho
+        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isPanelMinimized))
+          ? 'mr-[60%]' // Deixa 60% para a área de trabalho quando não minimizado
           : ''
           }`}
       >
@@ -113,6 +117,7 @@ export function ThreadLayout({
       <ToolCallSidePanel
         isOpen={isSidePanelOpen && initialLoadCompleted}
         onClose={onSidePanelClose}
+        onMinimize={onSidePanelMinimize}
         toolCalls={toolCalls}
         messages={messages}
         externalNavigateToIndex={externalNavIndex}

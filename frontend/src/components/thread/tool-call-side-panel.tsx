@@ -33,6 +33,7 @@ export interface ToolCallInput {
 interface ToolCallSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onMinimize?: () => void;
   toolCalls: ToolCallInput[];
   currentIndex: number;
   onNavigate: (newIndex: number) => void;
@@ -68,6 +69,7 @@ const CONTENT_LAYOUT_ID = 'tool-panel-content';
 export function ToolCallSidePanel({
   isOpen,
   onClose,
+  onMinimize,
   toolCalls,
   currentIndex,
   onNavigate,
@@ -104,6 +106,14 @@ export function ToolCallSidePanel({
   const handleClose = React.useCallback(() => {
     onClose();
   }, [onClose]);
+  
+  const handleMinimize = React.useCallback(() => {
+    if (onMinimize) {
+      onMinimize();
+    } else {
+      onClose();
+    }
+  }, [onMinimize, onClose]);
 
   // Padrões de arquivos principais por tipo de projeto
   const FILE_PATTERNS = {
@@ -651,7 +661,7 @@ export function ToolCallSidePanel({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={handleClose}
+                      onClick={handleMinimize}
                       className="h-8 w-8"
                       title="Minimizar para visualização flutuante"
                     >
@@ -831,7 +841,7 @@ export function ToolCallSidePanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleClose}
+                  onClick={handleMinimize}
                   className="h-8 w-8 ml-1"
                   title="Minimizar para visualização flutuante"
                 >
@@ -849,7 +859,7 @@ export function ToolCallSidePanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleClose}
+                  onClick={handleMinimize}
                   className="h-8 w-8 ml-1"
                   title="Minimizar para visualização flutuante"
                 >
@@ -862,7 +872,7 @@ export function ToolCallSidePanel({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleClose}
+                onClick={handleMinimize}
                 className="h-8 w-8"
                 title="Minimizar para visualização flutuante"
               >

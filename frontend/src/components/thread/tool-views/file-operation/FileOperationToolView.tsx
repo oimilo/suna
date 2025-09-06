@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import {
   getLanguageFromFileName,
@@ -134,26 +135,28 @@ export function FileOperationToolView({
     if (isHtml && htmlPreviewUrl && isInitialLoad) {
       const timer = setTimeout(() => {
         setIsInitialLoad(false);
-      }, 2000); // Wait 2 seconds before first load
+      }, 5000); // Wait 5 seconds before first load to ensure sandbox is ready
       
       return () => clearTimeout(timer);
     }
   }, [isHtml, htmlPreviewUrl, isInitialLoad]);
 
-  // Auto-retry logic for iframe loading errors
+  // Auto-retry logic for iframe loading errors with progressive delays
   React.useEffect(() => {
-    if (iframeError && retryCount < 3) {
+    if (iframeError && retryCount < 5) {
       setIsRetrying(true);
+      // Progressive delays: 3s, 5s, 7s, 9s, 11s
+      const delay = 3000 + (retryCount * 2000);
       const timer = setTimeout(() => {
         setIframeError(false);
         setRetryCount(prev => prev + 1);
         if (iframeRef.current) {
           iframeRef.current.src = htmlPreviewUrl || '';
         }
-      }, 3000); // Retry after 3 seconds
+      }, delay);
       
       return () => clearTimeout(timer);
-    } else if (retryCount >= 3) {
+    } else if (retryCount >= 5) {
       // Stop retrying after max attempts
       setIsRetrying(false);
     }
@@ -197,28 +200,28 @@ export function FileOperationToolView({
       // Show loading during initial load or retry
       if (isInitialLoad || isRetrying) {
         return (
-          <div className="flex flex-col items-center justify-center h-full py-12 px-6">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-amber-500/10">
-              <RefreshCw className="h-10 w-10 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
-              Sandbox Iniciando...
-            </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
-              O ambiente de desenvolvimento está sendo preparado. Isso pode levar alguns segundos na primeira vez.
-            </p>
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>{isInitialLoad ? 'Preparando ambiente...' : `Tentando novamente... (Tentativa ${retryCount + 1}/3)`}</span>
+          <div className="flex flex-col items-center justify-center h-full pt-32">
+            {/* Modern animated loading indicator */}
+            <div className="relative mb-8">
+              <div className="w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-2 border-zinc-200 dark:border-zinc-800"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-zinc-900 dark:border-t-zinc-100 animate-spin" style={{ animationDuration: '2s' }}></div>
+                <div className="absolute inset-2 rounded-full border-2 border-transparent border-r-zinc-400 dark:border-r-zinc-600 animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }}></div>
+                <div className="absolute inset-4 rounded-full bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 animate-pulse" style={{ animationDuration: '2s' }}></div>
               </div>
             </div>
+            <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
+              Projeto Iniciando...
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md">
+              Por favor aguarde enquanto preparamos o ambiente.
+            </p>
           </div>
         );
       }
       
       // Show error state after max retries
-      if (iframeError && retryCount >= 3) {
+      if (iframeError && retryCount >= 5) {
         return (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-red-500/10">
@@ -228,7 +231,7 @@ export function FileOperationToolView({
               Não foi possível carregar o preview
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
-              O sandbox pode estar demorando mais que o esperado para iniciar.
+              O projeto está demorando mais que o esperado. Tente novamente.
             </p>
             <Button
               onClick={() => {
@@ -266,10 +269,12 @@ export function FileOperationToolView({
                 // But that's OK for external content
                 const doc = iframe.contentDocument;
                 const bodyContent = doc?.body?.innerHTML || '';
-                // Check for both 502 and 404 errors
+                // Check for both 502 and 404 errors, and other gateway errors
                 if (bodyContent.includes('File not found: 502') || 
                     bodyContent.includes('File not found: 404') ||
-                    bodyContent.includes('"error":"File not found: 404"')) {
+                    bodyContent.includes('"error":"File not found: 404"') ||
+                    bodyContent.includes('502 Bad Gateway') ||
+                    bodyContent.includes('status of 502')) {
                   setIframeError(true);
                 } else {
                   // Successfully loaded
@@ -431,20 +436,32 @@ export function FileOperationToolView({
                 </Button>
               )}
               <TabsList className="h-8 bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 p-0.5 gap-0.5 rounded-lg">
-                <TabsTrigger
-                  value="code"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.04] [&[data-state=active]]:dark:bg-white/[0.04] [&[data-state=active]]:text-foreground [&[data-state=active]]:shadow-sm hover:bg-black/[0.02] dark:hover:bg-white/[0.02] text-muted-foreground data-[state=inactive]:opacity-60"
-                >
-                  <Code className="h-3.5 w-3.5" />
-                  Código
-                </TabsTrigger>
-                <TabsTrigger
-                  value="preview"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.04] [&[data-state=active]]:dark:bg-white/[0.04] [&[data-state=active]]:text-foreground [&[data-state=active]]:shadow-sm hover:bg-black/[0.02] dark:hover:bg-white/[0.02] text-muted-foreground data-[state=inactive]:opacity-60"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Visualizar
-                </TabsTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value="code"
+                      className="flex items-center px-2 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.08] [&[data-state=active]]:dark:bg-white/[0.08] [&[data-state=active]]:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] text-muted-foreground [&[data-state=active]]:text-foreground data-[state=inactive]:opacity-50"
+                    >
+                      <Code className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Código</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value="preview"
+                      className="flex items-center px-2 py-1.5 text-xs font-medium transition-all rounded-md [&[data-state=active]]:bg-black/[0.08] [&[data-state=active]]:dark:bg-white/[0.08] [&[data-state=active]]:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] text-muted-foreground [&[data-state=active]]:text-foreground data-[state=inactive]:opacity-50"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Visualizar</p>
+                  </TooltipContent>
+                </Tooltip>
               </TabsList>
             </div>
           </div>
