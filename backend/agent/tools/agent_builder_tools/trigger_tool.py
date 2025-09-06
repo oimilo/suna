@@ -153,12 +153,12 @@ class TriggerTool(AgentBuilderBaseTool):
                     "message": result_message,
                     "trigger": {
                         "id": trigger.trigger_id,
-                        "name": trigger.config.name,
-                        "description": trigger.config.description,
+                        "name": trigger.name,
+                        "description": trigger.description,
                         "cron_expression": cron_expression,
                         "execution_type": execution_type,
-                        "is_active": trigger.config.is_active,
-                        "created_at": trigger.metadata.created_at.isoformat()
+                        "is_active": trigger.is_active,
+                        "created_at": trigger.created_at.isoformat()
                     }
                 })
             except ValueError as ve:
