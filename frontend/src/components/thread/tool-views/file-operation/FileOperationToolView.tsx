@@ -69,6 +69,8 @@ export function FileOperationToolView({
   const isDarkTheme = resolvedTheme === 'dark';
   const [iframeError, setIframeError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
+  const [isRetrying, setIsRetrying] = React.useState(false);
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
   const operation = getOperationType(name, assistantContent);
@@ -127,9 +129,21 @@ export function FileOperationToolView({
 
   const FileIcon = getFileIcon(fileName);
 
+  // Initial load delay to give sandbox time to start
+  React.useEffect(() => {
+    if (isHtml && htmlPreviewUrl && isInitialLoad) {
+      const timer = setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 2000); // Wait 2 seconds before first load
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isHtml, htmlPreviewUrl, isInitialLoad]);
+
   // Auto-retry logic for iframe loading errors
   React.useEffect(() => {
     if (iframeError && retryCount < 3) {
+      setIsRetrying(true);
       const timer = setTimeout(() => {
         setIframeError(false);
         setRetryCount(prev => prev + 1);
@@ -139,6 +153,8 @@ export function FileOperationToolView({
       }, 3000); // Retry after 3 seconds
       
       return () => clearTimeout(timer);
+    } else if (retryCount >= 3) {
+      setIsRetrying(false);
     }
   }, [iframeError, retryCount, htmlPreviewUrl]);
 
@@ -146,6 +162,8 @@ export function FileOperationToolView({
   React.useEffect(() => {
     setIframeError(false);
     setRetryCount(0);
+    setIsInitialLoad(true);
+    setIsRetrying(false);
   }, [htmlPreviewUrl]);
 
   if (!isStreaming && !processedFilePath && !fileContent) {
@@ -175,7 +193,8 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
-      if (iframeError) {
+      // Show loading during initial load or retry
+      if (isInitialLoad || isRetrying) {
         return (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-amber-500/10">
@@ -187,32 +206,48 @@ export function FileOperationToolView({
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
               O ambiente de desenvolvimento está sendo preparado. Isso pode levar alguns segundos na primeira vez.
             </p>
-            {retryCount < 3 ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Tentando novamente em alguns segundos... (Tentativa {retryCount + 1}/3)</span>
-                </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>{isInitialLoad ? 'Preparando ambiente...' : `Tentando novamente... (Tentativa ${retryCount + 1}/3)`}</span>
               </div>
-            ) : (
-              <Button
-                onClick={() => {
-                  setIframeError(false);
-                  setRetryCount(0);
-                  if (iframeRef.current) {
-                    iframeRef.current.src = htmlPreviewUrl;
-                  }
-                }}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Tentar Novamente
-              </Button>
-            )}
+            </div>
+          </div>
+        );
+      }
+      
+      // Show error state after max retries
+      if (iframeError && retryCount >= 3) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full py-12 px-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-red-500/10">
+              <ExternalLink className="h-10 w-10 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
+              Não foi possível carregar o preview
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
+              O sandbox pode estar demorando mais que o esperado para iniciar.
+            </p>
+            <Button
+              onClick={() => {
+                setIframeError(false);
+                setRetryCount(0);
+                setIsRetrying(true);
+                if (iframeRef.current) {
+                  iframeRef.current.src = htmlPreviewUrl;
+                }
+              }}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Tentar Novamente
+            </Button>
           </div>
         );
       }
 
+      // Only render iframe when not loading or retrying
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
@@ -229,11 +264,19 @@ export function FileOperationToolView({
                 // This will throw if we can't access the contentDocument (CORS)
                 // But that's OK for external content
                 const doc = iframe.contentDocument;
-                if (doc?.body?.innerHTML?.includes('File not found: 502')) {
+                const bodyContent = doc?.body?.innerHTML || '';
+                // Check for both 502 and 404 errors
+                if (bodyContent.includes('File not found: 502') || 
+                    bodyContent.includes('File not found: 404') ||
+                    bodyContent.includes('"error":"File not found: 404"')) {
                   setIframeError(true);
+                } else {
+                  // Successfully loaded
+                  setIsRetrying(false);
                 }
               } catch {
-                // CORS error is expected for external content, ignore it
+                // CORS error is expected for external content, assume success
+                setIsRetrying(false);
               }
             }}
           />
