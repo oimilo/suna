@@ -26,6 +26,7 @@ export function HtmlRenderer({
     const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
     const [iframeError, setIframeError] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const [isRetrying, setIsRetrying] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     // Create a blob URL for HTML content if needed
@@ -86,6 +87,7 @@ export function HtmlRenderer({
     // Auto-retry logic for 502 errors
     useEffect(() => {
         if (iframeError && retryCount < 3) {
+            setIsRetrying(true);
             const timer = setTimeout(() => {
                 console.log('[HtmlRenderer] Retrying after error, attempt:', retryCount + 1);
                 setIframeError(false);
@@ -96,6 +98,9 @@ export function HtmlRenderer({
                 }
             }, 3000); // Retry after 3 seconds
             return () => clearTimeout(timer);
+        } else if (retryCount >= 3) {
+            // Stop retrying after max attempts
+            setIsRetrying(false);
         }
     }, [iframeError, retryCount, htmlPreviewUrl]);
 
@@ -117,10 +122,12 @@ export function HtmlRenderer({
                 // Successfully loaded
                 setIframeError(false);
                 setRetryCount(0);
+                setIsRetrying(false);
             }
         } catch (e) {
             // Cross-origin, can't check content, assume it's ok
             console.log('[HtmlRenderer] Cross-origin iframe, assuming success');
+            setIsRetrying(false);
         }
     };
 
@@ -128,6 +135,7 @@ export function HtmlRenderer({
     const handleManualRetry = () => {
         setIframeError(false);
         setRetryCount(0);
+        setIsRetrying(true);
         if (iframeRef.current) {
             iframeRef.current.src = htmlPreviewUrl;
         }
@@ -148,7 +156,7 @@ export function HtmlRenderer({
             <div className="flex-1 min-h-0 relative">
                 {viewMode === 'preview' ? (
                     <div className="w-full h-full">
-                        {iframeError && retryCount < 3 ? (
+                        {isRetrying ? (
                             // Show subtle loading state while retrying
                             <div className="w-full h-full flex items-center justify-center">
                                 <Loader2 className="h-5 w-5 text-muted-foreground animate-spin opacity-50" />

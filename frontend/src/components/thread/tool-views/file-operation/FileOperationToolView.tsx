@@ -69,6 +69,7 @@ export function FileOperationToolView({
   const isDarkTheme = resolvedTheme === 'dark';
   const [iframeError, setIframeError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
+  const [isRetrying, setIsRetrying] = React.useState(false);
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
   const operation = getOperationType(name, assistantContent);
@@ -130,6 +131,7 @@ export function FileOperationToolView({
   // Auto-retry logic for iframe loading errors
   React.useEffect(() => {
     if (iframeError && retryCount < 3) {
+      setIsRetrying(true);
       const timer = setTimeout(() => {
         setIframeError(false);
         setRetryCount(prev => prev + 1);
@@ -139,6 +141,9 @@ export function FileOperationToolView({
       }, 3000); // Retry after 3 seconds
       
       return () => clearTimeout(timer);
+    } else if (retryCount >= 3) {
+      // Stop retrying after max attempts
+      setIsRetrying(false);
     }
   }, [iframeError, retryCount, htmlPreviewUrl]);
 
@@ -146,6 +151,7 @@ export function FileOperationToolView({
   React.useEffect(() => {
     setIframeError(false);
     setRetryCount(0);
+    setIsRetrying(false);
   }, [htmlPreviewUrl]);
 
   if (!isStreaming && !processedFilePath && !fileContent) {
@@ -175,7 +181,7 @@ export function FileOperationToolView({
     }
 
     if (isHtml && htmlPreviewUrl) {
-      if (iframeError && retryCount < 3) {
+      if (isRetrying) {
         // Show subtle loading state while retrying
         return (
           <div className="flex items-center justify-center h-full">
@@ -199,6 +205,7 @@ export function FileOperationToolView({
               onClick={() => {
                 setIframeError(false);
                 setRetryCount(0);
+                setIsRetrying(true);
                 if (iframeRef.current) {
                   iframeRef.current.src = htmlPreviewUrl;
                 }
@@ -230,9 +237,13 @@ export function FileOperationToolView({
                 const doc = iframe.contentDocument;
                 if (doc?.body?.innerHTML?.includes('File not found: 502')) {
                   setIframeError(true);
+                } else {
+                  // Successfully loaded
+                  setIsRetrying(false);
                 }
               } catch {
-                // CORS error is expected for external content, ignore it
+                // CORS error is expected for external content, assume success
+                setIsRetrying(false);
               }
             }}
           />
