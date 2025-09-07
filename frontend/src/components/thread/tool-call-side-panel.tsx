@@ -141,8 +141,17 @@ export function ToolCallSidePanel({
         : rawContent ? JSON.stringify(rawContent) : '';
       
       // Verifica se é um arquivo principal (não CSS, config, etc.)
+      // Procura especificamente por padrões de criação de arquivo, não apenas menções
       const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
-      const isMainFile = mainFilePatterns.some(pattern => content.includes(pattern));
+      const isMainFile = mainFilePatterns.some(pattern => {
+        // Verifica se o padrão aparece como um caminho de arquivo sendo criado
+        return content.includes(`file_path="${pattern}"`) ||
+               content.includes(`file_path='${pattern}'`) ||
+               content.includes(`<create-file file_path="${pattern}"`) ||
+               content.includes(`"file_path": "${pattern}"`) ||
+               // Fallback para detecção simples, mas apenas se parecer um caminho
+               (content.includes(`/${pattern}`) || content.includes(`\\${pattern}`));
+      });
       
       // Exclui arquivos auxiliares comuns
       const auxiliaryPatterns = [
@@ -151,6 +160,11 @@ export function ToolCallSidePanel({
         'README.md', 'test.', 'spec.', '_test.', '.test.'
       ];
       const isAuxiliary = auxiliaryPatterns.some(pattern => content.includes(pattern));
+      
+      // Log para debug
+      if (isMainFile) {
+        console.log('[DELIVERY] Arquivo principal detectado em', name, '- padrão encontrado');
+      }
       
       // Só considera entrega se for arquivo principal e não auxiliar
       return isMainFile && !isAuxiliary;
@@ -166,14 +180,9 @@ export function ToolCallSidePanel({
       return true;
     }
 
-    // Ignora operações técnicas e mensagens genéricas
-    const technicalOps = [
-      'execute-command', 'str-replace', 'edit-file', 'read-file',
-      'check-command-output', 'list-commands', 'terminate-command',
-      'complete', 'ask'
-    ];
-    
-    return !technicalOps.includes(name);
+    // Por padrão, retorna false (não é uma entrega relevante)
+    // Apenas casos específicos acima (arquivos principais, deploy, etc.) são considerados entregas
+    return false;
   };
 
   // Detecta o arquivo principal baseado no contexto do projeto
@@ -182,7 +191,8 @@ export function ToolCallSidePanel({
       .map((tc, idx) => ({ tc, idx }))
       .filter(({ tc }) => {
         const name = tc.assistantCall?.name;
-        return name === 'create-file' || name === 'full-file-rewrite';
+        // Inclui edit-file para detectar quando arquivos principais são editados
+        return name === 'create-file' || name === 'full-file-rewrite' || name === 'edit-file';
       });
 
     if (fileCreations.length === 0) return -1;
@@ -213,9 +223,19 @@ export function ToolCallSidePanel({
     for (const pattern of patterns) {
       const match = fileCreations.find(({ tc }) => {
         const content = getContentAsString(tc.assistantCall?.content);
-        return content.includes(pattern);
+        // Usa a mesma lógica específica de detecção
+        return content.includes(`file_path="${pattern}"`) ||
+               content.includes(`file_path='${pattern}'`) ||
+               content.includes(`<create-file file_path="${pattern}"`) ||
+               content.includes(`<edit-file target_file="${pattern}"`) ||
+               content.includes(`"file_path": "${pattern}"`) ||
+               content.includes(`"target_file": "${pattern}"`) ||
+               (content.includes(`/${pattern}`) || content.includes(`\\${pattern}`));
       });
-      if (match) return match.idx;
+      if (match) {
+        console.log('[MAIN_FILE] Arquivo principal encontrado:', pattern, 'no índice', match.idx);
+        return match.idx;
+      }
     }
 
     // Fallback: último arquivo HTML ou primeiro arquivo criado
@@ -237,7 +257,9 @@ export function ToolCallSidePanel({
       'read-file',
       'check-command-output',
       'list-commands',
-      'terminate-command'
+      'terminate-command',
+      'ask',
+      'complete'
     ];
     return technicalOps.includes(name);
   };
@@ -310,12 +332,18 @@ export function ToolCallSidePanel({
   React.useEffect(() => {
     if (!toolCalls.length || hasUserInteracted || isLoading) return;
 
+    console.log('[PANEL] Verificando', toolCalls.length, 'toolCalls para entregas relevantes');
+    
     // Detecta se há entregas relevantes (não apenas qualquer toolcall)
     const hasDelivery = toolCalls.some(tc => isDeliveryMoment(tc));
+    
+    console.log('[PANEL] Tem entrega relevante?', hasDelivery);
     
     if (hasDelivery) {
       // Encontra o arquivo principal
       const mainIdx = detectMainFile(toolCalls);
+      
+      console.log('[PANEL] Índice do arquivo principal:', mainIdx);
       
       // Se não encontrou arquivo principal, procura por outras entregas importantes
       const deliveryIdx = mainIdx > -1 ? mainIdx : toolCalls.findIndex(tc => {
@@ -325,24 +353,24 @@ export function ToolCallSidePanel({
       });
       
       if (deliveryIdx > -1) {
+        console.log('[PANEL] Navegando para entrega no índice:', deliveryIdx);
         setMainDeliveryIndex(deliveryIdx);
-        // Navega para a entrega principal
+        // SEMPRE navega para a entrega principal quando detectada
         setInternalIndex(deliveryIdx);
+        // Também atualiza o índice externo para sincronizar
+        onNavigate(deliveryIdx);
         
-        // Só solicita abertura se:
-        // 1. O painel está fechado
-        // 2. Não está minimizado (ou seja, isPanelMinimized === false)
-        // 3. Estamos em modo live
-        // 4. Há uma função de callback para abrir
-        // Isso garante que o painel só abre em entregas principais importantes
+        // Solicita abertura se necessário
         if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
-          onNavigate(deliveryIdx);
+          console.log('[PANEL] Solicitando abertura do painel');
           onRequestOpen();
         }
       }
+    } else {
+      console.log('[PANEL] Nenhuma entrega relevante detectada - mantendo painel como está');
     }
     // Se não há entregas relevantes, mantém o painel como está (fechado ou minimizado)
-  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen]);
+  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen, detectMainFile, isDeliveryMoment]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];
@@ -660,7 +688,8 @@ export function ToolCallSidePanel({
     return () => clearInterval(interval);
   }, [isStreaming]);
 
-  if (!isOpen) {
+  // Oculta o painel quando está minimizado OU fechado
+  if (!isOpen || isPanelMinimized) {
     return null;
   }
 

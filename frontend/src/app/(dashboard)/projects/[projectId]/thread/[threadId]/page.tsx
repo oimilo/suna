@@ -454,17 +454,100 @@ export default function ThreadPage({
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
 
-      // Removido: auto-abertura genérica do painel
-      // O painel agora só abre quando o ToolCallSidePanel detecta uma
-      // entrega relevante (arquivo principal, deploy, etc.) via onRequestOpen
-      // Isto segue a hierarquia definida no workspace_ui_structure.md
-      
-      // Apenas atualiza o índice se já houver toolCalls
+      // Lógica inteligente de inicialização
       if (toolCalls.length > 0) {
-        setCurrentToolIndex(toolCalls.length - 1);
+        console.log('[INIT] Verificando toolCalls para detecção de arquivo principal:', toolCalls.length);
+        
+        // Padrões de arquivos principais
+        const FILE_PATTERNS = {
+          web: ['index.html', 'home.html', 'main.html', 'app.html'],
+          game: ['game.html', 'play.html', 'index.html', 'main.js'],
+          python: ['main.py', 'app.py', 'server.py', 'bot.py', 'script.py'],
+          node: ['index.js', 'app.js', 'server.js', 'main.js', 'index.ts'],
+          dashboard: ['dashboard.html', 'admin.html', 'panel.html'],
+          api: ['webhook.js', 'api.py', 'handler.js', 'function.js']
+        };
+
+        // Detecta se há arquivo principal ou entrega importante
+        let mainDeliveryIndex = -1;
+        const allPatterns = Object.values(FILE_PATTERNS).flat();
+        
+        for (let i = 0; i < toolCalls.length; i++) {
+          const tc = toolCalls[i];
+          const name = tc.assistantCall?.name;
+          
+          // Verifica se é deploy ou expose-port (sempre importante)
+          if (name === 'deploy' || name === 'expose-port') {
+            console.log('[INIT] Encontrado deploy/expose-port no índice:', i);
+            mainDeliveryIndex = i;
+            break;
+          }
+          
+          // Verifica se é criação/edição de arquivo principal
+          if (name === 'create-file' || name === 'full-file-rewrite' || name === 'edit-file') {
+            const content = typeof tc.assistantCall?.content === 'string' 
+              ? tc.assistantCall.content 
+              : JSON.stringify(tc.assistantCall?.content || '');
+            
+            // Procura por padrões de arquivo principal no conteúdo
+            // Usa detecção específica para evitar falsos positivos com arquivos anexados
+            for (const pattern of allPatterns) {
+              // Verifica especificamente por padrões de criação/edição de arquivo
+              const isFileCreation = 
+                content.includes(`file_path="${pattern}"`) ||
+                content.includes(`file_path='${pattern}'`) ||
+                content.includes(`target_file="${pattern}"`) ||
+                content.includes(`target_file='${pattern}'`) ||
+                content.includes(`<create-file file_path="${pattern}"`) ||
+                content.includes(`<edit-file target_file="${pattern}"`) ||
+                content.includes(`"file_path": "${pattern}"`) ||
+                content.includes(`"target_file": "${pattern}"`) ||
+                // Fallback para detecção de caminho, mas apenas se parecer um caminho real
+                ((content.includes(`/${pattern}`) || content.includes(`\\${pattern}`)) && 
+                 (name === 'create-file' || name === 'full-file-rewrite'));
+              
+              if (isFileCreation) {
+                // Exclui arquivos auxiliares comuns
+                const auxiliaryPatterns = [
+                  'style.css', 'styles.css', 'config.js', 'config.json', 
+                  'package.json', 'requirements.txt', '.env', '.gitignore',
+                  'README.md', 'test.', 'spec.', '_test.', '.test.'
+                ];
+                
+                const isAuxiliary = auxiliaryPatterns.some(aux => 
+                  pattern.includes(aux) || content.includes(aux)
+                );
+                
+                if (!isAuxiliary) {
+                  console.log('[INIT] Encontrado arquivo principal (criação/edição):', pattern, 'no índice:', i);
+                  mainDeliveryIndex = i;
+                  break;
+                }
+              }
+            }
+            
+            // Se encontrou arquivo principal, não precisa continuar (a menos que encontre deploy/expose-port depois)
+          }
+        }
+        
+        console.log('[INIT] Resultado da detecção - mainDeliveryIndex:', mainDeliveryIndex);
+        
+        if (mainDeliveryIndex >= 0) {
+          // Há entrega principal - abre mostrando ela
+          console.log('[INIT] Abrindo área de trabalho com arquivo principal no índice:', mainDeliveryIndex);
+          setIsSidePanelOpen(true);
+          setIsPanelMinimized(false);
+          setCurrentToolIndex(mainDeliveryIndex);
+        } else {
+          // Só operações técnicas - mantém minimizado mas visível
+          console.log('[INIT] Sem arquivo principal detectado - mantendo minimizado');
+          setIsSidePanelOpen(true);
+          setIsPanelMinimized(true);
+          // NÃO navega para nenhum índice específico - fica minimizado sem mostrar nada
+        }
       }
     }
-  }, [initialPanelOpenAttempted, toolCalls, initialLoadCompleted, setCurrentToolIndex]);
+  }, [initialPanelOpenAttempted, toolCalls, initialLoadCompleted, setCurrentToolIndex, setIsSidePanelOpen, setIsPanelMinimized]);
 
   // Auto-scroll to bottom when initial load is completed
   useEffect(() => {
@@ -658,7 +741,8 @@ export default function ThreadPage({
         }}
         onSidePanelMinimize={() => {
           setIsPanelMinimized(true);
-          setIsSidePanelOpen(false);
+          // Mantém o painel aberto mas minimizado
+          // Isso garante que o indicador minimizado continue visível
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -711,7 +795,8 @@ export default function ThreadPage({
         }}
         onSidePanelMinimize={() => {
           setIsPanelMinimized(true);
-          setIsSidePanelOpen(false);
+          // Mantém o painel aberto mas minimizado
+          // Isso garante que o indicador minimizado continue visível
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
