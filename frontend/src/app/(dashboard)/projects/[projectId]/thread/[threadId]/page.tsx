@@ -520,22 +520,18 @@ export default function ThreadPage({
                 content.includes(`<parameter name="file_path">${pattern}</parameter>`) ||
                 content.includes(`<parameter name="target_file">${pattern}</parameter>`) ||
                 content.includes(`"file_path": "${pattern}"`) ||
-                content.includes(`"target_file": "${pattern}"`) ||
-                // Fallback para detecção de caminho, mas apenas se parecer um caminho real
-                ((content.includes(`/${pattern}`) || content.includes(`\\${pattern}`)) && 
-                 (name === 'create_file' || name === 'full_file_rewrite'));
+                content.includes(`"target_file": "${pattern}"`);
               
               if (isFileCreation) {
-                // Exclui arquivos auxiliares comuns
+                // Exclui arquivos auxiliares comuns - verifica apenas o nome do arquivo, não todo o conteúdo
                 const auxiliaryPatterns = [
                   'style.css', 'styles.css', 'config.js', 'config.json', 
                   'package.json', 'requirements.txt', '.env', '.gitignore',
                   'README.md', 'test.', 'spec.', '_test.', '.test.'
                 ];
                 
-                const isAuxiliary = auxiliaryPatterns.some(aux => 
-                  pattern.includes(aux) || content.includes(aux)
-                );
+                // Verifica se o padrão (nome do arquivo) é auxiliar
+                const isAuxiliary = auxiliaryPatterns.some(aux => pattern === aux);
                 
                 if (!isAuxiliary) {
                   console.log('[INIT] Encontrado arquivo principal (criação/edição):', pattern, 'no índice:', i);

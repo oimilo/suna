@@ -129,6 +129,35 @@ export function ToolCallSidePanel({
     api: ['webhook.js', 'api.py', 'handler.js', 'function.js']
   };
 
+  // Extrai o nome do arquivo do conteúdo do tool call
+  const extractFileName = (content: string): string | null => {
+    if (!content) return null;
+    
+    // Tenta extrair o nome do arquivo de diferentes formatos
+    const patterns = [
+      /<parameter name="file_path">([^<]+)<\/parameter>/,
+      /<parameter name="target_file">([^<]+)<\/parameter>/,
+      /file_path["\s:=]+["']([^"']+)["']/,
+      /target_file["\s:=]+["']([^"']+)["']/,
+      /"file_path"\s*:\s*"([^"]+)"/,
+      /"target_file"\s*:\s*"([^"]+)"/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1]) {
+        // Retorna apenas o nome do arquivo (última parte do caminho)
+        const fullPath = match[1];
+        const fileName = fullPath.split('/').pop() || fullPath.split('\\').pop() || fullPath;
+        console.log('[extractFileName] Extraído:', fileName, 'de:', fullPath);
+        return fileName;
+      }
+    }
+    
+    console.log('[extractFileName] Nenhum arquivo encontrado no conteúdo');
+    return null;
+  };
+
   // Detecta se é um momento de entrega relevante
   const isDeliveryMoment = (toolCall: ToolCallInput): boolean => {
     const name = toolCall.assistantCall?.name;
@@ -142,34 +171,49 @@ export function ToolCallSidePanel({
         ? rawContent 
         : rawContent ? JSON.stringify(rawContent) : '';
       
-      // Verifica se é um arquivo principal (não CSS, config, etc.)
-      // Procura especificamente por padrões de criação de arquivo, não apenas menções
-      const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
-      const isMainFile = mainFilePatterns.some(pattern => {
-        // Verifica se o padrão aparece como um caminho de arquivo sendo criado
-        return content.includes(`file_path="${pattern}"`) ||
-               content.includes(`file_path='${pattern}'`) ||
-               content.includes(`<create-file file_path="${pattern}"`) ||
-               content.includes(`"file_path": "${pattern}"`) ||
-               // Fallback para detecção simples, mas apenas se parecer um caminho
-               (content.includes(`/${pattern}`) || content.includes(`\\${pattern}`));
-      });
+      // Extrai o nome do arquivo sendo criado
+      const fileName = extractFileName(content);
       
-      // Exclui arquivos auxiliares comuns
-      const auxiliaryPatterns = [
-        'style.css', 'styles.css', 'config.js', 'config.json', 
-        'package.json', 'requirements.txt', '.env', '.gitignore',
-        'README.md', 'test.', 'spec.', '_test.', '.test.'
-      ];
-      const isAuxiliary = auxiliaryPatterns.some(pattern => content.includes(pattern));
-      
-      // Log para debug
-      if (isMainFile) {
-        console.log('[DELIVERY] Arquivo principal detectado em', name, '- padrão encontrado');
+      if (!fileName) {
+        console.log('[DELIVERY] Não foi possível extrair nome do arquivo de', name);
+        return false;
       }
       
-      // Só considera entrega se for arquivo principal e não auxiliar
-      return isMainFile && !isAuxiliary;
+      console.log('[DELIVERY] Verificando arquivo:', fileName);
+      
+      // Lista de arquivos auxiliares que NÃO são entregas principais
+      const auxiliaryFiles = [
+        'style.css', 'styles.css', 'config.js', 'config.json', 
+        'package.json', 'requirements.txt', '.env', '.gitignore',
+        'README.md', 'Dockerfile', 'docker-compose.yml',
+        'tsconfig.json', 'webpack.config.js', 'babel.config.js'
+      ];
+      
+      // Verifica se é um arquivo auxiliar
+      const isAuxiliary = auxiliaryFiles.some(aux => 
+        fileName === aux || 
+        fileName.includes('test.') || 
+        fileName.includes('spec.') || 
+        fileName.includes('_test.') || 
+        fileName.includes('.test.')
+      );
+      
+      if (isAuxiliary) {
+        console.log('[DELIVERY] Arquivo auxiliar detectado, ignorando:', fileName);
+        return false;
+      }
+      
+      // Verifica se é um arquivo principal conhecido
+      const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
+      const isMainFile = mainFilePatterns.includes(fileName);
+      
+      if (isMainFile) {
+        console.log('[DELIVERY] ✅ Arquivo principal detectado:', fileName);
+      } else {
+        console.log('[DELIVERY] Arquivo não reconhecido como principal:', fileName);
+      }
+      
+      return isMainFile;
     }
 
     // Prioridade 2: Deploy ou exposição de serviço (sempre importante)
@@ -195,7 +239,7 @@ export function ToolCallSidePanel({
       .map((tc, idx) => ({ tc, idx }))
       .filter(({ tc }) => {
         const name = tc.assistantCall?.name;
-        // Inclui edit-file para detectar quando arquivos principais são editados
+        // Inclui edit_file para detectar quando arquivos principais são editados
         return name === 'create_file' || name === 'full_file_rewrite' || name === 'edit_file';
       });
 
@@ -210,60 +254,45 @@ export function ToolCallSidePanel({
       return '';
     };
 
-    // Tenta detectar o contexto do projeto baseado em todos os arquivos criados
-    const allFiles = fileCreations.map(({ tc }) => 
-      getContentAsString(tc.assistantCall?.content)
-    ).join(' ');
+    // Lista de todos os padrões de arquivos principais
+    const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
     
-    // Procura por padrões na ordem de prioridade
-    const patterns = [
-      ...FILE_PATTERNS.web,    // Prioridade para web
-      ...FILE_PATTERNS.game,   // Depois jogos
-      ...FILE_PATTERNS.python, // Depois Python
-      ...FILE_PATTERNS.node,   // Depois Node
-      ...FILE_PATTERNS.dashboard,
-      ...FILE_PATTERNS.api
-    ];
-
-    // Procura arquivo principal nos padrões
-    for (const pattern of patterns) {
-      const match = fileCreations.find(({ tc, idx }) => {
-        const content = getContentAsString(tc.assistantCall?.content);
-        
-        // Log detalhado para debug
-        const checks = {
-          pattern,
-          idx,
-          hasFilePath: content.includes(`file_path="${pattern}"`),
-          hasFilePathSingle: content.includes(`file_path='${pattern}'`),
-          hasCreateTag: content.includes(`<parameter name="file_path">${pattern}</parameter>`),
-          hasEditTag: content.includes(`<parameter name="target_file">${pattern}</parameter>`),
-          hasJsonFilePath: content.includes(`"file_path": "${pattern}"`),
-          hasJsonTargetFile: content.includes(`"target_file": "${pattern}"`),
-          hasPathSlash: content.includes(`/${pattern}`),
-          hasPathBackslash: content.includes(`\\${pattern}`)
-        };
-        
-        console.log('[detectMainFile] Verificando padrão:', checks);
-        
-        // Usa a mesma lógica específica de detecção
-        return checks.hasFilePath || checks.hasFilePathSingle || checks.hasCreateTag || 
-               checks.hasEditTag || checks.hasJsonFilePath || checks.hasJsonTargetFile ||
-               checks.hasPathSlash || checks.hasPathBackslash;
-      });
-      if (match) {
-        console.log('[MAIN_FILE] ✅ Arquivo principal encontrado:', pattern, 'no índice', match.idx);
-        return match.idx;
+    // Procura arquivo principal usando extração correta
+    for (const { tc, idx } of fileCreations) {
+      const content = getContentAsString(tc.assistantCall?.content);
+      const fileName = extractFileName(content);
+      
+      if (!fileName) {
+        console.log('[detectMainFile] Não foi possível extrair nome do arquivo no índice', idx);
+        continue;
+      }
+      
+      console.log('[detectMainFile] Verificando arquivo extraído:', fileName, 'no índice', idx);
+      
+      // Verifica se é um arquivo principal
+      if (mainFilePatterns.includes(fileName)) {
+        console.log('[MAIN_FILE] ✅ Arquivo principal encontrado:', fileName, 'no índice', idx);
+        return idx;
       }
     }
-
-    // Fallback: último arquivo HTML ou primeiro arquivo criado
-    const htmlFile = fileCreations.findLast(({ tc }) => {
+    
+    console.log('[detectMainFile] Nenhum arquivo principal encontrado nos padrões');
+    
+    // Fallback mais conservador: procura especificamente por index.html
+    const indexHtml = fileCreations.find(({ tc }) => {
       const content = getContentAsString(tc.assistantCall?.content);
-      return content.includes('.html');
+      const fileName = extractFileName(content);
+      return fileName === 'index.html';
     });
     
-    return htmlFile?.idx ?? fileCreations[0]?.idx ?? -1;
+    if (indexHtml) {
+      console.log('[detectMainFile] Fallback: index.html encontrado no índice', indexHtml.idx);
+      return indexHtml.idx;
+    }
+    
+    // Não retorna mais o primeiro arquivo como fallback
+    console.log('[detectMainFile] Nenhum arquivo principal detectado');
+    return -1;
   };
 
   // Verifica se é uma operação técnica que deve ser ocultada
