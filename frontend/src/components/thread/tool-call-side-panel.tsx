@@ -56,6 +56,7 @@ interface ToolCallSidePanelProps {
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
   onRequestOpen?: () => void;
+  onMainFileDetected?: () => void;  // Callback quando arquivo principal é detectado
 }
 
 interface ToolCallSnapshot {
@@ -85,6 +86,7 @@ export function ToolCallSidePanel({
   onFileClick,
   disableInitialAnimation,
   onRequestOpen,
+  onMainFileDetected,
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
@@ -133,7 +135,7 @@ export function ToolCallSidePanel({
     if (!name) return false;
 
     // Prioridade 1: Arquivos principais criados (não arquivos auxiliares)
-    if (name === 'create-file' || name === 'full-file-rewrite') {
+    if (name === 'create_file' || name === 'full_file_rewrite') {
       const rawContent = toolCall.assistantCall?.content;
       // Converte para string se necessário
       const content = typeof rawContent === 'string' 
@@ -176,7 +178,7 @@ export function ToolCallSidePanel({
     }
 
     // Prioridade 3: Configurações de integração importantes
-    if (name === 'create-credential-profile' || name === 'connect-credential-profile') {
+    if (name === 'create_credential_profile' || name === 'connect_credential_profile') {
       return true;
     }
 
@@ -187,14 +189,18 @@ export function ToolCallSidePanel({
 
   // Detecta o arquivo principal baseado no contexto do projeto
   const detectMainFile = (calls: ToolCallInput[]): number => {
+    console.log('[detectMainFile] Iniciando detecção com', calls.length, 'tool calls');
+    
     const fileCreations = calls
       .map((tc, idx) => ({ tc, idx }))
       .filter(({ tc }) => {
         const name = tc.assistantCall?.name;
         // Inclui edit-file para detectar quando arquivos principais são editados
-        return name === 'create-file' || name === 'full-file-rewrite' || name === 'edit-file';
+        return name === 'create_file' || name === 'full_file_rewrite' || name === 'edit_file';
       });
 
+    console.log('[detectMainFile] Encontradas', fileCreations.length, 'criações/edições de arquivo');
+    
     if (fileCreations.length === 0) return -1;
 
     // Converte content para string de forma segura
@@ -221,19 +227,32 @@ export function ToolCallSidePanel({
 
     // Procura arquivo principal nos padrões
     for (const pattern of patterns) {
-      const match = fileCreations.find(({ tc }) => {
+      const match = fileCreations.find(({ tc, idx }) => {
         const content = getContentAsString(tc.assistantCall?.content);
+        
+        // Log detalhado para debug
+        const checks = {
+          pattern,
+          idx,
+          hasFilePath: content.includes(`file_path="${pattern}"`),
+          hasFilePathSingle: content.includes(`file_path='${pattern}'`),
+          hasCreateTag: content.includes(`<parameter name="file_path">${pattern}</parameter>`),
+          hasEditTag: content.includes(`<parameter name="target_file">${pattern}</parameter>`),
+          hasJsonFilePath: content.includes(`"file_path": "${pattern}"`),
+          hasJsonTargetFile: content.includes(`"target_file": "${pattern}"`),
+          hasPathSlash: content.includes(`/${pattern}`),
+          hasPathBackslash: content.includes(`\\${pattern}`)
+        };
+        
+        console.log('[detectMainFile] Verificando padrão:', checks);
+        
         // Usa a mesma lógica específica de detecção
-        return content.includes(`file_path="${pattern}"`) ||
-               content.includes(`file_path='${pattern}'`) ||
-               content.includes(`<create-file file_path="${pattern}"`) ||
-               content.includes(`<edit-file target_file="${pattern}"`) ||
-               content.includes(`"file_path": "${pattern}"`) ||
-               content.includes(`"target_file": "${pattern}"`) ||
-               (content.includes(`/${pattern}`) || content.includes(`\\${pattern}`));
+        return checks.hasFilePath || checks.hasFilePathSingle || checks.hasCreateTag || 
+               checks.hasEditTag || checks.hasJsonFilePath || checks.hasJsonTargetFile ||
+               checks.hasPathSlash || checks.hasPathBackslash;
       });
       if (match) {
-        console.log('[MAIN_FILE] Arquivo principal encontrado:', pattern, 'no índice', match.idx);
+        console.log('[MAIN_FILE] ✅ Arquivo principal encontrado:', pattern, 'no índice', match.idx);
         return match.idx;
       }
     }
@@ -348,8 +367,8 @@ export function ToolCallSidePanel({
       // Se não encontrou arquivo principal, procura por outras entregas importantes
       const deliveryIdx = mainIdx > -1 ? mainIdx : toolCalls.findIndex(tc => {
         const name = tc.assistantCall?.name;
-        return name === 'deploy' || name === 'expose-port' || 
-               name === 'create-credential-profile';
+        return name === 'deploy' || name === 'expose_port' || 
+               name === 'create_credential_profile';
       });
       
       if (deliveryIdx > -1) {
@@ -360,8 +379,21 @@ export function ToolCallSidePanel({
         // Também atualiza o índice externo para sincronizar
         onNavigate(deliveryIdx);
         
-        // Solicita abertura se necessário
-        if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
+        // Se encontrou arquivo principal (mainIdx > -1), abre maximizado
+        if (mainIdx > -1) {
+          console.log('[PANEL] Arquivo principal detectado - abrindo workspace maximizado');
+          // Garante que o painel está aberto
+          if (!isOpen && onRequestOpen) {
+            console.log('[PANEL] Abrindo painel para mostrar arquivo principal');
+            onRequestOpen();
+          }
+          // Chama callback para maximizar o painel quando arquivo principal é detectado
+          if (onMainFileDetected) {
+            console.log('[PANEL] Chamando onMainFileDetected para maximizar workspace');
+            onMainFileDetected();
+          }
+        } else if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
+          // Para outras entregas que não são arquivo principal, apenas abre se necessário
           console.log('[PANEL] Solicitando abertura do painel');
           onRequestOpen();
         }
@@ -370,7 +402,7 @@ export function ToolCallSidePanel({
       console.log('[PANEL] Nenhuma entrega relevante detectada - mantendo painel como está');
     }
     // Se não há entregas relevantes, mantém o painel como está (fechado ou minimizado)
-  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen, detectMainFile, isDeliveryMoment]);
+  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen, onMainFileDetected, detectMainFile, isDeliveryMoment]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];

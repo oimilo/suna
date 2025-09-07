@@ -78,7 +78,7 @@ export function ToolNavigationDropdown({
       
       // Extrai nome do arquivo se for create-file
       let fileName: string | undefined;
-      if (name === 'create-file' || name === 'full-file-rewrite') {
+      if (name === 'create_file' || name === 'full_file_rewrite') {
         const contentStr = typeof content === 'string' ? content : JSON.stringify(content || '');
         const fileMatch = contentStr.match(/file[_\-]?(?:path|name)?["\s:=]+["']?([^"'\s]+\.[a-z]+)/i);
         if (fileMatch) {
@@ -127,7 +127,7 @@ export function ToolNavigationDropdown({
       const IconComponent = getToolIcon(name);
       // Para create-file, mostra apenas o nome do arquivo
       let displayName = getUserFriendlyToolName(name);
-      if ((name === 'create-file' || name === 'full-file-rewrite') && fileName) {
+      if ((name === 'create_file' || name === 'full_file_rewrite') && fileName) {
         displayName = fileName;
       }
       

@@ -477,14 +477,14 @@ export default function ThreadPage({
           const name = tc.assistantCall?.name;
           
           // Verifica se é deploy ou expose-port (sempre importante)
-          if (name === 'deploy' || name === 'expose-port') {
+          if (name === 'deploy' || name === 'expose_port') {
             console.log('[INIT] Encontrado deploy/expose-port no índice:', i);
             mainDeliveryIndex = i;
             break;
           }
           
           // Verifica se é criação/edição de arquivo principal
-          if (name === 'create-file' || name === 'full-file-rewrite' || name === 'edit-file') {
+          if (name === 'create_file' || name === 'full_file_rewrite' || name === 'edit_file') {
             const content = typeof tc.assistantCall?.content === 'string' 
               ? tc.assistantCall.content 
               : JSON.stringify(tc.assistantCall?.content || '');
@@ -498,13 +498,13 @@ export default function ThreadPage({
                 content.includes(`file_path='${pattern}'`) ||
                 content.includes(`target_file="${pattern}"`) ||
                 content.includes(`target_file='${pattern}'`) ||
-                content.includes(`<create-file file_path="${pattern}"`) ||
-                content.includes(`<edit-file target_file="${pattern}"`) ||
+                content.includes(`<parameter name="file_path">${pattern}</parameter>`) ||
+                content.includes(`<parameter name="target_file">${pattern}</parameter>`) ||
                 content.includes(`"file_path": "${pattern}"`) ||
                 content.includes(`"target_file": "${pattern}"`) ||
                 // Fallback para detecção de caminho, mas apenas se parecer um caminho real
                 ((content.includes(`/${pattern}`) || content.includes(`\\${pattern}`)) && 
-                 (name === 'create-file' || name === 'full-file-rewrite'));
+                 (name === 'create_file' || name === 'full_file_rewrite'));
               
               if (isFileCreation) {
                 // Exclui arquivos auxiliares comuns

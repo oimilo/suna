@@ -133,6 +133,13 @@ export function ThreadLayout({
         agentName={agentName}
         disableInitialAnimation={disableInitialAnimation}
         onRequestOpen={onSidePanelRequestOpen}
+        onMainFileDetected={() => {
+          // Quando arquivo principal é detectado, maximiza o workspace
+          if (isPanelMinimized && onSidePanelMinimize) {
+            console.log('[ThreadLayout] Arquivo principal detectado - maximizando workspace');
+            onSidePanelMinimize();  // Toggle para maximizar
+          }
+        }}
       />
 
       {sandboxId && (
