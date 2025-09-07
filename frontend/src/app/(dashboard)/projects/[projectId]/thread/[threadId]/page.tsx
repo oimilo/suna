@@ -261,6 +261,25 @@ export default function ThreadPage({
 
   const handleStreamClose = useCallback(() => {
     console.log(`[PAGE] Stream hook closed with final status: ${agentStatus}`);
+    
+    // Clean up any orphaned STREAMING tool calls
+    setToolCalls(prev => prev.map(tc => {
+      if (tc.toolResult?.content === 'STREAMING') {
+        console.log('[PAGE] Finalizing orphaned STREAMING tool call:', tc.assistantCall?.name);
+        return {
+          ...tc,
+          toolResult: {
+            ...tc.toolResult,
+            content: JSON.stringify({ 
+              message: 'Stream interrupted', 
+              status: 'stream_lost' 
+            }),
+            isSuccess: false
+          }
+        };
+      }
+      return tc;
+    }));
   }, [agentStatus]);
 
   // Agent stream hook
@@ -638,6 +657,37 @@ export default function ThreadPage({
       setAutoOpenedPanel(false);
     }
   }, [agentStatus, streamHookStatus, agentRunId, currentHookRunId, setAgentStatus, setAgentRunId, setAutoOpenedPanel]);
+  
+  // Clean up orphaned STREAMING tool calls when agent becomes idle
+  useEffect(() => {
+    if ((agentStatus === 'idle' || agentStatus === 'error') && toolCalls.length > 0) {
+      const hasStreamingTools = toolCalls.some(tc => tc.toolResult?.content === 'STREAMING');
+      
+      if (hasStreamingTools) {
+        console.log('[PAGE] Cleaning up orphaned STREAMING tool calls (agent is idle)');
+        const timer = setTimeout(() => {
+          setToolCalls(prev => prev.map(tc => {
+            if (tc.toolResult?.content === 'STREAMING') {
+              return {
+                ...tc,
+                toolResult: {
+                  ...tc.toolResult,
+                  content: JSON.stringify({ 
+                    message: 'Tool call completed', 
+                    status: 'finalized' 
+                  }),
+                  isSuccess: true
+                }
+              };
+            }
+            return tc;
+          }));
+        }, 1000); // Wait 1 second before cleaning up to avoid false positives
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [agentStatus, toolCalls]);
 
   // SEO title update
   useEffect(() => {

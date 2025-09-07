@@ -91,6 +91,9 @@ export function useAgentStream(
   const currentRunIdRef = useRef<string | null>(null); // Ref to track the run ID being processed
   const threadIdRef = useRef(threadId); // Ref to hold the current threadId
   const setMessagesRef = useRef(setMessages); // Ref to hold the setMessages function
+  const lastMessageTimeRef = useRef<number>(0); // Track last message received
+  const streamHealthCheckRef = useRef<NodeJS.Timeout | null>(null); // Health check timer
+  const streamRecoveryAttemptsRef = useRef<number>(0); // Track recovery attempts
 
   const orderedTextContent = useMemo(() => {
     return textContent
@@ -161,6 +164,12 @@ export function useAgentStream(
       if (streamCleanupRef.current) {
         streamCleanupRef.current();
         streamCleanupRef.current = null;
+      }
+      
+      // Clear health check timer
+      if (streamHealthCheckRef.current) {
+        clearInterval(streamHealthCheckRef.current);
+        streamHealthCheckRef.current = null;
       }
 
       // Reset streaming-specific state
@@ -238,6 +247,10 @@ export function useAgentStream(
   const handleStreamMessage = useCallback(
     (rawData: string) => {
       if (!isMountedRef.current) return;
+      
+      // Update last message time and reset recovery attempts on successful message
+      lastMessageTimeRef.current = Date.now();
+      streamRecoveryAttemptsRef.current = 0;
       (window as any).lastStreamMessage = Date.now(); // Keep track of last message time
 
       let processedData = rawData;
@@ -565,6 +578,11 @@ export function useAgentStream(
         streamCleanupRef.current();
         streamCleanupRef.current = null;
       }
+      // Clear health check timer on unmount
+      if (streamHealthCheckRef.current) {
+        clearInterval(streamHealthCheckRef.current);
+        streamHealthCheckRef.current = null;
+      }
       // Reset state on unmount if needed, though finalizeStream should handle most cases
       setStatus('idle');
       setTextContent([]);
@@ -584,13 +602,19 @@ export function useAgentStream(
         `[useAgentStream] Received request to start streaming for ${runId}`,
       );
 
-      // Clean up any previous stream
+      // Clean up any previous stream and health check
       if (streamCleanupRef.current) {
         console.log(
           '[useAgentStream] Cleaning up existing stream before starting new one.',
         );
         streamCleanupRef.current();
         streamCleanupRef.current = null;
+      }
+      
+      // Clear health check timer
+      if (streamHealthCheckRef.current) {
+        clearInterval(streamHealthCheckRef.current);
+        streamHealthCheckRef.current = null;
       }
 
       // Reset state before starting
@@ -628,6 +652,61 @@ export function useAgentStream(
           onClose: handleStreamClose,
         });
         streamCleanupRef.current = cleanup;
+        
+        // Initialize last message time
+        lastMessageTimeRef.current = Date.now();
+        
+        // Start health check monitoring
+        if (streamHealthCheckRef.current) {
+          clearInterval(streamHealthCheckRef.current);
+        }
+        
+        streamHealthCheckRef.current = setInterval(async () => {
+          const timeSinceLastMessage = Date.now() - lastMessageTimeRef.current;
+          
+          // If no message received for 15 seconds, check agent status
+          if (timeSinceLastMessage > 15000) {
+            console.log(`[useAgentStream] No messages for ${timeSinceLastMessage}ms, checking agent status...`);
+            
+            try {
+              const agentStatus = await getAgentStatus(runId);
+              
+              if (agentStatus.status === 'running') {
+                // Agent is still running but stream is stuck
+                if (streamRecoveryAttemptsRef.current < 3) {
+                  streamRecoveryAttemptsRef.current++;
+                  console.log(`[useAgentStream] Agent still running but stream stuck. Recovery attempt ${streamRecoveryAttemptsRef.current}/3`);
+                  
+                  // Try to recover by recreating the stream
+                  if (streamCleanupRef.current) {
+                    streamCleanupRef.current();
+                  }
+                  
+                  const newCleanup = streamAgent(runId, {
+                    onMessage: handleStreamMessage,
+                    onError: handleStreamError,
+                    onClose: handleStreamClose,
+                  });
+                  streamCleanupRef.current = newCleanup;
+                  lastMessageTimeRef.current = Date.now(); // Reset timer
+                } else {
+                  console.error(`[useAgentStream] Failed to recover stream after 3 attempts`);
+                  clearInterval(streamHealthCheckRef.current!);
+                  streamHealthCheckRef.current = null;
+                }
+              } else {
+                // Agent is no longer running, finalize
+                console.log(`[useAgentStream] Agent no longer running (status: ${agentStatus.status}), finalizing stream`);
+                clearInterval(streamHealthCheckRef.current!);
+                streamHealthCheckRef.current = null;
+                finalizeStream(mapAgentStatus(agentStatus.status) || 'completed', runId);
+              }
+            } catch (err) {
+              console.error(`[useAgentStream] Error checking agent status during health check:`, err);
+            }
+          }
+        }, 5000); // Check every 5 seconds
+        
         // Status will be updated to 'streaming' by the first message received in handleStreamMessage
       } catch (err) {
         if (!isMountedRef.current) return; // Check mount status after async call

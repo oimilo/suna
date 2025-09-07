@@ -347,6 +347,22 @@ export function ToolCallSidePanel({
     }
   }, [isOpen, currentIndex, isInitialized, toolCallSnapshots.length]);
 
+  // Detecta arquivo principal sempre que toolCalls mudar
+  React.useEffect(() => {
+    if (!toolCalls.length) return;
+    
+    // Sempre detecta o arquivo principal para mostrar a tag "Principal"
+    const mainIdx = detectMainFile(toolCalls);
+    
+    if (mainIdx > -1) {
+      console.log('[PANEL] Arquivo principal detectado no índice:', mainIdx);
+      setMainDeliveryIndex(mainIdx);
+    } else {
+      // Reseta se não há arquivo principal
+      setMainDeliveryIndex(-1);
+    }
+  }, [toolCalls]); // Roda sempre que toolCalls mudar
+
   // Auto-abertura inteligente e navegação para arquivo principal
   React.useEffect(() => {
     if (!toolCalls.length || hasUserInteracted || isLoading) return;
