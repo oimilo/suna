@@ -9,6 +9,7 @@ from utils.logger import logger
 from services.supabase import DBConnection
 from decimal import Decimal
 from utils.config import config
+from services.subscription_validator import can_user_get_daily_credits
 
 # Constants
 DAILY_CREDITS_AMOUNT = Decimal(str(config.DAILY_CREDITS_AMOUNT))  # Credits per day from env variable (default: 200)
@@ -83,8 +84,39 @@ async def get_or_create_daily_credits(client, user_id: str) -> Dict:
                 'credits_used': Decimal(str(most_recent['credits_used']))
             }
         
-        # No valid daily credits found, create new ones
-        logger.info(f"[DAILY_CREDITS] No valid daily credits found for user {user_id}, creating new ones")
+        # No valid daily credits found, check if user is eligible for new ones
+        logger.info(f"[DAILY_CREDITS] No valid daily credits found for user {user_id}, checking eligibility")
+        
+        # Check if user can receive daily credits
+        can_get_credits, reason = await can_user_get_daily_credits(client, user_id, config)
+        
+        if not can_get_credits:
+            logger.warning(f"[DAILY_CREDITS] User {user_id} is not eligible for daily credits: {reason}")
+            # Return empty credits to indicate no credits available
+            return {
+                'id': None,
+                'credits_available': Decimal("0.00"),
+                'expires_at': None,
+                'credits_granted': Decimal("0.00"),
+                'credits_used': Decimal("0.00"),
+                'not_eligible_reason': reason
+            }
+        
+        # User is eligible (PAID user), create new daily credits
+        # For non-cumulative credits: expire any existing credits first
+        logger.info(f"[DAILY_CREDITS] Creating non-cumulative daily credits for PAID user {user_id}")
+        
+        # Expire all existing non-expired credits for this user (non-cumulative logic)
+        # Update any existing credits to mark them as expired
+        existing_update = await client.table('daily_credits') \
+            .update({'expires_at': now.isoformat()}) \
+            .eq('user_id', user_id) \
+            .gt('expires_at', now.isoformat()) \
+            .execute()
+        
+        if existing_update.data:
+            logger.info(f"[DAILY_CREDITS] Expired {len(existing_update.data)} existing credit entries for user {user_id} (non-cumulative)")
+        
         expires_at = now + timedelta(hours=DAILY_CREDITS_DURATION_HOURS)
         
         new_credit = {

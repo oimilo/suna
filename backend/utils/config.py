@@ -194,7 +194,10 @@ class Configuration:
         return self.STRIPE_PRO_MAX_YEARLY_ID_PROD
     
     # Credits Configuration
-    DAILY_CREDITS_AMOUNT: int = int(os.getenv('DAILY_CREDITS_AMOUNT', '200'))  # Default: 200 credits per day ($2 worth)
+    DAILY_CREDITS_AMOUNT: int = int(os.getenv('DAILY_CREDITS_AMOUNT', '200'))  # Default: 200 credits per day ($2 worth) - NON-CUMULATIVE for paid users
+    FREE_TRIAL_CREDITS: int = int(os.getenv('FREE_TRIAL_CREDITS', '500'))  # Initial one-time credits for free users (NO daily credits)
+    DAILY_CREDITS_PAID_ONLY: bool = os.getenv('DAILY_CREDITS_PAID_ONLY', 'true').lower() in ('true', 't', 'yes', 'y', '1')  # Daily credits are ONLY for paid users (default: true)
+    BLOCK_WHEN_NO_CREDITS: bool = os.getenv('BLOCK_WHEN_NO_CREDITS', 'true').lower() in ('true', 't', 'yes', 'y', '1')  # Whether to block agent execution when no credits
     
     # LLM API keys
     ANTHROPIC_API_KEY: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
