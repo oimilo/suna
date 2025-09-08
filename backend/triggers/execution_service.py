@@ -625,14 +625,16 @@ class WorkflowExecutor:
         try:
             edge_function_url = os.getenv("SUPABASE_EDGE_FUNCTION_URL")
             trigger_secret = os.getenv("TRIGGER_SECRET")
+            supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
             
-            if not edge_function_url or not trigger_secret:
-                raise ValueError("Edge Function URL or Trigger Secret not configured")
+            if not edge_function_url or not trigger_secret or not supabase_service_key:
+                raise ValueError("Edge Function URL, Trigger Secret or Supabase Service Key not configured")
             
             async with httpx.AsyncClient(timeout=30.0) as client_http:
                 response = await client_http.post(
                     f"{edge_function_url}/run-agent-trigger",
                     headers={
+                        "Authorization": f"Bearer {supabase_service_key}",
                         "x-trigger-secret": trigger_secret,
                         "Content-Type": "application/json"
                     },
