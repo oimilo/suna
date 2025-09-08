@@ -22,6 +22,8 @@ async def register_usage_with_credits(client, user_id: str, cost_in_dollars: flo
         Tuple[float, float]: (daily_credits_used_in_dollars, subscription_used_in_dollars)
     """
     try:
+        logger.info(f"[BILLING_CREDITS] Starting register_usage for user {user_id}, cost: ${cost_in_dollars:.4f}")
+        
         # First, try to debit from daily credits
         success, remaining_cost = await debit_daily_credits(client, user_id, Decimal(str(cost_in_dollars)))
         

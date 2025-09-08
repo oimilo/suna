@@ -172,6 +172,8 @@ async def debit_daily_credits(client, user_id: str, amount_in_dollars: Decimal) 
         - If no daily credits available: (False, full_amount)
     """
     try:
+        logger.info(f"[DAILY_CREDITS_DEBIT] Starting debit for user {user_id}, amount: ${amount_in_dollars}")
+        
         # Convert dollars to credits
         amount_in_credits = dollars_to_credits(amount_in_dollars)
         
@@ -191,12 +193,12 @@ async def debit_daily_credits(client, user_id: str, amount_in_dollars: Decimal) 
         if daily_credits['id']:
             new_credits_used = daily_credits['credits_used'] + credits_to_debit
             
+            # Remove the concurrent check for now - just update directly
             result = await client.table('daily_credits') \
                 .update({
                     'credits_used': float(new_credits_used)
                 }) \
                 .eq('id', daily_credits['id']) \
-                .eq('credits_used', float(daily_credits['credits_used'])) \
                 .execute()
             
             if result.data and len(result.data) > 0:
@@ -206,8 +208,8 @@ async def debit_daily_credits(client, user_id: str, amount_in_dollars: Decimal) 
                 remaining_dollars = amount_in_dollars - dollars_debited
                 return True, remaining_dollars
             else:
-                # Concurrent update detected, retry would be needed
-                logger.warning(f"[DAILY_CREDITS_DEBIT] Concurrent update detected for daily credits of user {user_id}, credit_id: {daily_credits['id']}")
+                # Update failed
+                logger.error(f"[DAILY_CREDITS_DEBIT] Failed to update daily credits for user {user_id}, credit_id: {daily_credits['id']}")
                 return False, amount_in_dollars
         
         return False, amount_in_dollars
