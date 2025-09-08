@@ -16,7 +16,7 @@ import { BRANDING } from '@/lib/branding';
 import { useSidebarContext } from '@/contexts/sidebar-context';
 import { ToolNavigationDropdown } from './tool-navigation-dropdown';
 import { WindowControls } from './window-controls';
-import { debugLogger } from '@/utils/debug-logger';
+// Debug logger removido - usar console.log diretamente
 
 export interface ToolCallInput {
   assistantCall: {
@@ -132,10 +132,10 @@ export function ToolCallSidePanel({
 
   // Extrai o nome do arquivo do conteúdo do tool call
   const extractFileName = (rawContent: any): string | null => {
-    debugLogger.log('DEBUG-EXTRACT', `Tipo do conteúdo recebido: ${typeof rawContent}`);
+    // console.log('[DEBUG-EXTRACT] Tipo do conteúdo recebido:', typeof rawContent);
     
     if (!rawContent) {
-      debugLogger.log('DEBUG-EXTRACT', 'Conteúdo vazio ou null');
+      // console.log('[DEBUG-EXTRACT] Conteúdo vazio ou null');
       return null;
     }
     
@@ -149,7 +149,7 @@ export function ToolCallSidePanel({
         // Se tiver um campo 'content', usa ele
         if (parsed.content) {
           content = typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed.content);
-          debugLogger.log('DEBUG-EXTRACT', 'Extraindo content de objeto parseado');
+          // console.log('[DEBUG-EXTRACT] Extraindo content de objeto parseado');
         } else {
           content = rawContent;
         }
@@ -161,14 +161,14 @@ export function ToolCallSidePanel({
       // Se já for objeto, procura o campo content
       if (rawContent.content) {
         content = typeof rawContent.content === 'string' ? rawContent.content : JSON.stringify(rawContent.content);
-        debugLogger.log('DEBUG-EXTRACT', 'Usando campo content do objeto');
+        // console.log('[DEBUG-EXTRACT] Usando campo content do objeto');
       } else {
         content = JSON.stringify(rawContent);
       }
     }
     
     // Log do conteúdo após extração
-    debugLogger.log('DEBUG-EXTRACT', `Conteúdo processado (primeiros 300 chars): ${content.substring(0, 300)}`);
+    // console.log('[DEBUG-EXTRACT] Conteúdo processado (primeiros 300 chars):', content.substring(0, 300));
     
     // Tenta extrair o nome do arquivo de diferentes formatos
     const patterns = [
@@ -188,25 +188,25 @@ export function ToolCallSidePanel({
     
     for (let i = 0; i < patterns.length; i++) {
       const pattern = patterns[i];
-      debugLogger.log('DEBUG-EXTRACT', `Tentando padrão ${i + 1}: ${pattern.toString()}`);
+      // console.log(`[DEBUG-EXTRACT] Tentando padrão ${i + 1}:`, pattern.toString());
       const match = content.match(pattern);
       if (match && match[1]) {
         // Retorna apenas o nome do arquivo (última parte do caminho)
         const fullPath = match[1];
         const fileName = fullPath.split('/').pop() || fullPath.split('\\').pop() || fullPath;
-        debugLogger.log('DEBUG-EXTRACT', `✓ Match! Caminho: "${fullPath}", Arquivo: "${fileName}"`);
+        // console.log(`[DEBUG-EXTRACT] ✓ Match! Caminho: "${fullPath}", Arquivo: "${fileName}"`);
         return fileName;
       }
     }
     
-    debugLogger.log('DEBUG-EXTRACT', '✗ Nenhum padrão encontrou match');
+    // console.log('[DEBUG-EXTRACT] ✗ Nenhum padrão encontrou match');
     return null;
   };
 
   // Detecta se é um momento de entrega relevante
   const isDeliveryMoment = (toolCall: ToolCallInput): boolean => {
     const name = toolCall.assistantCall?.name;
-    debugLogger.log('DEBUG-DELIVERY', `Tool name: ${name}`);
+    // console.log('[DEBUG-DELIVERY] Tool name:', name);
     
     if (!name) return false;
 
@@ -215,19 +215,19 @@ export function ToolCallSidePanel({
     if (name === 'create_file' || name === 'create-file' || 
         name === 'full_file_rewrite' || name === 'full-file-rewrite') {
       const rawContent = toolCall.assistantCall?.content;
-      debugLogger.log('DEBUG-DELIVERY', `Raw content type: ${typeof rawContent}`);
-      debugLogger.log('DEBUG-DELIVERY', 'Raw content:', rawContent);
+      // console.log('[DEBUG-DELIVERY] Raw content type:', typeof rawContent);
+      // console.log('[DEBUG-DELIVERY] Raw content:', rawContent);
       
       // Passa o conteúdo bruto diretamente para extractFileName
       // que agora lida com a extração do conteúdo real
       const fileName = extractFileName(rawContent);
       
       if (!fileName) {
-        debugLogger.log('DEBUG-DELIVERY', `✗ Não foi possível extrair nome do arquivo de ${name}`);
+        // console.log(`[DEBUG-DELIVERY] ✗ Não foi possível extrair nome do arquivo de ${name}`);
         return false;
       }
       
-      debugLogger.log('DEBUG-DELIVERY', `Arquivo extraído: ${fileName}`);
+      // console.log('[DEBUG-DELIVERY] Arquivo extraído:', fileName);
       
       // Lista de arquivos auxiliares que NÃO são entregas principais
       const auxiliaryFiles = [
@@ -314,20 +314,20 @@ export function ToolCallSidePanel({
       const fileName = extractFileName(tc.assistantCall?.content);
       
       if (!fileName) {
-        debugLogger.log('DEBUG-DETECT', `Não foi possível extrair nome do arquivo no índice ${idx}`);
+        // console.log(`[DEBUG-DETECT] Não foi possível extrair nome do arquivo no índice ${idx}`);
         continue;
       }
       
-      debugLogger.log('DEBUG-DETECT', `Verificando arquivo extraído: ${fileName} no índice ${idx}`);
+      // console.log(`[DEBUG-DETECT] Verificando arquivo extraído: ${fileName} no índice ${idx}`);
       
       // Verifica se é um arquivo principal
       if (mainFilePatterns.includes(fileName)) {
-        debugLogger.log('DEBUG-DETECT', `✅ Arquivo principal encontrado: ${fileName} no índice ${idx}`);
+        // console.log(`[DEBUG-DETECT] ✅ Arquivo principal encontrado: ${fileName} no índice ${idx}`);
         return idx;
       }
     }
     
-    debugLogger.log('DEBUG-DETECT', 'Nenhum arquivo principal encontrado nos padrões');
+    // console.log('[DEBUG-DETECT] Nenhum arquivo principal encontrado nos padrões');
     
     // Fallback mais conservador: procura especificamente por index.html
     const indexHtml = fileCreations.find(({ tc }) => {
@@ -336,12 +336,12 @@ export function ToolCallSidePanel({
     });
     
     if (indexHtml) {
-      debugLogger.log('DEBUG-DETECT', `Fallback: index.html encontrado no índice ${indexHtml.idx}`);
+      // console.log(`[DEBUG-DETECT] Fallback: index.html encontrado no índice ${indexHtml.idx}`);
       return indexHtml.idx;
     }
     
     // Não retorna mais o primeiro arquivo como fallback
-    debugLogger.log('DEBUG-DETECT', 'Nenhum arquivo principal detectado');
+    // console.log('[DEBUG-DETECT] Nenhum arquivo principal detectado');
     return -1;
   };
 
@@ -428,23 +428,23 @@ export function ToolCallSidePanel({
 
   // Detecta arquivo principal sempre que toolCalls mudar
   React.useEffect(() => {
-    debugLogger.log('DEBUG-USEEFFECT', '===== useEffect de detecção disparado =====');
-    debugLogger.log('DEBUG-USEEFFECT', `toolCalls.length: ${toolCalls.length}`);
+    // console.log('[DEBUG-USEEFFECT] ===== useEffect de detecção disparado =====');
+    // console.log('[DEBUG-USEEFFECT] toolCalls.length:', toolCalls.length);
     
     if (!toolCalls.length) {
-      debugLogger.log('DEBUG-USEEFFECT', 'Sem tool calls, retornando');
+      // console.log('[DEBUG-USEEFFECT] Sem tool calls, retornando');
       return;
     }
     
     // Sempre detecta o arquivo principal para mostrar a tag "Principal"
     const mainIdx = detectMainFile(toolCalls);
-    debugLogger.log('DEBUG-USEEFFECT', `Resultado de detectMainFile: ${mainIdx}`);
+    // console.log('[DEBUG-USEEFFECT] Resultado de detectMainFile:', mainIdx);
     
     if (mainIdx > -1) {
-      debugLogger.log('DEBUG-USEEFFECT', `✓ Arquivo principal detectado! Setando mainDeliveryIndex para: ${mainIdx}`);
+      // console.log('[DEBUG-USEEFFECT] ✓ Arquivo principal detectado! Setando mainDeliveryIndex para:', mainIdx);
       setMainDeliveryIndex(mainIdx);
     } else {
-      debugLogger.log('DEBUG-USEEFFECT', '✗ Nenhum arquivo principal. Resetando mainDeliveryIndex para -1');
+      // console.log('[DEBUG-USEEFFECT] ✗ Nenhum arquivo principal. Resetando mainDeliveryIndex para -1');
       setMainDeliveryIndex(-1);
     }
   }, [toolCalls]); // Roda sempre que toolCalls mudar
