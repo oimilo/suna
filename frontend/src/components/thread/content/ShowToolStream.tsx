@@ -4,13 +4,8 @@ import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-pa
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';
 import styles from '@/styles/toolcalls.module.css';
 
-// Only show streaming for file operation tools
-const FILE_OPERATION_TOOLS = new Set([
-    'Create File',
-    'Delete File',
-    'Full File Rewrite',
-    'Read File',
-]);
+// Only show streaming for file operation tools (disabled - no tools expand)
+const FILE_OPERATION_TOOLS = new Set([]);
 
 interface ShowToolStreamProps {
     content: string;

@@ -247,7 +247,7 @@ export function ToolCallSidePanel({
       );
       
       if (isAuxiliary) {
-        console.log('[DELIVERY] Arquivo auxiliar detectado, ignorando:', fileName);
+        // console.log('[DELIVERY] Arquivo auxiliar detectado, ignorando:', fileName);
         return false;
       }
       
@@ -256,9 +256,9 @@ export function ToolCallSidePanel({
       const isMainFile = mainFilePatterns.includes(fileName);
       
       if (isMainFile) {
-        console.log('[DELIVERY] ✅ Arquivo principal detectado:', fileName);
+        // console.log('[DELIVERY] ✅ Arquivo principal detectado:', fileName);
       } else {
-        console.log('[DELIVERY] Arquivo não reconhecido como principal:', fileName);
+        // console.log('[DELIVERY] Arquivo não reconhecido como principal:', fileName);
       }
       
       return isMainFile;
@@ -281,8 +281,8 @@ export function ToolCallSidePanel({
 
   // Detecta o arquivo principal baseado no contexto do projeto
   const detectMainFile = (calls: ToolCallInput[]): number => {
-    console.log('[DEBUG-DETECT] ========== INICIANDO DETECÇÃO DE ARQUIVO PRINCIPAL ==========');
-    console.log('[DEBUG-DETECT] Total de tool calls:', calls.length);
+    // console.log('[DEBUG-DETECT] ========== INICIANDO DETECÇÃO DE ARQUIVO PRINCIPAL ==========');
+    // console.log('[DEBUG-DETECT] Total de tool calls:', calls.length);
     
     // Log de cada tool call
     calls.forEach((tc, idx) => {
@@ -301,7 +301,7 @@ export function ToolCallSidePanel({
                name === 'str_replace_editor' || name === 'str-replace-editor';
       });
 
-    console.log('[DEBUG-DETECT] Arquivos encontrados:', fileCreations.length);
+    // console.log('[DEBUG-DETECT] Arquivos encontrados:', fileCreations.length);
     
     if (fileCreations.length === 0) return -1;
 
@@ -453,18 +453,18 @@ export function ToolCallSidePanel({
   React.useEffect(() => {
     if (!toolCalls.length || hasUserInteracted || isLoading) return;
 
-    console.log('[PANEL] 🔍 Verificando', toolCalls.length, 'toolCalls para entregas relevantes');
+    // console.log('[PANEL] 🔍 Verificando', toolCalls.length, 'toolCalls para entregas relevantes');
     
     // Detecta se há entregas relevantes (não apenas qualquer toolcall)
     const hasDelivery = toolCalls.some(tc => isDeliveryMoment(tc));
     
-    console.log('[PANEL] Tem entrega relevante?', hasDelivery);
+    // console.log('[PANEL] Tem entrega relevante?', hasDelivery);
     
     if (hasDelivery) {
       // Encontra o arquivo principal
       const mainIdx = detectMainFile(toolCalls);
       
-      console.log('[PANEL] Índice do arquivo principal:', mainIdx);
+      // console.log('[PANEL] Índice do arquivo principal:', mainIdx);
       
       // Se não encontrou arquivo principal, procura por outras entregas importantes
       const deliveryIdx = mainIdx > -1 ? mainIdx : toolCalls.findIndex(tc => {
@@ -474,7 +474,7 @@ export function ToolCallSidePanel({
       });
       
       if (deliveryIdx > -1) {
-        console.log('[PANEL] 🎯 Navegando para entrega no índice:', deliveryIdx);
+        // console.log('[PANEL] 🎯 Navegando para entrega no índice:', deliveryIdx);
         setMainDeliveryIndex(deliveryIdx);
         // SEMPRE navega para a entrega principal quando detectada
         setInternalIndex(deliveryIdx);
@@ -483,28 +483,28 @@ export function ToolCallSidePanel({
         
         // Se encontrou arquivo principal (mainIdx > -1), abre maximizado
         if (mainIdx > -1) {
-          console.log('[PANEL] ✅ Arquivo principal detectado no índice', mainIdx, '- abrindo workspace maximizado');
+          // console.log('[PANEL] ✅ Arquivo principal detectado no índice', mainIdx, '- abrindo workspace maximizado');
           // Garante que o painel está aberto
           if (!isOpen && onRequestOpen) {
-            console.log('[PANEL] Abrindo painel para mostrar arquivo principal');
+            // console.log('[PANEL] Abrindo painel para mostrar arquivo principal');
             onRequestOpen();
           }
           // Chama callback para maximizar o painel quando arquivo principal é detectado
           // Este callback SEMPRE deve ser chamado quando arquivo principal é detectado
           if (onMainFileDetected) {
-            console.log('[PANEL] 🚀 Chamando onMainFileDetected para maximizar workspace');
+            // console.log('[PANEL] 🚀 Chamando onMainFileDetected para maximizar workspace');
             onMainFileDetected();
           } else {
-            console.log('[PANEL] ⚠️ onMainFileDetected não está definido!');
+            // console.log('[PANEL] ⚠️ onMainFileDetected não está definido!');
           }
         } else if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
           // Para outras entregas que não são arquivo principal, apenas abre se necessário
-          console.log('[PANEL] Solicitando abertura do painel');
+          // console.log('[PANEL] Solicitando abertura do painel');
           onRequestOpen();
         }
       }
     } else {
-      console.log('[PANEL] Nenhuma entrega relevante detectada - mantendo painel como está');
+      // console.log('[PANEL] Nenhuma entrega relevante detectada - mantendo painel como está');
     }
     // Se não há entregas relevantes, mantém o painel como está (fechado ou minimizado)
   }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen, onMainFileDetected, detectMainFile, isDeliveryMoment]);

@@ -382,7 +382,58 @@ export function useToolCalls(
         });
       }
       
-      setIsSidePanelOpen(true);
+      // Only auto-open panel for specific important tools, not for every file operation
+      // For file operations, check if it's a main deliverable file
+      const shouldAutoOpen = 
+        toolName === 'deploy' || 
+        toolName === 'expose-port' ||
+        toolName === 'create_credential_profile' ||
+        toolName === 'connect_credential_profile';
+      
+      // For file operations, check if it's creating a main file
+      if ((toolName === 'create-file' || toolName === 'full-file-rewrite') && formattedContent) {
+        // Extract filename from the content
+        const fileNameMatch = formattedContent.match(/file_path[="]+"([^"]+)"|target_file[="]+"([^"]+)"/);
+        if (fileNameMatch) {
+          const fullPath = fileNameMatch[1] || fileNameMatch[2];
+          const fileName = fullPath?.split('/').pop() || fullPath?.split('\\').pop() || '';
+          
+          // Main file patterns - same as in ToolCallSidePanel
+          const mainFilePatterns = [
+            'index.html', 'home.html', 'main.html', 'app.html',
+            'game.html', 'play.html', 'main.js',
+            'main.py', 'app.py', 'server.py', 'bot.py', 'script.py',
+            'index.js', 'app.js', 'server.js', 'index.ts',
+            'dashboard.html', 'admin.html', 'panel.html',
+            'webhook.js', 'api.py', 'handler.js', 'function.js'
+          ];
+          
+          // Auxiliary files that should NOT trigger opening
+          const auxiliaryFiles = [
+            'style.css', 'styles.css', 'config.js', 'config.json', 
+            'package.json', 'requirements.txt', '.env', '.gitignore',
+            'README.md', 'Dockerfile', 'docker-compose.yml',
+            'tsconfig.json', 'webpack.config.js', 'babel.config.js'
+          ];
+          
+          const isAuxiliary = auxiliaryFiles.some(aux => 
+            fileName === aux || 
+            fileName.includes('test.') || 
+            fileName.includes('spec.') || 
+            fileName.includes('_test.') || 
+            fileName.includes('.test.')
+          );
+          
+          if (!isAuxiliary && mainFilePatterns.includes(fileName)) {
+            console.log('[STREAM] Main file detected:', fileName, '- opening panel');
+            setIsSidePanelOpen(true);
+          } else {
+            console.log('[STREAM] Not a main file:', fileName, '- panel remains closed');
+          }
+        }
+      } else if (shouldAutoOpen) {
+        setIsSidePanelOpen(true);
+      }
     },
     [toolCalls.length],
   );
