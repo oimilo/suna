@@ -99,37 +99,67 @@ class ThreadManager:
         client = await self.db.client
 
         # Check if this is an assistant_response_end message with usage data
-        if type == "status" and isinstance(content, dict) and content.get("status_type") == "assistant_response_end":
+        # Support both formats: direct type="assistant_response_end" and nested type="status" with status_type
+        is_assistant_end = False
+        usage_data = {}
+        
+        # Check for both message formats
+        if type == "assistant_response_end" and isinstance(content, dict):
+            # Direct format (what response_processor.py actually saves)
+            is_assistant_end = True
             usage_data = content.get("usage", {})
-            if usage_data and usage_data.get("total_tokens", 0) > 0:
+            logger.info(f"[CREDIT_DEBIT] Found assistant_response_end message (direct format) for thread {thread_id}")
+        elif type == "status" and isinstance(content, dict) and content.get("status_type") == "assistant_response_end":
+            # Legacy format (in case old messages exist)
+            is_assistant_end = True
+            usage_data = content.get("usage", {})
+            logger.info(f"[CREDIT_DEBIT] Found assistant_response_end message (legacy format) for thread {thread_id}")
+        
+        if is_assistant_end and usage_data:
+            total_tokens = usage_data.get("total_tokens", 0)
+            
+            if total_tokens > 0:
                 # Get the user_id from the thread
                 try:
                     thread_result = await client.table('threads').select('account_id').eq('thread_id', thread_id).single().execute()
                     if thread_result.data and 'account_id' in thread_result.data:
                         user_id = thread_result.data['account_id']
                         
+                        logger.info(f"[CREDIT_DEBIT] Processing usage for user {user_id}, thread {thread_id}")
+                        
                         # Calculate the cost
                         model = usage_data.get("model", "gpt-4o")
                         prompt_tokens = usage_data.get("prompt_tokens", 0)
                         completion_tokens = usage_data.get("completion_tokens", 0)
                         
+                        logger.info(f"[CREDIT_DEBIT] Token usage - Prompt: {prompt_tokens}, Completion: {completion_tokens}, Total: {total_tokens}, Model: {model}")
+                        
                         # Calculate cost using the billing module
                         cost_in_dollars = calculate_token_cost(prompt_tokens, completion_tokens, model)
                         
-                        # Register usage with daily credits first
-                        daily_used, sub_used = await register_usage_with_credits(client, user_id, cost_in_dollars)
+                        logger.info(f"[CREDIT_DEBIT] Calculated cost: ${cost_in_dollars:.6f} for {total_tokens} tokens")
                         
-                        # Add the credit usage info to the content
-                        content["credit_usage"] = {
-                            "daily_credits_used": daily_used,
-                            "subscription_credits_used": sub_used,
-                            "total_cost": cost_in_dollars
-                        }
-                        
-                        logger.info(f"Debited credits for user {user_id}: ${daily_used:.4f} from daily, ${sub_used:.4f} from subscription")
+                        if cost_in_dollars > 0:
+                            # Register usage with daily credits first
+                            daily_used, sub_used = await register_usage_with_credits(client, user_id, cost_in_dollars)
+                            
+                            # Add the credit usage info to the content
+                            content["credit_usage"] = {
+                                "daily_credits_used": daily_used,
+                                "subscription_credits_used": sub_used,
+                                "total_cost": cost_in_dollars
+                            }
+                            
+                            logger.info(f"[CREDIT_DEBIT] ✅ Successfully debited credits for user {user_id}: ${daily_used:.4f} from daily, ${sub_used:.4f} from subscription")
+                        else:
+                            logger.info(f"[CREDIT_DEBIT] No cost to debit (cost=$0.00)")
+                    else:
+                        logger.error(f"[CREDIT_DEBIT] Could not find account_id for thread {thread_id}")
                 except Exception as e:
-                    logger.error(f"Failed to debit credits for thread {thread_id}: {str(e)}")
+                    logger.error(f"[CREDIT_DEBIT] Failed to debit credits for thread {thread_id}: {str(e)}", exc_info=True)
                     # Continue without blocking the message save
+            else:
+                logger.info(f"[CREDIT_DEBIT] No tokens used (total_tokens=0) for thread {thread_id}")
 
         # Prepare data for insertion
         data_to_insert = {
