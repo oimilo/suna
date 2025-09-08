@@ -32,6 +32,7 @@ interface ThreadLayoutProps {
   onSidePanelNavigate: (index: number) => void;
   onSidePanelClose: () => void;
   onSidePanelMinimize?: () => void;
+  onSidePanelMaximize?: () => void;
   onSidePanelRequestOpen?: () => void;
   renderAssistantMessage: (assistantContent?: string, toolContent?: string) => React.ReactNode;
   renderToolResult: (toolContent?: string, isSuccess?: boolean) => React.ReactNode;
@@ -70,6 +71,7 @@ export function ThreadLayout({
   onSidePanelNavigate,
   onSidePanelClose,
   onSidePanelMinimize,
+  onSidePanelMaximize,
   onSidePanelRequestOpen,
   renderAssistantMessage,
   renderToolResult,
@@ -135,9 +137,12 @@ export function ThreadLayout({
         onRequestOpen={onSidePanelRequestOpen}
         onMainFileDetected={() => {
           // Quando arquivo principal é detectado, maximiza o workspace
-          if (isPanelMinimized && onSidePanelMinimize) {
-            console.log('[ThreadLayout] Arquivo principal detectado - maximizando workspace');
-            onSidePanelMinimize();  // Toggle para maximizar
+          console.log('[ThreadLayout] 🎯 Arquivo principal detectado - forçando maximização do workspace');
+          console.log('[ThreadLayout] Estado atual - isPanelMinimized:', isPanelMinimized, 'isSidePanelOpen:', isSidePanelOpen);
+          
+          // Always maximize when main file is detected, regardless of current state
+          if (onSidePanelMaximize) {
+            onSidePanelMaximize();  // Maximiza o painel
           }
         }}
       />

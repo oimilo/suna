@@ -59,6 +59,7 @@ export default function ThreadPage({
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
+  const [hasMainFileDetected, setHasMainFileDetected] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -476,6 +477,13 @@ export default function ThreadPage({
       // Lógica inteligente de inicialização
       if (toolCalls.length > 0) {
         console.log('[INIT] Verificando toolCalls para detecção de arquivo principal:', toolCalls.length);
+        console.log('[INIT] ToolCalls existentes:', toolCalls.map((tc, i) => ({
+          index: i,
+          name: tc.assistantCall?.name,
+          contentPreview: typeof tc.assistantCall?.content === 'string' 
+            ? tc.assistantCall.content.substring(0, 100) 
+            : JSON.stringify(tc.assistantCall?.content).substring(0, 100)
+        })));
         
         // Padrões de arquivos principais
         const FILE_PATTERNS = {
@@ -503,24 +511,52 @@ export default function ThreadPage({
           }
           
           // Verifica se é criação/edição de arquivo principal
-          if (name === 'create_file' || name === 'full_file_rewrite' || name === 'edit_file') {
-            const content = typeof tc.assistantCall?.content === 'string' 
-              ? tc.assistantCall.content 
-              : JSON.stringify(tc.assistantCall?.content || '');
+          // Suporta tanto underscore quanto hífen nos nomes
+          if (name === 'create_file' || name === 'create-file' || 
+              name === 'full_file_rewrite' || name === 'full-file-rewrite' || 
+              name === 'edit_file' || name === 'edit-file' ||
+              name === 'str_replace_editor' || name === 'str-replace-editor') {
+            
+            // Extração inteligente do conteúdo real
+            let content = '';
+            const rawContent = tc.assistantCall?.content;
+            
+            if (typeof rawContent === 'string') {
+              try {
+                const parsed = JSON.parse(rawContent);
+                // Se tiver um campo 'content', usa ele
+                content = parsed.content ? 
+                  (typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed.content)) : 
+                  rawContent;
+              } catch {
+                // Não é JSON, usa como string
+                content = rawContent;
+              }
+            } else if (rawContent && typeof rawContent === 'object') {
+              // Se já for objeto, procura o campo content
+              const objContent = (rawContent as any).content;
+              content = objContent ? 
+                (typeof objContent === 'string' ? objContent : JSON.stringify(objContent)) : 
+                JSON.stringify(rawContent);
+            } else {
+              content = String(rawContent || '');
+            }
+            
+            console.log('[INIT] Conteúdo extraído para análise:', content.substring(0, 200));
             
             // Procura por padrões de arquivo principal no conteúdo
             // Usa detecção específica para evitar falsos positivos com arquivos anexados
             for (const pattern of allPatterns) {
-              // Verifica especificamente por padrões de criação/edição de arquivo
-              const isFileCreation = 
-                content.includes(`file_path="${pattern}"`) ||
-                content.includes(`file_path='${pattern}'`) ||
-                content.includes(`target_file="${pattern}"`) ||
-                content.includes(`target_file='${pattern}'`) ||
-                content.includes(`<parameter name="file_path">${pattern}</parameter>`) ||
-                content.includes(`<parameter name="target_file">${pattern}</parameter>`) ||
-                content.includes(`"file_path": "${pattern}"`) ||
-                content.includes(`"target_file": "${pattern}"`);
+              // Cria regex para capturar o arquivo independente do caminho
+              // Por exemplo: detecta "index.html" em "./index.html", "/tmp/index.html", etc.
+              const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const fileRegex = new RegExp(
+                `(file[_-]path|target[_-]file)["'\\s:=]+["']([^"']*[\\/])?${escapedPattern}["']|` +
+                `<parameter name="(file[_-]path|target[_-]file)">([^<]*[\\/])?${escapedPattern}</parameter>`,
+                'i'
+              );
+              
+              const isFileCreation = fileRegex.test(content);
               
               if (isFileCreation) {
                 // Exclui arquivos auxiliares comuns - verifica apenas o nome do arquivo, não todo o conteúdo
@@ -534,9 +570,11 @@ export default function ThreadPage({
                 const isAuxiliary = auxiliaryPatterns.some(aux => pattern === aux);
                 
                 if (!isAuxiliary) {
-                  console.log('[INIT] Encontrado arquivo principal (criação/edição):', pattern, 'no índice:', i);
+                  console.log('[INIT] 🎯 Encontrado arquivo principal (criação/edição):', pattern, 'no índice:', i);
                   mainDeliveryIndex = i;
                   break;
+                } else {
+                  console.log('[INIT] Arquivo auxiliar ignorado:', pattern);
                 }
               }
             }
@@ -549,20 +587,31 @@ export default function ThreadPage({
         
         if (mainDeliveryIndex >= 0) {
           // Há entrega principal - abre mostrando ela
-          console.log('[INIT] Abrindo área de trabalho com arquivo principal no índice:', mainDeliveryIndex);
+          console.log('[INIT] ✅ Abrindo área de trabalho MAXIMIZADA com arquivo principal no índice:', mainDeliveryIndex);
           setIsSidePanelOpen(true);
-          setIsPanelMinimized(false);
+          setIsPanelMinimized(false); // IMPORTANTE: Garante que abre maximizado
+          setHasMainFileDetected(true); // Marca que arquivo principal foi detectado
           setCurrentToolIndex(mainDeliveryIndex);
         } else {
           // Só operações técnicas - mantém minimizado mas visível
-          console.log('[INIT] Sem arquivo principal detectado - mantendo minimizado');
+          console.log('[INIT] ⚠️ Sem arquivo principal detectado - mantendo minimizado');
+          console.log('[INIT] ToolCalls verificados mas não encontraram arquivo principal');
           setIsSidePanelOpen(true);
           setIsPanelMinimized(true);
+          setHasMainFileDetected(false);
           // NÃO navega para nenhum índice específico - fica minimizado sem mostrar nada
         }
       }
     }
   }, [initialPanelOpenAttempted, toolCalls, initialLoadCompleted, setCurrentToolIndex, setIsSidePanelOpen, setIsPanelMinimized]);
+
+  // Garante que o painel permanece maximizado quando arquivo principal é detectado
+  useEffect(() => {
+    if (hasMainFileDetected && isPanelMinimized) {
+      console.log('[PAGE] Forçando maximização - arquivo principal foi detectado');
+      setIsPanelMinimized(false);
+    }
+  }, [hasMainFileDetected, isPanelMinimized]);
 
   // Auto-scroll to bottom when initial load is completed
   useEffect(() => {
@@ -786,9 +835,17 @@ export default function ThreadPage({
           setIsPanelMinimized(false);
         }}
         onSidePanelMinimize={() => {
+          console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
           setIsPanelMinimized(true);
+          setHasMainFileDetected(false); // Reset flag when user manually minimizes
           // Mantém o painel aberto mas minimizado
           // Isso garante que o indicador minimizado continue visível
+        }}
+        onSidePanelMaximize={() => {
+          console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
+          setIsPanelMinimized(false);
+          setIsSidePanelOpen(true);
+          setHasMainFileDetected(true);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
@@ -840,9 +897,17 @@ export default function ThreadPage({
           setIsPanelMinimized(false);
         }}
         onSidePanelMinimize={() => {
+          console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
           setIsPanelMinimized(true);
+          setHasMainFileDetected(false); // Reset flag when user manually minimizes
           // Mantém o painel aberto mas minimizado
           // Isso garante que o indicador minimizado continue visível
+        }}
+        onSidePanelMaximize={() => {
+          console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
+          setIsPanelMinimized(false);
+          setIsSidePanelOpen(true);
+          setHasMainFileDetected(true);
         }}
         onSidePanelRequestOpen={() => {
           setIsSidePanelOpen(true);
