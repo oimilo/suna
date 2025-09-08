@@ -861,8 +861,18 @@ async def stream_agent_run(
                                      tasks.append(asyncio.create_task(control_reader.__anext__()))
 
                 # Cancel pending listener tasks on exit
-                for p_task in pending: p_task.cancel()
-                for task in tasks: task.cancel()
+                for p_task in pending: 
+                    p_task.cancel()
+                    try:
+                        await p_task
+                    except asyncio.CancelledError:
+                        pass
+                for task in tasks: 
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
 
 
             listener_task = asyncio.create_task(listen_messages())
@@ -923,8 +933,8 @@ async def stream_agent_run(
             # Graceful shutdown order: unsubscribe → close → cancel
             if pubsub_response: await pubsub_response.unsubscribe(response_channel)
             if pubsub_control: await pubsub_control.unsubscribe(control_channel)
-            if pubsub_response: await pubsub_response.close()
-            if pubsub_control: await pubsub_control.close()
+            if pubsub_response: await pubsub_response.aclose()
+            if pubsub_control: await pubsub_control.aclose()
 
             if listener_task:
                 listener_task.cancel()

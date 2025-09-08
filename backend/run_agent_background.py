@@ -184,6 +184,7 @@ async def run_agent_background(
             await retry(lambda: pubsub.subscribe(instance_control_channel, global_control_channel))
         except Exception as e:
             logger.error(f"Redis failed to subscribe to control channels: {e}", exc_info=True)
+            await pubsub.aclose()  # Close the connection before raising
             raise e
 
         logger.debug(f"Subscribed to control channels: {instance_control_channel}, {global_control_channel}")
@@ -312,7 +313,7 @@ async def run_agent_background(
         if pubsub:
             try:
                 await pubsub.unsubscribe()
-                await pubsub.close()
+                await pubsub.aclose()
                 logger.debug(f"Closed pubsub connection for {agent_run_id}")
             except Exception as e:
                 logger.warning(f"Error closing pubsub for {agent_run_id}: {str(e)}")
