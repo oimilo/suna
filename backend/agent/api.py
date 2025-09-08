@@ -809,18 +809,13 @@ async def stream_agent_run(
             )
 
             # 3. Set up Pub/Sub listeners for new responses and control signals
-            try:
-                pubsub_response = await redis.create_pubsub()
-                await pubsub_response.subscribe(response_channel)
-                logger.debug(f"Subscribed to response channel: {response_channel}")
+            pubsub_response = await redis.create_pubsub()
+            await pubsub_response.subscribe(response_channel)
+            logger.debug(f"Subscribed to response channel: {response_channel}")
 
-                pubsub_control = await redis.create_pubsub()
-                await pubsub_control.subscribe(control_channel)
-                logger.debug(f"Subscribed to control channel: {control_channel}")
-            except Exception as e:
-                logger.error(f"Failed to create pubsub connections: {e}")
-                yield f"data: {json.dumps({'type': 'status', 'status': 'error', 'message': 'Failed to establish stream connection'})}\n\n"
-                return
+            pubsub_control = await redis.create_pubsub()
+            await pubsub_control.subscribe(control_channel)
+            logger.debug(f"Subscribed to control channel: {control_channel}")
 
             # Queue to communicate between listeners and the main generator loop
             message_queue = asyncio.Queue()
@@ -925,26 +920,22 @@ async def stream_agent_run(
                  yield f"data: {json.dumps({'type': 'status', 'status': 'error', 'message': f'Failed to start stream: {e}'})}\n\n"
         finally:
             terminate_stream = True
-            
-            # Cancel listener task first
-            if listener_task and not listener_task.done():
+            # Graceful shutdown order: unsubscribe → close → cancel
+            if pubsub_response: await pubsub_response.unsubscribe(response_channel)
+            if pubsub_control: await pubsub_control.unsubscribe(control_channel)
+            if pubsub_response: await pubsub_response.close()
+            if pubsub_control: await pubsub_control.close()
+
+            if listener_task:
                 listener_task.cancel()
                 try:
-                    await asyncio.wait_for(listener_task, timeout=1.0)
-                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    await listener_task  # Reap inner tasks & swallow their errors
+                except asyncio.CancelledError:
                     pass
                 except Exception as e:
                     logger.debug(f"listener_task ended with: {e}")
-            
-            # Release pubsub connections back to pool
-            try:
-                if pubsub_response:
-                    await redis.release_pubsub(pubsub_response)
-                if pubsub_control:
-                    await redis.release_pubsub(pubsub_control)
-            except Exception as e:
-                logger.error(f"Error during pubsub cleanup: {e}")
-            
+            # Wait briefly for tasks to cancel
+            await asyncio.sleep(0.1)
             logger.debug(f"Streaming cleanup complete for agent run: {agent_run_id}")
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream", headers={

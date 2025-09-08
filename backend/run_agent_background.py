@@ -308,13 +308,14 @@ async def run_agent_background(
             except asyncio.CancelledError: pass
             except Exception as e: logger.warning(f"Error during stop_checker cancellation: {e}")
 
-        # Release pubsub connection back to pool
+        # Close pubsub connection
         if pubsub:
             try:
-                await redis.release_pubsub(pubsub)
-                logger.debug(f"Released pubsub connection for {agent_run_id}")
+                await pubsub.unsubscribe()
+                await pubsub.close()
+                logger.debug(f"Closed pubsub connection for {agent_run_id}")
             except Exception as e:
-                logger.warning(f"Error releasing pubsub for {agent_run_id}: {str(e)}")
+                logger.warning(f"Error closing pubsub for {agent_run_id}: {str(e)}")
 
         # Set TTL on the response list in Redis
         await _cleanup_redis_response_list(agent_run_id)
