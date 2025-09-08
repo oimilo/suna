@@ -3,14 +3,22 @@ import os
 from dotenv import load_dotenv
 import asyncio
 from utils.logger import logger
-from typing import List, Any
+from typing import List, Any, Dict
 from utils.retry import retry
+import time
+from collections import deque
 
 # Redis client and connection pool
 client: redis.Redis | None = None
 pool: redis.ConnectionPool | None = None
 _initialized = False
 _init_lock = asyncio.Lock()
+
+# PubSub connection management
+_pubsub_pool: deque = deque(maxlen=20)  # Pool of reusable pubsub connections
+_pubsub_active: Dict[int, tuple] = {}  # Track active connections (id -> (pubsub, last_used))
+_pubsub_lock = asyncio.Lock()
+MAX_PUBSUB_IDLE_TIME = 60  # Max idle time in seconds before cleanup
 
 # Constants
 REDIS_KEY_TTL = 3600 * 24  # 24 hour TTL as safety mechanism
@@ -28,6 +36,12 @@ def initialize():
     
     if redis_url:
         logger.info(f"Initializing Redis from URL: {redis_url[:20]}...")
+        # For Upstash Redis with SSL
+        import ssl
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
         pool = redis.ConnectionPool.from_url(
             redis_url,
             decode_responses=True,
@@ -37,6 +51,7 @@ def initialize():
             retry_on_timeout=True,
             health_check_interval=30,
             max_connections=128,
+            ssl_cert_reqs=None,  # Disable cert verification for Upstash
         )
     else:
         # Fall back to individual configuration
@@ -102,7 +117,28 @@ async def initialize_async():
 
 async def close():
     """Close Redis connection and connection pool."""
-    global client, pool, _initialized
+    global client, pool, _initialized, _pubsub_pool, _pubsub_active
+    
+    # Close all pubsub connections first
+    async with _pubsub_lock:
+        # Close active connections
+        for pubsub, _ in _pubsub_active.values():
+            try:
+                await asyncio.wait_for(pubsub.aclose(), timeout=1.0)
+            except:
+                pass
+        _pubsub_active.clear()
+        
+        # Close pooled connections
+        while _pubsub_pool:
+            pubsub = _pubsub_pool.popleft()
+            try:
+                await asyncio.wait_for(pubsub.aclose(), timeout=1.0)
+            except:
+                pass
+        
+        logger.info("Closed all pubsub connections")
+    
     if client:
         logger.info("Closing Redis connection")
         try:
@@ -164,9 +200,86 @@ async def publish(channel: str, message: str):
 
 
 async def create_pubsub():
-    """Create a Redis pubsub object."""
-    redis_client = await get_client()
-    return redis_client.pubsub()
+    """Create or reuse a Redis pubsub object from pool."""
+    async with _pubsub_lock:
+        # Try to reuse from pool
+        while _pubsub_pool:
+            pubsub = _pubsub_pool.popleft()
+            try:
+                # Test if connection is still alive
+                await asyncio.wait_for(pubsub.ping(), timeout=1.0)
+                _pubsub_active[id(pubsub)] = (pubsub, time.time())
+                logger.debug(f"Reusing pubsub connection from pool. Active: {len(_pubsub_active)}, Pool: {len(_pubsub_pool)}")
+                return pubsub
+            except Exception:
+                # Connection is dead, try next one
+                try:
+                    await pubsub.aclose()
+                except:
+                    pass
+                continue
+        
+        # Create new connection if pool is empty or all connections were dead
+        redis_client = await get_client()
+        pubsub = redis_client.pubsub()
+        _pubsub_active[id(pubsub)] = (pubsub, time.time())
+        logger.debug(f"Created new pubsub connection. Active: {len(_pubsub_active)}, Pool: {len(_pubsub_pool)}")
+        return pubsub
+
+async def release_pubsub(pubsub):
+    """Release a pubsub connection back to the pool for reuse."""
+    if not pubsub:
+        return
+    
+    async with _pubsub_lock:
+        pubsub_id = id(pubsub)
+        
+        # Remove from active connections
+        if pubsub_id in _pubsub_active:
+            del _pubsub_active[pubsub_id]
+        
+        try:
+            # Unsubscribe from all channels
+            await pubsub.unsubscribe()
+            
+            # Test if connection is still healthy
+            await asyncio.wait_for(pubsub.ping(), timeout=1.0)
+            
+            # Add back to pool if healthy and pool not full
+            if len(_pubsub_pool) < _pubsub_pool.maxlen:
+                _pubsub_pool.append(pubsub)
+                logger.debug(f"Released pubsub to pool. Active: {len(_pubsub_active)}, Pool: {len(_pubsub_pool)}")
+            else:
+                # Pool is full, close the connection
+                await pubsub.aclose()
+                logger.debug(f"Closed excess pubsub connection. Active: {len(_pubsub_active)}, Pool: {len(_pubsub_pool)}")
+        except Exception as e:
+            # Connection is unhealthy, close it
+            logger.debug(f"Closing unhealthy pubsub connection: {e}")
+            try:
+                await pubsub.aclose()
+            except:
+                pass
+
+async def cleanup_idle_pubsubs():
+    """Clean up idle pubsub connections periodically."""
+    async with _pubsub_lock:
+        current_time = time.time()
+        to_remove = []
+        
+        # Check active connections for idle ones
+        for pubsub_id, (pubsub, last_used) in _pubsub_active.items():
+            if current_time - last_used > MAX_PUBSUB_IDLE_TIME:
+                to_remove.append(pubsub_id)
+        
+        # Remove idle connections
+        for pubsub_id in to_remove:
+            pubsub, _ = _pubsub_active.pop(pubsub_id)
+            try:
+                await pubsub.aclose()
+                logger.debug(f"Closed idle pubsub connection. Active: {len(_pubsub_active)}")
+            except:
+                pass
 
 
 # List operations
