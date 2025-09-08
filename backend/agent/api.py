@@ -2794,15 +2794,36 @@ async def preview_proxy(
         elif clean_path.endswith('.otf'):
             content_type = "font/otf"
         
-        # 7. Return the file content with appropriate headers
+        # 7. Determine cache policy based on file type
+        # Development files (HTML, CSS, JS) should not be cached
+        # Static assets (images, fonts) can be cached for performance
+        if clean_path.endswith(('.html', '.css', '.js', '.json', '.xml', '.txt')):
+            # No cache for files that change frequently during development
+            cache_control = "no-cache, no-store, must-revalidate"
+        elif clean_path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', 
+                                 '.woff', '.woff2', '.ttf', '.otf', '.pdf')):
+            # Cache static assets for 1 hour
+            cache_control = "public, max-age=3600"
+        else:
+            # Default: no cache for unknown file types
+            cache_control = "no-cache, no-store, must-revalidate"
+        
+        # 8. Return the file content with appropriate headers
+        response_headers = {
+            "Cache-Control": cache_control,
+            "X-Frame-Options": "SAMEORIGIN",  # Allow iframe from same origin
+            "X-Content-Type-Options": "nosniff"  # Prevent MIME type sniffing
+        }
+        
+        # Add additional no-cache headers if needed
+        if "no-cache" in cache_control:
+            response_headers["Pragma"] = "no-cache"
+            response_headers["Expires"] = "0"
+        
         return Response(
             content=file_content,
             media_type=content_type,
-            headers={
-                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
-                "X-Frame-Options": "SAMEORIGIN",  # Allow iframe from same origin
-                "X-Content-Type-Options": "nosniff"  # Prevent MIME type sniffing
-            }
+            headers=response_headers
         )
         
     except HTTPException:
