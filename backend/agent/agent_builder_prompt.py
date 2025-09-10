@@ -365,7 +365,7 @@ When creating credential profiles for external integrations, you MUST follow thi
 
 <function_calls>
 <invoke name="search_mcp_servers">
-<parameter name="query">{{user's app name}}</parameter>
+<parameter name="query">[user's app name]</parameter>
 <parameter name="limit">5</parameter>
 </invoke>
 </function_calls>
@@ -377,8 +377,8 @@ When creating credential profiles for external integrations, you MUST follow thi
 
 <function_calls>
 <invoke name="create_credential_profile">
-<parameter name="app_slug">{{exact app_slug from search results}}</parameter>
-<parameter name="profile_name">{{descriptive name}}</parameter>
+<parameter name="app_slug">[exact app_slug from search results]</parameter>
+<parameter name="profile_name">[descriptive name]</parameter>
 </invoke>
 </function_calls>
 ```
@@ -389,7 +389,7 @@ When creating credential profiles for external integrations, you MUST follow thi
 
 <function_calls>
 <invoke name="connect_credential_profile">
-<parameter name="profile_id">{{profile_id from create response}}</parameter>
+<parameter name="profile_id">[profile_id from create response]</parameter>
 </invoke>
 </function_calls>
 ```
@@ -402,8 +402,8 @@ When creating credential profiles for external integrations, you MUST follow thi
 - When you click the link, the secure OAuth connection will be handled automatically
 - Your credentials are securely managed through our integration system
 
-1. **Click the connection link above** to connect your {{app_name}} account
-2. **Authorize the connection** to your {{app_name}} account  
+1. **Click the connection link above** to connect your [app_name] account
+2. **Authorize the connection** to your [app_name] account  
 4. **Return here when done** and let me know you've connected successfully
 
 ⚠️ **I need to wait for you to connect before proceeding** - this is required so I can check what tools are available and help you select the right ones for your agent.
@@ -417,21 +417,21 @@ When creating credential profiles for external integrations, you MUST follow thi
 
 <function_calls>
 <invoke name="check_profile_connection">
-<parameter name="profile_id">{{profile_id}}</parameter>
+<parameter name="profile_id">[profile_id]</parameter>
 </invoke>
 </function_calls>
 ```
 
 ### **Step 6: MANDATORY - Tool Selection** ⚙️
 ```
-"Excellent! Your {{app_name}} account is connected. I can see the following tools are available:
+"Excellent! Your [app_name] account is connected. I can see the following tools are available:
 
-{{List each available tool with descriptions from check_profile_connection response}}
+[List each available tool with descriptions from check_profile_connection response]
 
 **Which tools would you like to enable for your agent?** 
-- **Tool 1**: {{description of what it does}}
-- **Tool 2**: {{description of what it does}}  
-- **Tool 3**: {{description of what it does}}
+- **Tool 1**: [description of what it does]
+- **Tool 2**: [description of what it does]  
+- **Tool 3**: [description of what it does]
 
 Please let me know which specific tools you'd like to use, and I'll configure them for your agent. You can select multiple tools or all of them."
 ```
@@ -442,8 +442,8 @@ Please let me know which specific tools you'd like to use, and I'll configure th
 
 <function_calls>
 <invoke name="configure_profile_for_agent">
-<parameter name="profile_id">{{profile_id}}</parameter>
-<parameter name="enabled_tools">{{array of selected tool names}}</parameter>
+<parameter name="profile_id">[profile_id]</parameter>
+<parameter name="enabled_tools">[array of selected tool names]</parameter>
 </invoke>
 </function_calls>
 ```
@@ -468,9 +468,9 @@ When user asks for a workflow or automation, ALWAYS follow these steps:
 ### **Step 2: Analyze and Plan** 📋
 ```
 "Based on the available tools, here's what I can use:
-- **{{Tool Name 1}}**: For {{specific task}}
-- **{{Tool Name 2}}**: For {{specific task}}
-- **MCP Integration Tools**: {{list any relevant integration tools found}}
+- **[Tool Name 1]**: For [specific task]
+- **[Tool Name 2]**: For [specific task]
+- **MCP Integration Tools**: [list any relevant integration tools found]
 
 Note: Tool names must match exactly, including any prefixes like 'pipedream:', 'gmail:', etc."
 ```
@@ -481,12 +481,12 @@ Note: Tool names must match exactly, including any prefixes like 'pipedream:', '
 
 <function_calls>
 <invoke name="create_workflow">
-<parameter name="name">{{workflow name}}</parameter>
-<parameter name="description">{{description}}</parameter>
+<parameter name="name">[workflow name]</parameter>
+<parameter name="description">[description]</parameter>
 <parameter name="steps">[
   {
     "step_type": "tool",
-    "tool_name": "{{EXACT tool name from list_available_tools}}",
+    "tool_name": "[EXACT tool name from list_available_tools]",
     "tool_input": {...}
   }
 ]</parameter>
