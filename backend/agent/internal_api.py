@@ -144,23 +144,56 @@ async def _execute_agent_background(
         ):
             response_count += 1
             
-            # Store response in Redis
-            import json
-            await redis.rpush(response_key, json.dumps(response))
-            await redis.publish(response_channel, "new")
+            # DEBUGGING: Log every response type and content for analysis
+            logger.info(f"Agent response #{response_count} - Type: {type(response)}, Content: {str(response)[:200]}...")
             
-            # Check for completion
-            # Ensure response is a dict before trying to access it
-            if isinstance(response, dict) and response.get('type') == 'status':
-                status_val = response.get('status')
-                if status_val in ['completed', 'failed', 'stopped']:
-                    final_status = status_val
-                    if status_val == 'failed':
-                        error_message = response.get('message', 'Agent execution failed')
-                    break
-            elif not isinstance(response, dict):
-                # Log unexpected response type for debugging
-                logger.warning(f"Unexpected response type in agent execution: {type(response)} - {response}")
+            # Handle different response types
+            if isinstance(response, dict):
+                # Store response in Redis
+                import json
+                await redis.rpush(response_key, json.dumps(response))
+                await redis.publish(response_channel, "new")
+                
+                # Check for completion
+                if response.get('type') == 'status':
+                    status_val = response.get('status')
+                    logger.info(f"Status response: {status_val}")
+                    if status_val in ['completed', 'failed', 'stopped']:
+                        final_status = status_val
+                        if status_val == 'failed':
+                            error_message = response.get('message', 'Agent execution failed')
+                        break
+            elif isinstance(response, bool):
+                # CRITICAL: Found the bool response - this is the bug source
+                logger.error(f"CRITICAL BUG: run_agent yielded boolean value: {response}")
+                logger.error(f"This happened at response #{response_count}")
+                logger.error(f"Agent config: {agent_config}")
+                logger.error(f"Model: {model_name}")
+                
+                # Store error info in Redis for debugging
+                import json
+                error_response = {
+                    "type": "error", 
+                    "message": f"run_agent yielded bool {response} at iteration {response_count}",
+                    "debug_info": {
+                        "response_count": response_count,
+                        "model_name": model_name,
+                        "agent_config_name": agent_config.get('name', 'Unknown') if agent_config else None
+                    }
+                }
+                await redis.rpush(response_key, json.dumps(error_response))
+                await redis.publish(response_channel, "new")
+                continue
+            else:
+                # Handle other unexpected types
+                logger.error(f"UNEXPECTED response type {type(response)}: {response}")
+                import json
+                error_response = {
+                    "type": "error", 
+                    "message": f"Unexpected response type {type(response)}: {str(response)[:100]}"
+                }
+                await redis.rpush(response_key, json.dumps(error_response))
+                await redis.publish(response_channel, "new")
                 continue
         
         # If loop finished without explicit status, mark as completed

@@ -554,6 +554,8 @@ async def run_agent(
                 logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
                 if trace:
                     trace.event(name="error_response_from_run_thread", level="ERROR", status_message=(f"{response.get('message', 'Unknown error')}"))
+                # DEBUGGING: Log yielded response
+                logger.info(f"YIELD RESPONSE (error): Type {type(response)}, Content: {str(response)[:100]}...")
                 yield response
                 has_error_occurred = True
                 break
@@ -575,6 +577,8 @@ async def run_agent(
                             if trace:
                                 trace.event(name="error_chunk_detected", level="ERROR", status_message=(f"{chunk.get('message', 'Unknown error')}"))
                             error_detected = True
+                            # DEBUGGING: Log yielded chunk
+                            logger.info(f"YIELD CHUNK (error): Type {type(chunk)}, Content: {str(chunk)[:100]}...")
                             yield chunk  # Forward the error chunk
                             continue     # Continue processing other chunks but don't break yet
                         
@@ -642,6 +646,8 @@ async def run_agent(
                                 if trace:
                                     trace.event(name="error_processing_assistant_chunk", level="ERROR", status_message=(f"Error processing assistant chunk: {e}"))
 
+                        # DEBUGGING: Log yielded chunk
+                        logger.info(f"YIELD CHUNK (normal): Type {type(chunk)}, Content: {str(chunk)[:100]}...")
                         yield chunk
                 else:
                     # Response is not iterable, likely an error dict

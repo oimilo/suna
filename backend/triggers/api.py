@@ -830,5 +830,26 @@ async def get_workflow(
     return workflow
 
 
+# Debug endpoint to check webhook configuration
+@router.get("/debug/webhook-config")
+async def debug_webhook_config():
+    """Debug endpoint to check webhook configuration for future triggers"""
+    import os
+    from triggers.provider_service import get_provider_service
+    
+    provider_service = get_provider_service(db)
+    
+    # Get the schedule provider to check webhook base URL
+    schedule_provider = provider_service._providers.get("schedule")
+    
+    return {
+        "webhook_base_url_env": os.getenv("WEBHOOK_BASE_URL", "NOT_SET"),
+        "webhook_base_url_provider": getattr(schedule_provider, '_webhook_base_url', 'NOT_SET'),
+        "expected_production_url": "https://prophet-milo-f3hr5.ondigitalocean.app",
+        "environment": os.getenv("ENV_MODE", "NOT_SET"),
+        "config_env_mode": config.ENV_MODE.value if hasattr(config, 'ENV_MODE') else "NOT_SET"
+    }
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
