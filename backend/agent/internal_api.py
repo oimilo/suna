@@ -16,7 +16,7 @@ from services import redis
 from agent.run import run_agent
 from services.langfuse import langfuse
 
-router = APIRouter(prefix="/api/internal", tags=["internal"])
+router = APIRouter(prefix="/internal", tags=["internal"])
 
 class ExecuteAgentRequest(BaseModel):
     agent_run_id: str
