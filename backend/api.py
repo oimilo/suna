@@ -205,8 +205,8 @@ api_router.include_router(triggers_api.router)
 
 # Internal API for Edge Functions (must come after triggers_api)
 try:
-    from agent import internal_api
-    api_router.include_router(internal_api.router)
+    from agent.internal_api import router as internal_router
+    api_router.include_router(internal_router)
     logger.info("Internal API router registered successfully")
 except Exception as e:
     logger.error(f"Failed to import/register internal_api: {e}")
