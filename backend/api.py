@@ -205,13 +205,21 @@ api_router.include_router(triggers_api.router)
 
 # Internal API for Edge Functions (must come after triggers_api)
 try:
-    from agent.internal_api import router as internal_router
+    import importlib
+    internal_api_module = importlib.import_module('agent.internal_api')
+    internal_router = getattr(internal_api_module, 'router')
     api_router.include_router(internal_router)
     logger.info("Internal API router registered successfully")
-except Exception as e:
-    logger.error(f"Failed to import/register internal_api: {e}")
+except ImportError as ie:
+    logger.error(f"Failed to import internal_api module: {ie}")
     import traceback
-    logger.error(f"Traceback: {traceback.format_exc()}")
+    logger.error(f"Import traceback: {traceback.format_exc()}")
+except AttributeError as ae:
+    logger.error(f"Failed to find router in internal_api module: {ae}")
+except Exception as e:
+    logger.error(f"Unexpected error importing/registering internal_api: {e}")
+    import traceback
+    logger.error(f"Full traceback: {traceback.format_exc()}")
 
 from pipedream import api as pipedream_api
 api_router.include_router(pipedream_api.router)
