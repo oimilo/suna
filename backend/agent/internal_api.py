@@ -150,13 +150,18 @@ async def _execute_agent_background(
             await redis.publish(response_channel, "new")
             
             # Check for completion
-            if response.get('type') == 'status':
+            # Ensure response is a dict before trying to access it
+            if isinstance(response, dict) and response.get('type') == 'status':
                 status_val = response.get('status')
                 if status_val in ['completed', 'failed', 'stopped']:
                     final_status = status_val
                     if status_val == 'failed':
                         error_message = response.get('message', 'Agent execution failed')
                     break
+            elif not isinstance(response, dict):
+                # Log unexpected response type for debugging
+                logger.warning(f"Unexpected response type in agent execution: {type(response)} - {response}")
+                continue
         
         # If loop finished without explicit status, mark as completed
         if final_status == "running":
