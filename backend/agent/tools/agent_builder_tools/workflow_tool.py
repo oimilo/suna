@@ -80,6 +80,28 @@ class WorkflowTool(AgentBuilderBaseTool):
     def _validate_tool_steps(self, steps: List[Dict[str, Any]], available_tools: List[str]) -> List[str]:
         errors = []
         
+        def find_similar_tools(tool_name: str, available: List[str], max_suggestions: int = 3) -> List[str]:
+            """Find similar tool names for suggestions."""
+            tool_lower = tool_name.lower()
+            similar = []
+            
+            # Exact substring matches
+            for available_tool in available:
+                if tool_lower in available_tool.lower() or available_tool.lower() in tool_lower:
+                    similar.append(available_tool)
+            
+            # Partial matches
+            if not similar:
+                for available_tool in available:
+                    # Check if any significant part matches
+                    tool_parts = tool_lower.replace('_', ' ').replace('-', ' ').split()
+                    available_parts = available_tool.lower().replace('_', ' ').replace('-', ' ').replace(':', ' ').split()
+                    
+                    if any(part in available_parts for part in tool_parts if len(part) > 3):
+                        similar.append(available_tool)
+            
+            return similar[:max_suggestions]
+        
         def validate_step_list(step_list: List[Dict[str, Any]], path: str = ""):
             for i, step in enumerate(step_list):
                 current_path = f"{path}step[{i}]" if path else f"step[{i}]"
@@ -87,7 +109,14 @@ class WorkflowTool(AgentBuilderBaseTool):
                 if step.get('type') == 'tool':
                     tool_name = step.get('config', {}).get('tool_name')
                     if tool_name and tool_name not in available_tools:
-                        errors.append(f"{current_path}: Tool '{tool_name}' is not available for this agent")
+                        # Find similar tools for suggestions
+                        similar = find_similar_tools(tool_name, available_tools)
+                        
+                        if similar:
+                            suggestions = ", ".join(f"'{s}'" for s in similar)
+                            errors.append(f"{current_path}: Tool '{tool_name}' is not available. Did you mean: {suggestions}?")
+                        else:
+                            errors.append(f"{current_path}: Tool '{tool_name}' is not available. Use 'list_available_tools' to see all available tools.")
                 
                 if step.get('children'):
                     validate_step_list(step['children'], f"{current_path}.children.")
@@ -609,6 +638,101 @@ class WorkflowTool(AgentBuilderBaseTool):
             
         except Exception as e:
             return self.fail_response(f"Error updating workflow status: {str(e)}")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "list_available_tools",
+            "description": "List all tools available for this agent, including native tools and MCP integrations. Use this before creating workflows to discover exact tool names.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "include_descriptions": {
+                        "type": "boolean",
+                        "description": "Whether to include tool descriptions (if available)",
+                        "default": False
+                    }
+                },
+                "required": []
+            }
+        }
+    })
+    @xml_schema(
+        tag_name="list-available-tools",
+        mappings=[
+            {"param_name": "include_descriptions", "node_type": "attribute", "path": ".", "required": False}
+        ],
+        example='''
+        <function_calls>
+        <invoke name="list_available_tools">
+        <parameter name="include_descriptions">true</parameter>
+        </invoke>
+        </function_calls>
+        '''
+    )
+    async def list_available_tools(self, include_descriptions: bool = False) -> ToolResult:
+        """List all tools available for this agent to use in workflows."""
+        try:
+            available_tools = await self._get_available_tools_for_agent()
+            
+            # Categorize tools for better organization
+            categorized = {
+                "file_operations": [],
+                "web_tools": [],
+                "shell_tools": [],
+                "vision_tools": [],
+                "deployment_tools": [],
+                "mcp_integrations": [],
+                "data_providers": [],
+                "other": []
+            }
+            
+            # Map of known tool patterns to categories
+            tool_categories = {
+                'file_operations': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'edit_file', 'read_file'],
+                'web_tools': ['web_search', 'browser_navigate_to', 'browser_take_screenshot', 'scrape_webpage'],
+                'shell_tools': ['execute_command', 'run_command'],
+                'vision_tools': ['see_image', 'computer_use'],
+                'deployment_tools': ['deploy', 'expose_port'],
+                'data_providers': ['get_data_provider_endpoints', 'execute_data_provider_call']
+            }
+            
+            # Categorize each tool
+            for tool in available_tools:
+                categorized_flag = False
+                
+                # Check known categories
+                for category, patterns in tool_categories.items():
+                    if any(pattern in tool.lower() for pattern in patterns):
+                        categorized[category].append(tool)
+                        categorized_flag = True
+                        break
+                
+                # Check if it's an MCP tool (contains colon or starts with known MCP prefixes)
+                if not categorized_flag:
+                    if ':' in tool or any(tool.startswith(prefix) for prefix in ['pipedream', 'gmail', 'slack', 'github']):
+                        categorized["mcp_integrations"].append(tool)
+                    else:
+                        categorized["other"].append(tool)
+            
+            # Remove empty categories
+            categorized = {k: v for k, v in categorized.items() if v}
+            
+            # Sort tools in each category
+            for category in categorized:
+                categorized[category].sort()
+            
+            return self.success_response({
+                "message": f"Found {len(available_tools)} available tools for this agent",
+                "total_tools": len(available_tools),
+                "all_tools": sorted(available_tools),
+                "categorized": categorized,
+                "tip": "Use the exact tool names from this list when creating workflows. Tool names are case-sensitive.",
+                "note": "MCP integration tools may have prefixes like 'pipedream:' or 'gmail:' - use the full name including the prefix."
+            })
+            
+        except Exception as e:
+            return self.fail_response(f"Error listing available tools: {str(e)}")
 
     def _convert_steps_to_json(self, steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not steps:
