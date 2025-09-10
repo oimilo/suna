@@ -549,6 +549,13 @@ async def run_agent(
                 enable_context_manager=enable_context_manager,
                 generation=generation
             )
+            
+            # CRITICAL DEBUG: Log the type of response immediately after run_thread call
+            logger.info(f"CRITICAL DEBUG: thread_manager.run_thread returned type: {type(response)}")
+            logger.info(f"CRITICAL DEBUG: response content preview: {str(response)[:100]}...")
+            logger.info(f"CRITICAL DEBUG: response has __aiter__: {hasattr(response, '__aiter__')}")
+            logger.info(f"CRITICAL DEBUG: response is dict: {isinstance(response, dict)}")
+            logger.info(f"CRITICAL DEBUG: response is bool: {isinstance(response, bool)}")
 
             if isinstance(response, dict) and "status" in response and response["status"] == "error":
                 logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
