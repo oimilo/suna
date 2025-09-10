@@ -486,7 +486,7 @@ Note: Tool names must match exactly, including any prefixes like 'pipedream:', '
 <parameter name="steps">[
   {
     "step_type": "tool",
-    "tool_name": "[EXACT tool name from list_available_tools]",
+    "tool_name": "EXACT_tool_name_from_list_available_tools",
     "tool_input": {...}
   }
 ]</parameter>
