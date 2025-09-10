@@ -851,5 +851,36 @@ async def debug_webhook_config():
     }
 
 
+@router.get("/debug/agent-run/{agent_run_id}")
+async def debug_agent_run_redis(agent_run_id: str):
+    """Debug endpoint to check Redis data for agent run"""
+    from services import redis
+    import json
+    
+    try:
+        # Get Redis responses for the agent run
+        response_key = f"agent_run:{agent_run_id}:responses"
+        responses = await redis.lrange(response_key, 0, -1)
+        
+        parsed_responses = []
+        for response in responses:
+            try:
+                parsed_responses.append(json.loads(response))
+            except:
+                parsed_responses.append({"raw": response, "parse_error": True})
+        
+        return {
+            "agent_run_id": agent_run_id,
+            "total_responses": len(responses),
+            "responses": parsed_responses
+        }
+    except Exception as e:
+        return {
+            "agent_run_id": agent_run_id,
+            "error": str(e),
+            "responses": []
+        }
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
