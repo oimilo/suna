@@ -13,6 +13,14 @@ from .trigger_service import TriggerEvent, TriggerResult
 from .utils import format_workflow_for_llm
 
 
+class WorkflowNotFoundError(Exception):
+    """Exceção específica para workflows não encontrados"""
+    def __init__(self, message: str, workflow_id: str = None, agent_id: str = None):
+        super().__init__(message)
+        self.workflow_id = workflow_id
+        self.agent_id = agent_id
+
+
 class ExecutionService:
 
     def __init__(self, db_connection: DBConnection):
@@ -31,13 +39,58 @@ class ExecutionService:
             logger.info(f"Executing trigger for agent {agent_id}: workflow={trigger_result.should_execute_workflow}, agent={trigger_result.should_execute_agent}")
             
             if trigger_result.should_execute_workflow:
-                return await self._workflow_executor.execute_workflow(
-                    agent_id=agent_id,
-                    workflow_id=trigger_result.workflow_id,
-                    workflow_input=trigger_result.workflow_input or {},
-                    trigger_result=trigger_result,
-                    trigger_event=trigger_event
-                )
+                try:
+                    return await self._workflow_executor.execute_workflow(
+                        agent_id=agent_id,
+                        workflow_id=trigger_result.workflow_id,
+                        workflow_input=trigger_result.workflow_input or {},
+                        trigger_result=trigger_result,
+                        trigger_event=trigger_event
+                    )
+                except WorkflowNotFoundError as e:
+                    # FALLBACK AUTOMÁTICO para execução de agente quando workflow não existe
+                    logger.warning(f"Workflow not found, automatically falling back to agent execution", 
+                                 workflow_id=getattr(e, 'workflow_id', trigger_result.workflow_id),
+                                 agent_id=agent_id,
+                                 trigger_id=trigger_event.trigger_id,
+                                 error_message=str(e),
+                                 fallback_type="workflow_to_agent")
+                    
+                    # Criar prompt inteligente baseado no contexto disponível
+                    workflow_context = ""
+                    if trigger_result.workflow_input:
+                        workflow_context = f"Based on the workflow input data: {json.dumps(trigger_result.workflow_input)}"
+                    
+                    execution_variables_context = ""
+                    if trigger_result.execution_variables:
+                        execution_variables_context = f"Execution context: {json.dumps(trigger_result.execution_variables)}"
+                    
+                    # Prompt que preserva a intenção original da automação
+                    fallback_prompt = f"""Execute the automation that was originally configured as a workflow but the workflow is no longer available.
+                    
+{workflow_context}
+{execution_variables_context}
+
+Please analyze the context and execute the appropriate actions based on the automation's original intent."""
+                    
+                    # Criar TriggerResult alternativo para agente
+                    fallback_trigger_result = TriggerResult(
+                        success=True,
+                        should_execute_agent=True,
+                        agent_prompt=fallback_prompt,
+                        execution_variables=trigger_result.execution_variables or {}
+                    )
+                    
+                    logger.info(f"Executing fallback agent with intelligent prompt", 
+                               agent_id=agent_id,
+                               trigger_id=trigger_event.trigger_id,
+                               fallback_type="workflow_to_agent")
+                    
+                    return await self._agent_executor.execute_agent(
+                        agent_id=agent_id,
+                        trigger_result=fallback_trigger_result,
+                        trigger_event=trigger_event
+                    )
             else:
                 return await self._agent_executor.execute_agent(
                     agent_id=agent_id,
@@ -46,7 +99,10 @@ class ExecutionService:
                 )
                 
         except Exception as e:
-            logger.error(f"Failed to execute trigger result: {e}")
+            logger.error(f"Failed to execute trigger result: {e}", 
+                        agent_id=agent_id,
+                        trigger_id=trigger_event.trigger_id,
+                        error_type=type(e).__name__)
             return {
                 "success": False,
                 "error": str(e),
@@ -445,13 +501,50 @@ class WorkflowExecutor:
     async def _get_workflow_data(self, workflow_id: str, agent_id: str) -> Tuple[Dict[str, Any], list]:
         client = await self._db.client
         
+        logger.info(f"Validating workflow reference", 
+                   workflow_id=workflow_id, 
+                   agent_id=agent_id, 
+                   operation="workflow_validation")
+        
         workflow_result = await client.table('agent_workflows').select('*').eq('id', workflow_id).eq('agent_id', agent_id).execute()
+        
         if not workflow_result.data:
-            raise ValueError(f"Workflow {workflow_id} not found for agent {agent_id}")
+            # LOGGING DETALHADO do problema de referência quebrada
+            logger.error(f"Workflow validation failed - workflow not found", 
+                        workflow_id=workflow_id,
+                        agent_id=agent_id,
+                        error_type="workflow_not_found",
+                        operation="workflow_validation")
+            
+            # Lançar exceção específica que será tratada pelo ExecutionService
+            raise WorkflowNotFoundError(
+                f"Workflow {workflow_id} not found for agent {agent_id}",
+                workflow_id=workflow_id,
+                agent_id=agent_id
+            )
         
         workflow_config = workflow_result.data[0]
+        
+        # Validar se workflow está ativo
         if workflow_config['status'] != 'active':
-            raise ValueError(f"Workflow {workflow_id} is not active")
+            logger.error(f"Workflow validation failed - workflow not active", 
+                        workflow_id=workflow_id,
+                        agent_id=agent_id,
+                        workflow_status=workflow_config['status'],
+                        error_type="workflow_not_active",
+                        operation="workflow_validation")
+            
+            raise WorkflowNotFoundError(
+                f"Workflow {workflow_id} is not active (status: {workflow_config['status']})",
+                workflow_id=workflow_id,
+                agent_id=agent_id
+            )
+        
+        logger.info(f"Workflow validation successful", 
+                   workflow_id=workflow_id, 
+                   agent_id=agent_id,
+                   workflow_name=workflow_config.get('name', 'Unknown'),
+                   operation="workflow_validation")
         
         steps_json = workflow_config.get('steps', [])
         return workflow_config, steps_json
