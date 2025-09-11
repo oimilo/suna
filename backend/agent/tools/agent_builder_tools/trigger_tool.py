@@ -37,8 +37,7 @@ class TriggerTool(AgentBuilderBaseTool):
                     "execution_type": {
                         "type": "string",
                         "enum": ["workflow", "agent"],
-                        "description": "Whether to execute a workflow or run the agent directly",
-                        "default": "agent"
+                        "description": "Whether to execute a workflow or run the agent directly. Auto-detected if not provided based on workflow_id or agent_prompt"
                     },
                     "workflow_id": {
                         "type": "string",
@@ -54,7 +53,7 @@ class TriggerTool(AgentBuilderBaseTool):
                         "description": "Prompt to send to the agent when triggered (required if execution_type is 'agent')"
                     }
                 },
-                "required": ["name", "cron_expression", "execution_type"]
+                "required": ["name", "cron_expression"]
             }
         }
     })
@@ -64,7 +63,7 @@ class TriggerTool(AgentBuilderBaseTool):
             {"param_name": "name", "node_type": "attribute", "path": ".", "required": True},
             {"param_name": "description", "node_type": "element", "path": "description", "required": False},
             {"param_name": "cron_expression", "node_type": "attribute", "path": ".", "required": True},
-            {"param_name": "execution_type", "node_type": "attribute", "path": ".", "required": True},
+            {"param_name": "execution_type", "node_type": "attribute", "path": ".", "required": False},
             {"param_name": "workflow_id", "node_type": "element", "path": "workflow_id", "required": False},
             {"param_name": "workflow_input", "node_type": "element", "path": "workflow_input", "required": False},
             {"param_name": "agent_prompt", "node_type": "element", "path": "agent_prompt", "required": False}
@@ -86,21 +85,37 @@ class TriggerTool(AgentBuilderBaseTool):
         self,
         name: str,
         cron_expression: str,
-        execution_type: str = "agent",
+        execution_type: Optional[str] = None,
         description: Optional[str] = None,
         workflow_id: Optional[str] = None,
         workflow_input: Optional[Dict[str, Any]] = None,
         agent_prompt: Optional[str] = None
     ) -> ToolResult:
         try:
+            # Auto-detect execution_type if not provided
+            if execution_type is None:
+                if workflow_id:
+                    execution_type = "workflow"
+                elif agent_prompt:
+                    execution_type = "agent"
+                else:
+                    return self.fail_response("Either workflow_id or agent_prompt must be provided")
+            
             if execution_type not in ["workflow", "agent"]:
                 return self.fail_response("execution_type must be either 'workflow' or 'agent'")
             
-            if execution_type == "workflow" and not workflow_id:
-                return self.fail_response("workflow_id is required when execution_type is 'workflow'")
-            
-            if execution_type == "agent" and not agent_prompt:
-                return self.fail_response("agent_prompt is required when execution_type is 'agent'")
+            # Ensure consistency between execution_type and parameters
+            if execution_type == "workflow":
+                if not workflow_id:
+                    return self.fail_response("workflow_id is required when execution_type is 'workflow'")
+                # Clear agent_prompt if workflow execution
+                agent_prompt = None
+            elif execution_type == "agent":
+                if not agent_prompt:
+                    return self.fail_response("agent_prompt is required when execution_type is 'agent'")
+                # Clear workflow fields if agent execution
+                workflow_id = None
+                workflow_input = None
             
             if execution_type == "workflow":
                 client = await self.db.client
