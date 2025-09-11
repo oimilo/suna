@@ -489,7 +489,7 @@ async def start_agent(
         logger.info(f"[AGENT LOAD] Agent config keys: {list(agent_config.keys())}")
         logger.info(f"Using agent {agent_config['agent_id']} for this agent run (thread remains agent-agnostic)")
 
-    can_use, model_message, allowed_models = await can_use_model(client, account_id, model_name)
+    can_use, model_message, allowed_models = can_use_model(client, account_id, model_name)
     if not can_use:
         raise HTTPException(status_code=403, detail={"message": model_message, "allowed_models": allowed_models})
 
@@ -1142,7 +1142,7 @@ async def initiate_agent_with_files(
     if agent_config:
         logger.info(f"[AGENT INITIATE] Agent config keys: {list(agent_config.keys())}")
 
-    can_use, model_message, allowed_models = await can_use_model(client, account_id, model_name)
+    can_use, model_message, allowed_models = can_use_model(client, account_id, model_name)
     if not can_use:
         raise HTTPException(status_code=403, detail={"message": model_message, "allowed_models": allowed_models})
 

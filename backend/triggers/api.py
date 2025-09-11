@@ -750,7 +750,7 @@ async def execute_agent_workflow(
     
     # Validate permissions
     model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
-    can_use, model_message, allowed_models = await can_use_model(client, account_id, model_name)
+    can_use, model_message, allowed_models = can_use_model(client, account_id, model_name)
     if not can_use:
         raise HTTPException(status_code=403, detail={"message": model_message, "allowed_models": allowed_models})
 
