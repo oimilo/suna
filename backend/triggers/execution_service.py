@@ -661,17 +661,23 @@ class WorkflowExecutor:
     async def _validate_workflow_execution(self, account_id: str) -> None:
         from services.billing import check_billing_status, can_use_model
         
+        logger.debug(f"Validating workflow execution for account: {account_id}")
+        
         client = await self._db.client
         model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
         
         # can_use_model returns (bool, str, list) - async function
+        logger.debug(f"Checking model access for model: {model_name}")
         model_access_result = await can_use_model(client, account_id, model_name)
+        logger.debug(f"Model access result type: {type(model_access_result)}, value: {model_access_result}")
         can_use, model_message, allowed_models = model_access_result
         if not can_use:
             raise Exception(f"Model access denied: {model_message}")
             
         # check_billing_status returns (bool, str, dict)
+        logger.debug(f"Checking billing status for account: {account_id}")
         billing_result = await check_billing_status(client, account_id)
+        logger.debug(f"Billing result type: {type(billing_result)}, value: {billing_result}")
         can_run, billing_message, subscription_info = billing_result
         if not can_run:
             raise Exception(f"Billing check failed: {billing_message}")
@@ -752,11 +758,16 @@ class WorkflowExecutor:
                     logger.error(f"Edge Function error for workflow: {response.status_code} - {error_detail}")
                     raise Exception(f"Edge Function error: {error_detail}")
                 
-                result = response.json()
-                logger.info(f"Workflow Edge Function invoked: {result}")
+                # Add better error handling for Edge Function response
+                try:
+                    result = response.json()
+                    logger.info(f"Workflow Edge Function invoked successfully: result_type={type(result)}, result={result}")
+                except json.JSONDecodeError as json_error:
+                    logger.error(f"Failed to parse Edge Function response as JSON: {json_error}, response_text={response.text}")
+                    raise Exception(f"Invalid JSON response from Edge Function: {response.text[:200]}")
                 
         except Exception as e:
-            logger.error(f"Failed to invoke Edge Function for workflow: {e}")
+            logger.error(f"Failed to invoke Edge Function for workflow: {e}, error_type={type(e).__name__}")
             await client.table('agent_runs').update({
                 "status": "failed",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
