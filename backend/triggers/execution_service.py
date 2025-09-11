@@ -781,17 +781,20 @@ class WorkflowExecutor:
             
             # Create async task for agent execution (with workflow-enhanced system_prompt)
             task = asyncio.create_task(run_agent_async(
+                agent_id=agent_config.get('agent_id'),
                 agent_run_id=agent_run_id,
+                user_id=account_id,
                 thread_id=thread_id,
-                instance_id=getattr(config, 'INSTANCE_ID', 'workflow_executor'),
                 project_id=project_id,
+                account_id=account_id,
+                db_ref=self._db,
+                instance_id_ref=getattr(config, 'INSTANCE_ID', 'workflow_executor'),
+                prompt=None,  # Using system_prompt from agent_config
                 model_name=model_name,
-                enable_thinking=False,
                 reasoning_effort='medium',
-                stream=False,
+                enable_thinking=False,
                 enable_context_manager=True,
-                agent_config=agent_config,  # This contains the workflow-enhanced system_prompt
-                request_id=None
+                agent_config=agent_config  # This contains the workflow-enhanced system_prompt
             ))
             
             # Store task reference to prevent garbage collection
