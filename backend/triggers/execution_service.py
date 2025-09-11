@@ -632,6 +632,20 @@ class WorkflowExecutor:
 --- WORKFLOW EXECUTION MODE ---
 {workflow_prompt}"""
         
+        # Ensure account_id is present (required for billing and MCP initialization)
+        if 'account_id' not in enhanced_config:
+            client = await self._db.client
+            agent_result = await client.table('agents').select('account_id').eq('agent_id', agent_config.get('agent_id')).execute()
+            if agent_result.data:
+                enhanced_config['account_id'] = agent_result.data[0]['account_id']
+                logger.info(f"Added account_id to enhanced config: {enhanced_config['account_id']}")
+        
+        logger.info(f"Enhanced agent config for workflow execution",
+                   has_mcps=bool(enhanced_config.get('configured_mcps') or enhanced_config.get('custom_mcps')),
+                   configured_mcps_count=len(enhanced_config.get('configured_mcps', [])),
+                   custom_mcps_count=len(enhanced_config.get('custom_mcps', [])),
+                   has_account_id=bool(enhanced_config.get('account_id')))
+        
         return enhanced_config
     
     def _get_available_tools(self, agent_config: Dict[str, Any]) -> list:
@@ -756,23 +770,28 @@ class WorkflowExecutor:
         if not workflow_input:
             workflow_input = agent_config.get('workflow_input', {})
         
-        # Use direct workflow execution for production (no Dramatiq/RabbitMQ)
-        logger.info(f"Starting workflow execution directly: agent_run_id={agent_run_id}")
+        # IMPORTANTE: Executar workflow como agente normal com system_prompt modificado
+        # (seguindo o padrão do Suna original - não usar WorkflowExecutor separado)
+        logger.info(f"Starting workflow as agent execution: agent_run_id={agent_run_id}")
+        logger.info(f"MCPs configured: {len(agent_config.get('configured_mcps', []))} configured, {len(agent_config.get('custom_mcps', []))} custom")
         
         try:
-            # Import the direct workflow execution function
-            from run_agent_workflow_direct import run_workflow_direct
+            # Import the standard agent execution function
+            from run_agent_async import run_agent_async
             
-            # Create async task for workflow execution
-            task = asyncio.create_task(run_workflow_direct(
+            # Create async task for agent execution (with workflow-enhanced system_prompt)
+            task = asyncio.create_task(run_agent_async(
                 agent_run_id=agent_run_id,
                 thread_id=thread_id,
+                instance_id=getattr(config, 'INSTANCE_ID', 'workflow_executor'),
                 project_id=project_id,
                 model_name=model_name,
-                agent_config=agent_config,
-                workflow_id=workflow_id,
-                workflow_input=workflow_input,
-                instance_id=getattr(config, 'INSTANCE_ID', 'workflow_executor')
+                enable_thinking=False,
+                reasoning_effort='medium',
+                stream=False,
+                enable_context_manager=True,
+                agent_config=agent_config,  # This contains the workflow-enhanced system_prompt
+                request_id=None
             ))
             
             # Store task reference to prevent garbage collection
@@ -781,7 +800,7 @@ class WorkflowExecutor:
             self._background_tasks.add(task)
             task.add_done_callback(self._background_tasks.discard)
             
-            logger.info(f"Workflow execution task created successfully: {agent_run_id}")
+            logger.info(f"Workflow (as agent) execution task created successfully: {agent_run_id}")
                 
         except Exception as e:
             logger.error(f"Failed to start workflow execution: {e}, error_type={type(e).__name__}")
