@@ -793,8 +793,8 @@ class WorkflowExecutor:
                 model_name=model_name,
                 reasoning_effort='medium',
                 enable_thinking=False,
-                enable_context_manager=True,
-                agent_config=agent_config  # This contains the workflow-enhanced system_prompt
+                agent_config=agent_config,  # This contains the workflow-enhanced system_prompt
+                agent_version_id=agent_config.get('current_version_id')
             ))
             
             # Store task reference to prevent garbage collection
