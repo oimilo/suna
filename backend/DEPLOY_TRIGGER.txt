@@ -1,2 +1,2 @@
-Deploy trigger: 2025-09-11 17:40:00
-Forcing deployment to apply can_use_model fix
+Deploy trigger: Thu Sep 11 14:48:20 -03 2025
+Forcing deployment with billing.py fix for can_use_model
