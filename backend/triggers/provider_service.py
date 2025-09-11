@@ -89,8 +89,8 @@ class ScheduleProvider(TriggerProvider):
             return False
         
         try:
-            # Para Supabase Edge Functions, usar a URL do function diretamente
-            webhook_url = f"{self._webhook_base_url}/run-agent-trigger"
+            # URL do webhook na API principal (DigitalOcean)
+            webhook_url = f"{self._webhook_base_url}/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             execution_type = trigger.config.get('execution_type', 'agent')
             user_timezone = trigger.config.get('timezone', 'UTC')
