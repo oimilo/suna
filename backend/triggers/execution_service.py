@@ -480,7 +480,7 @@ class WorkflowExecutor:
             await self._create_workflow_message(thread_id, workflow_config, workflow_input)
             
             agent_run_id = await self._start_workflow_agent_execution(
-                thread_id, project_id, enhanced_agent_config
+                thread_id, project_id, enhanced_agent_config, workflow_id, workflow_input
             )
             
             return {
@@ -717,22 +717,37 @@ class WorkflowExecutor:
         self,
         thread_id: str,
         project_id: str,
-        agent_config: Dict[str, Any]
+        agent_config: Dict[str, Any],
+        workflow_id: str = None,
+        workflow_input: Dict[str, Any] = None
     ) -> str:
         client = await self._db.client
         model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
+        
+        # Get account_id from thread
+        thread_result = await client.table('threads').select('account_id').eq('thread_id', thread_id).execute()
+        if not thread_result.data:
+            raise ValueError(f"Thread {thread_id} not found")
+        account_id = thread_result.data[0]['account_id']
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
             "status": "running",
             "started_at": datetime.now(timezone.utc).isoformat(),
             "agent_id": agent_config.get('agent_id'),
-            "agent_version_id": agent_config.get('current_version_id')
+            "agent_version_id": agent_config.get('current_version_id'),
+            "account_id": account_id
         }).execute()
         
         agent_run_id = agent_run.data[0]['id']
         
         await self._register_workflow_run(agent_run_id)
+        
+        # Extract workflow_id and workflow_input from agent_config if not provided
+        if not workflow_id:
+            workflow_id = agent_config.get('workflow_id')
+        if not workflow_input:
+            workflow_input = agent_config.get('workflow_input', {})
         
         # Use direct workflow execution for production (no Dramatiq/RabbitMQ)
         logger.info(f"Starting workflow execution directly: agent_run_id={agent_run_id}")
