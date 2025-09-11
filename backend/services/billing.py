@@ -574,10 +574,14 @@ async def get_allowed_models_for_user(client, user_id: str):
 def can_use_model(client, user_id: str, model_name: str):
     """
     Simplified: All users can use Claude Sonnet 4.
+    
+    Returns:
+        Tuple[bool, str, List[str]]: (can_use, message, allowed_models)
     """
     # Always allow Claude Sonnet 4 for all users
     logger.info(f"[MODEL_ACCESS_CHECK] User {user_id} granted access to Claude Sonnet 4")
-    return True, "Model access allowed", ["claude-sonnet-4-20250514"]
+    # IMPORTANTE: SEMPRE retornar tupla com 3 valores para evitar erro 'bool' object has no attribute 'get'
+    return (True, "Model access allowed", ["claude-sonnet-4-20250514"])
 
 async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optional[Dict]]:
     """
