@@ -777,7 +777,7 @@ class WorkflowExecutor:
         
         try:
             # Import the standard agent execution function
-            from run_agent_async import run_agent_async
+            from run_agent_background_simple import run_agent_async
             
             # Create async task for agent execution (with workflow-enhanced system_prompt)
             task = asyncio.create_task(run_agent_async(
