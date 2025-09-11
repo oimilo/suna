@@ -108,6 +108,17 @@ async def _execute_agent_background(
     try:
         logger.info(f"Starting background agent execution: {agent_run_id}")
         
+        # Create agent_run record in database FIRST
+        agent_run_data = {
+            "id": agent_run_id,
+            "thread_id": thread_id,
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await client.table('agent_runs').insert(agent_run_data).execute()
+        logger.info(f"Created agent_run record: {agent_run_id}")
+        
         # Create trace for monitoring
         trace = langfuse.trace(
             name="trigger_agent_run",
