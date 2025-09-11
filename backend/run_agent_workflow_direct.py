@@ -94,6 +94,7 @@ async def run_workflow_direct(
             thread_id=thread_id,
             project_id=project_id,
             user_id=user_id,
+            agent_config=agent_config,
             trace=trace
         )
         

@@ -12,6 +12,9 @@ from utils.logger import logger, structlog
 from services.supabase import DBConnection
 from services.redis import redis
 from services.langfuse import langfuse
+from agentpress.thread_manager import ThreadManager
+from agent.tools.mcp_tool_wrapper import MCPToolWrapper
+from agentpress.tool import SchemaType
 
 
 class WorkflowExecutor:
@@ -20,7 +23,106 @@ class WorkflowExecutor:
     def __init__(self, db: DBConnection):
         self.db = db
         self.tool_instances = {}
+        self.thread_manager = None
+        self.mcp_wrapper = None
         
+    async def _initialize_tools(self, agent_config: Dict[str, Any], thread_id: str, project_id: str, user_id: str):
+        """Initialize tool registry with MCP tools from agent configuration."""
+        if self.thread_manager:
+            logger.info("Thread manager already initialized, skipping tool initialization")
+            return  # Already initialized
+            
+        logger.info("Initializing tool registry for workflow executor")
+        
+        # Log the received agent configuration
+        logger.info(f"Agent config keys: {list(agent_config.keys())}")
+        logger.info(f"Configured MCPs count: {len(agent_config.get('configured_mcps', []))}")
+        logger.info(f"Custom MCPs count: {len(agent_config.get('custom_mcps', []))}")
+        
+        # Create thread manager
+        self.thread_manager = ThreadManager(thread_id, project_id, None)
+        
+        # Check for MCPs in agent config
+        all_mcps = []
+        
+        # Add standard configured MCPs
+        if agent_config.get('configured_mcps'):
+            all_mcps.extend(agent_config['configured_mcps'])
+        
+        # Add custom MCPs (including Pipedream)
+        if agent_config.get('custom_mcps'):
+            logger.info(f"Processing {len(agent_config['custom_mcps'])} custom MCPs")
+            for custom_mcp in agent_config['custom_mcps']:
+                logger.info(f"Custom MCP: {custom_mcp.get('name')} - Type: {custom_mcp.get('type')} - Enabled tools: {custom_mcp.get('enabledTools', [])}")
+                custom_type = custom_mcp.get('customType', custom_mcp.get('type', 'sse'))
+                
+                # For Pipedream MCPs, ensure proper config
+                if custom_type == 'pipedream':
+                    if 'config' not in custom_mcp:
+                        custom_mcp['config'] = {}
+                    
+                    # Get external_user_id from profile if needed
+                    if not custom_mcp['config'].get('external_user_id'):
+                        profile_id = custom_mcp['config'].get('profile_id')
+                        if profile_id:
+                            try:
+                                # Get the profile to retrieve external_user_id
+                                profile_result = await self.db.client.table('credential_profiles').select('*').eq('id', profile_id).execute()
+                                if profile_result.data:
+                                    custom_mcp['config']['external_user_id'] = profile_result.data[0].get('external_user_id')
+                                    logger.info(f"Retrieved external_user_id from profile {profile_id}")
+                            except Exception as e:
+                                logger.error(f"Error retrieving external_user_id: {e}")
+                    
+                    if 'headers' in custom_mcp['config'] and 'x-pd-app-slug' in custom_mcp['config']['headers']:
+                        custom_mcp['config']['app_slug'] = custom_mcp['config']['headers']['x-pd-app-slug']
+                
+                mcp_config = {
+                    'name': custom_mcp['name'],
+                    'qualifiedName': f"custom_{custom_type}_{custom_mcp['name'].replace(' ', '_').lower()}",
+                    'config': custom_mcp['config'],
+                    'enabledTools': custom_mcp.get('enabledTools', []),
+                    'instructions': custom_mcp.get('instructions', ''),
+                    'isCustom': True,
+                    'customType': custom_type
+                }
+                all_mcps.append(mcp_config)
+        
+        if all_mcps:
+            logger.info(f"Registering MCP wrapper with {len(all_mcps)} MCP servers")
+            
+            # Create and initialize MCP wrapper
+            self.mcp_wrapper = MCPToolWrapper(mcp_configs=all_mcps)
+            await self.mcp_wrapper.initialize_and_register_tools()
+            
+            # Register tools in thread manager
+            self.thread_manager.add_tool(MCPToolWrapper, mcp_configs=all_mcps)
+            
+            # Get the initialized wrapper instance
+            for tool_name, tool_info in self.thread_manager.tool_registry.tools.items():
+                if isinstance(tool_info['instance'], MCPToolWrapper):
+                    self.mcp_wrapper = tool_info['instance']
+                    break
+            
+            if self.mcp_wrapper:
+                # Register dynamic MCP tools
+                updated_schemas = self.mcp_wrapper.get_schemas()
+                logger.info(f"MCP wrapper has {len(updated_schemas)} schemas available")
+                
+                for method_name, schema_list in updated_schemas.items():
+                    if method_name != 'call_mcp_tool':
+                        for schema in schema_list:
+                            if schema.schema_type == SchemaType.OPENAPI:
+                                self.thread_manager.tool_registry.tools[method_name] = {
+                                    "instance": self.mcp_wrapper,
+                                    "schema": schema
+                                }
+                                logger.info(f"Registered MCP tool: {method_name}")
+            
+            # Log all registered tools
+            all_tools = list(self.thread_manager.tool_registry.tools.keys())
+            logger.info(f"Workflow executor registered tools: {all_tools}")
+    
     async def execute_workflow(
         self,
         workflow_id: str,
@@ -29,6 +131,7 @@ class WorkflowExecutor:
         thread_id: str,
         project_id: str,
         user_id: str,
+        agent_config: Dict[str, Any] = None,
         trace: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
@@ -38,6 +141,10 @@ class WorkflowExecutor:
             Dict with status and results
         """
         logger.info(f"Starting workflow execution: {workflow_id}")
+        
+        # Initialize tools if agent config provided
+        if agent_config:
+            await self._initialize_tools(agent_config, thread_id, project_id, user_id)
         
         try:
             # Get workflow definition from database
@@ -51,6 +158,7 @@ class WorkflowExecutor:
             steps = workflow.get('steps', [])
             
             logger.info(f"Executing workflow '{workflow['name']}' with {len(steps)} steps")
+            logger.info(f"Workflow steps: {json.dumps(steps, indent=2)}")
             
             # Initialize execution context
             context = {
@@ -187,21 +295,101 @@ class WorkflowExecutor:
         
         logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
         
-        # Special handling for specific tools
+        # Process arguments to replace variables from context
+        processed_args = self._process_tool_args(tool_args, context)
+        
+        # Check if we have the tool in our registry
+        logger.info(f"Checking tool availability - thread_manager: {bool(self.thread_manager)}, mcp_wrapper: {bool(self.mcp_wrapper)}")
+        if self.thread_manager and self.mcp_wrapper:
+            # Try to execute through MCP wrapper
+            try:
+                # Check if it's a registered MCP tool
+                if hasattr(self.mcp_wrapper, tool_name):
+                    logger.info(f"Executing MCP tool: {tool_name}")
+                    method = getattr(self.mcp_wrapper, tool_name)
+                    result = await method(**processed_args)
+                    
+                    # Convert ToolResult to dict
+                    if hasattr(result, 'output'):
+                        return {
+                            'status': 'completed',
+                            'output': result.output,
+                            'metadata': getattr(result, 'metadata', {})
+                        }
+                    else:
+                        return {
+                            'status': 'completed',
+                            'output': str(result)
+                        }
+                        
+                # Try as a generic MCP tool call
+                elif tool_name.startswith('mcp_'):
+                    logger.info(f"Executing MCP tool via call_mcp_tool: {tool_name}")
+                    result = await self.mcp_wrapper.call_mcp_tool(
+                        tool_name=tool_name,
+                        arguments=processed_args
+                    )
+                    
+                    if hasattr(result, 'output'):
+                        return {
+                            'status': 'completed',
+                            'output': result.output,
+                            'metadata': getattr(result, 'metadata', {})
+                        }
+                    else:
+                        return {
+                            'status': 'completed',
+                            'output': str(result)
+                        }
+                        
+            except Exception as e:
+                logger.error(f"Error executing MCP tool {tool_name}: {e}")
+                return {
+                    'status': 'error',
+                    'error': str(e),
+                    'tool': tool_name
+                }
+        
+        # Fallback to simulated implementations for testing
+        logger.warning(f"Tool {tool_name} not available in registry, using fallback")
+        
         if tool_name == 'browser_navigate_to':
-            return await self._execute_browser_navigate(tool_args, context)
+            return await self._execute_browser_navigate(processed_args, context)
         elif tool_name == 'gmail_send_email':
-            return await self._execute_gmail_send(tool_args, context, user_id)
+            return await self._execute_gmail_send(processed_args, context, user_id)
         elif tool_name == 'create_file':
-            return await self._execute_create_file(tool_args, context)
+            return await self._execute_create_file(processed_args, context)
         else:
-            # Generic tool execution (would need proper tool registry)
-            logger.warning(f"Tool {tool_name} not implemented in workflow executor")
             return {
-                'status': 'not_implemented',
+                'status': 'not_available',
                 'tool': tool_name,
-                'message': f'Tool {tool_name} execution not yet implemented'
+                'message': f'Tool {tool_name} not available in tool registry'
             }
+    
+    def _process_tool_args(self, args: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Process tool arguments, replacing variables with context values."""
+        processed = {}
+        
+        for key, value in args.items():
+            if isinstance(value, str) and '{' in value:
+                # Try to format with context values
+                try:
+                    # Allow access to context.input and context.results
+                    format_context = {
+                        'input': context.get('input', {}),
+                        'results': context.get('results', {})
+                    }
+                    # Flatten for easier access
+                    for k, v in context.get('input', {}).items():
+                        format_context[k] = v
+                    
+                    processed[key] = value.format(**format_context)
+                except:
+                    processed[key] = value  # Keep original if formatting fails
+            else:
+                processed[key] = value
+        
+        return processed
     
     async def _execute_instruction_step(
         self,

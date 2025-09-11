@@ -307,7 +307,7 @@ class AgentExecutor:
                     'agentpress_tools': {},
                 }
             
-            return {
+            config = {
                 'agent_id': agent_id,
                 'account_id': agent_data.get('account_id'),
                 'name': agent_data.get('name', 'Unknown Agent'),
@@ -334,6 +334,12 @@ class AgentExecutor:
                 'current_version_id': str(active_version.version_id),
                 'version_name': active_version.version_name
             }
+            
+            logger.info(f"Agent config loaded - MCPs: {len(config['configured_mcps'])} configured, {len(config['custom_mcps'])} custom")
+            for custom_mcp in config['custom_mcps']:
+                logger.info(f"  Custom MCP: {custom_mcp['name']} - Type: {custom_mcp['type']}")
+            
+            return config
             
         except Exception as e:
             logger.warning(f"Failed to get agent config using versioning system: {e}")
