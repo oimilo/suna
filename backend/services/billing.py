@@ -571,7 +571,7 @@ async def get_allowed_models_for_user(client, user_id: str):
     return MODEL_ACCESS_TIERS.get(tier_name, MODEL_ACCESS_TIERS['free'])  # Default to free tier if unknown
 
 
-async def can_use_model(client, user_id: str, model_name: str):
+def can_use_model(client, user_id: str, model_name: str):
     """
     Simplified: All users can use Claude Sonnet 4.
     """

@@ -664,8 +664,8 @@ class WorkflowExecutor:
         client = await self._db.client
         model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
         
-        # can_use_model returns (bool, str, list)
-        model_access_result = await can_use_model(client, account_id, model_name)
+        # can_use_model returns (bool, str, list) - synchronous function
+        model_access_result = can_use_model(client, account_id, model_name)
         can_use, model_message, allowed_models = model_access_result
         if not can_use:
             raise Exception(f"Model access denied: {model_message}")
