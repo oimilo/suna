@@ -734,52 +734,35 @@ class WorkflowExecutor:
         
         await self._register_workflow_run(agent_run_id)
         
-        # Use Supabase Edge Function for async execution
-        logger.info(f"Invoking Edge Function for workflow: agent_run_id={agent_run_id}")
+        # Use direct workflow execution for production (no Dramatiq/RabbitMQ)
+        logger.info(f"Starting workflow execution directly: agent_run_id={agent_run_id}")
         
         try:
-            edge_function_url = os.getenv("SUPABASE_EDGE_FUNCTION_URL")
-            trigger_secret = os.getenv("TRIGGER_SECRET")
-            supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            # Import the direct workflow execution function
+            from run_agent_workflow_direct import run_workflow_direct
             
-            if not edge_function_url or not trigger_secret or not supabase_service_key:
-                raise ValueError("Edge Function URL, Trigger Secret or Supabase Service Key not configured")
+            # Create async task for workflow execution
+            task = asyncio.create_task(run_workflow_direct(
+                agent_run_id=agent_run_id,
+                thread_id=thread_id,
+                project_id=project_id,
+                model_name=model_name,
+                agent_config=agent_config,
+                workflow_id=workflow_id,
+                workflow_input=workflow_input,
+                instance_id=getattr(config, 'INSTANCE_ID', 'workflow_executor')
+            ))
             
-            async with httpx.AsyncClient(timeout=30.0) as client_http:
-                response = await client_http.post(
-                    f"{edge_function_url}/run-agent-trigger",
-                    headers={
-                        "Authorization": f"Bearer {supabase_service_key}",
-                        "x-trigger-secret": trigger_secret,
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "agent_run_id": agent_run_id,
-                        "thread_id": thread_id,
-                        "project_id": project_id,
-                        "agent_config": agent_config,
-                        "model_name": model_name,
-                        "enable_thinking": False,
-                        "reasoning_effort": "medium",
-                        "trigger_variables": {}
-                    }
-                )
-                
-                if response.status_code != 200:
-                    error_detail = response.text
-                    logger.error(f"Edge Function error for workflow: {response.status_code} - {error_detail}")
-                    raise Exception(f"Edge Function error: {error_detail}")
-                
-                # Add better error handling for Edge Function response
-                try:
-                    result = response.json()
-                    logger.info(f"Workflow Edge Function invoked successfully: result_type={type(result)}, result={result}")
-                except json.JSONDecodeError as json_error:
-                    logger.error(f"Failed to parse Edge Function response as JSON: {json_error}, response_text={response.text}")
-                    raise Exception(f"Invalid JSON response from Edge Function: {response.text[:200]}")
+            # Store task reference to prevent garbage collection
+            if not hasattr(self, '_background_tasks'):
+                self._background_tasks = set()
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
+            
+            logger.info(f"Workflow execution task created successfully: {agent_run_id}")
                 
         except Exception as e:
-            logger.error(f"Failed to invoke Edge Function for workflow: {e}, error_type={type(e).__name__}")
+            logger.error(f"Failed to start workflow execution: {e}, error_type={type(e).__name__}")
             await client.table('agent_runs').update({
                 "status": "failed",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -787,7 +770,7 @@ class WorkflowExecutor:
             }).eq("id", agent_run_id).execute()
             raise
         
-        logger.info(f"Started workflow agent execution via Edge Function: {agent_run_id}")
+        logger.info(f"Started workflow agent execution via asyncio: {agent_run_id}")
         return agent_run_id
     
     async def _register_workflow_run(self, agent_run_id: str) -> None:
