@@ -631,6 +631,14 @@ class WorkflowExecutor:
         available_tools = []
         agentpress_tools = agent_config.get('agentpress_tools', {})
         
+        # Log for debugging
+        logger.debug(f"agentpress_tools type: {type(agentpress_tools)}, value: {agentpress_tools}")
+        
+        # Ensure agentpress_tools is a dictionary
+        if not isinstance(agentpress_tools, dict):
+            logger.warning(f"agentpress_tools is not a dict, it's {type(agentpress_tools)}: {agentpress_tools}")
+            agentpress_tools = {}
+        
         tool_mapping = {
             'sb_shell_tool': ['execute_command'],
             'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file'],
@@ -643,7 +651,11 @@ class WorkflowExecutor:
         }
         
         for tool_key, tool_names in tool_mapping.items():
-            if agentpress_tools.get(tool_key, {}).get('enabled', False):
+            tool_config = agentpress_tools.get(tool_key, {})
+            # Check if tool_config is a dict before calling .get()
+            if isinstance(tool_config, dict) and tool_config.get('enabled', False):
+                available_tools.extend(tool_names)
+            elif tool_config is True:  # Handle case where tool is just a boolean
                 available_tools.extend(tool_names)
         
         all_mcps = []
