@@ -664,11 +664,15 @@ class WorkflowExecutor:
         client = await self._db.client
         model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
         
-        can_use, model_message, _ = await can_use_model(client, account_id, model_name)
+        # can_use_model returns (bool, str, list)
+        model_access_result = await can_use_model(client, account_id, model_name)
+        can_use, model_message, allowed_models = model_access_result
         if not can_use:
             raise Exception(f"Model access denied: {model_message}")
             
-        can_run, billing_message, _ = await check_billing_status(client, account_id)
+        # check_billing_status returns (bool, str, dict)
+        billing_result = await check_billing_status(client, account_id)
+        can_run, billing_message, subscription_info = billing_result
         if not can_run:
             raise Exception(f"Billing check failed: {billing_message}")
     
