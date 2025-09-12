@@ -151,21 +151,29 @@ async def run_agent(
         logger.info("Custom agent specified - registering only enabled tools")
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(MessageTool)
-        if enabled_tools.get('sb_shell_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_shell_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('sb_files_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_files_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('sb_browser_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_browser_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxBrowserTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
-        if enabled_tools.get('sb_deploy_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_deploy_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxDeployTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('sb_expose_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_expose_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('web_search_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('web_search_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('sb_vision_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('sb_vision_tool', {})
+        if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
-        if config.RAPID_API_KEY and enabled_tools.get('data_providers_tool', {}).get('enabled', False):
+        _cfg = enabled_tools.get('data_providers_tool', {})
+        if config.RAPID_API_KEY and ((isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True):
             thread_manager.add_tool(DataProvidersTool)
 
     # Register MCP tool wrapper if agent has configured MCPs or custom MCPs
