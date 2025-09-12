@@ -882,5 +882,103 @@ async def debug_agent_run_redis(agent_run_id: str):
         }
 
 
+# ===== INTERNAL ENDPOINTS (TEMPORÁRIOS PARA TESTE) =====
+
+@router.post("/internal/create-test-mcp-workflow-email")
+async def internal_create_and_execute_mcp_email(
+    request: Request,
+    agent_id: str = Body(..., embed=True),
+    to: str = Body(..., embed=True),
+    subject: str = Body(..., embed=True),
+    body_text: str = Body(..., embed=True)
+):
+    """Create a minimal workflow with a single MCP gmail_send_email tool step and execute it.
+
+    Protected by TRIGGER_WEBHOOK_SECRET if configured. Intended for quick E2E validation.
+    """
+    import os
+    import uuid
+    from .execution_service import get_execution_service
+    from .trigger_service import TriggerResult, TriggerEvent, TriggerType
+
+    # Secret check (optional if env var not set)
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Build steps: single tool step calling gmail_send_email
+        steps_json = [
+            {
+                'name': 'Send Email',
+                'description': 'Send email via Pipedream Gmail',
+                'type': 'tool',
+                'config': {
+                    'tool_name': 'gmail_send_email',
+                    'args': {
+                        'to': to,
+                        'subject': subject,
+                        'body': body_text
+                    }
+                },
+                'order': 1
+            }
+        ]
+
+        # Create workflow (active)
+        wf_result = await client.table('agent_workflows').insert({
+            'agent_id': agent_id,
+            'name': 'Test MCP Gmail Direct',
+            'description': 'Trigger single MCP gmail_send_email',
+            'trigger_phrase': None,
+            'is_default': False,
+            'status': 'active',
+            'steps': steps_json
+        }).execute()
+
+        if not wf_result.data:
+            raise HTTPException(status_code=500, detail="Failed to create workflow")
+
+        workflow_id = wf_result.data[0]['id']
+
+        # Prepare trigger event/result
+        trigger_event = TriggerEvent(
+            trigger_id=f"internal_{workflow_id}_{uuid.uuid4()}",
+            agent_id=agent_id,
+            trigger_type=TriggerType.WEBHOOK,
+            raw_data={'execution_type': 'workflow', 'workflow_id': workflow_id}
+        )
+
+        trigger_result = TriggerResult(
+            success=True,
+            should_execute_workflow=True,
+            workflow_id=workflow_id,
+            workflow_input={},
+            execution_variables={'triggered_by': 'internal_endpoint'}
+        )
+
+        # Execute
+        execution_service = get_execution_service(db)
+        exec_out = await execution_service.execute_trigger_result(
+            agent_id=agent_id,
+            trigger_result=trigger_result,
+            trigger_event=trigger_event
+        )
+
+        return {
+            'workflow_id': workflow_id,
+            'execution': exec_out
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal MCP email test failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
