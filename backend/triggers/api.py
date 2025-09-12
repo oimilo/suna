@@ -1138,7 +1138,24 @@ async def internal_list_mcp_tools(
         if agent_config.get('custom_mcps'):
             all_mcps.extend(agent_config['custom_mcps'])
 
-        tm.add_tool(MCPToolWrapper, mcp_configs=all_mcps)
+        # Ensure each MCP has minimally required fields
+        def _slugify(text: str) -> str:
+            import re
+            s = (text or '').strip().lower().replace(' ', '_').replace('-', '_')
+            return re.sub(r"[^a-z0-9_]+", "", s)
+
+        processed_mcps = []
+        for mcp in all_mcps:
+            cfg = dict(mcp)
+            cfg.setdefault('config', {})
+            custom_type = cfg.get('customType') or cfg.get('type') or 'sse'
+            cfg['customType'] = custom_type
+            server_slug = _slugify((cfg.get('config') or {}).get('app_slug') or custom_type or cfg.get('name') or 'mcp')
+            name_slug = _slugify(cfg.get('name') or 'server')
+            cfg['qualifiedName'] = cfg.get('qualifiedName') or f"custom_{server_slug}_{name_slug}"
+            processed_mcps.append(cfg)
+
+        tm.add_tool(MCPToolWrapper, mcp_configs=processed_mcps)
 
         mcp_wrapper = None
         for _, tool_info in tm.tool_registry.tools.items():
