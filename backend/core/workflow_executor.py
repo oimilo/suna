@@ -25,6 +25,39 @@ class WorkflowExecutor:
         self.tool_instances = {}
         self.thread_manager = None
         self.mcp_wrapper = None
+
+    async def _log_tool_message(self, thread_id: str, tool_name: str, args: Dict[str, Any], result: Any):
+        """Persist a 'tool' message in the messages table for observability/monitoring."""
+        try:
+            client = await self.db.client
+            content = {
+                'tool_name': tool_name,
+                'args': args,
+                'result': getattr(result, 'output', result)
+            }
+            await client.table('messages').insert({
+                'message_id': str(datetime.now(timezone.utc).timestamp()).replace('.', ''),
+                'thread_id': thread_id,
+                'type': 'tool',
+                'is_llm_message': False,
+                'content': content
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Failed to log tool message: {e}")
+
+    async def _log_status_message(self, thread_id: str, data: Dict[str, Any]):
+        """Persist a 'workflow_status' message for step/status visibility in UI/monitor."""
+        try:
+            client = await self.db.client
+            await client.table('messages').insert({
+                'message_id': str(datetime.now(timezone.utc).timestamp()).replace('.', ''),
+                'thread_id': thread_id,
+                'type': 'workflow_status',
+                'is_llm_message': False,
+                'content': data
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Failed to log workflow status message: {e}")
         
     async def _initialize_tools(self, agent_config: Dict[str, Any], thread_id: str, project_id: str, user_id: str):
         """Initialize tool registry with MCP tools from agent configuration."""
@@ -178,6 +211,13 @@ class WorkflowExecutor:
                 'total_steps': len(steps),
                 'input': workflow_input
             })
+            # Also persist as message
+            await self._log_status_message(thread_id, {
+                'type': 'workflow_start',
+                'workflow_name': workflow['name'],
+                'total_steps': len(steps),
+                'input': workflow_input
+            })
             
             # Execute each step
             for i, step in enumerate(steps):
@@ -191,6 +231,12 @@ class WorkflowExecutor:
                 
                 # Publish step start
                 await self._publish_status(agent_run_id, thread_id, {
+                    'type': 'step_start',
+                    'step_number': i + 1,
+                    'step_name': step_name,
+                    'step_type': step_type
+                })
+                await self._log_status_message(thread_id, {
                     'type': 'step_start',
                     'step_number': i + 1,
                     'step_name': step_name,
@@ -225,6 +271,12 @@ class WorkflowExecutor:
                         'step_name': step_name,
                         'result': result
                     })
+                    await self._log_status_message(thread_id, {
+                        'type': 'step_complete',
+                        'step_number': i + 1,
+                        'step_name': step_name,
+                        'result': result
+                    })
                     
                 except Exception as e:
                     error_msg = f"Error in step '{step_name}': {str(e)}"
@@ -233,6 +285,12 @@ class WorkflowExecutor:
                     
                     # Publish step error
                     await self._publish_status(agent_run_id, thread_id, {
+                        'type': 'step_error',
+                        'step_number': i + 1,
+                        'step_name': step_name,
+                        'error': str(e)
+                    })
+                    await self._log_status_message(thread_id, {
                         'type': 'step_error',
                         'step_number': i + 1,
                         'step_name': step_name,
@@ -255,6 +313,12 @@ class WorkflowExecutor:
                 'results': context['results'],
                 'errors': context['errors']
             })
+            await self._log_status_message(thread_id, {
+                'type': 'workflow_complete',
+                'status': context['status'],
+                'results': context['results'],
+                'errors': context['errors']
+            })
             
             logger.info(f"Workflow execution completed: {context['status']}")
             return context
@@ -264,6 +328,11 @@ class WorkflowExecutor:
             
             # Publish fatal error
             await self._publish_status(agent_run_id, thread_id, {
+                'type': 'workflow_error',
+                'error': str(e),
+                'traceback': traceback.format_exc()
+            })
+            await self._log_status_message(thread_id, {
                 'type': 'workflow_error',
                 'error': str(e),
                 'traceback': traceback.format_exc()
@@ -308,6 +377,8 @@ class WorkflowExecutor:
                     logger.info(f"Executing MCP tool: {tool_name}")
                     method = getattr(self.mcp_wrapper, tool_name)
                     result = await method(**processed_args)
+                    # Persist tool call
+                    await self._log_tool_message(thread_id, tool_name, processed_args, result)
                     
                     # Convert ToolResult to dict
                     if hasattr(result, 'output'):
@@ -329,6 +400,7 @@ class WorkflowExecutor:
                         tool_name=tool_name,
                         arguments=processed_args
                     )
+                    await self._log_tool_message(thread_id, tool_name, processed_args, result)
                     
                     if hasattr(result, 'output'):
                         return {
@@ -354,11 +426,17 @@ class WorkflowExecutor:
         logger.warning(f"Tool {tool_name} not available in registry, using fallback")
         
         if tool_name == 'browser_navigate_to':
-            return await self._execute_browser_navigate(processed_args, context)
+            sim = await self._execute_browser_navigate(processed_args, context)
+            await self._log_tool_message(thread_id, tool_name, processed_args, sim)
+            return sim
         elif tool_name == 'gmail_send_email':
-            return await self._execute_gmail_send(processed_args, context, user_id)
+            sim = await self._execute_gmail_send(processed_args, context, user_id)
+            await self._log_tool_message(thread_id, tool_name, processed_args, sim)
+            return sim
         elif tool_name == 'create_file':
-            return await self._execute_create_file(processed_args, context)
+            sim = await self._execute_create_file(processed_args, context)
+            await self._log_tool_message(thread_id, tool_name, processed_args, sim)
+            return sim
         else:
             return {
                 'status': 'not_available',
