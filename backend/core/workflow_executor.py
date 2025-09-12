@@ -72,8 +72,9 @@ class WorkflowExecutor:
         logger.info(f"Configured MCPs count: {len(agent_config.get('configured_mcps', []))}")
         logger.info(f"Custom MCPs count: {len(agent_config.get('custom_mcps', []))}")
         
-        # Create thread manager
-        self.thread_manager = ThreadManager(thread_id, project_id, None)
+        # Create thread manager with proper signature
+        # Pass agent_config to enable MCP tool registration paths
+        self.thread_manager = ThreadManager(agent_config=agent_config)
         
         # Check for MCPs in agent config
         all_mcps = []
