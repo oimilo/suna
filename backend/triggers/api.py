@@ -872,6 +872,98 @@ async def internal_execute_existing_workflow(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@workflows_router.get("/internal/search")
+async def internal_search_workflows(
+    request: Request,
+    name: Optional[str] = Query(None),
+    agent_id: Optional[str] = Query(None)
+):
+    """Endpoint interno para buscar workflows por nome (ilike) e/ou agent_id.
+
+    Retorna lista com id, name, status e agent_id.
+    """
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    client = await db.client
+    q = client.table('agent_workflows').select('id, name, status, agent_id, created_at').order('created_at', desc=True)
+    if name:
+        q = q.ilike('name', f"%{name}%")
+    if agent_id:
+        q = q.eq('agent_id', agent_id)
+    res = await q.execute()
+    return res.data
+
+
+class InternalUpdateGmailStepsRequest(BaseModel):
+    agent_id: str
+    workflow_id: str
+    instruction: Optional[str] = "Execute o monitoramento e prepare o email."
+    to: str
+    subject: str = "Atualização de Monitoramento"
+    body: str = "Monitoramento concluído para {planilha_url}."
+
+
+@workflows_router.post("/internal/update-gmail-steps")
+async def internal_update_workflow_gmail_steps(
+    request: Request,
+    payload: InternalUpdateGmailStepsRequest
+):
+    """Atualiza os steps do workflow para: instruction + gmail_send_email com args.
+
+    Protegido por x-trigger-secret.
+    """
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        wf_res = await client.table('agent_workflows').select('*').eq('id', payload.workflow_id).eq('agent_id', payload.agent_id).execute()
+        if not wf_res.data:
+            raise HTTPException(status_code=404, detail="Workflow not found for agent")
+
+        steps_json = [
+            {
+                'name': 'Executar Monitoramento',
+                'description': 'Instrução para o agente contextualizar o workflow',
+                'type': 'instruction',
+                'config': { 'instruction': payload.instruction },
+                'order': 1
+            },
+            {
+                'name': 'Enviar Email via MCP',
+                'description': 'Enviar email via Gmail MCP',
+                'type': 'tool',
+                'config': {
+                    'tool_name': 'gmail_send_email',
+                    'args': {
+                        'to': payload.to,
+                        'subject': payload.subject,
+                        'body': payload.body
+                    }
+                },
+                'order': 2
+            }
+        ]
+
+        await client.table('agent_workflows').update({
+            'steps': steps_json,
+            'status': 'active'
+        }).eq('id', payload.workflow_id).execute()
+
+        return { 'updated': True, 'workflow_id': payload.workflow_id, 'steps_count': len(steps_json) }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal update gmail steps failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @workflows_router.get("/{workflow_id}")
 async def get_workflow(
     workflow_id: str,
