@@ -16,6 +16,10 @@ from services.langfuse import langfuse
 from agentpress.thread_manager import ThreadManager
 from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 from agentpress.tool import SchemaType
+import hashlib
+import httpx
+import csv
+from io import StringIO
 
 
 class WorkflowExecutor:
@@ -598,6 +602,10 @@ class WorkflowExecutor:
             sim = await self._execute_gmail_send(processed_args, context, user_id)
             await self._log_tool_message(thread_id, tool_name, processed_args, sim)
             return sim
+        elif tool_name == 'fetch_and_diff':
+            sim = await self._execute_fetch_and_diff(processed_args, context, agent_run_id)
+            await self._log_tool_message(thread_id, tool_name, processed_args, sim)
+            return sim
         elif tool_name == 'create_file':
             sim = await self._execute_create_file(processed_args, context)
             await self._log_tool_message(thread_id, tool_name, processed_args, sim)
@@ -634,6 +642,170 @@ class WorkflowExecutor:
         
         return processed
     
+    async def _execute_fetch_and_diff(self, args: Dict[str, Any], context: Dict[str, Any], agent_run_id: str) -> Dict[str, Any]:
+        """Generic fetch+diff step supporting csv_url, http_json and mcp_tool sources.
+
+        Args schema (flexível):
+          source: { type: 'csv_url'|'http_json'|'mcp_tool', ... }
+          record_key: [field1, field2]
+          include_fields: [field]
+          sort_by: [field]
+          source_key: string (identificador lógico)
+        """
+        try:
+            source = args.get('source') or {}
+            source_type = (source.get('type') or '').lower()
+            record_key_fields = args.get('record_key') or ['id']
+            include_fields = args.get('include_fields')
+            sort_by = args.get('sort_by') or record_key_fields
+            source_key = args.get('source_key') or 'default'
+
+            # 1) Fetch
+            if source_type == 'csv_url':
+                url = source.get('url')
+                if not url:
+                    return { 'status': 'error', 'error': 'csv_url requires source.url' }
+                async with httpx.AsyncClient(timeout=30) as client:
+                    resp = await client.get(url)
+                    resp.raise_for_status()
+                    text = resp.text
+                delimiter = ((source.get('csv') or {}).get('delimiter')) or ','
+                reader = csv.DictReader(StringIO(text), delimiter=delimiter)
+                raw_records = [dict(r) for r in reader]
+            elif source_type == 'http_json':
+                url = source.get('url')
+                if not url:
+                    return { 'status': 'error', 'error': 'http_json requires source.url' }
+                headers = source.get('headers') or {}
+                async with httpx.AsyncClient(timeout=30) as client:
+                    resp = await client.get(url, headers=headers)
+                    resp.raise_for_status()
+                    body = resp.json()
+                extract = (source.get('extract') or {}).get('path')
+                raw_records = self._extract_by_path(body, extract) if extract else body
+                if not isinstance(raw_records, list):
+                    return { 'status': 'error', 'error': 'http_json extract did not yield a list' }
+            elif source_type == 'mcp_tool':
+                method = source.get('method')
+                mcp_args = source.get('args') or {}
+                if not self.mcp_wrapper:
+                    return { 'status': 'error', 'error': 'MCP not initialized' }
+                # Prefer direct attribute if available; otherwise, generic call
+                if method and hasattr(self.mcp_wrapper, method):
+                    result = await getattr(self.mcp_wrapper, method)(**mcp_args)
+                else:
+                    result = await self.mcp_wrapper.call_mcp_tool(tool_name=method, arguments=mcp_args)
+                output = getattr(result, 'output', result)
+                try:
+                    import json as _json
+                    body = output if isinstance(output, (dict, list)) else _json.loads(str(output))
+                except Exception:
+                    return { 'status': 'error', 'error': 'MCP output is not valid JSON' }
+                extract = (source.get('extract') or {}).get('path')
+                raw_records = self._extract_by_path(body, extract) if extract else body
+                if not isinstance(raw_records, list):
+                    return { 'status': 'error', 'error': 'MCP extract did not yield a list' }
+            else:
+                return { 'status': 'error', 'error': f'Unsupported source.type: {source_type}' }
+
+            # 2) Normalize records
+            normalized = self._normalize_records(raw_records, include_fields, sort_by)
+
+            # 3) Snapshot + diff (Redis)
+            wf_id = context.get('workflow_id') or 'unknown'
+            key_prefix = f"wf:{wf_id}:src:{source_key}"
+            data_key = f"{key_prefix}:data"
+            hash_key = f"{key_prefix}:hash"
+
+            import json as _json
+            serialized = _json.dumps(normalized, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
+            curr_hash = hashlib.sha256(serialized.encode('utf-8')).hexdigest()
+
+            prev_hash = await redis.get(hash_key)
+            prev_data_raw = await redis.get(data_key)
+            prev = []
+            if prev_data_raw:
+                try:
+                    prev = _json.loads(prev_data_raw)
+                except Exception:
+                    prev = []
+
+            await redis.set(hash_key, curr_hash, ex=redis.REDIS_KEY_TTL)
+            await redis.set(data_key, serialized, ex=redis.REDIS_KEY_TTL)
+
+            # 4) Compute diff
+            def index_by_key(items: list) -> dict:
+                idx = {}
+                for it in items:
+                    key_parts = [str(it.get(k, '')) for k in record_key_fields]
+                    idx['|'.join(key_parts)] = it
+                return idx
+
+            prev_idx = index_by_key(prev)
+            curr_idx = index_by_key(normalized)
+
+            added_keys = [k for k in curr_idx.keys() if k not in prev_idx]
+            removed_keys = [k for k in prev_idx.keys() if k not in curr_idx]
+            updated_keys = []
+            for k in curr_idx.keys():
+                if k in prev_idx and curr_idx[k] != prev_idx[k]:
+                    updated_keys.append(k)
+
+            has_changes = bool(added_keys or removed_keys or updated_keys)
+            sample_changes = []
+            for k in updated_keys[:5]:
+                sample_changes.append({ 'key': k, 'from': prev_idx.get(k), 'to': curr_idx.get(k) })
+
+            summary = {
+                'added': len(added_keys),
+                'removed': len(removed_keys),
+                'updated': len(updated_keys)
+            }
+
+            return {
+                'status': 'completed',
+                'has_changes': has_changes,
+                'summary': summary,
+                'changed_keys': (added_keys + removed_keys + updated_keys)[:50],
+                'sample_changes': sample_changes
+            }
+
+        except httpx.HTTPError as he:
+            return { 'status': 'error', 'error': f'HTTP error: {str(he)}' }
+        except Exception as e:
+            return { 'status': 'error', 'error': str(e) }
+
+    def _extract_by_path(self, obj: Any, path: Optional[str]):
+        if not path:
+            return obj
+        parts = [p for p in str(path).split('.') if p]
+        cur = obj
+        for p in parts:
+            if isinstance(cur, dict) and p in cur:
+                cur = cur[p]
+            else:
+                return cur  # fallback
+        return cur
+
+    def _normalize_records(self, records: list, include_fields: Optional[list], sort_by: list) -> list:
+        def pick(rec: dict) -> dict:
+            if include_fields and isinstance(include_fields, list):
+                return { k: rec.get(k) for k in include_fields }
+            # default: keep all fields (shallow)
+            return dict(rec)
+
+        picked = [pick(r) for r in records if isinstance(r, dict)]
+        try:
+            picked.sort(key=lambda x: tuple(str(x.get(f, '')) for f in sort_by))
+        except Exception:
+            pass
+        # Ensure deterministic field order by sorting keys
+        normalized = []
+        for rec in picked:
+            ordered = { k: rec[k] for k in sorted(rec.keys()) }
+            normalized.append(ordered)
+        return normalized
+
     async def _execute_instruction_step(
         self,
         step: Dict[str, Any],
