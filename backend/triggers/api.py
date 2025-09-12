@@ -980,5 +980,91 @@ async def internal_create_and_execute_mcp_email(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/internal/create-test-mcp-workflow-tool")
+async def internal_create_and_execute_mcp_tool(
+    request: Request,
+    agent_id: str = Body(..., embed=True),
+    tool_name: str = Body(..., embed=True),
+    args: Dict[str, Any] = Body(default_factory=dict, embed=True)
+):
+    """Create a minimal workflow with a single generic MCP tool step and execute it.
+
+    Protected by TRIGGER_WEBHOOK_SECRET. Useful to validate any MCP mapping like slack, calendar, trello, etc.
+    """
+    import os
+    import uuid
+    from .execution_service import get_execution_service
+    from .trigger_service import TriggerResult, TriggerEvent, TriggerType
+
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        steps_json = [
+            {
+                'name': f'Run {tool_name}',
+                'description': f'Execute {tool_name} via MCP',
+                'type': 'tool',
+                'config': {
+                    'tool_name': tool_name,
+                    'args': args or {}
+                },
+                'order': 1
+            }
+        ]
+
+        wf_result = await client.table('agent_workflows').insert({
+            'agent_id': agent_id,
+            'name': f'Test MCP {tool_name}',
+            'description': f'Test step for {tool_name}',
+            'trigger_phrase': None,
+            'is_default': False,
+            'status': 'active',
+            'steps': steps_json
+        }).execute()
+
+        if not wf_result.data:
+            raise HTTPException(status_code=500, detail="Failed to create workflow")
+
+        workflow_id = wf_result.data[0]['id']
+
+        trigger_event = TriggerEvent(
+            trigger_id=f"internal_{workflow_id}_{uuid.uuid4()}",
+            agent_id=agent_id,
+            trigger_type=TriggerType.WEBHOOK,
+            raw_data={'execution_type': 'workflow', 'workflow_id': workflow_id}
+        )
+
+        trigger_result = TriggerResult(
+            success=True,
+            should_execute_workflow=True,
+            workflow_id=workflow_id,
+            workflow_input={},
+            execution_variables={'triggered_by': 'internal_endpoint'}
+        )
+
+        execution_service = get_execution_service(db)
+        exec_out = await execution_service.execute_trigger_result(
+            agent_id=agent_id,
+            trigger_result=trigger_result,
+            trigger_event=trigger_event
+        )
+
+        return {
+            'workflow_id': workflow_id,
+            'execution': exec_out
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal MCP generic tool test failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
