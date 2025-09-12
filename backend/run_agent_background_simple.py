@@ -114,7 +114,7 @@ async def run_agent_async(
             client = await db.client
             await client.table('agent_runs').update({
                 'status': 'error',
-                'error': str(e),
+                'error': error_msg,
                 'completed_at': datetime.now(timezone.utc).isoformat()
             }).eq('id', agent_run_id).execute()
             
