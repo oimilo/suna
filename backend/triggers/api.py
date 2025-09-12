@@ -1223,5 +1223,145 @@ async def internal_list_mcp_tools(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ===== INTERNAL MCP DIAGNOSTICS =====
+
+@router.post("/internal/mcp/diagnose-gmail-send")
+async def internal_mcp_diagnose_gmail_send(
+    request: Request,
+    agent_id: str = Body(..., embed=True),
+    to: str = Body(..., embed=True),
+    subject: str = Body("Diagnóstico MCP Gmail", embed=True),
+    body_text: str = Body("Mensagem de teste de diagnóstico MCP Gmail.", embed=True)
+):
+    """Try to execute mcp_pipedream_gmail_send_email directly and return raw result/error.
+
+    Protected by x-trigger-secret. Useful to identify credential/config issues (external_user_id/app_slug).
+    """
+    import os
+    from agent.versioning.domain.entities import AgentId
+    from agent.versioning.infrastructure.dependencies import set_db_connection, get_container
+    from agentpress.thread_manager import ThreadManager
+    from agent.tools.mcp_tool_wrapper import MCPToolWrapper
+
+    # Secret check
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        set_db_connection(db)
+        client = await db.client
+
+        # Load active agent version
+        agent_result = await client.table('agents').select('account_id, name').eq('agent_id', agent_id).execute()
+        if not agent_result.data:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        agent_data = agent_result.data[0]
+        container = get_container()
+        version_service = await container.get_version_service()
+        agent_id_obj = AgentId.from_string(agent_id)
+        active_version = await version_service.version_repo.find_active_version(agent_id_obj)
+        if not active_version:
+            raise HTTPException(status_code=404, detail="No active version for agent")
+
+        agent_config = {
+            'agent_id': agent_id,
+            'name': agent_data.get('name', 'Unknown Agent'),
+            'configured_mcps': [
+                {
+                    'name': mcp.name,
+                    'type': mcp.type,
+                    'config': mcp.config,
+                    'enabledTools': mcp.enabled_tools
+                }
+                for mcp in active_version.configured_mcps
+            ],
+            'custom_mcps': [
+                {
+                    'name': mcp.name,
+                    'type': mcp.type,
+                    'config': mcp.config,
+                    'enabledTools': mcp.enabled_tools,
+                    'customType': getattr(mcp, 'type', None)
+                }
+                for mcp in active_version.custom_mcps
+            ]
+        }
+
+        # Initialize MCP wrapper via ThreadManager
+        tm = ThreadManager(agent_config=agent_config)
+
+        # Prepare MCP configs with qualifiedName/customType/app_slug
+        def _slugify(text: str) -> str:
+            import re
+            s = (text or '').strip().lower().replace(' ', '_').replace('-', '_')
+            return re.sub(r"[^a-z0-9_]+", "", s)
+
+        all_mcps = []
+        if agent_config.get('configured_mcps'):
+            all_mcps.extend(agent_config['configured_mcps'])
+        if agent_config.get('custom_mcps'):
+            all_mcps.extend(agent_config['custom_mcps'])
+
+        processed = []
+        for m in all_mcps:
+            cfg = dict(m)
+            cfg.setdefault('config', {})
+            ctype = cfg.get('customType') or cfg.get('type') or 'sse'
+            cfg['customType'] = ctype
+            if 'headers' in cfg['config'] and 'x-pd-app-slug' in cfg['config']['headers']:
+                cfg['config']['app_slug'] = cfg['config']['headers']['x-pd-app-slug']
+            server_slug = _slugify(cfg['config'].get('app_slug') or ctype or cfg.get('name') or 'mcp')
+            name_slug = _slugify(cfg.get('name') or 'server')
+            cfg['qualifiedName'] = cfg.get('qualifiedName') or f"custom_{server_slug}_{name_slug}"
+            processed.append(cfg)
+
+        tm.add_tool(MCPToolWrapper, mcp_configs=processed)
+
+        mcp_wrapper = None
+        for _, tool_info in tm.tool_registry.tools.items():
+            if isinstance(tool_info['instance'], MCPToolWrapper):
+                mcp_wrapper = tool_info['instance']
+                break
+
+        if not mcp_wrapper:
+            return { 'success': False, 'error': 'MCP wrapper not initialized' }
+
+        await mcp_wrapper.initialize_and_register_tools(tm.tool_registry)
+
+        # Execute direct call
+        try:
+            result = await mcp_wrapper.call_mcp_tool('mcp_pipedream_gmail_send_email', {
+                'to': to,
+                'subject': subject,
+                'body': body_text
+            })
+            out = getattr(result, 'output', str(result))
+            return { 'success': True, 'output': out }
+        except Exception as exec_err:
+            return { 'success': False, 'error': str(exec_err) }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal MCP diagnose failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== INTERNAL QUICK PING (SANITY) =====
+
+@router.get("/internal/ping")
+async def internal_ping(request: Request):
+    """Lightweight ping to verify new internal routes are deployed."""
+    import os
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {"ok": True, "ts": datetime.now(timezone.utc).isoformat()}
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
