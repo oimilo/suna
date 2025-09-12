@@ -125,38 +125,37 @@ class WorkflowExecutor:
         
         if all_mcps:
             logger.info(f"Registering MCP wrapper with {len(all_mcps)} MCP servers")
-            
-            # Create and initialize MCP wrapper
-            self.mcp_wrapper = MCPToolWrapper(mcp_configs=all_mcps)
-            await self.mcp_wrapper.initialize_and_register_tools()
-            
-            # Register tools in thread manager
+
+            # Register wrapper in thread manager (creates the managed instance)
             self.thread_manager.add_tool(MCPToolWrapper, mcp_configs=all_mcps)
-            
-            # Get the initialized wrapper instance
-            for tool_name, tool_info in self.thread_manager.tool_registry.tools.items():
+
+            # Get the managed wrapper instance
+            for _, tool_info in self.thread_manager.tool_registry.tools.items():
                 if isinstance(tool_info['instance'], MCPToolWrapper):
                     self.mcp_wrapper = tool_info['instance']
                     break
-            
+
+            # Initialize the managed instance and update registry with dynamic schemas
             if self.mcp_wrapper:
-                # Register dynamic MCP tools
-                updated_schemas = self.mcp_wrapper.get_schemas()
-                logger.info(f"MCP wrapper has {len(updated_schemas)} schemas available")
-                
+                await self.mcp_wrapper.initialize_and_register_tools(self.thread_manager.tool_registry)
+
+                updated_schemas = self.mcp_wrapper.get_schemas() or {}
+                logger.info(f"MCP wrapper has {len(updated_schemas)} schemas available after init")
+
                 for method_name, schema_list in updated_schemas.items():
-                    if method_name != 'call_mcp_tool':
-                        for schema in schema_list:
-                            if schema.schema_type == SchemaType.OPENAPI:
-                                self.thread_manager.tool_registry.tools[method_name] = {
-                                    "instance": self.mcp_wrapper,
-                                    "schema": schema
-                                }
-                                logger.info(f"Registered MCP tool: {method_name}")
-            
-            # Log all registered tools
-            all_tools = list(self.thread_manager.tool_registry.tools.keys())
-            logger.info(f"Workflow executor registered tools: {all_tools}")
+                    if method_name == 'call_mcp_tool':
+                        continue
+                    for schema in schema_list:
+                        if schema.schema_type == SchemaType.OPENAPI:
+                            self.thread_manager.tool_registry.tools[method_name] = {
+                                "instance": self.mcp_wrapper,
+                                "schema": schema
+                            }
+                            logger.info(f"Registered MCP tool: {method_name}")
+
+                # Log all registered tools
+                all_tools = list(self.thread_manager.tool_registry.tools.keys())
+                logger.info(f"Workflow executor registered tools: {all_tools}")
 
     def _slugify(self, value: str) -> str:
         try:
