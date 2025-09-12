@@ -3,8 +3,6 @@ import uuid
 import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple
-import os
-import httpx
 
 from services.supabase import DBConnection
 from services import redis
@@ -375,6 +373,7 @@ class AgentExecutor:
     ) -> str:
         client = await self._db.client
         model_name = "anthropic/claude-sonnet-4-20250514"
+        account_id = agent_config.get('account_id')
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
@@ -382,6 +381,7 @@ class AgentExecutor:
             "started_at": datetime.now(timezone.utc).isoformat(),
             "agent_id": agent_config.get('agent_id'),
             "agent_version_id": agent_config.get('current_version_id'),
+            "account_id": account_id,
             "metadata": {
                 "model_name": model_name,
                 "enable_thinking": False,
@@ -396,49 +396,32 @@ class AgentExecutor:
         
         await self._register_agent_run(agent_run_id)
         
-        # Use Supabase Edge Function for async execution
-        logger.info(f"Invoking Supabase Edge Function for agent execution: agent_run_id={agent_run_id}, thread_id={thread_id}")
-        
+        # Start agent execution via asyncio in background (no Edge Function)
+        logger.info(f"Starting agent execution via asyncio: agent_run_id={agent_run_id}, thread_id={thread_id}")
         try:
-            edge_function_url = os.getenv("SUPABASE_EDGE_FUNCTION_URL")
-            trigger_secret = os.getenv("TRIGGER_SECRET")
-            supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-            
-            if not edge_function_url or not trigger_secret or not supabase_service_key:
-                raise ValueError("Edge Function URL, Trigger Secret or Supabase Service Key not configured")
-            
-            # Call Edge Function
-            async with httpx.AsyncClient(timeout=30.0) as client_http:
-                response = await client_http.post(
-                    f"{edge_function_url}/run-agent-trigger",
-                    headers={
-                        "Authorization": f"Bearer {supabase_service_key}",
-                        "x-trigger-secret": trigger_secret,
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "agent_run_id": agent_run_id,
-                        "thread_id": thread_id,
-                        "project_id": project_id,
-                        "agent_config": agent_config,
-                        "model_name": model_name,
-                        "enable_thinking": False,
-                        "reasoning_effort": "low",
-                        "trigger_variables": trigger_variables
-                    }
-                )
-                
-                if response.status_code != 200:
-                    error_detail = response.text
-                    logger.error(f"Edge Function returned error: {response.status_code} - {error_detail}")
-                    raise Exception(f"Edge Function error: {error_detail}")
-                
-                result = response.json()
-                logger.info(f"Edge Function invoked successfully: {result}")
-                
+            from run_agent_background_simple import run_agent_async
+            task = asyncio.create_task(run_agent_async(
+                agent_id=agent_config.get('agent_id'),
+                agent_run_id=agent_run_id,
+                user_id=account_id,
+                thread_id=thread_id,
+                project_id=project_id,
+                account_id=account_id,
+                db_ref=self._db,
+                instance_id_ref=getattr(config, 'INSTANCE_ID', 'trigger_executor'),
+                prompt=None,
+                model_name=model_name,
+                reasoning_effort='low',
+                enable_thinking=False,
+                agent_config=agent_config,
+                agent_version_id=agent_config.get('current_version_id')
+            ))
+            if not hasattr(self, '_background_tasks'):
+                self._background_tasks = set()
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
         except Exception as e:
-            logger.error(f"Failed to invoke Edge Function: {e}")
-            # Update agent run status to failed
+            logger.error(f"Failed to start agent execution: {e}")
             await client.table('agent_runs').update({
                 "status": "failed",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -446,7 +429,7 @@ class AgentExecutor:
             }).eq("id", agent_run_id).execute()
             raise
         
-        logger.info(f"Agent execution started via Edge Function: {agent_run_id}")
+        logger.info(f"Agent execution task created successfully: {agent_run_id}")
         return agent_run_id
     
     async def _register_agent_run(self, agent_run_id: str) -> None:
