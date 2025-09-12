@@ -138,6 +138,21 @@ class WorkflowExecutor:
                     
                     if 'headers' in custom_mcp['config'] and 'x-pd-app-slug' in custom_mcp['config']['headers']:
                         custom_mcp['config']['app_slug'] = custom_mcp['config']['headers']['x-pd-app-slug']
+
+                    # Ensure external_user_id using Pipedream Profile Manager when available
+                    if not custom_mcp['config'].get('external_user_id'):
+                        try:
+                            from pipedream.profiles import get_profile_manager
+                            from services.supabase import DBConnection
+                            profile_db = DBConnection()
+                            profile_manager = get_profile_manager(profile_db)
+                            # user_id is the account_id in our context
+                            profile = await profile_manager.get_profile(user_id, custom_mcp['config'].get('profile_id'))
+                            if profile and getattr(profile, 'external_user_id', None):
+                                custom_mcp['config']['external_user_id'] = profile.external_user_id
+                                logger.info(f"Resolved external_user_id via Pipedream profiles for profile {custom_mcp['config'].get('profile_id')}")
+                        except Exception as e:
+                            logger.warning(f"Failed to resolve external_user_id via Pipedream profiles: {e}")
                 
                 mcp_config = {
                     'name': custom_mcp['name'],
