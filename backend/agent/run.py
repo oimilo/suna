@@ -83,6 +83,13 @@ async def run_agent(
     enabled_tools = None
     if agent_config and 'agentpress_tools' in agent_config:
         enabled_tools = agent_config['agentpress_tools']
+        # Normalize to dict to avoid calling .get on non-mapping types
+        if isinstance(enabled_tools, bool) or enabled_tools is None:
+            logger.warning("agentpress_tools is not a dict (bool/None). Coercing to empty dict.")
+            enabled_tools = {}
+        elif not isinstance(enabled_tools, dict):
+            logger.warning(f"agentpress_tools has invalid type {type(enabled_tools)}. Coercing to empty dict.")
+            enabled_tools = {}
         logger.info(f"Using custom tool configuration from agent")
     
 
