@@ -157,6 +157,57 @@ class WorkflowExecutor:
             # Log all registered tools
             all_tools = list(self.thread_manager.tool_registry.tools.keys())
             logger.info(f"Workflow executor registered tools: {all_tools}")
+
+    def _slugify(self, value: str) -> str:
+        try:
+            import re
+            s = value.strip().lower().replace(' ', '_').replace('-', '_')
+            s = re.sub(r"[^a-z0-9_]+", "", s)
+            return s
+        except Exception:
+            return value.lower()
+
+    def _resolve_mcp_method_name(self, tool_name: str, agent_config: Dict[str, Any]) -> Optional[str]:
+        """Try to resolve a generic tool_name (e.g., gmail_send_email) to a concrete MCP dynamic method name.
+
+        Strategy:
+        1) Construct candidates like mcp_{server}_{tool_name} for each configured/custom MCP (server from customType/app_slug/name)
+        2) Check if any candidate exists in wrapper (hasattr)
+        3) Fallback: scan wrapper schemas and find a method whose name endswith _{tool_name}
+        """
+        try:
+            candidates: List[str] = []
+            all_mcps = []
+            if agent_config.get('configured_mcps'):
+                all_mcps.extend(agent_config['configured_mcps'])
+            if agent_config.get('custom_mcps'):
+                all_mcps.extend(agent_config['custom_mcps'])
+
+            for mcp in all_mcps:
+                server = mcp.get('customType') or mcp.get('type') or ''
+                app_slug = (mcp.get('config') or {}).get('app_slug')
+                name = mcp.get('name')
+                server_slug = self._slugify(app_slug or server or name or 'mcp')
+                candidates.append(f"mcp_{server_slug}_{tool_name}")
+
+            # Check direct attributes
+            for cand in candidates:
+                if hasattr(self.mcp_wrapper, cand):
+                    logger.info(f"Resolved tool '{tool_name}' to MCP method '{cand}' via server candidate")
+                    return cand
+
+            # Fallback: scan schemas
+            try:
+                schemas = self.mcp_wrapper.get_schemas()
+                for method_name in schemas.keys():
+                    if method_name.endswith(f"_{tool_name}") or method_name == tool_name:
+                        logger.info(f"Resolved tool '{tool_name}' to MCP method '{method_name}' via schema scan")
+                        return method_name
+            except Exception:
+                pass
+        except Exception as e:
+            logger.debug(f"Resolver failed for tool {tool_name}: {e}")
+        return None
     
     async def execute_workflow(
         self,
@@ -415,6 +466,30 @@ class WorkflowExecutor:
                             'status': 'completed',
                             'output': str(result)
                         }
+
+                # Resolve generic tool_name to MCP dynamic method name
+                else:
+                    resolved = self._resolve_mcp_method_name(tool_name, self.thread_manager.agent_config or agent_config)
+                    if resolved:
+                        if hasattr(self.mcp_wrapper, resolved):
+                            logger.info(f"Executing resolved MCP tool: {resolved} for '{tool_name}'")
+                            method = getattr(self.mcp_wrapper, resolved)
+                            result = await method(**processed_args)
+                        else:
+                            logger.info(f"Executing resolved MCP tool via call_mcp_tool: {resolved}")
+                            result = await self.mcp_wrapper.call_mcp_tool(tool_name=resolved, arguments=processed_args)
+                        await self._log_tool_message(thread_id, resolved, processed_args, result)
+                        if hasattr(result, 'output'):
+                            return {
+                                'status': 'completed',
+                                'output': result.output,
+                                'metadata': getattr(result, 'metadata', {})
+                            }
+                        else:
+                            return {
+                                'status': 'completed',
+                                'output': str(result)
+                            }
                         
             except Exception as e:
                 logger.error(f"Error executing MCP tool {tool_name}: {e}")
