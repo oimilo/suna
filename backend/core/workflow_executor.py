@@ -4,6 +4,7 @@ Executes workflow steps defined in the database instead of treating them as chat
 """
 
 import json
+import uuid
 import asyncio
 import traceback
 from typing import Dict, Any, List, Optional
@@ -36,7 +37,7 @@ class WorkflowExecutor:
                 'result': getattr(result, 'output', result)
             }
             await client.table('messages').insert({
-                'message_id': str(datetime.now(timezone.utc).timestamp()).replace('.', ''),
+                'message_id': str(uuid.uuid4()),
                 'thread_id': thread_id,
                 'type': 'tool',
                 'is_llm_message': False,
@@ -50,7 +51,7 @@ class WorkflowExecutor:
         try:
             client = await self.db.client
             await client.table('messages').insert({
-                'message_id': str(datetime.now(timezone.utc).timestamp()).replace('.', ''),
+                'message_id': str(uuid.uuid4()),
                 'thread_id': thread_id,
                 'type': 'workflow_status',
                 'is_llm_message': False,
