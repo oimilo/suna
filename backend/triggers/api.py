@@ -1540,3 +1540,44 @@ async def internal_ping(request: Request):
 
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
+
+class InternalUpdateStepsRequest(BaseModel):
+    agent_id: str
+    workflow_id: str
+    steps: List[Dict[str, Any]]
+    status: Optional[str] = None
+
+
+@workflows_router.post("/internal/update-steps")
+async def internal_update_workflow_steps(
+    request: Request,
+    payload: InternalUpdateStepsRequest
+):
+    """Atualiza steps arbitrários de um workflow (sem JWT), protegido por segredo.
+
+    Espera steps no mesmo formato usado na coluna 'steps' da tabela agent_workflows.
+    """
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Verificar existência e propriedade
+        wf = await client.table('agent_workflows').select('*').eq('id', payload.workflow_id).eq('agent_id', payload.agent_id).execute()
+        if not wf.data:
+            raise HTTPException(status_code=404, detail="Workflow not found for agent")
+
+        update_data = { 'steps': payload.steps }
+        if payload.status is not None:
+            update_data['status'] = payload.status
+
+        await client.table('agent_workflows').update(update_data).eq('id', payload.workflow_id).execute()
+        return { 'updated': True, 'workflow_id': payload.workflow_id, 'steps_count': len(payload.steps) }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal update steps failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
