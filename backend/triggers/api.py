@@ -904,6 +904,7 @@ class InternalUpdateGmailStepsRequest(BaseModel):
     to: str
     subject: str = "Atualização de Monitoramento"
     body: str = "Monitoramento concluído para {planilha_url}."
+    tool_name: Optional[str] = "gmail_send_email"  # permite usar mcp_pipedream_gmail_send_email
 
 
 @workflows_router.post("/internal/update-gmail-steps")
@@ -940,7 +941,7 @@ async def internal_update_workflow_gmail_steps(
                 'description': 'Enviar email via Gmail MCP',
                 'type': 'tool',
                 'config': {
-                    'tool_name': 'gmail_send_email',
+                    'tool_name': payload.tool_name or 'gmail_send_email',
                     'args': {
                         'to': payload.to,
                         'subject': payload.subject,
