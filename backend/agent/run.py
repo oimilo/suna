@@ -73,6 +73,13 @@ async def run_agent(
 
     project_data = project.data[0]
     sandbox_info = project_data.get('sandbox', {})
+    # Normalize sandbox_info: avoid calling .get on non-dict (e.g., legacy boolean values)
+    if isinstance(sandbox_info, bool) or sandbox_info is None:
+        logger.warning(f"project.sandbox has invalid type {type(sandbox_info)}; coercing to empty dict")
+        sandbox_info = {}
+    elif not isinstance(sandbox_info, dict):
+        logger.warning(f"project.sandbox has invalid type {type(sandbox_info)}; coercing to empty dict")
+        sandbox_info = {}
     if not sandbox_info.get('id'):
         raise ValueError(f"No sandbox found for project {project_id}")
 
