@@ -808,6 +808,70 @@ async def execute_agent_workflow(
         )
 
 
+@workflows_router.post("/internal/execute-workflow")
+async def internal_execute_existing_workflow(
+    request: Request,
+    agent_id: str = Body(..., embed=True),
+    workflow_id: str = Body(..., embed=True),
+    input_data: Dict[str, Any] = Body(default_factory=dict, embed=True)
+):
+    """Endpoint interno para executar um workflow existente (sem JWT).
+
+    Protegido por x-trigger-secret. Útil para chamadas de triggers já existentes.
+    """
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Validar workflow pertence ao agente e está ativo
+        wf = await client.table('agent_workflows').select('*').eq('id', workflow_id).eq('agent_id', agent_id).execute()
+        if not wf.data:
+            raise HTTPException(status_code=404, detail="Workflow not found for agent")
+        if wf.data[0]['status'] != 'active':
+            raise HTTPException(status_code=400, detail="Workflow is not active")
+
+        # Montar TriggerResult e TriggerEvent e delegar
+        from .trigger_service import TriggerResult, TriggerEvent, TriggerType
+        trigger_result = TriggerResult(
+            success=True,
+            should_execute_workflow=True,
+            workflow_id=workflow_id,
+            workflow_input=input_data or {},
+            execution_variables={'triggered_by': 'internal_execute_workflow'}
+        )
+        trigger_event = TriggerEvent(
+            trigger_id=f"internal_exec_{workflow_id}_{uuid.uuid4()}",
+            agent_id=agent_id,
+            trigger_type=TriggerType.WEBHOOK,
+            raw_data=input_data or {}
+        )
+
+        execution_service = get_execution_service(db)
+        out = await execution_service.execute_trigger_result(
+            agent_id=agent_id,
+            trigger_result=trigger_result,
+            trigger_event=trigger_event
+        )
+
+        if not out.get('success'):
+            raise HTTPException(status_code=500, detail=out)
+
+        return {
+            'thread_id': out.get('thread_id'),
+            'agent_run_id': out.get('agent_run_id'),
+            'status': 'running'
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal execute workflow failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @workflows_router.get("/{workflow_id}")
 async def get_workflow(
     workflow_id: str,
