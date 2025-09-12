@@ -350,6 +350,10 @@ async def run_agent(
                     
                 # Get the schema info
                 for schema in schema_list:
+                    # Guard against invalid entries
+                    if not hasattr(schema, 'schema_type') or not hasattr(schema, 'schema'):
+                        logger.warning(f"Skipping invalid MCP schema entry for {method_name}: type={type(schema)}")
+                        continue
                     if schema.schema_type == SchemaType.OPENAPI:
                         func_info = schema.schema.get('function', {})
                         description = func_info.get('description', 'No description available')
