@@ -107,9 +107,46 @@ class WorkflowExecutor:
         # Check for MCPs in agent config
         all_mcps = []
         
-        # Add standard configured MCPs
+        # Add standard configured MCPs (normalize shape)
         if agent_config.get('configured_mcps'):
-            all_mcps.extend(agent_config['configured_mcps'])
+            logger.info(f"Processing {len(agent_config['configured_mcps'])} configured MCPs")
+            for base_mcp in agent_config['configured_mcps']:
+                try:
+                    cfg = dict(base_mcp)
+                    cfg.setdefault('config', {})
+                    custom_type = cfg.get('customType') or cfg.get('type') or 'sse'
+
+                    # Pipedream helpers: infer app_slug from headers if present
+                    if 'headers' in cfg.get('config', {}) and 'x-pd-app-slug' in cfg['config']['headers']:
+                        cfg['config']['app_slug'] = cfg['config']['headers']['x-pd-app-slug']
+
+                    # Ensure external_user_id for pipedream when possible
+                    if custom_type == 'pipedream' and not cfg['config'].get('external_user_id'):
+                        try:
+                            from pipedream.profiles import get_profile_manager
+                            from services.supabase import DBConnection as _DB
+                            profile_db = _DB()
+                            profile_manager = get_profile_manager(profile_db)
+                            profile = await profile_manager.get_profile(user_id, cfg['config'].get('profile_id'))
+                            if profile and getattr(profile, 'external_user_id', None):
+                                cfg['config']['external_user_id'] = profile.external_user_id
+                                logger.info(f"Configured MCP external_user_id via profile for {cfg.get('name')}")
+                        except Exception as e:
+                            logger.debug(f"Could not resolve external_user_id for configured MCP {cfg.get('name')}: {e}")
+
+                    qualified_name = cfg.get('qualifiedName') or f"custom_{custom_type}_{(cfg.get('name') or 'server').replace(' ', '_').lower()}"
+                    norm = {
+                        'name': cfg.get('name') or 'server',
+                        'qualifiedName': qualified_name,
+                        'config': cfg.get('config') or {},
+                        'enabledTools': cfg.get('enabledTools', []),
+                        'instructions': cfg.get('instructions', ''),
+                        'isCustom': False,
+                        'customType': custom_type
+                    }
+                    all_mcps.append(norm)
+                except Exception as e:
+                    logger.warning(f"Failed to normalize configured MCP {base_mcp}: {e}")
         
         # Add custom MCPs (including Pipedream)
         if agent_config.get('custom_mcps'):
