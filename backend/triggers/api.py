@@ -1066,5 +1066,113 @@ async def internal_create_and_execute_mcp_tool(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/internal/debug/mcp-tools")
+async def internal_list_mcp_tools(
+    request: Request,
+    agent_id: str
+):
+    """List all MCP tools available for the given agent (internal, protected by TRIGGER_WEBHOOK_SECRET)."""
+    import os
+    from agent.versioning.domain.entities import AgentId
+    from agent.versioning.infrastructure.dependencies import set_db_connection, get_container
+    from agentpress.thread_manager import ThreadManager
+    from agent.tools.mcp_tool_wrapper import MCPToolWrapper
+    from agentpress.tool import SchemaType
+
+    # Secret check
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        set_db_connection(db)
+        client = await db.client
+
+        # Load agent base info
+        agent_result = await client.table('agents').select('account_id, name').eq('agent_id', agent_id).execute()
+        if not agent_result.data:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        agent_data = agent_result.data[0]
+        container = get_container()
+        version_service = await container.get_version_service()
+        agent_id_obj = AgentId.from_string(agent_id)
+        active_version = await version_service.version_repo.find_active_version(agent_id_obj)
+        if not active_version:
+            raise HTTPException(status_code=404, detail="No active version for agent")
+
+        agent_config = {
+            'agent_id': agent_id,
+            'name': agent_data.get('name', 'Unknown Agent'),
+            'system_prompt': active_version.system_prompt.value,
+            'configured_mcps': [
+                {
+                    'name': mcp.name,
+                    'type': mcp.type,
+                    'config': mcp.config,
+                    'enabledTools': mcp.enabled_tools
+                }
+                for mcp in active_version.configured_mcps
+            ],
+            'custom_mcps': [
+                {
+                    'name': mcp.name,
+                    'type': mcp.type,
+                    'config': mcp.config,
+                    'enabledTools': mcp.enabled_tools,
+                    'customType': getattr(mcp, 'type', None)  # preserve if present
+                }
+                for mcp in active_version.custom_mcps
+            ],
+            'agentpress_tools': active_version.tool_configuration.tools,
+            'current_version_id': str(active_version.version_id),
+            'version_name': active_version.version_name
+        }
+
+        # Initialize thread manager and MCP wrapper
+        tm = ThreadManager(agent_config=agent_config)
+        all_mcps = []
+        if agent_config.get('configured_mcps'):
+            all_mcps.extend(agent_config['configured_mcps'])
+        if agent_config.get('custom_mcps'):
+            all_mcps.extend(agent_config['custom_mcps'])
+
+        tm.add_tool(MCPToolWrapper, mcp_configs=all_mcps)
+
+        mcp_wrapper = None
+        for _, tool_info in tm.tool_registry.tools.items():
+            if isinstance(tool_info['instance'], MCPToolWrapper):
+                mcp_wrapper = tool_info['instance']
+                break
+
+        if not mcp_wrapper:
+            return { 'tools': [], 'message': 'MCP wrapper not initialized' }
+
+        await mcp_wrapper.initialize_and_register_tools(tm.tool_registry)
+        schemas = mcp_wrapper.get_schemas() or {}
+
+        tools = []
+        for method_name, schema_list in schemas.items():
+            if method_name == 'call_mcp_tool':
+                continue
+            for schema in schema_list:
+                if hasattr(schema, 'schema_type') and schema.schema_type == SchemaType.OPENAPI:
+                    func = schema.schema.get('function', {})
+                    tools.append({
+                        'method': method_name,
+                        'description': func.get('description', ''),
+                        'params': list((func.get('parameters', {}) or {}).get('properties', {}).keys())
+                    })
+
+        return { 'tools': tools, 'count': len(tools) }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal MCP tools debug failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include workflows router AFTER all routes are defined
 router.include_router(workflows_router)
