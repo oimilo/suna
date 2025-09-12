@@ -737,8 +737,14 @@ class WorkflowExecutor:
             def index_by_key(items: list) -> dict:
                 idx = {}
                 for it in items:
-                    key_parts = [str(it.get(k, '')) for k in record_key_fields]
-                    idx['|'.join(key_parts)] = it
+                    if record_key_fields == ['*']:
+                        import json as _json
+                        raw = _json.dumps(it, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+                        key = hashlib.sha256(raw.encode('utf-8')).hexdigest()
+                    else:
+                        key_parts = [str(it.get(k, '')) for k in record_key_fields]
+                        key = '|'.join(key_parts)
+                    idx[key] = it
                 return idx
 
             prev_idx = index_by_key(prev)
