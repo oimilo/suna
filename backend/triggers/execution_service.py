@@ -469,9 +469,24 @@ class WorkflowExecutor:
             
             await self._create_workflow_message(thread_id, workflow_config, workflow_input)
             
-            agent_run_id = await self._start_workflow_agent_execution(
-                thread_id, project_id, enhanced_agent_config, workflow_id, workflow_input
-            )
+            # Decide execution strategy: deterministic steps vs. agent-style
+            use_steps_executor = False
+            try:
+                for step in (steps_json or []):
+                    if isinstance(step, dict) and step.get('type') in ['tool', 'condition', 'instruction']:
+                        use_steps_executor = True
+                        break
+            except Exception:
+                use_steps_executor = False
+
+            if use_steps_executor:
+                agent_run_id = await self._start_workflow_steps_execution(
+                    thread_id, project_id, enhanced_agent_config, workflow_id, workflow_input
+                )
+            else:
+                agent_run_id = await self._start_workflow_agent_execution(
+                    thread_id, project_id, enhanced_agent_config, workflow_id, workflow_input
+                )
             
             return {
                 "success": True,
@@ -800,6 +815,69 @@ class WorkflowExecutor:
         logger.info(f"Started workflow agent execution via asyncio: {agent_run_id}")
         return agent_run_id
     
+    async def _start_workflow_steps_execution(
+        self,
+        thread_id: str,
+        project_id: str,
+        agent_config: Dict[str, Any],
+        workflow_id: str,
+        workflow_input: Dict[str, Any]
+    ) -> str:
+        client = await self._db.client
+        model_name = config.MODEL_TO_USE or "claude-sonnet-4-20250514"
+
+        # Get account_id from thread
+        thread_result = await client.table('threads').select('account_id').eq('thread_id', thread_id).execute()
+        if not thread_result.data:
+            raise ValueError(f"Thread {thread_id} not found")
+        account_id = thread_result.data[0]['account_id']
+
+        # Create agent_run row
+        agent_run = await client.table('agent_runs').insert({
+            "thread_id": thread_id,
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "agent_id": agent_config.get('agent_id'),
+            "agent_version_id": agent_config.get('current_version_id'),
+            "account_id": account_id
+        }).execute()
+
+        agent_run_id = agent_run.data[0]['id']
+
+        await self._register_workflow_run(agent_run_id)
+
+        # Run the core workflow executor directly in background
+        logger.info(f"Starting deterministic workflow steps execution via asyncio: agent_run_id={agent_run_id}")
+        try:
+            from run_agent_workflow_direct import run_workflow_direct
+
+            task = asyncio.create_task(run_workflow_direct(
+                agent_run_id=agent_run_id,
+                thread_id=thread_id,
+                project_id=project_id,
+                model_name=model_name,
+                agent_config=agent_config,
+                workflow_id=workflow_id,
+                workflow_input=workflow_input,
+                instance_id=getattr(config, 'INSTANCE_ID', 'workflow_executor')
+            ))
+
+            if not hasattr(self, '_background_tasks'):
+                self._background_tasks = set()
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
+        except Exception as e:
+            logger.error(f"Failed to start steps workflow execution: {e}, error_type={type(e).__name__}")
+            await client.table('agent_runs').update({
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(e)
+            }).eq("id", agent_run_id).execute()
+            raise
+
+        logger.info(f"Workflow steps execution task created successfully: {agent_run_id}")
+        return agent_run_id
+
     async def _register_workflow_run(self, agent_run_id: str) -> None:
         try:
             instance_id = getattr(config, 'INSTANCE_ID', 'default')
