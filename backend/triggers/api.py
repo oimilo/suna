@@ -965,6 +965,24 @@ async def internal_update_workflow_gmail_steps(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@workflows_router.get("/internal/get-workflow")
+async def internal_get_workflow_details(
+    request: Request,
+    workflow_id: str
+):
+    """Retorna detalhes do workflow (inclui steps) sem exigir JWT. Protegido por segredo."""
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    client = await db.client
+    res = await client.table('agent_workflows').select('*').eq('id', workflow_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return res.data[0]
+
+
 @workflows_router.get("/{workflow_id}")
 async def get_workflow(
     workflow_id: str,
