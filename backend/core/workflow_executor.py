@@ -59,6 +59,33 @@ class WorkflowExecutor:
             }).execute()
         except Exception as e:
             logger.warning(f"Failed to log workflow status message: {e}")
+
+    async def _post_assistant_summary(self, thread_id: str, context: Dict[str, Any]):
+        """Post a concise assistant message summarizing workflow outcome so the UI shows content."""
+        try:
+            client = await self.db.client
+            status = context.get('status')
+            results = context.get('results', {})
+            lines = [f"Workflow status: {status}"]
+            if results:
+                lines.append("Results:")
+                for step_name, result in results.items():
+                    # Create a short one-liner per step
+                    if isinstance(result, dict):
+                        summary = result.get('message') or result.get('status') or 'done'
+                    else:
+                        summary = str(result)[:120]
+                    lines.append(f"- {step_name}: {summary}")
+            content = { 'role': 'assistant', 'content': "\n".join(lines) }
+            await client.table('messages').insert({
+                'message_id': str(uuid.uuid4()),
+                'thread_id': thread_id,
+                'type': 'assistant',
+                'is_llm_message': False,
+                'content': json.dumps(content)
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Failed to post assistant summary: {e}")
         
     async def _initialize_tools(self, agent_config: Dict[str, Any], thread_id: str, project_id: str, user_id: str):
         """Initialize tool registry with MCP tools from agent configuration."""
@@ -371,6 +398,9 @@ class WorkflowExecutor:
                 'results': context['results'],
                 'errors': context['errors']
             })
+
+            # Post assistant summary so UI shows a visible message
+            await self._post_assistant_summary(thread_id, context)
             
             logger.info(f"Workflow execution completed: {context['status']}")
             return context
@@ -388,6 +418,13 @@ class WorkflowExecutor:
                 'type': 'workflow_error',
                 'error': str(e),
                 'traceback': traceback.format_exc()
+            })
+
+            # Also post assistant error summary
+            await self._post_assistant_summary(thread_id, {
+                'status': 'failed',
+                'results': {},
+                'errors': [str(e)]
             })
             
             return {
