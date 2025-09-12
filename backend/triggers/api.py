@@ -1071,7 +1071,12 @@ async def internal_list_mcp_tools(
     request: Request,
     agent_id: str
 ):
-    """List all MCP tools available for the given agent (internal, protected by TRIGGER_WEBHOOK_SECRET)."""
+    """List all MCP tools for the agent.
+
+    Supports two modes via query param `mode`:
+    - mode=config (default fallback): returns tools from agent_config.enabledTools without opening MCP connections
+    - mode=live: initializes MCP and returns dynamic methods (might be slower)
+    """
     import os
     from agent.versioning.domain.entities import AgentId
     from agent.versioning.infrastructure.dependencies import set_db_connection, get_container
@@ -1130,7 +1135,33 @@ async def internal_list_mcp_tools(
             'version_name': active_version.version_name
         }
 
-        # Initialize thread manager and MCP wrapper
+        # Fast path: mode=config (no MCP connection)
+        mode = request.query_params.get('mode', 'config').lower()
+        if mode == 'config':
+            def _slugify(text: str) -> str:
+                import re
+                s = (text or '').strip().lower().replace(' ', '_').replace('-', '_')
+                return re.sub(r"[^a-z0-9_]+", "", s)
+
+            all_mcps_cfg = []
+            if agent_config.get('configured_mcps'):
+                all_mcps_cfg.extend(agent_config['configured_mcps'])
+            if agent_config.get('custom_mcps'):
+                all_mcps_cfg.extend(agent_config['custom_mcps'])
+
+            tools = []
+            for mcp in all_mcps_cfg:
+                cfg = mcp.get('config') or {}
+                server_slug = _slugify(cfg.get('app_slug') or mcp.get('customType') or mcp.get('type') or mcp.get('name') or 'mcp')
+                for t in mcp.get('enabledTools', []) or []:
+                    tools.append({
+                        'method': f"mcp_{server_slug}_{_slugify(t)}",
+                        'alias': t,
+                        'source': 'config'
+                    })
+            return { 'tools': tools, 'count': len(tools), 'mode': 'config' }
+
+        # Live path: initialize MCP (might be slower)
         tm = ThreadManager(agent_config=agent_config)
         all_mcps = []
         if agent_config.get('configured_mcps'):
@@ -1179,10 +1210,11 @@ async def internal_list_mcp_tools(
                     tools.append({
                         'method': method_name,
                         'description': func.get('description', ''),
-                        'params': list((func.get('parameters', {}) or {}).get('properties', {}).keys())
+                        'params': list((func.get('parameters', {}) or {}).get('properties', {}).keys()),
+                        'source': 'live'
                     })
 
-        return { 'tools': tools, 'count': len(tools) }
+        return { 'tools': tools, 'count': len(tools), 'mode': 'live' }
 
     except HTTPException:
         raise
