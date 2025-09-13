@@ -260,6 +260,7 @@ class WorkflowExecutor:
         1) Construct candidates like mcp_{server}_{tool_name} for each configured/custom MCP (server from customType/app_slug/name)
         2) Check if any candidate exists in wrapper (hasattr)
         3) Fallback: scan wrapper schemas and find a method whose name endswith _{tool_name}
+        4) Always consider generic pipedream prefix: mcp_pipedream_{tool_name}
         """
         try:
             candidates: List[str] = []
@@ -275,6 +276,9 @@ class WorkflowExecutor:
                 name = mcp.get('name')
                 server_slug = self._slugify(app_slug or server or name or 'mcp')
                 candidates.append(f"mcp_{server_slug}_{tool_name}")
+
+            # Generic pipedream candidate as a last resort
+            candidates.append(f"mcp_pipedream_{tool_name}")
 
             # Check direct attributes
             for cand in candidates:

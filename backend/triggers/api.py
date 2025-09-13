@@ -1398,6 +1398,70 @@ async def internal_list_mcp_tools(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Quick view of active agent version MCP configuration (sanitized)
+@router.get("/internal/debug/agent-version-config")
+async def internal_debug_agent_version_config(
+    request: Request,
+    agent_id: str
+):
+    """Retorna visão sanitizada da versão ativa do agente: MCPs, app_slug e external_user_id/profile.
+
+    Protegido por x-trigger-secret.
+    """
+    import os
+    from agent.versioning.domain.entities import AgentId
+    from agent.versioning.infrastructure.dependencies import set_db_connection, get_container
+
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        set_db_connection(db)
+        client = await db.client
+
+        agent_result = await client.table('agents').select('account_id, name').eq('agent_id', agent_id).execute()
+        if not agent_result.data:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        container = get_container()
+        version_service = await container.get_version_service()
+        agent_id_obj = AgentId.from_string(agent_id)
+        active_version = await version_service.version_repo.find_active_version(agent_id_obj)
+        if not active_version:
+            raise HTTPException(status_code=404, detail="No active version for agent")
+
+        def pick(d: dict, keys: list[str]):
+            return {k: d.get(k) for k in keys if k in d}
+
+        def sanitize_mcp(mcp):
+            cfg = mcp.config or {}
+            headers = (cfg.get('headers') or {})
+            # Normalize app_slug if only present in headers
+            app_slug = cfg.get('app_slug') or headers.get('x-pd-app-slug')
+            return {
+                'name': mcp.name,
+                'type': mcp.type,
+                'enabledTools': mcp.enabled_tools,
+                'config': pick({**cfg, 'app_slug': app_slug}, ['app_slug', 'external_user_id', 'profile_id'])
+            }
+
+        data = {
+            'agent_id': agent_id,
+            'version_id': str(active_version.version_id),
+            'version_name': active_version.version_name,
+            'configured_mcps': [sanitize_mcp(m) for m in active_version.configured_mcps],
+            'custom_mcps': [sanitize_mcp(m) for m in active_version.custom_mcps],
+        }
+
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal agent version config debug failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ===== INTERNAL MCP DIAGNOSTICS =====
 
 @router.post("/internal/mcp/diagnose-gmail-send")
@@ -1506,17 +1570,26 @@ async def internal_mcp_diagnose_gmail_send(
 
         await mcp_wrapper.initialize_and_register_tools(tm.tool_registry)
 
-        # Execute direct call
+        # Execute: prefer alias, fallback to explicit method
+        alias = 'gmail_send_email'
+        args = {
+            'to': to,
+            'subject': subject,
+            'body': body_text
+        }
         try:
-            result = await mcp_wrapper.call_mcp_tool('mcp_pipedream_gmail_send_email', {
-                'to': to,
-                'subject': subject,
-                'body': body_text
-            })
+            # Try alias first (dynamic resolution based on configured MCPs)
+            result = await mcp_wrapper.call_mcp_tool(alias, args)
             out = getattr(result, 'output', str(result))
-            return { 'success': True, 'output': out }
-        except Exception as exec_err:
-            return { 'success': False, 'error': str(exec_err) }
+            return { 'success': True, 'used': 'alias', 'tool': alias, 'output': out }
+        except Exception as alias_err:
+            # Fallback to explicit Pipedream Gmail method name
+            try:
+                result = await mcp_wrapper.call_mcp_tool('mcp_pipedream_gmail_send_email', args)
+                out = getattr(result, 'output', str(result))
+                return { 'success': True, 'used': 'method', 'tool': 'mcp_pipedream_gmail_send_email', 'output': out }
+            except Exception as method_err:
+                return { 'success': False, 'error': f"alias_error={str(alias_err)}; method_error={str(method_err)}" }
 
     except HTTPException:
         raise

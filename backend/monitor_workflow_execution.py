@@ -133,7 +133,7 @@ async def monitor_execution(agent_run_id: str):
 
 async def main():
     # Use the most recent agent_run_id from the test
-    agent_run_id = "e0fdf309-e656-47a2-af89-233bc7088827"
+    agent_run_id = "2fbf932c-3f6a-4c3b-85dd-d5c8f6db9a75"
     
     # Monitor the execution
     status = await monitor_execution(agent_run_id)
