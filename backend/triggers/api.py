@@ -1555,6 +1555,16 @@ async def internal_mcp_diagnose_gmail_send(
             server_slug = _slugify(cfg['config'].get('app_slug') or ctype or cfg.get('name') or 'mcp')
             name_slug = _slugify(cfg.get('name') or 'server')
             cfg['qualifiedName'] = cfg.get('qualifiedName') or f"custom_{server_slug}_{name_slug}"
+            # Resolve external_user_id from credential_profiles if only profile_id is present
+            try:
+                if not cfg['config'].get('external_user_id'):
+                    profile_id = cfg['config'].get('profile_id')
+                    if profile_id:
+                        prof = await client.table('credential_profiles').select('external_user_id').eq('id', profile_id).single().execute()
+                        if getattr(prof, 'data', None) and prof.data.get('external_user_id'):
+                            cfg['config']['external_user_id'] = prof.data['external_user_id']
+            except Exception as _e:
+                logger.warning(f"Could not resolve external_user_id for profile {cfg['config'].get('profile_id')}: {_e}")
             processed.append(cfg)
 
         tm.add_tool(MCPToolWrapper, mcp_configs=processed)
