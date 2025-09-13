@@ -1372,7 +1372,11 @@ async def internal_list_mcp_tools(
         if not mcp_wrapper:
             return { 'tools': [], 'message': 'MCP wrapper not initialized' }
 
-        await mcp_wrapper.initialize_and_register_tools(tm.tool_registry)
+        try:
+            await mcp_wrapper.initialize_and_register_tools(tm.tool_registry)
+        except Exception as init_err:
+            logger.error(f"MCP live init failed: {init_err}")
+            return { 'tools': [], 'count': 0, 'mode': 'live', 'error': f"init_failed: {str(init_err)}" }
         schemas = mcp_wrapper.get_schemas() or {}
 
         tools = []
@@ -1389,6 +1393,8 @@ async def internal_list_mcp_tools(
                         'source': 'live'
                     })
 
+        if not tools:
+            return { 'tools': [], 'count': 0, 'mode': 'live', 'error': 'no_tools_registered_after_init' }
         return { 'tools': tools, 'count': len(tools), 'mode': 'live' }
 
     except HTTPException:
@@ -1460,6 +1466,74 @@ async def internal_debug_agent_version_config(
         raise
     except Exception as e:
         logger.error(f"Internal agent version config debug failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Inspect Pipedream profile config (external_user_id) for debugging
+@router.get("/internal/debug/pipedream-profile")
+async def internal_debug_pipedream_profile(
+    request: Request,
+    agent_id: str,
+    profile_id: str
+):
+    """Retorna informações do profile Pipedream, incluindo external_user_id, a partir de user_mcp_credential_profiles e credential_profiles.
+
+    Protegido por x-trigger-secret.
+    """
+    import os
+    from utils.encryption import decrypt_data
+
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Validate agent exists (and optionally fetch account)
+        agent = await client.table('agents').select('agent_id, account_id').eq('agent_id', agent_id).single().execute()
+        if not getattr(agent, 'data', None):
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        result = {
+            'agent_id': agent_id,
+            'profile_id': profile_id,
+            'source_user_mcp_credential_profiles': None,
+            'source_credential_profiles': None
+        }
+
+        # Try encrypted user_mcp_credential_profiles first
+        try:
+            enc = await client.table('user_mcp_credential_profiles').select('encrypted_config').eq('profile_id', profile_id).single().execute()
+            if getattr(enc, 'data', None) and enc.data.get('encrypted_config'):
+                decrypted = decrypt_data(enc.data['encrypted_config'])
+                import json as _json
+                cfg = _json.loads(decrypted)
+                result['source_user_mcp_credential_profiles'] = {
+                    'external_user_id': cfg.get('external_user_id'),
+                    'app_slug': cfg.get('app_slug'),
+                    'oauth_app_id': cfg.get('oauth_app_id')
+                }
+        except Exception as e1:
+            result['source_user_mcp_credential_profiles'] = {'error': str(e1)}
+
+        # Fallback to credential_profiles plain
+        try:
+            plain = await client.table('credential_profiles').select('*').eq('id', profile_id).single().execute()
+            if getattr(plain, 'data', None):
+                result['source_credential_profiles'] = {
+                    'external_user_id': plain.data.get('external_user_id'),
+                    'app_slug': plain.data.get('app_slug'),
+                    'profile_name': plain.data.get('profile_name')
+                }
+        except Exception as e2:
+            result['source_credential_profiles'] = {'error': str(e2)}
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal debug pipedream profile failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===== INTERNAL MCP DIAGNOSTICS =====
