@@ -591,6 +591,24 @@ class WorkflowExecutor:
                                 'status': 'completed',
                                 'output': str(result)
                             }
+                    # Final attempt: try calling the alias directly via MCP wrapper
+                    try:
+                        logger.info(f"Attempting MCP alias via call_mcp_tool: {tool_name}")
+                        result = await self.mcp_wrapper.call_mcp_tool(tool_name=tool_name, arguments=processed_args)
+                        await self._log_tool_message(thread_id, tool_name, processed_args, result)
+                        if hasattr(result, 'output'):
+                            return {
+                                'status': 'completed',
+                                'output': result.output,
+                                'metadata': getattr(result, 'metadata', {})
+                            }
+                        else:
+                            return {
+                                'status': 'completed',
+                                'output': str(result)
+                            }
+                    except Exception as last_err:
+                        logger.info(f"Alias call_mcp_tool failed for '{tool_name}': {last_err}")
                         
             except Exception as e:
                 logger.error(f"Error executing MCP tool {tool_name}: {e}")
