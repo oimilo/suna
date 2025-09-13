@@ -675,7 +675,7 @@ class WorkflowExecutor:
                         url = fallback_url
                 if not url:
                     return { 'status': 'error', 'error': 'csv_url requires source.url' }
-                async with httpx.AsyncClient(timeout=30) as client:
+                async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
                     resp = await client.get(url)
                     resp.raise_for_status()
                     text = resp.text
@@ -687,7 +687,7 @@ class WorkflowExecutor:
                 if not url:
                     return { 'status': 'error', 'error': 'http_json requires source.url' }
                 headers = source.get('headers') or {}
-                async with httpx.AsyncClient(timeout=30) as client:
+                async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
                     resp = await client.get(url, headers=headers)
                     resp.raise_for_status()
                     body = resp.json()
