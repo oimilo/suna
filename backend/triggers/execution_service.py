@@ -577,10 +577,18 @@ class WorkflowExecutor:
             if not active_version:
                 raise ValueError(f"No active version found for agent {agent_id}")
             
+            # Defensive: garantir system_prompt string não vazia
+            try:
+                _sys_prompt = getattr(active_version.system_prompt, 'value', None)
+                if not _sys_prompt or not str(_sys_prompt).strip():
+                    _sys_prompt = 'You are a helpful AI assistant.'
+            except Exception:
+                _sys_prompt = 'You are a helpful AI assistant.'
+
             agent_config = {
                 'agent_id': agent_id,
                 'name': agent_data.get('name', 'Unknown Agent'),
-                'system_prompt': active_version.system_prompt.value,
+                'system_prompt': _sys_prompt,
                 'configured_mcps': [
                     {
                         'name': mcp.name,
@@ -599,7 +607,7 @@ class WorkflowExecutor:
                     }
                     for mcp in active_version.custom_mcps
                 ],
-                'agentpress_tools': active_version.tool_configuration.tools,
+                'agentpress_tools': active_version.tool_configuration.tools if isinstance(active_version.tool_configuration.tools, dict) else {},
                 'current_version_id': str(active_version.version_id),
                 'version_name': active_version.version_name
             }
