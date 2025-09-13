@@ -1827,7 +1827,8 @@ async def internal_pipedream_direct_call(
                         pass
                     return { 'success': True, 'output': content }
         except Exception as e:
-            return { 'success': False, 'error': str(e) }
+            import traceback as _tb
+            return { 'success': False, 'error': str(e), 'type': e.__class__.__name__, 'traceback': _tb.format_exc() }
 
     except HTTPException:
         raise
