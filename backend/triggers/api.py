@@ -1738,3 +1738,99 @@ async def internal_update_workflow_steps(
     except Exception as e:
         logger.error(f"Internal update steps failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== INTERNAL: DIRECT PIPEDREAM MCP CALL (DEBUG) =====
+
+@router.post("/internal/mcp/pipedream-direct-call")
+async def internal_pipedream_direct_call(
+    request: Request,
+    agent_id: str = Body(..., embed=True),
+    profile_id: str = Body(..., embed=True),
+    app_slug: str = Body("gmail", embed=True),
+    tool_name: str = Body(..., embed=True),  # e.g., 'gmail_send_email'
+    args: Dict[str, Any] = Body(default_factory=dict, embed=True)
+):
+    """Chama o MCP Pipedream diretamente usando streamable HTTP, sem depender do registro de tools.
+
+    Retorna o resultado bruto ou o erro do handshake/execução.
+    Protegido por x-trigger-secret.
+    """
+    import os
+    from utils.encryption import decrypt_data
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+    from pipedream.facade import PipedreamManager
+
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Resolve external_user_id via encrypted profile table
+        external_user_id = None
+        try:
+            enc = await client.table('user_mcp_credential_profiles').select('encrypted_config').eq('profile_id', profile_id).single().execute()
+            if getattr(enc, 'data', None) and enc.data.get('encrypted_config'):
+                decrypted = decrypt_data(enc.data['encrypted_config'])
+                import json as _json
+                cfg = _json.loads(decrypted)
+                external_user_id = cfg.get('external_user_id')
+        except Exception as e1:
+            logger.warning(f"Encrypted profile lookup failed: {e1}")
+
+        if not external_user_id:
+            raise HTTPException(status_code=400, detail="external_user_id not found for profile")
+
+        # Build headers
+        pipedream_manager = PipedreamManager()
+        http_client = pipedream_manager._http_client
+        access_token = await http_client._ensure_access_token()
+
+        project_id = os.getenv("PIPEDREAM_PROJECT_ID")
+        environment = os.getenv("PIPEDREAM_X_PD_ENVIRONMENT", "development")
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "x-pd-project-id": project_id,
+            "x-pd-environment": environment,
+            "x-pd-external-user-id": external_user_id,
+            "x-pd-app-slug": app_slug,
+        }
+        if http_client.rate_limit_token:
+            headers["x-pd-rate-limit"] = http_client.rate_limit_token
+
+        url = "https://remote.mcp.pipedream.net"
+
+        # Call tool directly
+        try:
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    result = await session.call_tool(tool_name, args)
+                    # Try to normalize result
+                    content = getattr(result, 'content', result)
+                    try:
+                        from typing import Iterable
+                        lines = []
+                        if isinstance(content, list):
+                            for item in content:
+                                text = getattr(item, 'text', str(item))
+                                lines.append(text)
+                            content = "\n".join(lines)
+                        elif hasattr(content, 'text'):
+                            content = content.text
+                    except Exception:
+                        pass
+                    return { 'success': True, 'output': content }
+        except Exception as e:
+            return { 'success': False, 'error': str(e) }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal Pipedream direct call failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
