@@ -1835,3 +1835,89 @@ async def internal_pipedream_direct_call(
     except Exception as e:
         logger.error(f"Internal Pipedream direct call failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/internal/mcp/pipedream-list-tools")
+async def internal_pipedream_list_tools(
+    request: Request,
+    agent_id: str,
+    profile_id: str,
+    app_slug: str = Query("gmail")
+):
+    """Lista as tools disponíveis no MCP Pipedream para um profile/app específicos.
+
+    Protegido por x-trigger-secret.
+    """
+    import os
+    from utils.encryption import decrypt_data
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+    from pipedream.facade import PipedreamManager
+
+    secret_env = os.getenv("TRIGGER_WEBHOOK_SECRET") or os.getenv("TRIGGER_SECRET")
+    incoming_secret = request.headers.get("x-trigger-secret", "")
+    if secret_env and incoming_secret != secret_env:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        client = await db.client
+
+        # Resolve external_user_id via encrypted profile table
+        external_user_id = None
+        try:
+            enc = await client.table('user_mcp_credential_profiles').select('encrypted_config').eq('profile_id', profile_id).single().execute()
+            if getattr(enc, 'data', None) and enc.data.get('encrypted_config'):
+                decrypted = decrypt_data(enc.data['encrypted_config'])
+                import json as _json
+                cfg = _json.loads(decrypted)
+                external_user_id = cfg.get('external_user_id')
+        except Exception as e1:
+            pass
+
+        if not external_user_id:
+            raise HTTPException(status_code=400, detail="external_user_id not found for profile")
+
+        pipedream_manager = PipedreamManager()
+        http_client = pipedream_manager._http_client
+        access_token = await http_client._ensure_access_token()
+
+        project_id = os.getenv("PIPEDREAM_PROJECT_ID")
+        environment = os.getenv("PIPEDREAM_X_PD_ENVIRONMENT", "development")
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "x-pd-project-id": project_id,
+            "x-pd-environment": environment,
+            "x-pd-external-user-id": external_user_id,
+            "x-pd-app-slug": app_slug,
+        }
+        if http_client.rate_limit_token:
+            headers["x-pd-rate-limit"] = http_client.rate_limit_token
+
+        url = "https://remote.mcp.pipedream.net"
+
+        try:
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    tools_result = await session.list_tools()
+                    tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
+                    items = []
+                    for t in tools:
+                        try:
+                            name = getattr(t, 'name', None) or t.get('name')
+                            desc = getattr(t, 'description', None) or t.get('description')
+                            params = getattr(t, 'inputSchema', None) or t.get('inputSchema')
+                            items.append({ 'name': name, 'description': desc, 'input_schema': params })
+                        except Exception:
+                            items.append(str(t))
+                    return { 'success': True, 'count': len(items), 'tools': items }
+        except Exception as e:
+            import traceback as _tb
+            return { 'success': False, 'error': str(e), 'type': e.__class__.__name__, 'traceback': _tb.format_exc() }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Internal Pipedream list tools failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
