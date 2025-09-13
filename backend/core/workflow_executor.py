@@ -275,7 +275,10 @@ class WorkflowExecutor:
                 app_slug = (mcp.get('config') or {}).get('app_slug')
                 name = mcp.get('name')
                 server_slug = self._slugify(app_slug or server or name or 'mcp')
+                # Standard dynamic method naming
                 candidates.append(f"mcp_{server_slug}_{tool_name}")
+                # Custom MCP wrapper naming (e.g., custom_gmail_gmail_send_email)
+                candidates.append(f"custom_{server_slug}_{tool_name}")
 
             # Generic pipedream candidate as a last resort
             candidates.append(f"mcp_pipedream_{tool_name}")
