@@ -240,14 +240,18 @@ class WorkflowExecutor:
                 all_tools = list(self.thread_manager.tool_registry.tools.keys())
                 logger.info(f"Workflow executor registered tools: {all_tools}")
 
-    def _slugify(self, value: str) -> str:
+    def _slugify(self, value: Optional[str]) -> str:
         try:
             import re
-            s = value.strip().lower().replace(' ', '_').replace('-', '_')
+            base = (value or "")
+            s = base.strip().lower().replace(' ', '_').replace('-', '_')
             s = re.sub(r"[^a-z0-9_]+", "", s)
             return s
         except Exception:
-            return value.lower()
+            try:
+                return str(value or "").lower()
+            except Exception:
+                return ""
 
     def _resolve_mcp_method_name(self, tool_name: str, agent_config: Dict[str, Any]) -> Optional[str]:
         """Try to resolve a generic tool_name (e.g., gmail_send_email) to a concrete MCP dynamic method name.
