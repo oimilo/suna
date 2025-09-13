@@ -168,6 +168,14 @@ class CustomMCPHandler:
                 
                 return profile_external_user_id
             else:
+                # Fallback: check credential_profiles for plain external_user_id
+                try:
+                    cred = await supabase.table('credential_profiles').select('external_user_id').eq('id', profile_id).single().execute()
+                    if getattr(cred, 'data', None) and cred.data.get('external_user_id'):
+                        logger.info(f"Resolved external_user_id from credential_profiles for profile {profile_id}")
+                        return cred.data['external_user_id']
+                except Exception as e2:
+                    logger.warning(f"Fallback credential_profiles lookup failed for {profile_id}: {e2}")
                 logger.error(f"Profile {profile_id} not found")
                 return None
                 
