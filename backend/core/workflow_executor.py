@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from utils.logger import logger, structlog
 from services.supabase import DBConnection
-from services.redis import redis
+from services import redis
 from services.langfuse import langfuse
 from agentpress.thread_manager import ThreadManager
 from agent.tools.mcp_tool_wrapper import MCPToolWrapper
