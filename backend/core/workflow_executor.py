@@ -622,29 +622,30 @@ class WorkflowExecutor:
             }
     
     def _process_tool_args(self, args: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Process tool arguments, replacing variables with context values."""
-        processed = {}
-        
-        for key, value in args.items():
-            if isinstance(value, str) and '{' in value:
-                # Try to format with context values
-                try:
-                    # Allow access to context.input and context.results
-                    format_context = {
-                        'input': context.get('input', {}),
-                        'results': context.get('results', {})
-                    }
-                    # Flatten for easier access
-                    for k, v in context.get('input', {}).items():
-                        format_context[k] = v
-                    
-                    processed[key] = value.format(**format_context)
-                except:
-                    processed[key] = value  # Keep original if formatting fails
-            else:
-                processed[key] = value
-        
-        return processed
+        """Process tool arguments recursively, replacing placeholders using context values."""
+        # Build formatting context
+        format_context: Dict[str, Any] = {
+            'input': context.get('input', {}),
+            'results': context.get('results', {})
+        }
+        for k, v in context.get('input', {}).items():
+            format_context[k] = v
+
+        def resolve(obj: Any) -> Any:
+            if isinstance(obj, str):
+                if '{' in obj:
+                    try:
+                        return obj.format(**format_context)
+                    except Exception:
+                        return obj
+                return obj
+            if isinstance(obj, list):
+                return [resolve(item) for item in obj]
+            if isinstance(obj, dict):
+                return { key: resolve(val) for key, val in obj.items() }
+            return obj
+
+        return resolve(args)
     
     async def _execute_fetch_and_diff(self, args: Dict[str, Any], context: Dict[str, Any], agent_run_id: str) -> Dict[str, Any]:
         """Generic fetch+diff step supporting csv_url, http_json and mcp_tool sources.
