@@ -667,6 +667,11 @@ class WorkflowExecutor:
             # 1) Fetch
             if source_type == 'csv_url':
                 url = source.get('url')
+                # Fallback: if placeholder not resolved, try context input
+                if (not isinstance(url, str) or not url.startswith(('http://','https://'))):
+                    fallback_url = (context.get('input') or {}).get('planilha_url')
+                    if isinstance(fallback_url, str) and fallback_url.startswith(('http://','https://')):
+                        url = fallback_url
                 if not url:
                     return { 'status': 'error', 'error': 'csv_url requires source.url' }
                 async with httpx.AsyncClient(timeout=30) as client:
