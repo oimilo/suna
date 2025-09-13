@@ -565,7 +565,8 @@ class WorkflowExecutor:
 
                 # Resolve generic tool_name to MCP dynamic method name
                 else:
-                    resolved = self._resolve_mcp_method_name(tool_name, self.thread_manager.agent_config or agent_config)
+                    # Resolve generic alias (e.g., gmail_send_email) to concrete MCP method name
+                    resolved = self._resolve_mcp_method_name(tool_name, getattr(self.thread_manager, 'agent_config', {}) )
                     if resolved:
                         if hasattr(self.mcp_wrapper, resolved):
                             logger.info(f"Executing resolved MCP tool: {resolved} for '{tool_name}'")

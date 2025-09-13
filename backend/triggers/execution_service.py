@@ -633,7 +633,7 @@ class WorkflowExecutor:
         )
         
         enhanced_config = agent_config.copy()
-        enhanced_config['system_prompt'] = f"""{agent_config['system_prompt']}
+        enhanced_config['system_prompt'] = f"""{agent_config.get('system_prompt', 'You are a helpful AI assistant.')}
 
 --- WORKFLOW EXECUTION MODE ---
 {workflow_prompt}"""
@@ -651,6 +651,19 @@ class WorkflowExecutor:
                    configured_mcps_count=len(enhanced_config.get('configured_mcps', [])),
                    custom_mcps_count=len(enhanced_config.get('custom_mcps', [])),
                    has_account_id=bool(enhanced_config.get('account_id')))
+
+        # Warmup MCP (non-blocking, short timeout) to reduce simulated sends
+        try:
+            async def _warmup():
+                try:
+                    # initialize tools quickly; ignore errors
+                    await asyncio.wait_for(self._workflow_executor._initialize_tools(enhanced_config, thread_id="warmup", project_id="warmup", user_id=enhanced_config.get('account_id','')), timeout=5.0)
+                except Exception:
+                    pass
+            # schedule without blocking
+            asyncio.create_task(_warmup())
+        except Exception:
+            pass
         
         return enhanced_config
     
