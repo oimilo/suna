@@ -270,6 +270,8 @@ class WorkflowExecutor:
             if agent_config.get('custom_mcps'):
                 all_mcps.extend(agent_config['custom_mcps'])
 
+            tool_name_dash = (tool_name or '').replace('_', '-')
+
             for mcp in all_mcps:
                 server = mcp.get('customType') or mcp.get('type') or ''
                 app_slug = (mcp.get('config') or {}).get('app_slug')
@@ -279,9 +281,13 @@ class WorkflowExecutor:
                 candidates.append(f"mcp_{server_slug}_{tool_name}")
                 # Custom MCP wrapper naming (e.g., custom_gmail_gmail_send_email)
                 candidates.append(f"custom_{server_slug}_{tool_name}")
+                # Hyphen variants for tools coming from MCP servers (e.g., gmail-send-email)
+                candidates.append(f"mcp_{server_slug}_{tool_name_dash}")
+                candidates.append(f"custom_{server_slug}_{tool_name_dash}")
 
-            # Generic pipedream candidate as a last resort
+            # Generic pipedream candidate as a last resort (underscore and hyphen)
             candidates.append(f"mcp_pipedream_{tool_name}")
+            candidates.append(f"mcp_pipedream_{tool_name_dash}")
 
             # Check direct attributes
             for cand in candidates:
@@ -293,7 +299,7 @@ class WorkflowExecutor:
             try:
                 schemas = self.mcp_wrapper.get_schemas()
                 for method_name in schemas.keys():
-                    if method_name.endswith(f"_{tool_name}") or method_name == tool_name:
+                    if method_name.endswith(f"_{tool_name}") or method_name.endswith(f"_{tool_name_dash}") or method_name in (tool_name, tool_name_dash):
                         logger.info(f"Resolved tool '{tool_name}' to MCP method '{method_name}' via schema scan")
                         return method_name
             except Exception:
