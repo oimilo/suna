@@ -56,7 +56,7 @@ class TriggerTool(AgentBuilderBaseTool):
                     "execution_recipe": {
                         "type": "object",
                         "description": "Optional compact execution recipe (goal, tools, recipe steps, success). If provided, the executor will receive it as RECIPE:{json}.",
-                        "additionalProperties": true
+                        "additionalProperties": True
                     }
                 },
                 "required": ["name", "cron_expression"]
