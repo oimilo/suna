@@ -52,6 +52,11 @@ class TriggerTool(AgentBuilderBaseTool):
                     "agent_prompt": {
                         "type": "string",
                         "description": "Prompt to send to the agent when triggered (required if execution_type is 'agent')"
+                    },
+                    "execution_recipe": {
+                        "type": "object",
+                        "description": "Optional compact execution recipe (goal, tools, recipe steps, success). If provided, the executor will receive it as RECIPE:{json}.",
+                        "additionalProperties": true
                     }
                 },
                 "required": ["name", "cron_expression"]
@@ -90,7 +95,8 @@ class TriggerTool(AgentBuilderBaseTool):
         description: Optional[str] = None,
         workflow_id: Optional[str] = None,
         workflow_input: Optional[Dict[str, Any]] = None,
-        agent_prompt: Optional[str] = None
+        agent_prompt: Optional[str] = None,
+        execution_recipe: Optional[Dict[str, Any]] = None
     ) -> ToolResult:
         try:
             # Always execute as agent for new triggers. If workflow_id is provided,
@@ -128,6 +134,15 @@ class TriggerTool(AgentBuilderBaseTool):
                 "provider_id": "schedule",
                 "agent_prompt": agent_prompt
             }
+            # Attach optional execution recipe for prompt-only flows
+            try:
+                if execution_recipe and isinstance(execution_recipe, dict):
+                    import json as _json
+                    # Validate compactness (rough limit)
+                    _json.dumps(execution_recipe)  # ensure serializable
+                    trigger_config["execution_recipe"] = execution_recipe
+            except Exception as _e:
+                logger.warning(f"Invalid execution_recipe ignored: {_e}")
             if original_workflow_id:
                 trigger_config["converted_from_workflow"] = True
                 trigger_config["source_workflow_id"] = original_workflow_id
@@ -180,6 +195,8 @@ class TriggerTool(AgentBuilderBaseTool):
                 if workflow_name:
                     result_message += f"**Converted from Workflow**: {workflow_name}\n"
                 result_message += f"**Prompt**: {agent_prompt}\n"
+                if trigger_config.get("execution_recipe"):
+                    result_message += f"**Recipe**: attached\n"
                 
                 result_message += f"\nThe trigger is now active and will run according to the schedule."
                 
