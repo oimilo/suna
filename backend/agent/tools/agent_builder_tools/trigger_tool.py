@@ -1,5 +1,6 @@
 import json
 import uuid
+import structlog
 from typing import Optional, Dict, Any, List
 from agentpress.tool import ToolResult, openapi_schema, xml_schema
 from agentpress.thread_manager import ThreadManager
@@ -169,19 +170,31 @@ class TriggerTool(AgentBuilderBaseTool):
             # Ensure a persistent project_id exists for this trigger (to reuse sandbox/files across runs)
             try:
                 if not project_id:
+                    # Try to infer current thread's project_id (builder context)
+                    try:
+                        context_vars = structlog.contextvars.get_contextvars()
+                        current_thread_id = context_vars.get('thread_id')
+                        if current_thread_id:
+                            trow = await client.table('threads').select('project_id').eq('thread_id', current_thread_id).single().execute()
+                            if trow.data and trow.data.get('project_id'):
+                                project_id = trow.data['project_id']
+                    except Exception:
+                        pass
+
                     # Fetch agent's account_id
                     agent_row = await client.table('agents').select('account_id, name').eq('agent_id', self.agent_id).single().execute()
                     if not agent_row.data:
                         return self.fail_response("Agent not found to create project for trigger")
                     account_id = agent_row.data['account_id']
                     placeholder_name = f"Automation: {name}"
-                    proj = await client.table('projects').insert({
-                        "project_id": str(uuid.uuid4()),
-                        "account_id": account_id,
-                        "name": placeholder_name,
-                        "created_at": datetime.now().isoformat()
-                    }).execute()
-                    project_id = proj.data[0]['project_id'] if proj.data else None
+                    if not project_id:
+                        proj = await client.table('projects').insert({
+                            "project_id": str(uuid.uuid4()),
+                            "account_id": account_id,
+                            "name": placeholder_name,
+                            "created_at": datetime.now().isoformat()
+                        }).execute()
+                        project_id = proj.data[0]['project_id'] if proj.data else None
                 if project_id:
                     trigger_config["project_id"] = project_id
             except Exception as _e:
@@ -218,6 +231,9 @@ class TriggerTool(AgentBuilderBaseTool):
                             "success": ["No API error returned", "Outputs match expected format"]
                         }
                         trigger_config["execution_recipe"] = execution_recipe
+                        # If no explicit allowed_tools was provided, default to required tools
+                        if not trigger_config.get("allowed_tools") and required_tools:
+                            trigger_config["allowed_tools"] = required_tools
                 except Exception as _e:
                     logger.warning(f"Failed to build execution recipe: {_e}")
             

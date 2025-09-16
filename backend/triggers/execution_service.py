@@ -281,8 +281,19 @@ class AgentExecutor:
                 }
             )
             
+            # Inject allowed_tools/setup_readme into agent_config for runtime tool filtering and workspace hints
+            enhanced_config = agent_config.copy()
+            try:
+                if isinstance(trigger_result.execution_variables, dict):
+                    if 'allowed_tools' in trigger_result.execution_variables:
+                        enhanced_config['allowed_tools'] = trigger_result.execution_variables.get('allowed_tools')
+                    if 'setup_readme' in trigger_result.execution_variables:
+                        enhanced_config['setup_readme'] = trigger_result.execution_variables.get('setup_readme')
+            except Exception:
+                pass
+
             agent_run_id = await self._start_agent_execution(
-                thread_id, project_id, agent_config, trigger_result.execution_variables
+                thread_id, project_id, enhanced_config, trigger_result.execution_variables
             )
             
             return {
@@ -413,9 +424,9 @@ class AgentExecutor:
         extra_hint = ""
         try:
             if (trigger_data or {}).get('allowed_tools'):
-                extra_hint += "\nUse only tools listed in allowed_tools; do not create scripts unless README instructs."
+                extra_hint += "\nUse only allowed_tools; if README.md exists, run the specified script instead of creating new ones."
             if (trigger_data or {}).get('setup_readme'):
-                extra_hint += "\nIf README.md exists in workspace, follow it and do not recreate artifacts."
+                extra_hint += "\nCheck README.md in workspace; if present, follow it and execute the script(s) it defines."
         except Exception:
             pass
 
