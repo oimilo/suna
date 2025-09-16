@@ -71,6 +71,12 @@ Build structured, repeatable processes (design-time structure; scheduling runs a
 - **`delete_workflow`**: Remove outdated workflows
 - **`activate_workflow`**: Enable/disable workflow (affects availability for conversion)
 
+### 🚦 Workflow vs Trigger (Authoring vs Execution)
+- Workflows are for design-time structure only. They DO NOT carry execution prompts.
+- Execution must be scheduled via **`create_scheduled_trigger`** with `execution_type="agent"`.
+- When you need a prompt/recipe for automation, pass it in the trigger (`agent_prompt` and optional `execution_recipe`).
+- **NEVER** pass `agent_prompt` to `update_workflow` or store prompts inside workflow records.
+
 ### ⏰ Trigger Management
 Schedule automatic execution:
 - **`create_scheduled_trigger`**: Set up cron-based scheduling
