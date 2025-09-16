@@ -155,7 +155,11 @@ def format_workflow_for_llm(
     workflow_config: Dict[str, Any],
     steps: List[Dict[str, Any]],
     input_data: Dict[str, Any] = None,
-    available_tools: List[str] = None
+    available_tools: List[str] = None,
+    required_tools: List[str] = None,
+    tool_bindings_by_step: Dict[str, Any] = None,
+    success_criteria: Dict[str, Any] = None,
+    execution_rules: List[str] = None
 ) -> str:
     parser = WorkflowParser()
     parsed_steps = parser.parse_workflow_steps(steps)
@@ -173,8 +177,12 @@ def format_workflow_for_llm(
     
     workflow_json = json.dumps(llm_workflow, indent=2)
     tools_list = ', '.join(available_tools) if available_tools else 'Use any available tools from your system prompt'
+    required_tools_list = ', '.join(required_tools) if required_tools else '(none specified)'
+    bindings_json = json.dumps(tool_bindings_by_step, indent=2) if tool_bindings_by_step else '(none)'
     input_json = json.dumps(input_data, indent=2) if input_data else 'None provided'
-    
+    success_json = json.dumps(success_criteria, indent=2) if success_criteria else '(not specified)'
+    rules_list = '\n'.join([f"- {r}" for r in (execution_rules or [])]) if execution_rules else '(none)'
+
     return f"""You are executing a structured workflow. Follow the steps exactly as specified in the JSON below.
 
 WORKFLOW STRUCTURE:
@@ -199,6 +207,12 @@ WORKFLOW STATISTICS:
 AVAILABLE TOOLS:
 {tools_list}
 
+REQUIRED TOOLS (MUST use when applicable):
+{required_tools_list}
+
+TOOL BINDINGS BY STEP (preferred tool per step):
+{bindings_json}
+
 IMPORTANT TOOL USAGE:
 - When a step specifies a tool, that tool MUST be used
 - If the specified tool is not available, explain what you would do instead
@@ -206,6 +220,12 @@ IMPORTANT TOOL USAGE:
 
 WORKFLOW INPUT DATA:
 {input_json}
+
+SUCCESS CRITERIA:
+{success_json}
+
+EXECUTION RULES:
+{rules_list}
 
 Begin executing the workflow now, starting with the first step."""
 

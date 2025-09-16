@@ -3,6 +3,7 @@ import uuid
 import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple
+import re
 
 from services.supabase import DBConnection
 from services import redis
@@ -352,7 +353,29 @@ class AgentExecutor:
         logger.info(f"Creating initial message for thread {thread_id} with prompt: {prompt[:100]}...")
         client = await self._db.client
         
-        message_payload = {"role": "user", "content": prompt}
+        # Render placeholders {var} in the prompt using trigger_data variables
+        def _render_placeholders(text: str, variables: Dict[str, Any]) -> str:
+            try:
+                if not isinstance(text, str) or not variables:
+                    return text
+                pattern = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+
+                def repl(match: re.Match[str]) -> str:
+                    key = match.group(1)
+                    if key in variables:
+                        try:
+                            val = variables[key]
+                            return str(val)
+                        except Exception:
+                            return match.group(0)
+                    return match.group(0)
+
+                return pattern.sub(repl, text)
+            except Exception:
+                return text
+
+        rendered_prompt = _render_placeholders(prompt, trigger_data or {})
+        message_payload = {"role": "user", "content": rendered_prompt}
         
         await client.table('messages').insert({
             "message_id": str(uuid.uuid4()),
