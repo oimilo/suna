@@ -367,47 +367,20 @@ async def get_usage_logs(client, user_id: str, page: int = 0, items_per_page: in
     
     start_of_month = max(start_of_month, cutoff_date)
     
-    # First get all threads for this user in batches
-    batch_size = 1000
-    offset = 0
-    all_threads = []
-    
-    while True:
-        threads_batch = await client.table('threads') \
-            .select('thread_id') \
-            .eq('account_id', user_id) \
-            .gte('created_at', start_of_month.isoformat()) \
-            .range(offset, offset + batch_size - 1) \
-            .execute()
-        
-        if not threads_batch.data:
-            break
-            
-        all_threads.extend(threads_batch.data)
-        
-        # If we got less than batch_size, we've reached the end
-        if len(threads_batch.data) < batch_size:
-            break
-            
-        offset += batch_size
-    
-    if not all_threads:
-        return {"logs": [], "has_more": False}
-    
-    thread_ids = [t['thread_id'] for t in all_threads]
-    
-    # Fetch usage messages with pagination, including thread project info
+    # Fetch usage messages with pagination, joining threads to filter by account_id to avoid giant IN() filters
     start_time = time.time()
-    messages_result = await client.table('messages') \
-        .select(
-            'message_id, thread_id, created_at, content, threads!inner(project_id)'
-        ) \
-        .in_('thread_id', thread_ids) \
-        .eq('type', 'assistant_response_end') \
-        .gte('created_at', start_of_month.isoformat()) \
-        .order('created_at', desc=True) \
-        .range(page * items_per_page, (page + 1) * items_per_page - 1) \
-        .execute()
+    try:
+        messages_result = await client.table('messages') \
+            .select('message_id, thread_id, created_at, content, threads!inner(account_id,project_id)') \
+            .eq('threads.account_id', user_id) \
+            .eq('type', 'assistant_response_end') \
+            .gte('created_at', start_of_month.isoformat()) \
+            .order('created_at', desc=True) \
+            .range(page * items_per_page, (page + 1) * items_per_page - 1) \
+            .execute()
+    except Exception as e:
+        logger.warning(f"Failed to fetch usage logs (falling back to empty): {e}")
+        return {"logs": [], "has_more": False}
     
     end_time = time.time()
     execution_time = end_time - start_time
@@ -1085,9 +1058,27 @@ async def get_subscription(
                 daily_expires_in=daily_credits_summary.get('daily_expires_in')
             )
         
-        # Extract current plan details
-        current_item = subscription['items']['data'][0]
-        current_price_id = current_item['price']['id']
+        # Extract current plan details (robusto a campos ausentes)
+        items = (subscription.get('items') or {}).get('data') or []
+        if not items:
+            # Fallback seguro: tratar como free tier
+            free_tier_id = config.STRIPE_FREE_TIER_ID
+            free_tier_info = SUBSCRIPTION_TIERS.get(free_tier_id, {'name': 'free', 'minutes': 0, 'cost': 0})
+            return SubscriptionStatus(
+                status=subscription.get('status', 'no_subscription'),
+                plan_name=free_tier_info.get('name', 'free'),
+                price_id=free_tier_id,
+                minutes_limit=free_tier_info.get('minutes', 0),
+                cost_limit=free_tier_info.get('cost', 0),
+                current_usage=current_usage,
+                daily_credits=daily_credits_summary.get('daily_credits', 0),
+                daily_credits_used=daily_credits_summary.get('daily_credits_used', 0),
+                daily_credits_granted=daily_credits_summary.get('daily_credits_granted', 0),
+                daily_expires_in=daily_credits_summary.get('daily_expires_in')
+            )
+
+        current_item = items[0]
+        current_price_id = (current_item.get('price') or {}).get('id') or subscription.get('price_id', config.STRIPE_FREE_TIER_ID)
         current_tier_info = get_tier_info_from_price(current_price_id, current_item.get('price'))
         
         status_response = SubscriptionStatus(
