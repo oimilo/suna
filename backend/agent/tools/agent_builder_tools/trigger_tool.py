@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Optional, Dict, Any, List
 from agentpress.tool import ToolResult, openapi_schema, xml_schema
 from agentpress.thread_manager import ThreadManager
@@ -57,6 +58,19 @@ class TriggerTool(AgentBuilderBaseTool):
                         "type": "object",
                         "description": "Optional compact execution recipe (goal, tools, recipe steps, success). If provided, the executor will receive it as RECIPE:{json}.",
                         "additionalProperties": True
+                    },
+                    "allowed_tools": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional allowlist of tool names the executor may use (e.g., mcp_pipedream_gmail_send_email)."
+                    },
+                    "setup_readme": {
+                        "type": "string",
+                        "description": "Optional README content the creator agent generated with usage instructions/scripts overview."
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "description": "Optional existing project_id to reuse as sandbox/workspace for this trigger. If omitted, a new project is created and persisted."
                     }
                 },
                 "required": ["name", "cron_expression"]
@@ -96,7 +110,10 @@ class TriggerTool(AgentBuilderBaseTool):
         workflow_id: Optional[str] = None,
         workflow_input: Optional[Dict[str, Any]] = None,
         agent_prompt: Optional[str] = None,
-        execution_recipe: Optional[Dict[str, Any]] = None
+        execution_recipe: Optional[Dict[str, Any]] = None,
+        allowed_tools: Optional[List[str]] = None,
+        setup_readme: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> ToolResult:
         try:
             # Always execute as agent for new triggers. If workflow_id is provided,
@@ -134,6 +151,11 @@ class TriggerTool(AgentBuilderBaseTool):
                 "provider_id": "schedule",
                 "agent_prompt": agent_prompt
             }
+            # Optional fields
+            if isinstance(allowed_tools, list) and allowed_tools:
+                trigger_config["allowed_tools"] = [str(t) for t in allowed_tools if isinstance(t, (str, bytes))]
+            if isinstance(setup_readme, str) and setup_readme.strip():
+                trigger_config["setup_readme"] = setup_readme
             # Attach optional execution recipe for prompt-only flows
             try:
                 if execution_recipe and isinstance(execution_recipe, dict):
@@ -143,6 +165,27 @@ class TriggerTool(AgentBuilderBaseTool):
                     trigger_config["execution_recipe"] = execution_recipe
             except Exception as _e:
                 logger.warning(f"Invalid execution_recipe ignored: {_e}")
+
+            # Ensure a persistent project_id exists for this trigger (to reuse sandbox/files across runs)
+            try:
+                if not project_id:
+                    # Fetch agent's account_id
+                    agent_row = await client.table('agents').select('account_id, name').eq('agent_id', self.agent_id).single().execute()
+                    if not agent_row.data:
+                        return self.fail_response("Agent not found to create project for trigger")
+                    account_id = agent_row.data['account_id']
+                    placeholder_name = f"Automation: {name}"
+                    proj = await client.table('projects').insert({
+                        "project_id": str(uuid.uuid4()),
+                        "account_id": account_id,
+                        "name": placeholder_name,
+                        "created_at": datetime.now().isoformat()
+                    }).execute()
+                    project_id = proj.data[0]['project_id'] if proj.data else None
+                if project_id:
+                    trigger_config["project_id"] = project_id
+            except Exception as _e:
+                logger.warning(f"Failed to ensure persistent project_id for trigger: {_e}")
             if original_workflow_id:
                 trigger_config["converted_from_workflow"] = True
                 trigger_config["source_workflow_id"] = original_workflow_id
@@ -197,6 +240,8 @@ class TriggerTool(AgentBuilderBaseTool):
                 result_message += f"**Prompt**: {agent_prompt}\n"
                 if trigger_config.get("execution_recipe"):
                     result_message += f"**Recipe**: attached\n"
+                if trigger_config.get("project_id"):
+                    result_message += f"**Project**: {trigger_config.get('project_id')} (workspace reuse)\n"
                 
                 result_message += f"\nThe trigger is now active and will run according to the schedule."
                 
@@ -209,7 +254,11 @@ class TriggerTool(AgentBuilderBaseTool):
                         "cron_expression": cron_expression,
                         "execution_type": execution_type,
                         "is_active": trigger.is_active,
-                        "created_at": trigger.created_at.isoformat()
+                        "created_at": trigger.created_at.isoformat(),
+                        "project_id": trigger_config.get("project_id"),
+                        "allowed_tools": trigger_config.get("allowed_tools", []),
+                        "has_recipe": bool(trigger_config.get("execution_recipe")),
+                        "has_setup_readme": bool(trigger_config.get("setup_readme"))
                     }
                 })
             except ValueError as ve:

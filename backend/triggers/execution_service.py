@@ -118,24 +118,43 @@ class SessionManager:
         self,
         agent_id: str,
         agent_config: Dict[str, Any],
-        trigger_event: TriggerEvent
+        trigger_event: TriggerEvent,
+        existing_project_id: str | None = None
     ) -> Tuple[str, str]:
         client = await self._db.client
         
-        project_id = str(uuid.uuid4())
+        project_id = existing_project_id or str(uuid.uuid4())
         thread_id = str(uuid.uuid4())
         account_id = agent_config.get('account_id')
         
         placeholder_name = f"Trigger: {agent_config.get('name', 'Agent')} - {trigger_event.trigger_id[:8]}"
-        
-        await client.table('projects').insert({
-            "project_id": project_id,
-            "account_id": account_id,
-            "name": placeholder_name,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }).execute()
-        
-        await self._create_sandbox_for_project(project_id)
+
+        if not existing_project_id:
+            await client.table('projects').insert({
+                "project_id": project_id,
+                "account_id": account_id,
+                "name": placeholder_name,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+            await self._create_sandbox_for_project(project_id)
+        else:
+            # Validate ownership and ensure sandbox exists
+            proj = await client.table('projects').select('*').eq('project_id', project_id).single().execute()
+            if not proj.data:
+                # If project vanished, recreate it
+                await client.table('projects').insert({
+                    "project_id": project_id,
+                    "account_id": account_id,
+                    "name": placeholder_name,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }).execute()
+                await self._create_sandbox_for_project(project_id)
+            else:
+                if proj.data.get('account_id') != account_id:
+                    raise ValueError("Project account mismatch for trigger execution")
+                # Ensure sandbox exists
+                if not isinstance(proj.data.get('sandbox'), dict) or not proj.data['sandbox']:
+                    await self._create_sandbox_for_project(project_id)
         
         await client.table('threads').insert({
             "thread_id": thread_id,
@@ -250,11 +269,16 @@ class AgentExecutor:
             logger.info(f"Agent config retrieved for {agent_id}")
             
             thread_id, project_id = await self._session_manager.create_agent_session(
-                agent_id, agent_config, trigger_event
+                agent_id, agent_config, trigger_event, existing_project_id=trigger_result.project_id
             )
             
             await self._create_initial_message(
-                thread_id, trigger_result.agent_prompt, trigger_result.execution_variables
+                thread_id, trigger_result.agent_prompt, {
+                    **(trigger_result.execution_variables or {}),
+                    **({"execution_recipe": trigger_result.execution_recipe} if hasattr(trigger_result, 'execution_recipe') else {}),
+                    **({"allowed_tools": trigger_result.allowed_tools} if trigger_result.allowed_tools else {}),
+                    **({"setup_readme": trigger_result.setup_readme} if trigger_result.setup_readme else {}),
+                }
             )
             
             agent_run_id = await self._start_agent_execution(
@@ -385,7 +409,17 @@ class AgentExecutor:
         except Exception:
             pass
 
-        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix
+        # Optional concise instruction to reuse README and allowed tools
+        extra_hint = ""
+        try:
+            if (trigger_data or {}).get('allowed_tools'):
+                extra_hint += "\nUse only tools listed in allowed_tools; do not create scripts unless README instructs."
+            if (trigger_data or {}).get('setup_readme'):
+                extra_hint += "\nIf README.md exists in workspace, follow it and do not recreate artifacts."
+        except Exception:
+            pass
+
+        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix + (f"\n{extra_hint}" if extra_hint else "")
         message_payload = {"role": "user", "content": rendered_prompt}
         
         await client.table('messages').insert({

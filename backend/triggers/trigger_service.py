@@ -32,6 +32,10 @@ class TriggerResult:
     workflow_id: Optional[str] = None
     workflow_input: Optional[Dict[str, Any]] = None
     execution_variables: Dict[str, Any] = field(default_factory=dict)
+    # Extended fields for agent execution context
+    project_id: Optional[str] = None
+    allowed_tools: Optional[List[str]] = None
+    setup_readme: Optional[str] = None
     error_message: Optional[str] = None
 
 

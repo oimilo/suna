@@ -105,6 +105,10 @@ class ScheduleProvider(TriggerProvider):
                 "agent_prompt": trigger.config.get('agent_prompt'),
                 "workflow_id": trigger.config.get('workflow_id'),
                 "workflow_input": trigger.config.get('workflow_input', {}),
+                "project_id": trigger.config.get('project_id'),
+                "allowed_tools": trigger.config.get('allowed_tools'),
+                "execution_recipe": trigger.config.get('execution_recipe'),
+                "setup_readme": trigger.config.get('setup_readme'),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
@@ -202,7 +206,10 @@ class ScheduleProvider(TriggerProvider):
                     success=True,
                     should_execute_agent=True,
                     agent_prompt=agent_prompt,
-                    execution_variables=execution_variables
+                    execution_variables=execution_variables,
+                    project_id=raw_data.get('project_id'),
+                    allowed_tools=raw_data.get('allowed_tools'),
+                    setup_readme=raw_data.get('setup_readme')
                 )
                 
         except Exception as e:
