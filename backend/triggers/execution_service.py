@@ -374,7 +374,18 @@ class AgentExecutor:
             except Exception:
                 return text
 
-        rendered_prompt = _render_placeholders(prompt, trigger_data or {})
+        # Append compact execution recipe if present on trigger payload (when created from workflow)
+        recipe_suffix = ""
+        try:
+            recipe = (trigger_data or {}).get('execution_recipe')
+            if recipe:
+                import json as _json
+                recipe_min = _json.dumps(recipe, separators=(',', ':'))
+                recipe_suffix = f"\n\nRECIPE:{recipe_min}"
+        except Exception:
+            pass
+
+        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix
         message_payload = {"role": "user", "content": rendered_prompt}
         
         await client.table('messages').insert({

@@ -131,6 +131,37 @@ class TriggerTool(AgentBuilderBaseTool):
             if original_workflow_id:
                 trigger_config["converted_from_workflow"] = True
                 trigger_config["source_workflow_id"] = original_workflow_id
+                # Build a compact execution recipe from workflow steps to help the executor cut discovery
+                try:
+                    wf = workflow if 'workflow' in locals() else None
+                    if not wf:
+                        wf_result = await client.table('agent_workflows').select('*').eq('id', original_workflow_id).eq('agent_id', self.agent_id).execute()
+                        if wf_result.data:
+                            wf = wf_result.data[0]
+                    if wf:
+                        steps_json = wf.get('steps', []) or []
+                        recipe_steps = []
+                        required_tools = []
+                        for s in steps_json:
+                            if s.get('type') == 'tool':
+                                tool_name = (s.get('config') or {}).get('tool_name')
+                                if tool_name and tool_name not in required_tools:
+                                    required_tools.append(tool_name)
+                                recipe_steps.append({
+                                    "step": s.get('name') or 'Unnamed',
+                                    "tool": tool_name,
+                                    "args": (s.get('config') or {}).get('args', {})
+                                })
+                        execution_recipe = {
+                            "goal": wf.get('description') or wf.get('name'),
+                            "inputs": {},
+                            "tools": [{"name": t} for t in required_tools],
+                            "recipe": recipe_steps,
+                            "success": ["No API error returned", "Outputs match expected format"]
+                        }
+                        trigger_config["execution_recipe"] = execution_recipe
+                except Exception as _e:
+                    logger.warning(f"Failed to build execution recipe: {_e}")
             
             trigger_svc = get_trigger_service(self.db)
             

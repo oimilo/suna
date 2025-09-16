@@ -122,6 +122,40 @@ class MCPToolWrapper(Tool):
     async def _execute_mcp_tool(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
         await self._ensure_initialized()
         return await self.tool_executor.execute_tool(tool_name, arguments)
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "list_mcp_tools",
+            "description": "List all available MCP tools with their fully qualified names to be used with call_mcp_tool.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    })
+    async def list_mcp_tools(self) -> ToolResult:
+        """Expose available MCP tools for discovery by the LLM."""
+        await self._ensure_initialized()
+        try:
+            tools = self.mcp_manager.get_all_tools_openapi() or []
+            # Normalize minimal view: name + description
+            normalized = []
+            for t in tools:
+                try:
+                    name = t.get('name') or t.get('operationId') or ''
+                    desc = t.get('description') or ''
+                    normalized.append({"name": name, "description": desc})
+                except Exception:
+                    continue
+            return self.success_response({
+                "message": f"Found {len(normalized)} MCP tool(s)",
+                "tools": normalized,
+                "tip": "Use call_mcp_tool with the exact 'name'"
+            })
+        except Exception as e:
+            return self.fail_response(f"Failed to list MCP tools: {str(e)}")
     
     @openapi_schema({
         "type": "function",
