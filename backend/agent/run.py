@@ -270,12 +270,12 @@ async def run_agent(
                     mcp_tools = [tool for tool in all_tools if tool not in ['call_mcp_tool', 'sb_files_tool', 'message_tool', 'expand_msg_tool', 'web_search_tool', 'sb_shell_tool', 'sb_vision_tool', 'sb_browser_tool', 'computer_use_tool', 'data_providers_tool', 'sb_deploy_tool', 'sb_expose_tool', 'update_agent_tool']]
                     logger.info(f"MCP tools registered: {mcp_tools}")
 
-                    # Apply allowlist and hide list_mcp_tools to force list_available_tools usage
+                    # Apply allowlist and optionally hide list_mcp_tools (only for trigger executions that set the preference)
                     try:
-                        # Always remove list_mcp_tools if present
-                        if 'list_mcp_tools' in thread_manager.tool_registry.tools:
+                        prefer_available = bool(agent_config.get('prefer_list_available_tools'))
+                        if prefer_available and 'list_mcp_tools' in thread_manager.tool_registry.tools:
                             del thread_manager.tool_registry.tools['list_mcp_tools']
-                            logger.info("Removed list_mcp_tools from registry (prefer list_available_tools)")
+                            logger.info("Removed list_mcp_tools from registry due to trigger preference")
 
                         allowed = agent_config.get('allowed_tools')
                         if allowed and isinstance(allowed, list):
