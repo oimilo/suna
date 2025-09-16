@@ -272,13 +272,17 @@ class AgentExecutor:
                 agent_id, agent_config, trigger_event, existing_project_id=trigger_result.project_id
             )
             
+            # Build execution variables, ensuring allowed_tools is propagated and explicit
+            exec_vars = dict(trigger_result.execution_variables or {})
+            if getattr(trigger_result, 'execution_recipe', None):
+                exec_vars["execution_recipe"] = trigger_result.execution_recipe
+            if getattr(trigger_result, 'allowed_tools', None):
+                exec_vars["allowed_tools"] = trigger_result.allowed_tools
+            if getattr(trigger_result, 'setup_readme', None):
+                exec_vars["setup_readme"] = trigger_result.setup_readme
+
             await self._create_initial_message(
-                thread_id, trigger_result.agent_prompt, {
-                    **(trigger_result.execution_variables or {}),
-                    **({"execution_recipe": trigger_result.execution_recipe} if hasattr(trigger_result, 'execution_recipe') else {}),
-                    **({"allowed_tools": trigger_result.allowed_tools} if trigger_result.allowed_tools else {}),
-                    **({"setup_readme": trigger_result.setup_readme} if trigger_result.setup_readme else {}),
-                }
+                thread_id, trigger_result.agent_prompt, exec_vars
             )
             
             # Inject allowed_tools/setup_readme into agent_config for runtime tool filtering and workspace hints
@@ -437,7 +441,17 @@ class AgentExecutor:
         except Exception:
             pass
 
-        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix + (f"\n{extra_hint}" if extra_hint else "")
+        # If we have an allowlist, append an explicit ALLOWED TOOLS section with exact names
+        allowed_tools_footer = ""
+        try:
+            allowed_list = (trigger_data or {}).get('allowed_tools') or []
+            if isinstance(allowed_list, list) and len(allowed_list) > 0:
+                names = ', '.join([str(x) for x in allowed_list])
+                allowed_tools_footer = f"\nALLOWED TOOLS (exact names for this run): {names}\nDO NOT use list_mcp_tools; always call list_available_tools first."
+        except Exception:
+            pass
+
+        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix + (f"\n{extra_hint}" if extra_hint else "") + allowed_tools_footer
         message_payload = {"role": "user", "content": rendered_prompt}
         
         await client.table('messages').insert({

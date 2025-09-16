@@ -270,21 +270,49 @@ async def run_agent(
                     mcp_tools = [tool for tool in all_tools if tool not in ['call_mcp_tool', 'sb_files_tool', 'message_tool', 'expand_msg_tool', 'web_search_tool', 'sb_shell_tool', 'sb_vision_tool', 'sb_browser_tool', 'computer_use_tool', 'data_providers_tool', 'sb_deploy_tool', 'sb_expose_tool', 'update_agent_tool']]
                     logger.info(f"MCP tools registered: {mcp_tools}")
 
-                    # Apply allowlist and optionally hide list_mcp_tools (only for trigger executions that set the preference)
+                    # Apply allowlist and optionally hide list_mcp_tools
                     try:
                         prefer_available = bool(agent_config.get('prefer_list_available_tools'))
-                        if prefer_available and 'list_mcp_tools' in thread_manager.tool_registry.tools:
-                            del thread_manager.tool_registry.tools['list_mcp_tools']
-                            logger.info("Removed list_mcp_tools from registry due to trigger preference")
+                        allowed = agent_config.get('allowed_tools') or []
+                        if not isinstance(allowed, list):
+                            allowed = []
 
-                        allowed = agent_config.get('allowed_tools')
-                        if allowed and isinstance(allowed, list):
-                            allowed_set = set(str(t) for t in allowed)
-                            allowed_set.add('list_available_tools')
+                        # If trigger preference is set OR we have an allowlist, hide list_mcp_tools to force list_available_tools
+                        if (prefer_available or len(allowed) > 0) and 'list_mcp_tools' in thread_manager.tool_registry.tools:
+                            del thread_manager.tool_registry.tools['list_mcp_tools']
+                            logger.info("Removed list_mcp_tools from registry due to trigger preference/allowlist")
+
+                        if len(allowed) > 0:
+                            # Normalize allowed names and build a matcher that accepts qualified or short names
+                            normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
+
+                            def is_allowed_tool(tool_name: str) -> bool:
+                                if tool_name in normalized_allowed:
+                                    return True
+                                # Accept qualified names like provider:tool or custom_* where the suffix matches
+                                for short in normalized_allowed:
+                                    if tool_name.endswith(f":{short}"):
+                                        return True
+                                    # Also accept exact short name if registry tool is unqualified
+                                    if tool_name == short:
+                                        return True
+                                return False
+
+                            # Always allow discovery via list_available_tools
+                            always_allow = {'list_available_tools'}
+                            # If any allowed tool appears qualified (contains ':'), keep call_mcp_tool so the LLM can execute it
+                            if any(':' in t for t in normalized_allowed):
+                                always_allow.add('call_mcp_tool')
+
                             for name in list(thread_manager.tool_registry.tools.keys()):
-                                if name not in allowed_set:
+                                if name in always_allow:
+                                    continue
+                                if not is_allowed_tool(name):
                                     del thread_manager.tool_registry.tools[name]
-                            logger.info(f"Applied tool allowlist; tools now: {list(thread_manager.tool_registry.tools.keys())}")
+
+                            logger.info(
+                                f"Applied robust tool allowlist (short-name mapping). Tools now: {list(thread_manager.tool_registry.tools.keys())}"
+                            )
                     except Exception as _e:
                         logger.warning(f"Failed to apply tool filtering: {_e}")
                 
