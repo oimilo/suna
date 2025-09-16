@@ -269,6 +269,24 @@ async def run_agent(
                     logger.info(f"All registered tools after MCP initialization: {all_tools}")
                     mcp_tools = [tool for tool in all_tools if tool not in ['call_mcp_tool', 'sb_files_tool', 'message_tool', 'expand_msg_tool', 'web_search_tool', 'sb_shell_tool', 'sb_vision_tool', 'sb_browser_tool', 'computer_use_tool', 'data_providers_tool', 'sb_deploy_tool', 'sb_expose_tool', 'update_agent_tool']]
                     logger.info(f"MCP tools registered: {mcp_tools}")
+
+                    # Apply allowlist and hide list_mcp_tools to force list_available_tools usage
+                    try:
+                        # Always remove list_mcp_tools if present
+                        if 'list_mcp_tools' in thread_manager.tool_registry.tools:
+                            del thread_manager.tool_registry.tools['list_mcp_tools']
+                            logger.info("Removed list_mcp_tools from registry (prefer list_available_tools)")
+
+                        allowed = agent_config.get('allowed_tools')
+                        if allowed and isinstance(allowed, list):
+                            allowed_set = set(str(t) for t in allowed)
+                            allowed_set.add('list_available_tools')
+                            for name in list(thread_manager.tool_registry.tools.keys()):
+                                if name not in allowed_set:
+                                    del thread_manager.tool_registry.tools[name]
+                            logger.info(f"Applied tool allowlist; tools now: {list(thread_manager.tool_registry.tools.keys())}")
+                    except Exception as _e:
+                        logger.warning(f"Failed to apply tool filtering: {_e}")
                 
                 except Exception as e:
                     logger.error(f"Failed to initialize MCP tools: {e}")

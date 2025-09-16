@@ -24,6 +24,39 @@ from services.daily_credits import (
     get_daily_credits_summary
 )
 
+# --- Local subscription cache helpers (avoid downgrading paying users on transient errors) ---
+async def get_cached_subscription(client, user_id: str) -> Optional[Dict]:
+    """Get last known subscription from our DB cache.
+    Prefer public.billing_subscriptions; fallback to basejump.billing_customers active flag.
+    """
+    try:
+        # Public cache with price_id/status synced by webhook
+        cached = await client.from_('billing_subscriptions') \
+            .select('id, status, price_id, updated_at') \
+            .eq('account_id', user_id) \
+            .order('updated_at', desc=True) \
+            .limit(1) \
+            .execute()
+        if cached.data:
+            sub = cached.data[0]
+            return {
+                'id': sub.get('id'),
+                'status': sub.get('status', 'active'),
+                'price_id': sub.get('price_id')
+            }
+
+        # Fallback: if customer marked active, assume Pro as conservative default
+        cust = await client.schema('basejump').from_('billing_customers') \
+            .select('active') \
+            .eq('account_id', user_id) \
+            .limit(1) \
+            .execute()
+        if cust.data and cust.data[0].get('active'):
+            return {'status': 'active', 'price_id': config.STRIPE_PRO_MONTHLY_ID}
+    except Exception as e:
+        logger.warning(f"Failed to fetch cached subscription for {user_id}: {e}")
+    return None
+
 # Initialize Stripe
 stripe.api_key = config.STRIPE_SECRET_KEY
 
