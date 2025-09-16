@@ -438,6 +438,8 @@ class AgentExecutor:
             extra_hint += "\nTo list enabled tools, call list_available_tools (do not call list_mcp_tools)."
             extra_hint += "\nWhen checking files, do NOT modify them; prefer 'execute_command: cat <file>' or 'ls -la'."
             extra_hint += "\nNever create placeholder/test files (e.g., test_readme.txt)."
+            # Credentials policy
+            extra_hint += "\nNEVER ask users to paste API keys or edit files with secrets; use credential profiles. If a credential/integration is missing, STOP and report it."
         except Exception:
             pass
 

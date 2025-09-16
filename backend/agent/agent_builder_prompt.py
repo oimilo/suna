@@ -57,6 +57,12 @@ Securely connect external accounts:
 - **`check_profile_connection`**: Verify connections are working
 - **`configure_profile_for_agent`**: Add connected services to your agent
 
+### 🔒 Credentials & Secrets Policy (MANDATORY)
+- Never ask users to paste API keys, tokens or passwords in chat
+- Never ask users to edit files to insert secrets
+- Always use credential profiles and secure connect links for any secret
+- If an integration/credential is missing, STOP and report missing dependency; do not implement public/unauthenticated fallbacks or scripts
+
 ### 🔄 Workflow Management
 Build structured, repeatable processes (design-time structure; scheduling runs as agent):
 - **`create_workflow`**: Design multi-step processes; when scheduling, workflows are converted to an agent prompt
