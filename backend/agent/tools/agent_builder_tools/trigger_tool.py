@@ -8,6 +8,7 @@ from datetime import datetime
 from services.supabase import DBConnection
 from triggers import get_trigger_service
 from triggers import TriggerType
+from triggers.utils import format_workflow_for_llm
 
 
 class TriggerTool(AgentBuilderBaseTool):
@@ -92,53 +93,44 @@ class TriggerTool(AgentBuilderBaseTool):
         agent_prompt: Optional[str] = None
     ) -> ToolResult:
         try:
-            # Auto-detect execution_type if not provided
-            if execution_type is None:
-                if workflow_id:
-                    execution_type = "workflow"
-                elif agent_prompt:
-                    execution_type = "agent"
-                else:
-                    return self.fail_response("Either workflow_id or agent_prompt must be provided")
-            
-            if execution_type not in ["workflow", "agent"]:
-                return self.fail_response("execution_type must be either 'workflow' or 'agent'")
-            
-            # Ensure consistency between execution_type and parameters
-            if execution_type == "workflow":
-                if not workflow_id:
-                    return self.fail_response("workflow_id is required when execution_type is 'workflow'")
-                # Clear agent_prompt if workflow execution
-                agent_prompt = None
-            elif execution_type == "agent":
-                if not agent_prompt:
-                    return self.fail_response("agent_prompt is required when execution_type is 'agent'")
-                # Clear workflow fields if agent execution
-                workflow_id = None
-                workflow_input = None
-            
-            if execution_type == "workflow":
-                client = await self.db.client
+            # Always execute as agent for new triggers. If workflow_id is provided,
+            # convert it to an agent prompt using the workflow definition.
+            client = await self.db.client
+            workflow_name: Optional[str] = None
+            original_workflow_id = workflow_id
+
+            if workflow_id and not agent_prompt:
                 workflow_result = await client.table('agent_workflows').select('*').eq('id', workflow_id).eq('agent_id', self.agent_id).execute()
                 if not workflow_result.data:
                     return self.fail_response(f"Workflow {workflow_id} not found or doesn't belong to this agent")
-                
                 workflow = workflow_result.data[0]
-                if workflow['status'] != 'active':
-                    return self.fail_response(f"Workflow '{workflow['name']}' is not active. Please activate it first.")
-            
+                workflow_name = workflow.get('name')
+                if workflow.get('status') != 'active':
+                    return self.fail_response(f"Workflow '{workflow_name}' is not active. Please activate it first.")
+                steps_json = workflow.get('steps', [])
+                agent_prompt = format_workflow_for_llm(
+                    workflow_config=workflow,
+                    steps=steps_json,
+                    input_data=workflow_input
+                )
+
+            if not agent_prompt:
+                return self.fail_response("agent_prompt is required (provide it directly or a valid workflow_id to convert)")
+
+            # Force execution_type to agent and clear workflow fields for storage
+            execution_type = "agent"
+            workflow_id = None
+            workflow_input = None
+
             trigger_config = {
                 "cron_expression": cron_expression,
-                "execution_type": execution_type,
-                "provider_id": "schedule"
+                "execution_type": "agent",
+                "provider_id": "schedule",
+                "agent_prompt": agent_prompt
             }
-            
-            if execution_type == "workflow":
-                trigger_config["workflow_id"] = workflow_id
-                if workflow_input:
-                    trigger_config["workflow_input"] = workflow_input
-            else:
-                trigger_config["agent_prompt"] = agent_prompt
+            if original_workflow_id:
+                trigger_config["converted_from_workflow"] = True
+                trigger_config["source_workflow_id"] = original_workflow_id
             
             trigger_svc = get_trigger_service(self.db)
             
@@ -153,14 +145,10 @@ class TriggerTool(AgentBuilderBaseTool):
                 
                 result_message = f"Scheduled trigger '{name}' created successfully!\n\n"
                 result_message += f"**Schedule**: {cron_expression}\n"
-                result_message += f"**Type**: {execution_type.capitalize()} execution\n"
-                
-                if execution_type == "workflow":
-                    result_message += f"**Workflow**: {workflow['name']}\n"
-                    if workflow_input:
-                        result_message += f"**Input Data**: {json.dumps(workflow_input, indent=2)}\n"
-                else:
-                    result_message += f"**Prompt**: {agent_prompt}\n"
+                result_message += f"**Type**: Agent execution\n"
+                if workflow_name:
+                    result_message += f"**Converted from Workflow**: {workflow_name}\n"
+                result_message += f"**Prompt**: {agent_prompt}\n"
                 
                 result_message += f"\nThe trigger is now active and will run according to the schedule."
                 

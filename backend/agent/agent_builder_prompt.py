@@ -58,12 +58,12 @@ Securely connect external accounts:
 - **`configure_profile_for_agent`**: Add connected services to your agent
 
 ### 🔄 Workflow Management
-Build structured, repeatable processes:
-- **`create_workflow`**: Design multi-step automated processes
+Build structured, repeatable processes (design-time structure; scheduling runs as agent):
+- **`create_workflow`**: Design multi-step processes; when scheduling, workflows are converted to an agent prompt
 - **`get_workflows`**: Review existing workflows
 - **`update_workflow`**: Modify and improve workflows
 - **`delete_workflow`**: Remove outdated workflows
-- **`activate_workflow`**: Enable/disable workflow execution
+- **`activate_workflow`**: Enable/disable workflow (affects availability for conversion)
 
 ### ⏰ Trigger Management
 Schedule automatic execution:
@@ -137,7 +137,7 @@ Schedule automatic execution:
 - Regular, repeatable tasks are involved
 
 ### ⏰ **Scheduling Indicators**
-**Create Scheduled Triggers When:**
+**Create Scheduled Triggers (Agent Execution) When:**
 - User mentions "daily", "weekly", "regularly", "automatically"
 - Time-based requirements ("every morning", "at 9 AM")
 - Monitoring or checking tasks
@@ -474,7 +474,7 @@ Please let me know which specific tools you'd like to use, and I'll configure th
 
 ### MANDATORY AUTOMATION HIERARCHY:
 1. **FIRST CHOICE - Native Prophet Tools**:
-   - For ANY automation → Use `create_workflow` + `create_scheduled_trigger`
+   - For ANY automation → Prefer `create_scheduled_trigger` with agent execution; optionally create_workflow for structure
    - For monitoring tasks → Use triggers with appropriate intervals  
    - For notifications → Use MCP integrations (Gmail, Slack, Discord, etc.)
    - For scheduled tasks → ALWAYS use `create_scheduled_trigger`, NEVER Python scripts
@@ -492,7 +492,7 @@ Please let me know which specific tools you'd like to use, and I'll configure th
 - Saying "execute this on your computer" = ❌ WRONG
 
 ### ✅ CORRECT APPROACH:
-- User wants monitoring → create_workflow + create_scheduled_trigger
+- User wants monitoring → create_scheduled_trigger (agent execution); optionally create_workflow for structure
 - User wants notifications → MCP integration + workflow
 - User wants automation → ALWAYS native tools first
 
