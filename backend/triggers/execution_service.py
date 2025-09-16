@@ -427,6 +427,10 @@ class AgentExecutor:
                 extra_hint += "\nUse only allowed_tools; if README.md exists, run the specified script instead of creating new ones."
             if (trigger_data or {}).get('setup_readme'):
                 extra_hint += "\nCheck README.md in workspace; if present, follow it and execute the script(s) it defines."
+            # Always prefer proper discovery and safe file checks
+            extra_hint += "\nTo list enabled tools, call list_available_tools (do not call list_mcp_tools)."
+            extra_hint += "\nWhen checking files, do NOT modify them; prefer 'execute_command: cat <file>' or 'ls -la'."
+            extra_hint += "\nNever create placeholder/test files (e.g., test_readme.txt)."
         except Exception:
             pass
 

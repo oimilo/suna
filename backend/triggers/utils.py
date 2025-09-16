@@ -176,7 +176,8 @@ def format_workflow_for_llm(
     llm_workflow["summary"] = summary
     
     workflow_json = json.dumps(llm_workflow, indent=2)
-    tools_list = ', '.join(available_tools) if available_tools else 'Use any available tools from your system prompt'
+    # Prefer explicit allowlist wording when available_tools is provided
+    tools_list = ', '.join(available_tools) if available_tools else 'Use ONLY the allowed tools provided by the execution context'
     required_tools_list = ', '.join(required_tools) if required_tools else '(none specified)'
     bindings_json = json.dumps(tool_bindings_by_step, indent=2) if tool_bindings_by_step else '(none)'
     input_json = json.dumps(input_data, indent=2) if input_data else 'None provided'
