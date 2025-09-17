@@ -27,21 +27,62 @@ class ToolDiscoveryTool(Tool):
 
             tools: Dict[str, Dict[str, Any]] = dict(registry.tools)
 
-            # Merge MCP dynamic tools if wrapper is present
+            # Base: names already registrados no registry
+            registry_names: List[str] = list(tools.keys())
+
+            # Unir com integrações habilitadas no agente (configured/custom MCPs -> enabledTools)
+            combined_names: List[str] = []
+            combined_names.extend(registry_names)
+
             try:
-                mcp_wrapper = None
-                for _, info in tools.items():
-                    from agent.tools.mcp_tool_wrapper import MCPToolWrapper  # local import to avoid cycles
-                    if isinstance(info.get("instance"), MCPToolWrapper):
-                        mcp_wrapper = info.get("instance")
-                        break
-                if mcp_wrapper and hasattr(mcp_wrapper, "get_available_tools"):
-                    mcp_tools = self.thread_manager.tool_registry.tools
-                    # Already registered dynamic tools are in registry; if needed, could call wrapper.get_available_tools()
+                agent_cfg = getattr(self.thread_manager, 'agent_config', {}) or {}
+                enabled_from_mcps: List[str] = []
+                for coll_key in ['configured_mcps', 'custom_mcps']:
+                    for mcp in agent_cfg.get(coll_key, []) or []:
+                        for t in mcp.get('enabledTools', []) or []:
+                            if isinstance(t, str) and t.strip():
+                                enabled_from_mcps.append(t.strip())
+                combined_names.extend(enabled_from_mcps)
             except Exception:
                 pass
 
-            tool_names: List[str] = sorted(list(tools.keys()))
+            # Apply allowlist se existir (aceita nome qualificado ou sufixo curto)
+            try:
+                agent_cfg = getattr(self.thread_manager, 'agent_config', {}) or {}
+                allowed = agent_cfg.get('allowed_tools') or []
+                if not isinstance(allowed, list):
+                    allowed = []
+                normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
+
+                def passes_allowlist(name: str) -> bool:
+                    if not normalized_allowed:
+                        return True
+                    if name in normalized_allowed:
+                        return True
+                    for short in normalized_allowed:
+                        if name.endswith(f":{short}"):
+                            return True
+                    return False
+
+                # Always manter as funções de descoberta
+                always_keep = {"list_available_tools", "list_mcp_tools", "call_mcp_tool"}
+                filtered = []
+                for n in combined_names:
+                    if n in always_keep or passes_allowlist(n):
+                        filtered.append(n)
+                combined_names = filtered
+            except Exception:
+                pass
+
+            # Dedup + sort
+            seen = set()
+            deduped: List[str] = []
+            for n in combined_names:
+                if n not in seen:
+                    seen.add(n)
+                    deduped.append(n)
+
+            tool_names: List[str] = sorted(deduped)
 
             if not include_descriptions:
                 return {
@@ -53,9 +94,11 @@ class ToolDiscoveryTool(Tool):
             described: List[Dict[str, str]] = []
             for name in tool_names:
                 try:
-                    schema = tools[name]["schema"].schema or {}
-                    func = schema.get("function", {}) if isinstance(schema, dict) else {}
-                    desc = func.get("description", "")
+                    desc = ""
+                    if name in tools:
+                        schema = tools[name]["schema"].schema or {}
+                        func = schema.get("function", {}) if isinstance(schema, dict) else {}
+                        desc = func.get("description", "")
                     described.append({"name": name, "description": desc})
                 except Exception:
                     described.append({"name": name, "description": ""})
