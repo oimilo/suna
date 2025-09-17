@@ -290,7 +290,7 @@ async def run_agent(
                             if 'list_mcp_tools' in thread_manager.tool_registry.tools:
                                 logger.info("Keeping list_mcp_tools as alias (ToolDiscoveryTool) if present; removing any duplicate from MCP wrapper")
 
-                        if len(allowed) > 0:
+                        if True:
                             # Normalize allowed names and build a matcher that accepts qualified or short names
                             normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
 
@@ -306,11 +306,8 @@ async def run_agent(
                                         return True
                                 return False
 
-                            # Always allow discovery via list_available_tools and the alias list_mcp_tools
-                            always_allow = {'list_available_tools', 'list_mcp_tools'}
-                            # If any allowed tool appears qualified (contains ':'), keep call_mcp_tool so the LLM can execute it
-                            if any(':' in t for t in normalized_allowed):
-                                always_allow.add('call_mcp_tool')
+                            # Always allow discovery + bridge
+                            always_allow = {'list_available_tools', 'list_mcp_tools', 'call_mcp_tool'}
 
                             for name in list(thread_manager.tool_registry.tools.keys()):
                                 if name in always_allow:
