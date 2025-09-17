@@ -416,44 +416,61 @@ class AgentExecutor:
             except Exception:
                 return text
 
-        # Append compact execution recipe if present on trigger payload (when created from workflow)
-        recipe_suffix = ""
+        # Structured initial message for executor (DO FIRST + ALLOWED TOOLS + RECIPE + RULES)
+        try:
+            task_objective = _render_placeholders(prompt, trigger_data or {}) or "Execute the automation task."
+        except Exception:
+            task_objective = prompt or "Execute the automation task."
+
+        # Allowed tools list
+        allowed_list = []
+        try:
+            maybe_allowed = (trigger_data or {}).get('allowed_tools') or []
+            if isinstance(maybe_allowed, list):
+                allowed_list = [str(x) for x in maybe_allowed]
+        except Exception:
+            allowed_list = []
+
+        # Recipe JSON (minified), if present
+        recipe_text = ""
         try:
             recipe = (trigger_data or {}).get('execution_recipe')
             if recipe:
                 import json as _json
-                recipe_min = _json.dumps(recipe, separators=(',', ':'))
-                recipe_suffix = f"\n\nRECIPE:{recipe_min}"
+                recipe_text = _json.dumps(recipe, separators=(',', ':'))
         except Exception:
-            pass
+            recipe_text = ""
 
-        # Optional concise instruction to reuse README and allowed tools
-        extra_hint = ""
-        try:
-            if (trigger_data or {}).get('allowed_tools'):
-                extra_hint += "\nUse only allowed_tools; if README.md exists, run the specified script instead of creating new ones."
-            if (trigger_data or {}).get('setup_readme'):
-                extra_hint += "\nCheck README.md in workspace; if present, follow it and execute the script(s) it defines."
-            # Always prefer proper discovery and safe file checks
-            extra_hint += "\nTo list enabled tools, call list_available_tools (do not call list_mcp_tools)."
-            extra_hint += "\nWhen checking files, do NOT modify them; prefer 'execute_command: cat <file>' or 'ls -la'."
-            extra_hint += "\nNever create placeholder/test files (e.g., test_readme.txt)."
-            # Credentials policy
-            extra_hint += "\nNEVER ask users to paste API keys or edit files with secrets; use credential profiles. If a credential/integration is missing, STOP and report it."
-        except Exception:
-            pass
+        # DO THIS FIRST checklist
+        do_first_lines = []
+        do_first_lines.append("1) Se existir README.md no workspace, LEIA e EXECUTE exatamente o que ele instruir (não recrie arquivos ou scripts).")
+        do_first_lines.append("2) Caso não haja README.md aplicável, chame imediatamente list_available_tools e verifique as ferramentas habilitadas.")
+        if allowed_list:
+            do_first_lines.append(f"3) Use SOMENTE estas ferramentas nesta execução: {', '.join(allowed_list)}.")
+        else:
+            do_first_lines.append("3) Use apenas ferramentas habilitadas para este agente nesta execução.")
+        do_first_lines.append("4) Se a ferramenta necessária ou credencial estiver ausente, PARE e reporte 'missing tool/credential' — não tente workarounds.")
 
-        # If we have an allowlist, append an explicit ALLOWED TOOLS section with exact names
-        allowed_tools_footer = ""
-        try:
-            allowed_list = (trigger_data or {}).get('allowed_tools') or []
-            if isinstance(allowed_list, list) and len(allowed_list) > 0:
-                names = ', '.join([str(x) for x in allowed_list])
-                allowed_tools_footer = f"\nALLOWED TOOLS (exact names for this run): {names}\nDO NOT use list_mcp_tools; always call list_available_tools first."
-        except Exception:
-            pass
+        rules_lines = [
+            "- Nunca use list_mcp_tools; SEMPRE use list_available_tools para descobrir ferramentas.",
+            "- Ao inspecionar arquivos, não modifique: prefira 'execute_command: cat <file>' ou 'ls -la'.",
+            "- Nunca crie arquivos de teste/placeholder (ex.: test_readme.txt).",
+            "- Nunca peça chaves API nem oriente edição de arquivos com segredos; use perfis de credencial. Se faltar integração/credencial, pare e reporte.",
+            "- Execute de forma determinística. Evite explorar alternativas quando houver RECIPE ou README."
+        ]
 
-        rendered_prompt = _render_placeholders(prompt, trigger_data or {}) + recipe_suffix + (f"\n{extra_hint}" if extra_hint else "") + allowed_tools_footer
+        parts = []
+        parts.append(f"TASK OBJECTIVE:\n{task_objective}")
+        parts.append("\nDO THIS FIRST:")
+        parts.append("\n" + "\n".join([f"- {line}" for line in do_first_lines]))
+        if allowed_list:
+            parts.append(f"\nALLOWED TOOLS (nomes exatos nesta execução): {', '.join(allowed_list)}")
+        if recipe_text:
+            parts.append(f"\nEXECUTION RECIPE (siga exatamente): {recipe_text}")
+        parts.append("\nREGRAS:")
+        parts.append("\n" + "\n".join(rules_lines))
+
+        rendered_prompt = "\n".join(parts)
         message_payload = {"role": "user", "content": rendered_prompt}
         
         await client.table('messages').insert({
