@@ -25,7 +25,22 @@ class ToolDiscoveryTool(Tool):
                     "total": 0
                 }
 
-            tools: Dict[str, Dict[str, Any]] = registry.tools
+            tools: Dict[str, Dict[str, Any]] = dict(registry.tools)
+
+            # Merge MCP dynamic tools if wrapper is present
+            try:
+                mcp_wrapper = None
+                for _, info in tools.items():
+                    from agent.tools.mcp_tool_wrapper import MCPToolWrapper  # local import to avoid cycles
+                    if isinstance(info.get("instance"), MCPToolWrapper):
+                        mcp_wrapper = info.get("instance")
+                        break
+                if mcp_wrapper and hasattr(mcp_wrapper, "get_available_tools"):
+                    mcp_tools = self.thread_manager.tool_registry.tools
+                    # Already registered dynamic tools are in registry; if needed, could call wrapper.get_available_tools()
+            except Exception:
+                pass
+
             tool_names: List[str] = sorted(list(tools.keys()))
 
             if not include_descriptions:

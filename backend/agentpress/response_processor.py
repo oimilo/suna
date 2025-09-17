@@ -1393,6 +1393,13 @@ class ResponseProcessor:
                 if isinstance(function_name, str) and function_name in ["list_mcp_tools", "list-mcp-tools"]:
                     logger.info("Alias mapping: list_mcp_tools -> list_available_tools (unified discovery)")
                     function_name = "list_available_tools"
+                # If the model tries to call discovery via call_mcp_tool("list_mcp_tools"), redirect
+                if function_name == "call_mcp_tool" and isinstance(arguments, (dict,)):
+                    tn = arguments.get("tool_name")
+                    if isinstance(tn, str) and tn in ["list_mcp_tools", "list-mcp-tools"]:
+                        logger.info("Alias mapping: call_mcp_tool(list_mcp_tools) -> list_available_tools")
+                        function_name = "list_available_tools"
+                        arguments = {"include_descriptions": False}
             except Exception:
                 pass
 
