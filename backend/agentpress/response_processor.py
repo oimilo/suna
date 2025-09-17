@@ -1446,14 +1446,27 @@ class ResponseProcessor:
                             if passes_allowlist(n):
                                 matches.append(n)
 
-                    if len(matches) == 1 and 'call_mcp_tool' in available_functions:
-                        qualified = matches[0]
-                        logger.info(f"Resolved short tool '{function_name}' -> qualified '{qualified}', delegating via call_mcp_tool")
-                        call_args = {"tool_name": qualified, "arguments": arguments if isinstance(arguments, dict) else {}}
-                        tool_fn = available_functions.get('call_mcp_tool')
-                        result = await tool_fn(**call_args)
-                        span.end(status_message="tool_executed_via_alias", output=result)
-                        return result
+                    # Prefer qualified names when available
+                    if 'call_mcp_tool' in available_functions and len(matches) >= 1:
+                        qualified_candidates = [n for n in matches if ':' in n]
+                        if len(qualified_candidates) == 1:
+                            qualified = qualified_candidates[0]
+                        elif len(qualified_candidates) > 1:
+                            # If multiple qualified, pick the first deterministically
+                            qualified = sorted(qualified_candidates)[0]
+                        else:
+                            # Only short match; use it as last resort
+                            if len(matches) == 1:
+                                qualified = matches[0]
+                            else:
+                                qualified = None
+                        if qualified:
+                            logger.info(f"Resolved short tool '{function_name}' -> qualified '{qualified}', delegating via call_mcp_tool")
+                            call_args = {"tool_name": qualified, "arguments": arguments if isinstance(arguments, dict) else {}}
+                            tool_fn = available_functions.get('call_mcp_tool')
+                            result = await tool_fn(**call_args)
+                            span.end(status_message="tool_executed_via_alias", output=result)
+                            return result
                 except Exception as _alias_err:
                     logger.debug(f"Alias resolution failed for '{function_name}': {_alias_err}")
 
@@ -1500,10 +1513,20 @@ class ResponseProcessor:
                                 if n == short or n.endswith(f":{short}"):
                                     if passes_allowlist(n):
                                         matches.append(n)
-                            if len(matches) == 1:
-                                qualified = matches[0]
-                                logger.info(f"Resolved call_mcp_tool tool_name '{provided}' -> '{qualified}'")
-                                arguments['tool_name'] = qualified
+                            if len(matches) >= 1:
+                                qualified_candidates = [n for n in matches if ':' in n]
+                                if len(qualified_candidates) == 1:
+                                    qualified = qualified_candidates[0]
+                                elif len(qualified_candidates) > 1:
+                                    qualified = sorted(qualified_candidates)[0]
+                                else:
+                                    if len(matches) == 1:
+                                        qualified = matches[0]
+                                    else:
+                                        qualified = None
+                                if qualified:
+                                    logger.info(f"Resolved call_mcp_tool tool_name '{provided}' -> '{qualified}'")
+                                    arguments['tool_name'] = qualified
             except Exception as _norm_err:
                 logger.debug(f"call_mcp_tool argument normalization skipped: {_norm_err}")
             
