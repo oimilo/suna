@@ -281,72 +281,6 @@ class AgentExecutor:
             if getattr(trigger_result, 'setup_readme', None):
                 exec_vars["setup_readme"] = trigger_result.setup_readme
 
-            # Auto-augment: if agent_prompt references provider-qualified tools (provider:tool)
-            # create a minimal recipe to resolve credentials and execute deterministically,
-            # and ensure discovery/credential tools are allowed.
-            try:
-                prompt_text = trigger_result.agent_prompt or ""
-                qualified = []
-                try:
-                    import re as _re
-                    qualified = list({m.group(0) for m in _re.finditer(r"\b([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\b", prompt_text)})
-                except Exception:
-                    qualified = []
-
-                # Merge allowed tools
-                base_allow = set(exec_vars.get("allowed_tools") or [])
-                base_allow.update({
-                    "list_available_tools",
-                    "get_credential_profiles",
-                    "check_profile_connection",
-                    "configure_profile_for_agent",
-                    "call_mcp_tool",
-                })
-                for q in qualified:
-                    base_allow.add(q)
-                if base_allow:
-                    exec_vars["allowed_tools"] = sorted(base_allow)
-
-                # If no explicit recipe provided, synthesize a compact one
-                if "execution_recipe" not in exec_vars and qualified:
-                    steps = []
-                    for q in qualified:
-                        provider = q.split(":", 1)[0]
-                        steps.extend([
-                            {
-                                "step": f"Listar perfis de {provider}",
-                                "description": "Descobrir perfis conectados do provedor",
-                                "tool": "get_credential_profiles",
-                                "args": {"provider": provider}
-                            },
-                            {
-                                "step": "Escolher e validar perfil",
-                                "description": "Se houver vários, preferir o configurado para o agente; senão o primeiro conectado",
-                                "tool": "check_profile_connection",
-                                "args": {"profile_id": "{{chosen_profile_id}}"}
-                            },
-                            {
-                                "step": "Vincular perfil ao agente (idempotente)",
-                                "tool": "configure_profile_for_agent",
-                                "args": {"profile_id": "{{chosen_profile_id}}"}
-                            },
-                            {
-                                "step": f"Executar {q}",
-                                "description": "Executar a ferramenta do provedor usando o profile_id quando suportado",
-                                "tool": "call_mcp_tool",
-                                "args": {"tool_name": q, "arguments": {"profile_id": "{{chosen_profile_id}}"}}
-                            }
-                        ])
-
-                    exec_vars["execution_recipe"] = {
-                        "goal": "Resolver credencial do provedor e executar ferramenta(s) de forma determinística",
-                        "tools": list({"get_credential_profiles","check_profile_connection","configure_profile_for_agent","call_mcp_tool","list_available_tools", *qualified}),
-                        "recipe": steps,
-                        "success": "Ferramenta do provedor executada com sucesso usando um perfil conectado"
-                    }
-            except Exception as _auto_e:
-                logger.debug(f"Auto-augment for provider tools skipped: {_auto_e}")
-
             await self._create_initial_message(
                 thread_id, trigger_result.agent_prompt, exec_vars
             )
@@ -354,12 +288,11 @@ class AgentExecutor:
             # Inject allowed_tools/setup_readme into agent_config for runtime tool filtering and workspace hints
             enhanced_config = agent_config.copy()
             try:
-                # Prefer values computed in exec_vars (after auto-augment)
-                if isinstance(exec_vars, dict):
-                    if 'allowed_tools' in exec_vars:
-                        enhanced_config['allowed_tools'] = exec_vars.get('allowed_tools')
-                    if 'setup_readme' in exec_vars:
-                        enhanced_config['setup_readme'] = exec_vars.get('setup_readme')
+                if isinstance(trigger_result.execution_variables, dict):
+                    if 'allowed_tools' in trigger_result.execution_variables:
+                        enhanced_config['allowed_tools'] = trigger_result.execution_variables.get('allowed_tools')
+                    if 'setup_readme' in trigger_result.execution_variables:
+                        enhanced_config['setup_readme'] = trigger_result.execution_variables.get('setup_readme')
             except Exception:
                 pass
 
