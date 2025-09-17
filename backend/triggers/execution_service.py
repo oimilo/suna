@@ -450,6 +450,22 @@ class AgentExecutor:
         else:
             do_first_lines.append("3) Use apenas ferramentas habilitadas para este agente nesta execução.")
         do_first_lines.append("4) Se a ferramenta necessária ou credencial estiver ausente, PARE e reporte 'missing tool/credential' — não tente workarounds.")
+        # Generic credential selection flow for any MCP integration (provider:tool)
+        do_first_lines.append(
+            "5) Ao usar ferramentas qualificadas no formato 'provider:tool' (por ex.: provider:send_email), resolva a conta assim:"
+        )
+        do_first_lines.append(
+            "   - 5.1) Descubra o provider a partir do prefixo antes de ':' e chame get_credential_profiles com esse provider"
+        )
+        do_first_lines.append(
+            "   - 5.2) Se houver vários perfis conectados, prefira o marcado/configurado para este agente; caso contrário, escolha o primeiro com status=connected"
+        )
+        do_first_lines.append(
+            "   - 5.3) Valide com check_profile_connection(profile_id) e garanta configure_profile_for_agent(profile_id) (idempotente)"
+        )
+        do_first_lines.append(
+            "   - 5.4) Ao chamar a ferramenta do provider, se ela aceitar 'profile_id' nos argumentos, inclua-o explicitamente"
+        )
 
         rules_lines = [
             "- Nunca use list_mcp_tools; SEMPRE use list_available_tools para descobrir ferramentas.",
