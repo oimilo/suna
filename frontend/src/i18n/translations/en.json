@@ -1,0 +1,203 @@
+{
+  "dashboard": {
+    "greeting": "What would you like to do today?",
+    "inputPlaceholder": "Describe what you need help with...",
+    "openMenu": "Open menu",
+    "selectAgent": "Select agent",
+    "newChat": "New chat",
+    "examples": {
+      "title": "Usage examples",
+      "example1": "Create a sales dashboard",
+      "example2": "Analyze marketing data",
+      "example3": "Automate repetitive tasks",
+      "example4": "Generate custom reports"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "allModels": "All Models",
+    "searchModels": "Search models...",
+    "recommended": "Recommended",
+    "recommendedForOptimalPerformance": "Recommended for optimal performance"
+  },
+  "billing": {
+    "limitReached": "Usage limit reached",
+    "upgrade": "Upgrade",
+    "currentUsage": "Current usage",
+    "limit": "Limit"
+  },
+  "agents": {
+    "title": "Agents",
+    "create": "Create Agent",
+    "configure": "Configure",
+    "select": "Select Agent",
+    "newAgent": "New Agent",
+    "searchAgents": "Search agents...",
+    "exploreAllAgents": "Explore All Agents",
+    "createAgent": "Create Agent",
+    "creating": "Creating...",
+    "searchYourAgents": "Search your agents...",
+    "allAgents": "All Agents",
+    "templates": "Templates",
+    "noPublishedTemplatesYet": "No published templates yet",
+    "publishAgentsToMarketplace": "Publish your agents to the marketplace to share them with the community and track their usage.",
+    "failedToLoadTemplates": "Failed to load templates"
+  },
+  "chat": {
+    "thinking": "Thinking...",
+    "newConversation": "New conversation",
+    "sendMessage": "Send message",
+    "attachFile": "Attach file",
+    "recordVoiceMessage": "Record voice message",
+    "clickToStopRecording": "Click to stop recording",
+    "processing": "Processing..."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "account": "Account",
+    "billing": "Billing"
+  },
+  "pricing": {
+    "free": "Free",
+    "starter": "Starter",
+    "pro": "Professional",
+    "business": "Business",
+    "perMonth": "/month"
+  },
+  "landing": {
+    "hero": {
+      "title": "Connect all your apps. Automate any task.",
+      "subtitle": "AI agents that work for you 24/7",
+      "cta": "Start free",
+      "placeholder": "Ex: 'Notify me on WhatsApp when I receive important emails'",
+      "badge": "100% OPEN SOURCE"
+    },
+    "features": {
+      "title": "Why choose Prophet?",
+      "integration": {
+        "title": "2700+ Integrations",
+        "description": "Connect with WhatsApp, Gmail, Slack, Notion and more"
+      },
+      "automation": {
+        "title": "Smart Automation",
+        "description": "AI agents that understand context and make decisions"
+      },
+      "customization": {
+        "title": "100% Customizable",
+        "description": "Create agents and flows tailored to your business"
+      },
+      "security": {
+        "title": "Secure and Private",
+        "description": "Your data protected with end-to-end encryption"
+      }
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "step1": {
+        "title": "Describe your need",
+        "description": "Tell Prophet what you need in natural language"
+      },
+      "step2": {
+        "title": "AI agent creates the automation",
+        "description": "Our AI connects the apps and creates the flow automatically"
+      },
+      "step3": {
+        "title": "Relax while everything works",
+        "description": "Your agent works 24/7 executing your tasks"
+      }
+    },
+    "cta": {
+      "title": "Ready to automate your work?",
+      "subtitle": "Start free, no credit card required",
+      "button": "Create free account"
+    }
+  },
+  "workflows": {
+    "title": "Workflows",
+    "create": "Create workflow",
+    "edit": "Edit workflow",
+    "delete": "Delete workflow",
+    "run": "Run",
+    "stop": "Stop",
+    "schedule": "Schedule",
+    "status": {
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending",
+      "stopped": "Stopped"
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "configure": "Configure",
+    "test": "Test connection",
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Connection error"
+    }
+  },
+  "credentials": {
+    "connectNewApp": "Connect New App",
+    "searchAppsAndProfiles": "Search apps and profiles...",
+    "appsWithProfiles": "{count} apps with {profileCount} profiles",
+    "appsWithProfilesConnected": "{count} apps with {profileCount} profiles ({connectedCount} connected)",
+    "profileName": "Profile Name",
+    "status": "Status",
+    "actions": "Actions",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "default": "Default",
+    "inactive": "Inactive",
+    "connect": "Connect",
+    "editName": "Edit Name",
+    "removeDefault": "Remove Default",
+    "setAsDefault": "Set as Default",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "reconnect": "Reconnect",
+    "delete": "Delete",
+    "newProfile": "New Profile",
+    "profile": "profile",
+    "profiles": "profiles",
+    "noCredentialProfilesYet": "No credential profiles yet",
+    "connectYourFavoriteApps": "Connect your favorite apps to create credential profiles for your agents",
+    "connectApp": "Connect App",
+    "noResultsFound": "No results found",
+    "tryAdjustingSearch": "Try adjusting your search terms or browse all apps",
+    "clearSearch": "Clear search",
+    "failedToLoadCredentialProfiles": "Failed to load credential profiles. Please try again.",
+    "deleteProfile": "Delete Profile",
+    "deleteProfileConfirmation": "Are you sure you want to delete \"{profileName}\"? This action cannot be undone.",
+    "cancel": "Cancel",
+    "profileUpdatedSuccessfully": "Profile updated successfully",
+    "profileDeletedSuccessfully": "Profile deleted successfully",
+    "profileConnectedSuccessfully": "Profile connected successfully",
+    "browseApps": "Browse Apps",
+    "selectAppToCreateProfile": "Select an app to create a credential profile"
+  },
+  "sidebar": {
+    "home": "Home",
+    "history": "History",
+    "agents": "Agents",
+    "settings": "Settings",
+    "newTask": "New Task",
+    "integrations": "Integrations",
+    "explore": "Explore",
+    "myAgents": "My Agents",
+    "newAgent": "New Agent"
+  }
+}

@@ -1,0 +1,414 @@
+/* Toolcall Component Styles */
+
+/* Container for multiple tool calls */
+.toolcallGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Base container */
+.toolcallContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: 'Inter', var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--muted-foreground);
+  background: rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(8px);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  max-width: fit-content;
+}
+
+/* Text styling */
+.toolcallContainer span,
+.toolcallLoading span {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+:global(.dark) .toolcallContainer {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+:global(.dark) .toolcallContainer span,
+:global(.dark) .toolcallLoading span {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+:global(.dark) .toolcallContainer span:global(.text-muted-foreground),
+:global(.dark) .toolcallLoading span:global(.text-muted-foreground) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+
+:global(.dark) .toolcallContainer {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+
+.toolcallContainer:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.toolcallContainer:active {
+  transform: translateY(0);
+  /* Removed drop shadows per user request */
+  transition-duration: 0.1s;
+}
+
+:global(.dark) .toolcallContainer:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark .toolcallContainer:active {
+  transform: translateY(0);
+  /* Removed drop shadows per user request */
+  transition-duration: 0.1s;
+}
+
+/* Icon wrapper */
+.toolcallIcon {
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  border: none;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.toolcallIcon svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--muted-foreground);
+  transition: color 0.2s;
+  opacity: 0.6;
+}
+
+.dark .toolcallIcon {
+  background: transparent;
+  border: none;
+}
+
+.dark .toolcallIcon svg {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Icon hover effect */
+.toolcallContainer:hover .toolcallIcon svg {
+  opacity: 0.8;
+}
+
+.dark .toolcallContainer:hover .toolcallIcon svg {
+  opacity: 0.8;
+}
+
+
+/* Full toolcall wrapper for expanded views */
+.toolcallWrapper {
+  background: rgba(20, 20, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.toolcallWrapper:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  /* Removed drop shadows per user request */
+}
+
+/* Header for expanded toolcalls */
+.toolcallHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.toolcallTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  flex: 1;
+}
+
+/* Status badges */
+.toolcallStatus {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.toolcallStatus.pending {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.toolcallStatus.running {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.toolcallStatus.success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.toolcallStatus.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Container state variations */
+.toolcallContainer.pending {
+  border-color: rgba(251, 191, 36, 0.2);
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.dark .toolcallContainer.pending {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.toolcallContainer.pending .toolcallIcon svg {
+  color: rgba(251, 191, 36, 0.8);
+  opacity: 1;
+}
+
+.dark .toolcallContainer.pending .toolcallIcon svg {
+  color: rgba(252, 211, 77, 1);
+  opacity: 1;
+}
+
+.toolcallContainer.running {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.dark .toolcallContainer.running {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.toolcallContainer.running .toolcallIcon svg {
+  color: rgba(59, 130, 246, 0.8);
+  opacity: 1;
+}
+
+.dark .toolcallContainer.running .toolcallIcon svg {
+  color: rgba(147, 197, 253, 1);
+  opacity: 1;
+}
+
+.toolcallContainer.success {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.dark .toolcallContainer.success {
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.toolcallContainer.success .toolcallIcon svg {
+  color: rgba(34, 197, 94, 0.8);
+  opacity: 1;
+}
+
+.dark .toolcallContainer.success .toolcallIcon svg {
+  color: rgba(134, 239, 172, 1);
+  opacity: 1;
+}
+
+.toolcallContainer.error {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.dark .toolcallContainer.error {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.toolcallContainer.error .toolcallIcon svg {
+  color: rgba(239, 68, 68, 0.8);
+  opacity: 1;
+}
+
+.dark .toolcallContainer.error .toolcallIcon svg {
+  color: rgba(252, 165, 165, 1);
+  opacity: 1;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+
+/* Loading state with shimmer animation - Independent of global animate-shimmer */
+/* TESTE: Esta mudança foi aplicada às 15:30 */
+.toolcallLoading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: 'Inter', var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--muted-foreground);
+  background: rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(8px);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  max-width: fit-content;
+}
+
+:global(.dark) .toolcallLoading {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+
+/* Hover state for loading */
+.dark .toolcallLoading:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+
+/* Tool View Wrapper Styles */
+.toolViewContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Override bg-card styles for file previews */
+.filePreviewOverride {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+:global(.dark) .filePreviewOverride {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.toolViewHeader {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.02);
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .toolViewHeader {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.toolViewHeaderContent {
+  display: flex;
+  align-items: center;
+  margin-left: 0.25rem;
+}
+
+.toolViewHeaderIcon {
+  height: 1rem;
+  width: 1rem;
+  margin-right: 0.5rem;
+  color: rgb(82 82 91);
+}
+
+.dark .toolViewHeaderIcon {
+  color: rgb(161 161 170);
+}
+
+.toolViewHeaderTitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(63 63 70);
+}
+
+.dark .toolViewHeaderTitle {
+  color: rgb(212 212 216);
+}
+
+.toolViewBody {
+  flex: 1;
+  overflow: auto;
+}
+
+.toolViewFooter {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.dark .toolViewFooter {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.toolViewFooterContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgb(113 113 122);
+}
+
+.dark .toolViewFooterContent {
+  color: rgb(161 161 170);
+}
+
+/* Smooth spin animation for loader */
+.smoothSpin {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
