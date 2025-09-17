@@ -1409,7 +1409,55 @@ class ResponseProcessor:
             # Look up the function by name
             tool_fn = available_functions.get(function_name)
             if not tool_fn:
-                logger.error(f"Tool function '{function_name}' not found in registry")
+                # Fallback: resolve short -> qualified and delegate via call_mcp_tool if uniquely resolvable
+                try:
+                    short = str(function_name).replace('-', '_')
+                    # Collect registry names and agent enabled tools
+                    registry_names = list(self.tool_registry.tools.keys())
+                    agent_cfg = self.agent_config or {}
+                    enabled = []
+                    for coll_key in ['configured_mcps', 'custom_mcps']:
+                        for mcp in agent_cfg.get(coll_key, []) or []:
+                            for t in mcp.get('enabledTools', []) or []:
+                                if isinstance(t, str) and t.strip():
+                                    enabled.append(t.strip())
+                    candidates = registry_names + enabled
+
+                    # Apply allowlist if present
+                    allowed = agent_cfg.get('allowed_tools') or []
+                    if not isinstance(allowed, list):
+                        allowed = []
+                    normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
+
+                    def passes_allowlist(name: str) -> bool:
+                        if not normalized_allowed:
+                            return True
+                        if name in normalized_allowed:
+                            return True
+                        for s in normalized_allowed:
+                            if name.endswith(f":{s}"):
+                                return True
+                        return False
+
+                    # Match exact short or qualified suffix
+                    matches = []
+                    for n in candidates:
+                        if n == short or n.endswith(f":{short}"):
+                            if passes_allowlist(n):
+                                matches.append(n)
+
+                    if len(matches) == 1 and 'call_mcp_tool' in available_functions:
+                        qualified = matches[0]
+                        logger.info(f"Resolved short tool '{function_name}' -> qualified '{qualified}', delegating via call_mcp_tool")
+                        call_args = {"tool_name": qualified, "arguments": arguments if isinstance(arguments, dict) else {}}
+                        tool_fn = available_functions.get('call_mcp_tool')
+                        result = await tool_fn(**call_args)
+                        span.end(status_message="tool_executed_via_alias", output=result)
+                        return result
+                except Exception as _alias_err:
+                    logger.debug(f"Alias resolution failed for '{function_name}': {_alias_err}")
+
+                logger.error(f"Tool function '{function_name}' not found in registry (after alias resolution)")
                 span.end(status_message="tool_not_found", level="ERROR")
                 return ToolResult(success=False, output=f"Tool function '{function_name}' not found")
             
