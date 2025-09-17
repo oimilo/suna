@@ -1460,6 +1460,52 @@ class ResponseProcessor:
                 logger.error(f"Tool function '{function_name}' not found in registry (after alias resolution)")
                 span.end(status_message="tool_not_found", level="ERROR")
                 return ToolResult(success=False, output=f"Tool function '{function_name}' not found")
+
+            # If we are about to execute call_mcp_tool, normalize tool_name argument from short -> qualified
+            try:
+                if function_name == 'call_mcp_tool' and isinstance(arguments, dict):
+                    provided = arguments.get('tool_name')
+                    if isinstance(provided, str) and provided:
+                        # If already qualified, keep; else try to resolve
+                        if ':' not in provided:
+                            short = provided.replace('-', '_').strip()
+                            registry_names = list(self.tool_registry.tools.keys())
+                            agent_cfg = self.agent_config or {}
+                            enabled = []
+                            for coll_key in ['configured_mcps', 'custom_mcps']:
+                                for mcp in agent_cfg.get(coll_key, []) or []:
+                                    for t in mcp.get('enabledTools', []) or []:
+                                        if isinstance(t, str) and t.strip():
+                                            enabled.append(t.strip())
+                            candidates = registry_names + enabled
+
+                            # Apply allowlist
+                            allowed = agent_cfg.get('allowed_tools') or []
+                            if not isinstance(allowed, list):
+                                allowed = []
+                            normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
+
+                            def passes_allowlist(name: str) -> bool:
+                                if not normalized_allowed:
+                                    return True
+                                if name in normalized_allowed:
+                                    return True
+                                for s in normalized_allowed:
+                                    if name.endswith(f":{s}"):
+                                        return True
+                                return False
+
+                            matches = []
+                            for n in candidates:
+                                if n == short or n.endswith(f":{short}"):
+                                    if passes_allowlist(n):
+                                        matches.append(n)
+                            if len(matches) == 1:
+                                qualified = matches[0]
+                                logger.info(f"Resolved call_mcp_tool tool_name '{provided}' -> '{qualified}'")
+                                arguments['tool_name'] = qualified
+            except Exception as _norm_err:
+                logger.debug(f"call_mcp_tool argument normalization skipped: {_norm_err}")
             
             logger.debug(f"Found tool function for '{function_name}', executing...")
             result = await tool_fn(**arguments)
