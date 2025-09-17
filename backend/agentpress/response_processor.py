@@ -1388,6 +1388,14 @@ class ResponseProcessor:
                 except json.JSONDecodeError:
                     arguments = {"text": arguments}
             
+            # Map legacy/confusing discovery calls to unified discovery
+            try:
+                if isinstance(function_name, str) and function_name in ["list_mcp_tools", "list-mcp-tools"]:
+                    logger.info("Alias mapping: list_mcp_tools -> list_available_tools (unified discovery)")
+                    function_name = "list_available_tools"
+            except Exception:
+                pass
+
             # Get available functions from tool registry
             available_functions = self.tool_registry.get_available_functions()
             
