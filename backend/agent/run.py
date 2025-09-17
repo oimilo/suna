@@ -149,6 +149,9 @@ async def run_agent(
         thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(MessageTool)
+        # Unified discovery tool: list_available_tools and list_mcp_tools alias
+        from agent.tools.tool_discovery_tool import ToolDiscoveryTool
+        thread_manager.add_tool(ToolDiscoveryTool, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxImageEditTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
@@ -158,6 +161,9 @@ async def run_agent(
         logger.info("Custom agent specified - registering only enabled tools")
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(MessageTool)
+        # Unified discovery tool: list_available_tools and list_mcp_tools alias
+        from agent.tools.tool_discovery_tool import ToolDiscoveryTool
+        thread_manager.add_tool(ToolDiscoveryTool, thread_manager=thread_manager)
         _cfg = enabled_tools.get('sb_shell_tool', {})
         if (isinstance(_cfg, dict) and _cfg.get('enabled', False)) or _cfg is True:
             thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
@@ -278,9 +284,11 @@ async def run_agent(
                             allowed = []
 
                         # If trigger preference is set OR we have an allowlist, hide list_mcp_tools to force list_available_tools
-                        if (prefer_available or len(allowed) > 0) and 'list_mcp_tools' in thread_manager.tool_registry.tools:
-                            del thread_manager.tool_registry.tools['list_mcp_tools']
-                            logger.info("Removed list_mcp_tools from registry due to trigger preference/allowlist")
+                        # If preference OR allowlist is present, ensure our alias handles discovery
+                        # Keep alias version registered by ToolDiscoveryTool; remove raw MCP version if present
+                        if (prefer_available or len(allowed) > 0):
+                            if 'list_mcp_tools' in thread_manager.tool_registry.tools:
+                                logger.info("Keeping list_mcp_tools as alias (ToolDiscoveryTool) if present; removing any duplicate from MCP wrapper")
 
                         if len(allowed) > 0:
                             # Normalize allowed names and build a matcher that accepts qualified or short names
@@ -298,8 +306,8 @@ async def run_agent(
                                         return True
                                 return False
 
-                            # Always allow discovery via list_available_tools
-                            always_allow = {'list_available_tools'}
+                            # Always allow discovery via list_available_tools and the alias list_mcp_tools
+                            always_allow = {'list_available_tools', 'list_mcp_tools'}
                             # If any allowed tool appears qualified (contains ':'), keep call_mcp_tool so the LLM can execute it
                             if any(':' in t for t in normalized_allowed):
                                 always_allow.add('call_mcp_tool')
