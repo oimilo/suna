@@ -325,6 +325,14 @@ async def run_agent(
                     logger.error(f"Failed to initialize MCP tools: {e}")
                     # Continue without MCP tools if initialization fails
 
+    # Log final registry keys and allowed tools for debugging
+    try:
+        final_keys = sorted(list(thread_manager.tool_registry.tools.keys()))
+        logger.info(f"Final tool registry keys (count={len(final_keys)}): {final_keys}")
+        logger.info(f"Effective allowed_tools: {agent_config.get('allowed_tools') if agent_config else None}")
+    except Exception as _log_e:
+        logger.debug(f"Registry logging failed: {_log_e}")
+
     # Prepare system prompt
     # First, get the default system prompt
     if "gemini-2.5-flash" in model_name.lower() and "gemini-2.5-pro" not in model_name.lower():
@@ -480,7 +488,7 @@ async def run_agent(
         latest_message = await client.table('messages').select('*').eq('thread_id', thread_id).in_('type', ['assistant', 'tool', 'user']).order('created_at', desc=True).limit(1).execute()
         if latest_message.data and len(latest_message.data) > 0:
             message_type = latest_message.data[0].get('type')
-            if message_type == 'assistant':
+            if message_type == 'assistant' and not (agent_config and agent_config.get('trigger_execution')):
                 logger.info(f"Last message was from assistant, stopping execution")
                 if trace:
                     trace.event(name="last_message_from_assistant", level="DEFAULT", status_message=(f"Last message was from assistant, stopping execution"))
@@ -601,6 +609,8 @@ async def run_agent(
         generation = trace.generation(name="thread_manager.run_thread") if trace else None
         try:
             # Make the LLM call and process the response
+            # Allow a bit more than 1 XML tool call for trigger executions (permit ls + list_available_tools)
+            xml_tool_limit = 2 if (agent_config and agent_config.get('trigger_execution')) else 1
             response = await thread_manager.run_thread(
                 thread_id=thread_id,
                 system_prompt=system_message,
@@ -609,7 +619,7 @@ async def run_agent(
                 llm_temperature=0,
                 llm_max_tokens=max_tokens,
                 tool_choice="auto",
-                max_xml_tool_calls=1,
+                max_xml_tool_calls=xml_tool_limit,
                 temporary_message=temporary_message,
                 processor_config=ProcessorConfig(
                     xml_tool_calling=True,
