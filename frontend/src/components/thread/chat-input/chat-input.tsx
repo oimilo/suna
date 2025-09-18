@@ -17,7 +17,7 @@ import { useFileDelete } from '@/hooks/react-query/files';
 import { useQueryClient } from '@tanstack/react-query';
 import { ToolCallInput } from './floating-tool-preview';
 import { ChatSnack } from './chat-snack';
-import { Brain, Zap, Workflow, Database } from 'lucide-react';
+import { Brain, Zap, Database } from 'lucide-react';
 import { FaGoogle, FaDiscord } from 'react-icons/fa';
 import { SiNotion } from 'react-icons/si';
 import { AgentConfigModal } from '@/components/agents/agent-config-modal';
@@ -526,13 +526,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                     
                     <div className="w-px h-4 bg-border/60" />
                     
-                    <button
-                      onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=workflows`)}
-                      className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
-                    >
-                      <Workflow className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="text-xs font-medium">Fluxos de trabalho</span>
-                    </button>
+                    {null}
                   </div>
                 </div>
               </div>

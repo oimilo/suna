@@ -1,11 +1,10 @@
 import React from 'react';
-import { Settings, Wrench, Server, BookOpen, Workflow, Zap } from 'lucide-react';
+import { Settings, Wrench, Server, BookOpen, Zap } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ExpandableMarkdownEditor } from '@/components/ui/expandable-markdown-editor';
 import { AgentToolsConfiguration } from '../agent-tools-configuration';
 import { AgentMCPConfiguration } from '../agent-mcp-configuration';
 import { AgentKnowledgeBaseManager } from '../knowledge-base/agent-knowledge-base-manager';
-import { AgentWorkflowsConfiguration } from '../workflows/agent-workflows-configuration';
 import { AgentTriggersConfiguration } from '../triggers/agent-triggers-configuration';
 import { toast } from 'sonner';
 import { BRANDING } from '@/lib/branding';
@@ -65,7 +64,7 @@ export function ConfigurationTab({
     if (isSunaAgent && (val === 'system' || val === 'tools')) {
       return 'integrations';
     }
-    if (['system', 'tools', 'integrations', 'knowledge', 'workflows', 'triggers'].includes(val || '')) {
+    if (['system', 'tools', 'integrations', 'knowledge', 'triggers'].includes(val || '')) {
       return val!;
     }
     return isSunaAgent ? 'integrations' : 'system';
@@ -218,28 +217,7 @@ export function ConfigurationTab({
             />
           </AccordionContent>
         </AccordionItem>
-        <AccordionItem 
-          value="workflows" 
-          className="rounded-xl hover:bg-muted/30 border transition-colors duration-200"
-        >
-          <AccordionTrigger className="hover:no-underline py-4 px-4 [&[data-state=open]]:pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                <Workflow className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="text-left">
-                <h4 className="text-sm font-medium text-foreground">Fluxos de Trabalho</h4>
-                <p className="text-xs text-muted-foreground">Automatize processos complexos</p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4">
-            <AgentWorkflowsConfiguration
-              agentId={agentId}
-              agentName={displayData.name || 'Agent'}
-            />
-          </AccordionContent>
-        </AccordionItem>
+        {null}
         <AccordionItem 
           value="triggers" 
           className="rounded-xl hover:bg-muted/30 border transition-colors duration-200"
