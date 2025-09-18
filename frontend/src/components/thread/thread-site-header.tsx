@@ -150,7 +150,7 @@ export function SiteHeader({
       )}>
         <div className={cn(
           "w-full mx-auto flex items-center justify-between",
-          isMobile ? "w-full" : "max-w-3xl"
+          isMobile ? "w-full" : "max-w-3xl px-4"
         )}>
           {isMobile && (
             <Button
@@ -165,12 +165,8 @@ export function SiteHeader({
           )}
 
           <div className="flex flex-1 items-center gap-2">
-          {/* Visual-only side panel button */}
-          {!isMobile && (
-            <div className="h-9 w-9 flex items-center justify-center opacity-40 cursor-default">
-              <PanelRightOpen className="h-4 w-4" />
-            </div>
-          )}
+          {/* Removed visual-only side panel icon (no-op) */}
+          {null}
           
           {isEditing ? (
             <div className="flex items-center gap-1">
@@ -204,7 +200,7 @@ export function SiteHeader({
             <Skeleton className="h-5 w-32" />
           ) : (
             <div
-              className="text-base font-medium text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
+              className="text-base font-medium text-foreground cursor-pointer flex items-center"
               onClick={startEditing}
               title="Clique para renomear o projeto"
             >
