@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PanelLeft, Command, Calendar, Clock, Zap, Bot, Trash2 } from 'lucide-react';
+import { Plus, PanelLeft, Command, Calendar, Clock, Zap, Bot, Trash2, ChevronRight } from 'lucide-react';
 import { NavUserHover } from './nav-user-hover';
 import { NavThreads } from './nav-threads';
 import Link from 'next/link';
@@ -260,7 +260,7 @@ export function HoverSidebar() {
         hoverTimeoutRef.current = setTimeout(() => {
           setIsHovered(true);
           setIsExpanded(true);
-        }, 400); // Increased delay to prevent accidental activation
+        }, 100); // Faster open on hover for more responsive UX
       }
     }
   };
@@ -293,37 +293,50 @@ export function HoverSidebar() {
       {/* Header com ícone e logo - esconde na página de chat e na página de config de agentes */}
       {!pathname.includes('/thread/') && !pathname.includes('/agents/config/') && (
         <div className="fixed top-0 left-0 z-[100] h-14 flex items-center px-4 bg-transparent w-full">
-          {/* Ícone de painel sempre visível */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={togglePin}
-                onMouseEnter={!isPinned ? handleMouseEnter : undefined}
-                className="h-8 w-8 mr-2"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="z-[120]">
-              {isPinned ? 'Desacoplar' : 'Acoplar'}
-            </TooltipContent>
-          </Tooltip>
+          {/* Ícone de painel: ocultar no /dashboard */}
+          {!pathname.startsWith('/dashboard') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={togglePin}
+                  onMouseEnter={!isPinned ? handleMouseEnter : undefined}
+                  className="h-8 w-8 mr-2"
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="z-[120]">
+                {isPinned ? 'Desacoplar' : 'Acoplar'}
+              </TooltipContent>
+            </Tooltip>
+          )}
           
           {/* Logo sempre visível */}
-          <Link href="/dashboard" className="flex items-center">
+          <Link href="/dashboard" className={cn("flex items-center", pathname.startsWith('/dashboard') ? 'ml-2.5' : '')}>
             <span className="font-dancing font-bold text-2xl">Prophet</span>
           </Link>
         </div>
       )}
 
-      {/* Área de ativação quadrada no canto superior esquerdo */}
+      {/* Faixa de ativação na borda esquerda (full height, estreita) */}
       {!isPinned && !isExpanded && (
         <div
-          className="fixed left-0 top-0 h-20 w-20 z-[99]"
+          className="fixed left-0 top-0 bottom-0 w-6 z-[99] hidden md:block group"
           onMouseEnter={handleMouseEnter}
-        />
+          tabIndex={0}
+          onFocus={handleMouseEnter}
+          onBlur={handleMouseLeave}
+          aria-label="Abrir barra lateral"
+        >
+          {/* Linha sutil indicando área ativa */}
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-foreground/15 to-transparent" />
+          {/* Setinha discreta que sugere abertura */}
+          <div className="absolute top-1/2 -translate-y-1/2 left-[5px] text-foreground/30 transition-all duration-200 group-hover:text-foreground/60 group-focus:text-foreground/60 group-hover:left-[6px] pointer-events-none">
+            <ChevronRight className="h-3 w-3" />
+          </div>
+        </div>
       )}
 
       {/* Sidebar expandida - flutuante sobre TODO o conteúdo */}
