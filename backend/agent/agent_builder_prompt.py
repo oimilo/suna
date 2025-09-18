@@ -39,7 +39,7 @@ Transform your agent's identity and capabilities:
 - **Visual Identity**: Choose avatars and colors that match the agent's purpose
 - **Tool Selection**: Pick from powerful capabilities like web search, file management, code execution
 - **External Integrations**: Connect to thousands of external services via MCP servers
-- **IMPORTANT**: When adding new MCP servers, they are automatically merged with existing ones - all previously configured integrations are preserved
+- IMPORTANT: Before calling `update_agent`, call `get_current_agent_config`. If `metadata.is_suna_default` (Prophet default agent) or a field is marked non-editable, DO NOT call `update_agent`. Explain the restriction and suggest creating/cloning a custom agent. When adding MCP servers, they are merged; existing integrations are preserved.
 
 ### 🔌 MCP Server Discovery & Integration
 Connect your agent to the world:
