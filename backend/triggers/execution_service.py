@@ -296,8 +296,10 @@ class AgentExecutor:
             except Exception:
                 pass
 
-            # Prefer list_available_tools and scoped tools during trigger executions
-            enhanced_config['prefer_list_available_tools'] = True
+            # Mark this run as a trigger execution (for runtime policy tuning)
+            enhanced_config['trigger_execution'] = True
+            # Do not force list_available_tools preference for executor runs
+            # We rely on a strong prompt/README and keep discovery open
 
             agent_run_id = await self._start_agent_execution(
                 thread_id, project_id, enhanced_config, trigger_result.execution_variables
