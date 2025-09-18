@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Square, Loader2, ArrowUp } from 'lucide-react';
+import { Square, Loader2, ArrowUp, Settings2, Brain, Database, Zap, Plug2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UploadedFile } from './chat-input';
 import { FileUploadHandler } from './file-upload-handler';
@@ -19,6 +19,13 @@ import { TooltipProvider, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { BillingModal } from '@/components/billing/billing-modal';
 import ChatDropdown from './chat-dropdown';
 import { handleFiles } from './file-upload-handler';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation';
 
 interface MessageInputProps {
   value: string;
@@ -62,6 +69,8 @@ interface MessageInputProps {
   toolCallIndex?: number;
   showToolPreview?: boolean;
   onExpandToolPreview?: () => void;
+  // Projects page quick-config
+  onOpenIntegrations?: () => void;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -108,9 +117,11 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       toolCallIndex,
       showToolPreview,
       onExpandToolPreview,
+      onOpenIntegrations,
     },
     ref,
   ) => {
+    const router = useRouter();
     const [billingModalOpen, setBillingModalOpen] = useState(false);
     const { enabled: customAgentsEnabled, loading: flagsLoading } = useFeatureFlag('custom_agents');
 
@@ -250,6 +261,55 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 isLoggedIn={isLoggedIn}
                 isFocused={isFocused}
               />
+            )}
+
+            {/* Quick Config dropup (projects chat input) */}
+            {isLoggedIn && selectedAgentId && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 rounded-lg hover:bg-muted/60 text-muted-foreground",
+                      !isFocused ? "opacity-40" : "opacity-100"
+                    )}
+                    title="Configurar agente"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => onOpenIntegrations ? onOpenIntegrations() : null}
+                    className="flex items-center gap-2"
+                  >
+                    <Plug2 className="h-4 w-4" />
+                    Integrações
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=instructions`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Brain className="h-4 w-4" />
+                    Instruções
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=knowledge`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Database className="h-4 w-4" />
+                    Conhecimento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=triggers`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Gatilhos
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
           </div>
