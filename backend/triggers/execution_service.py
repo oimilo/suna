@@ -513,7 +513,8 @@ class AgentExecutor:
         trigger_variables: Dict[str, Any]
     ) -> str:
         client = await self._db.client
-        model_name = "anthropic/claude-sonnet-4-20250514"
+        # Inherit model from agent configuration if available; fallback to config
+        model_name = agent_config.get('model_name') or agent_config.get('model') or getattr(config, 'MODEL_TO_USE', None) or "anthropic/claude-sonnet-4-20250514"
         account_id = agent_config.get('account_id')
         
         agent_run = await client.table('agent_runs').insert({
