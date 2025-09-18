@@ -131,9 +131,9 @@ class AgentConfigTool(AgentBuilderBaseTool):
                 
                 if restricted_fields:
                     return self.fail_response(
-                        f"Cannot modify {', '.join(restricted_fields)} for the default Suna agent. "
-                        f"Suna's core identity is managed centrally. However, you can still add MCP integrations, "
-                        f"create workflows, set up triggers, and customize other aspects of Suna."
+                        f"Cannot modify {', '.join(restricted_fields)} for the default Prophet agent. "
+                        f"Prophet's core identity is managed centrally. However, you can still add MCP integrations, "
+                        f"create scheduled triggers (agent execution) and customize other aspects of the agent."
                     )
             
             update_fields = {}
