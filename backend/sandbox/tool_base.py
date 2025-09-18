@@ -88,11 +88,11 @@ class SandboxToolsBase(Tool):
         return cleaned_path
 
     async def get_proxy_preview_url(self, file_path: str = "", port: int = 8080) -> str:
-        """Get the proxy preview URL for a file that avoids Daytona warning.
+        """Get the Prophet proxy preview URL for a file, avoiding Daytona warning.
         
         Args:
             file_path: Path to the file relative to /workspace (default: empty for root)
-            port: Port number (default: 8080, currently only 8080 is supported)
+            port: Port number (default: 8080). Other common ports are supported via a ported proxy route.
         
         Returns:
             The proxy URL that will be handled by our Next.js API route
@@ -104,14 +104,12 @@ class SandboxToolsBase(Tool):
         if file_path:
             file_path = file_path.replace('/workspace/', '').replace('/workspace', '').lstrip('/')
         
-        # For now, we only support port 8080 through our proxy
-        if port != 8080:
-            # If not port 8080, fall back to Daytona URL (for VNC etc)
-            preview_link = await self.sandbox.get_preview_link(port)
-            return preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-        
-        # Build the proxy URL using our API route
-        proxy_url = f"https://www.prophet.build/api/preview/{self.project_id}/{file_path}" if file_path else f"https://www.prophet.build/api/preview/{self.project_id}/"
+        # Build the proxy URL using our API route (supports 8080 directly, other ports via /p/{port})
+        if port == 8080:
+            proxy_url = f"https://www.prophet.build/api/preview/{self.project_id}/{file_path}" if file_path else f"https://www.prophet.build/api/preview/{self.project_id}/"
+        else:
+            base = f"https://www.prophet.build/api/preview/{self.project_id}/p/{port}/"
+            proxy_url = f"{base}{file_path}" if file_path else base
         logger.info(f"Returning proxy URL: {proxy_url}")
         
         return proxy_url
