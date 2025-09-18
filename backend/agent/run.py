@@ -270,6 +270,16 @@ async def run_agent(
                                     }
                                     logger.info(f"Registered dynamic MCP tool: {method_name}")
                     
+                    # Ensure credential profile management tools are available for any run with MCPs
+                    try:
+                        from services.supabase import DBConnection
+                        from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
+                        db_for_profiles = DBConnection()
+                        thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db_for_profiles, agent_id=agent_config.get('agent_id'))
+                        logger.info("Registered CredentialProfileTool for credential management")
+                    except Exception as _cred_e:
+                        logger.warning(f"Could not register CredentialProfileTool: {_cred_e}")
+
                     # Log all registered tools for debugging
                     all_tools = list(thread_manager.tool_registry.tools.keys())
                     logger.info(f"All registered tools after MCP initialization: {all_tools}")
@@ -290,7 +300,8 @@ async def run_agent(
                             if 'list_mcp_tools' in thread_manager.tool_registry.tools:
                                 logger.info("Keeping list_mcp_tools as alias (ToolDiscoveryTool) if present; removing any duplicate from MCP wrapper")
 
-                        if True:
+                        # Only apply filtering if we actually received an allowlist
+                        if len(allowed) > 0:
                             # Normalize allowed names and build a matcher that accepts qualified or short names
                             normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
 
@@ -318,6 +329,8 @@ async def run_agent(
                             logger.info(
                                 f"Applied robust tool allowlist (short-name mapping). Tools now: {list(thread_manager.tool_registry.tools.keys())}"
                             )
+                        else:
+                            logger.info("No allowed_tools provided; skipping runtime tool filtering (keeping discovery open)")
                     except Exception as _e:
                         logger.warning(f"Failed to apply tool filtering: {_e}")
                 
