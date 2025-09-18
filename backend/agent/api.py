@@ -780,7 +780,7 @@ async def stream_agent_run(
         pubsub_response = None
         pubsub_control = None
         listener_task = None
-            heartbeat_task = None
+        heartbeat_task = None
         terminate_stream = False
         initial_yield_complete = False
 
