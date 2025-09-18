@@ -469,6 +469,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   toolCallIndex={toolCallIndex}
                   showToolPreview={showToolPreview}
                   onExpandToolPreview={onExpandToolPreview}
+                  onOpenIntegrations={() => setRegistryDialogOpen(true)}
                 />
               </div>
 
