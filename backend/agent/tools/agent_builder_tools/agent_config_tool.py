@@ -108,8 +108,9 @@ class AgentConfigTool(AgentBuilderBaseTool):
     ) -> ToolResult:
         try:
             client = await self.db.client
+            effective_agent_id = self._get_target_agent_id()
             
-            agent_result = await client.table('agents').select('*').eq('agent_id', self.agent_id).execute()
+            agent_result = await client.table('agents').select('*').eq('agent_id', effective_agent_id).execute()
             if not agent_result.data:
                 return self.fail_response("Agent not found")
             
@@ -197,7 +198,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
             update_data = update_fields.copy()
             update_data["config"] = unified_config
                 
-            result = await client.table('agents').update(update_data).eq('agent_id', self.agent_id).execute()
+            result = await client.table('agents').update(update_data).eq('agent_id', effective_agent_id).execute()
             
             if not result.data:
                 return self.fail_response("Failed to update agent")

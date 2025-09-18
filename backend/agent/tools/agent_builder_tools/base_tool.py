@@ -12,6 +12,15 @@ class AgentBuilderBaseTool(Tool):
         self.db = db_connection
         self.agent_id = agent_id
     
+    def _get_target_agent_id(self) -> str:
+        """Resolve the effective target agent id (prefer thread's target_agent_id)."""
+        try:
+            if hasattr(self.thread_manager, 'target_agent_id') and self.thread_manager.target_agent_id:
+                return self.thread_manager.target_agent_id
+        except Exception:
+            pass
+        return self.agent_id
+    
     async def _get_current_account_id(self) -> str:
         try:
             context_vars = structlog.contextvars.get_contextvars()
@@ -39,7 +48,8 @@ class AgentBuilderBaseTool(Tool):
     async def _get_agent_data(self) -> Optional[dict]:
         try:
             client = await self.db.client
-            result = await client.table('agents').select('*').eq('agent_id', self.agent_id).execute()
+            effective_agent_id = self._get_target_agent_id()
+            result = await client.table('agents').select('*').eq('agent_id', effective_agent_id).execute()
             
             if not result.data:
                 return None
