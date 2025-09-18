@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Settings2, Brain, Database, Zap, Workflow, Bot } from 'lucide-react';
+import { Settings2, Brain, Database, Zap, Bot } from 'lucide-react';
 import { BRANDING } from '@/lib/branding';
 import { AgentMCPConfiguration } from './agent-mcp-configuration';
 import { AgentTriggersConfiguration } from './triggers/agent-triggers-configuration';
-import { AgentWorkflowsConfiguration } from './workflows/agent-workflows-configuration';
 import { AgentKnowledgeBaseManager } from './knowledge-base/agent-knowledge-base-manager';
 import { AgentToolsConfiguration } from './agent-tools-configuration';
 import { AgentSelector } from '../thread/chat-input/agent-selector';
@@ -145,7 +144,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
 
         <div className="flex-1 min-h-0 px-6 py-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-5 flex-shrink-0 h-9 mb-4">
+            <TabsList className="grid w-full grid-cols-4 flex-shrink-0 h-9 mb-4">
               <TabsTrigger value="tools" className="text-xs">
                 <Settings2 className="h-3 w-3 mr-1" />
                 Ferramentas
@@ -162,10 +161,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
                 <Zap className="h-3 w-3 mr-1" />
                 Gatilhos
               </TabsTrigger>
-              <TabsTrigger value="workflows" className="text-xs">
-                <Workflow className="h-3 w-3 mr-1" />
-                Fluxos de Trabalho
-              </TabsTrigger>
+              {null}
             </TabsList>
 
             <TabsContent value="tools" className="flex-1 m-0 mt-0 overflow-y-auto overflow-hidden">
@@ -277,20 +273,7 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="workflows" className="flex-1 m-0 mt-0 overflow-y-auto overflow-hidden">
-              <div className="h-full">
-                {selectedAgentId ? (
-                  <AgentWorkflowsConfiguration
-                    agentId={selectedAgentId}
-                    agentName={agentName}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-muted-foreground">Selecione um agente para configurar fluxos de trabalho</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
+            {null}
           </Tabs>
         </div>
       </DialogContent>
