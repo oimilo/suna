@@ -446,7 +446,8 @@ class AgentExecutor:
         # DO THIS FIRST checklist
         do_first_lines = []
         do_first_lines.append("1) Se existir README.md no workspace, LEIA e EXECUTE exatamente o que ele instruir (não recrie arquivos ou scripts).")
-        do_first_lines.append("2) Caso não haja README.md aplicável, chame imediatamente list_available_tools e verifique as ferramentas habilitadas.")
+        do_first_lines.append("2) Caso não haja README.md aplicável, chame imediatamente list_available_tools e verifique as ferramentas habilitadas.")        
+        do_first_lines.append("   - 2.1) Se a ferramenta necessária estiver listada, EXECUTE-A IMEDIATAMENTE; não finalize a resposta entre discovery e execução.")
         if allowed_list:
             do_first_lines.append(f"3) Use SOMENTE estas ferramentas nesta execução: {', '.join(allowed_list)}.")
         else:
@@ -467,6 +468,9 @@ class AgentExecutor:
         )
         do_first_lines.append(
             "   - 5.4) Ao chamar a ferramenta do provider, se ela aceitar 'profile_id' nos argumentos, inclua-o explicitamente"
+        )
+        do_first_lines.append(
+            "6) Não encerre a resposta antes de tentar a execução principal (após discovery e, se preciso, seleção/validação de perfil)."
         )
 
         rules_lines = [
