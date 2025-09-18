@@ -53,6 +53,13 @@ async def run_agent_async(
     logger.info(f"Starting agent run {agent_run_id} for thread {thread_id}")
     
     try:
+        # Ensure thread_id is available to tools that resolve account context
+        from utils.logger import structlog
+        try:
+            structlog.contextvars.bind_contextvars(thread_id=thread_id)
+        except Exception:
+            pass
+
         # Initialize the response streaming for this agent run
         response_list_key = f"agent_run:{agent_run_id}:responses"
         response_channel = f"agent_run:{agent_run_id}:new_response"
