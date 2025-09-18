@@ -780,6 +780,7 @@ async def stream_agent_run(
         pubsub_response = None
         pubsub_control = None
         listener_task = None
+            heartbeat_task = None
         terminate_stream = False
         initial_yield_complete = False
 
@@ -819,6 +820,18 @@ async def stream_agent_run(
 
             # Queue to communicate between listeners and the main generator loop
             message_queue = asyncio.Queue()
+
+            # Heartbeat (keep-alive) to prevent intermediaries from closing idle SSE connections
+            async def heartbeat():
+                try:
+                    while not terminate_stream:
+                        await asyncio.sleep(15)
+                        try:
+                            await message_queue.put({"type": "heartbeat"})
+                        except asyncio.CancelledError:
+                            break
+                except asyncio.CancelledError:
+                    pass
 
             async def listen_messages():
                 response_reader = pubsub_response.listen()
@@ -876,6 +889,7 @@ async def stream_agent_run(
 
 
             listener_task = asyncio.create_task(listen_messages())
+            heartbeat_task = asyncio.create_task(heartbeat())
 
             # 4. Main loop to process messages from the queue
             while not terminate_stream:
@@ -909,9 +923,21 @@ async def stream_agent_run(
 
                     elif queue_item["type"] == "error":
                         logger.error(f"Listener error for {agent_run_id}: {queue_item['data']}")
+                        # If the run already finished, emit a completed event instead of error
+                        try:
+                            run_status = await client.table('agent_runs').select('status').eq("id", agent_run_id).maybe_single().execute()
+                            status_val = run_status.data.get('status') if run_status.data else None
+                        except Exception:
+                            status_val = None
                         terminate_stream = True
-                        yield f"data: {json.dumps({'type': 'status', 'status': 'error'})}\n\n"
+                        final_status = 'completed' if status_val in ['completed', 'failed', 'stopped'] else 'error'
+                        yield f"data: {json.dumps({'type': 'status', 'status': final_status})}\n\n"
                         break
+
+                    elif queue_item["type"] == "heartbeat":
+                        # Lightweight keep-alive
+                        yield f"data: {json.dumps({'type': 'ping'})}\n\n"
+                        continue
 
                 except asyncio.CancelledError:
                      logger.info(f"Stream generator main loop cancelled for {agent_run_id}")
@@ -944,6 +970,12 @@ async def stream_agent_run(
                     pass
                 except Exception as e:
                     logger.debug(f"listener_task ended with: {e}")
+            if heartbeat_task:
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
             # Wait briefly for tasks to cancel
             await asyncio.sleep(0.1)
             logger.debug(f"Streaming cleanup complete for agent run: {agent_run_id}")
