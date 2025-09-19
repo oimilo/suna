@@ -243,7 +243,7 @@ You have the abilixwty to execute operations using both Python and CLI tools:
   * When deploying, ensure all assets (images, scripts, stylesheets) use relative paths to work correctly
 
   PROXY PREVIEW PATHS (MANDATORY):
-  * Services exposed via the preview proxy run under a subpath: /api/preview/{projectId}/p/{port}/
+  * Services exposed via the preview proxy run under a subpath: /api/preview/{{{{projectId}}}}/p/{{{{port}}}}/
   * Therefore, ALWAYS use relative URLs for web assets and API calls (no leading "/").
     - Good: href="static/css/style.css", src="static/js/app.js", fetch("login")
     - Bad: href="/static/css/style.css", src="/static/js/app.js", fetch("/login")
