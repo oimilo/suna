@@ -1405,9 +1405,15 @@ class ResponseProcessor:
 
             # Get available functions from tool registry
             available_functions = self.tool_registry.get_available_functions()
-            
-            # Look up the function by name
+
+            # Look up the function by name (direct or underscore-normalized)
             tool_fn = available_functions.get(function_name)
+            if not tool_fn and isinstance(function_name, str):
+                normalized_name = function_name.replace('-', '_')
+                tool_fn = available_functions.get(normalized_name)
+                if tool_fn:
+                    logger.info(f"Resolved hyphenated tool '{function_name}' -> '{normalized_name}' (direct registry call)")
+                    function_name = normalized_name
             if not tool_fn:
                 # Fallback: resolve short -> qualified and delegate via call_mcp_tool if uniquely resolvable
                 try:
@@ -1446,7 +1452,18 @@ class ResponseProcessor:
                             if passes_allowlist(n):
                                 matches.append(n)
 
-                    # Prefer qualified names when available (provider-agnostic)
+                    # If the short name exists directly in the registry, call it directly
+                    direct_registry_match = None
+                    if short in available_functions:
+                        direct_registry_match = short
+
+                    # Prefer direct registry call; otherwise, prefer qualified names when available (provider-agnostic)
+                    if direct_registry_match:
+                        logger.info(f"Resolved short tool '{function_name}' -> direct registry call '{direct_registry_match}'")
+                        result = await available_functions[direct_registry_match](**(arguments if isinstance(arguments, dict) else {}))
+                        span.end(status_message="tool_executed_via_direct_alias", output=result)
+                        return result
+                    
                     if 'call_mcp_tool' in available_functions and len(matches) >= 1:
                         qualified_candidates = [n for n in matches if ':' in n]
                         if len(qualified_candidates) == 1:
