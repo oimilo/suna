@@ -109,11 +109,26 @@ class MCPToolWrapper(Tool):
     
     async def initialize_and_register_tools(self, tool_registry=None):
         await self._ensure_initialized()
-        if tool_registry and self._dynamic_tools:
-            logger.info(f"Updating tool registry with {len(self._dynamic_tools)} MCP tools")
-            for method_name, schemas in self._schemas.items():
-                if method_name not in ['call_mcp_tool']:
-                    pass
+        if tool_registry and (self._dynamic_tools or self._schemas):
+            try:
+                # Register all dynamic methods into the openapi registry
+                count = 0
+                for method_name, schema_list in (self._schemas or {}).items():
+                    if method_name in ['call_mcp_tool']:
+                        continue
+                    for schema in schema_list:
+                        try:
+                            if hasattr(schema, 'schema_type') and schema.schema_type == SchemaType.OPENAPI:
+                                tool_registry.tools[method_name] = {
+                                    "instance": self,
+                                    "schema": schema
+                                }
+                                count += 1
+                        except Exception as _e:
+                            logger.debug(f"Skip schema for {method_name}: {_e}")
+                logger.info(f"Registered {count} MCP tool functions into registry")
+            except Exception as e:
+                logger.warning(f"Failed to register MCP tools in registry: {e}")
              
     async def get_available_tools(self) -> List[Dict[str, Any]]:
         await self._ensure_initialized()
