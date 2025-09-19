@@ -622,19 +622,9 @@ async def run_agent(
         generation = trace.generation(name="thread_manager.run_thread") if trace else None
         try:
             # Make the LLM call and process the response
-            # XML tool call budget (adaptive):
-            # - Triggers: allow 2 (discovery + ação)
-            # - Threads normais com MCPs: nas 2 primeiras iterações, permitir até 3 para agilizar discovery + credenciais + primeira ação
-            # - Caso contrário: 1
-            is_trigger = bool(agent_config and agent_config.get('trigger_execution'))
-            has_mcp = bool(agent_config and (agent_config.get('configured_mcps') or agent_config.get('custom_mcps')))
-            if is_trigger:
-                xml_tool_limit = 2
-            elif has_mcp and iteration_count <= 2:
-                xml_tool_limit = 3
-            else:
-                xml_tool_limit = 1
-            logger.info(f"XML tool limit for this iteration: {xml_tool_limit} (trigger={is_trigger}, has_mcp={has_mcp}, iter={iteration_count})")
+            # Global relaxed setting: allow up to 3 XML tool calls por iteração
+            xml_tool_limit = 3
+            logger.info(f"XML tool limit for this iteration: {xml_tool_limit}")
             response = await thread_manager.run_thread(
                 thread_id=thread_id,
                 system_prompt=system_message,
