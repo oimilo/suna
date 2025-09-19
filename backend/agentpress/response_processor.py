@@ -1446,7 +1446,7 @@ class ResponseProcessor:
                             if passes_allowlist(n):
                                 matches.append(n)
 
-                    # Prefer qualified names when available
+                    # Prefer qualified names when available (provider-agnostic)
                     if 'call_mcp_tool' in available_functions and len(matches) >= 1:
                         qualified_candidates = [n for n in matches if ':' in n]
                         if len(qualified_candidates) == 1:
@@ -1513,6 +1513,10 @@ class ResponseProcessor:
                                 if n == short or n.endswith(f":{short}"):
                                     if passes_allowlist(n):
                                         matches.append(n)
+                            if len(matches) == 0:
+                                # Could not resolve -> return guided error rather than running wrong thing
+                                span.end(status_message="mcp_tool_resolution_failed", level="ERROR")
+                                return ToolResult(success=False, output=f"MCP tool '{provided}' not found. Use list_available_tools(include_descriptions=true) and pass the exact qualified name (e.g., provider:tool_name). If MCP/credentials are missing, configure um profile e inclua profile_id.")
                             if len(matches) >= 1:
                                 qualified_candidates = [n for n in matches if ':' in n]
                                 if len(qualified_candidates) == 1:
