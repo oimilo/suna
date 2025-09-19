@@ -6,6 +6,7 @@ from .base_tool import AgentBuilderBaseTool
 from pipedream.facade import PipedreamManager
 from .mcp_search_tool import MCPSearchTool
 from utils.logger import logger
+from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 
 
 class CredentialProfileTool(AgentBuilderBaseTool):
@@ -13,6 +14,36 @@ class CredentialProfileTool(AgentBuilderBaseTool):
         super().__init__(thread_manager, db_connection, agent_id)
         self.pipedream_manager = PipedreamManager()
         self.pipedream_search = MCPSearchTool(thread_manager, db_connection, agent_id)
+
+    async def _refresh_mcp_registry(self) -> None:
+        try:
+            registry = getattr(self.thread_manager, 'tool_registry', None)
+            if not registry or not hasattr(registry, 'tools'):
+                return
+            # Locate the active MCPToolWrapper instance
+            mcp_wrapper = None
+            for _, tool_info in registry.tools.items():
+                instance = tool_info.get('instance') if isinstance(tool_info, dict) else None
+                if isinstance(instance, MCPToolWrapper):
+                    mcp_wrapper = instance
+                    break
+            if not mcp_wrapper:
+                return
+            # Reinitialize and register dynamic schemas under current registry
+            await mcp_wrapper.initialize_and_register_tools(registry)
+            updated = mcp_wrapper.get_schemas() or {}
+            for method_name, schema_list in updated.items():
+                if method_name == 'call_mcp_tool':
+                    continue
+                for schema in schema_list:
+                    try:
+                        if hasattr(schema, 'schema_type') and schema.schema_type.value == 'openapi':
+                            registry.tools[method_name] = {"instance": mcp_wrapper, "schema": schema}
+                    except Exception:
+                        continue
+            logger.info("MCP registry refreshed after profile operation")
+        except Exception as e:
+            logger.warning(f"Failed to refresh MCP registry: {e}")
 
     @openapi_schema({
         "type": "function",
@@ -299,6 +330,12 @@ class CredentialProfileTool(AgentBuilderBaseTool):
             else:
                 response_data["message"] = f"Profile '{profile.display_name}' is not connected yet"
             
+            # If connected and has connections, refresh registry so tools appear immediately
+            try:
+                if response_data.get("is_connected") and response_data.get("connection_count", 0) > 0:
+                    await self._refresh_mcp_registry()
+            except Exception:
+                pass
             return self.success_response(response_data)
             
         except Exception as e:
@@ -372,6 +409,11 @@ class CredentialProfileTool(AgentBuilderBaseTool):
                 return self.fail_response("Failed to update agent profile tools")
 
             version_msg = f"Profile '{profile.profile_name.value if hasattr(profile.profile_name, 'value') else str(profile.profile_name)}' updated with {len(enabled_tools)} tools"
+            # Refresh registry so the newly enabled tools are available in this session
+            try:
+                await self._refresh_mcp_registry()
+            except Exception:
+                pass
             return self.success_response({
                 "message": version_msg,
                 "enabled_tools": result.get("enabled_tools", []),
