@@ -472,6 +472,10 @@ class AgentExecutor:
         do_first_lines.append(
             "6) Não encerre a resposta antes de tentar a execução principal (após discovery e, se preciso, seleção/validação de perfil)."
         )
+        # Preview proxy path safety for web apps
+        do_first_lines.append(
+            "7) Ao servir páginas via expose-port/proxy (subpath /api/preview/{projectId}/p/{port}/), USE CAMINHOS RELATIVOS para assets e fetch (ex.: 'static/js/app.js', fetch('login')); NUNCA use URLs iniciando com '/'."
+        )
 
         rules_lines = [
             "- Nunca use list_mcp_tools; SEMPRE use list_available_tools para descobrir ferramentas.",

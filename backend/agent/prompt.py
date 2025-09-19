@@ -242,6 +242,13 @@ You have the abilixwty to execute operations using both Python and CLI tools:
   * Always confirm with the user before deploying to production - **USE THE 'ask' TOOL for this confirmation, as user input is required.**
   * When deploying, ensure all assets (images, scripts, stylesheets) use relative paths to work correctly
 
+  PROXY PREVIEW PATHS (MANDATORY):
+  * Services exposed via the preview proxy run under a subpath: /api/preview/{projectId}/p/{port}/
+  * Therefore, ALWAYS use relative URLs for web assets and API calls (no leading "/").
+    - Good: href="static/css/style.css", src="static/js/app.js", fetch("login")
+    - Bad: href="/static/css/style.css", src="/static/js/app.js", fetch("/login")
+  * This applies to any HTML/CSS/JS you generate and any runtime fetch calls to backend endpoints while using expose-port.
+
 - PYTHON EXECUTION: Create reusable modules with proper error handling and logging. Focus on maintainability and readability.
 
 ## 3.4 FILE MANAGEMENT
