@@ -820,14 +820,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         // Debounce curto para evitar flicker de tags parciais
                                                                         const textToRender = streamingTextContent || '';
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, Math.max(0, tagStartIndex)) : textToRender;
-                                                                        // Sanitiza caracteres inválidos durante o stream (substitui não-ASCII de controle)
-                                                                        const sanitizedTextBeforeTag = textBeforeTag.replace(/[\u0000-\u001F\u007F]/g, '');
+                                                                        // Sanitiza caracteres de controle preservando TAB(\t), LF(\n) e CR(\r)
+                                                                        const sanitizedTextBeforeTag = textBeforeTag.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
                                                                         const showCursor = (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && !detectedTag;
 
                                                                         return (
                                                                             <>
                                                                                 {sanitizedTextBeforeTag && (
-                                                                                    <PipedreamUrlDetector content={sanitizedTextBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                                                    <PipedreamUrlDetector content={sanitizedTextBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none whitespace-pre-wrap [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
                                                                                 )}
                                                                                 {showCursor && (
                                                                                     <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse" />
