@@ -8,6 +8,7 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp_module import mcp_manager
 from utils.logger import logger
+from flags.flags import is_enabled
 
 
 class MCPToolExecutor:
@@ -22,9 +23,20 @@ class MCPToolExecutor:
         try:
             requested = str(tool_name).strip()
 
-            # 1) Caminho direto: já é um custom_* conhecido
-            if requested in self.custom_tools:
-                return await self._execute_custom_tool(requested, arguments)
+            # STRICT: usar sempre nome remoto com hífen. Se vier provider:tool, retirar prefixo
+            try:
+                if await is_enabled("mcp_strict_remote_names"):
+                    remote_name = requested.split(':', 1)[1] if ':' in requested else requested
+                    # se houver versão underscore, preferir com hífen
+                    remote_name = remote_name.replace('_', '-')
+                    # procurar custom tool cujo original_name == remote_name
+                    for key, info in self.custom_tools.items():
+                        if (info.get('original_name') or '').strip() == remote_name:
+                            return await self._execute_custom_tool(key, arguments)
+                    # fallback: executar remoto direto no manager
+                    return await self._execute_standard_tool(remote_name, arguments)
+            except Exception:
+                pass
 
             # 2) Tentar resolver provider:tool ou aliases mcp_*/custom_* para um custom_* existente
             #    - O nome "original" remoto é o que a sessão MCP conhece (ex.: supabase-insert-row)
