@@ -89,8 +89,9 @@ class SandboxExposeTool(SandboxToolsBase):
             return self.success_response({
                 "url": url,
                 "port": port,
-                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {url}"
-            }, extra={"preview_path_note": note})
+                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {url}",
+                "preview_path_note": note
+            })
                 
         except ValueError:
             return self.fail_response(f"Invalid port number: {port}. Must be a valid integer between 1 and 65535.")
