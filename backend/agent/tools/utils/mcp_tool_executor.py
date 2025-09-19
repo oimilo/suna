@@ -20,6 +20,23 @@ class MCPToolExecutor:
         logger.info(f"Executing MCP tool {tool_name} with arguments {arguments}")
         
         try:
+            # Normalize tool_name variants before dispatch:
+            # Accept provider:tool, mcp_provider_tool, custom_provider_tool and hyphen/underscore variations
+            normalized_name = str(tool_name)
+            if ':' in normalized_name and not normalized_name.startswith(('mcp_', 'custom_')):
+                # Convert provider:tool to mcp_provider_tool
+                provider, short = normalized_name.split(':', 1)
+                normalized_name = f"mcp_{provider}_{short.replace('-', '_')}"
+            else:
+                # Only replace hyphens in the tool suffix part (after last underscore)
+                try:
+                    head, tail = normalized_name.rsplit('_', 1)
+                    normalized_name = f"{head}_{tail.replace('-', '_')}"
+                except ValueError:
+                    normalized_name = normalized_name.replace('-', '_')
+
+            tool_name = normalized_name
+
             if tool_name in self.custom_tools:
                 return await self._execute_custom_tool(tool_name, arguments)
             else:
