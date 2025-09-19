@@ -83,13 +83,19 @@ export const usePipedreamAppIcon = (appSlug: string, options?: { enabled?: boole
   return useQuery({
     queryKey: ['pipedream', 'app-icon', appSlug],
     queryFn: async (): Promise<AppIconResponse> => {
-      const result = await pipedreamApi.getAppIcon(appSlug);
-      console.log(`🎨 Icon for ${appSlug}:`, result);
-      return result;
+      try {
+        const result = await pipedreamApi.getAppIcon(appSlug);
+        console.log(`🎨 Icon for ${appSlug}:`, result);
+        return result;
+      } catch (err) {
+        // Falha ao obter ícone não é crítica: retornamos um fallback silencioso
+        return { success: false, app_slug: appSlug, icon_url: '' } as AppIconResponse;
+      }
     },
     enabled: options?.enabled !== undefined ? options.enabled : !!appSlug,
     staleTime: 60 * 60 * 1000,
-    retry: 2,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 };
 
