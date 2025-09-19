@@ -20,27 +20,74 @@ class MCPToolExecutor:
         logger.info(f"Executing MCP tool {tool_name} with arguments {arguments}")
         
         try:
-            # Normalize tool_name variants before dispatch:
-            # Accept provider:tool, mcp_provider_tool, custom_provider_tool and hyphen/underscore variations
-            normalized_name = str(tool_name)
-            if ':' in normalized_name and not normalized_name.startswith(('mcp_', 'custom_')):
-                # Convert provider:tool to mcp_provider_tool
-                provider, short = normalized_name.split(':', 1)
-                normalized_name = f"mcp_{provider}_{short.replace('-', '_')}"
-            else:
-                # Only replace hyphens in the tool suffix part (after last underscore)
-                try:
-                    head, tail = normalized_name.rsplit('_', 1)
-                    normalized_name = f"{head}_{tail.replace('-', '_')}"
-                except ValueError:
-                    normalized_name = normalized_name.replace('-', '_')
+            requested = str(tool_name).strip()
 
-            tool_name = normalized_name
+            # 1) Caminho direto: já é um custom_* conhecido
+            if requested in self.custom_tools:
+                return await self._execute_custom_tool(requested, arguments)
 
-            if tool_name in self.custom_tools:
-                return await self._execute_custom_tool(tool_name, arguments)
-            else:
-                return await self._execute_standard_tool(tool_name, arguments)
+            # 2) Tentar resolver provider:tool ou aliases mcp_*/custom_* para um custom_* existente
+            #    - O nome "original" remoto é o que a sessão MCP conhece (ex.: supabase-insert-row)
+            candidates_original: list[str] = []
+
+            # provider:tool → tool
+            if ':' in requested and not requested.startswith(('mcp_', 'custom_')):
+                _, tool = requested.split(':', 1)
+                candidates_original.append(tool)
+                candidates_original.append(tool.replace('_', '-'))
+                candidates_original.append(tool.replace('-', '_'))
+
+            # mcp_provider_tool ou custom_provider_tool → tool
+            import re as _re
+            m = _re.match(r"^(?:mcp|custom)_[^_]+_(.+)$", requested)
+            if m:
+                t = m.group(1)
+                candidates_original.append(t)
+                candidates_original.append(t.replace('_', '-'))
+                candidates_original.append(t.replace('-', '_'))
+
+            # hífen/underscore simples
+            candidates_original.append(requested)
+            candidates_original.append(requested.replace('_', '-'))
+            candidates_original.append(requested.replace('-', '_'))
+
+            # Dedup preservando ordem
+            seen = set()
+            uniq_candidates = []
+            for c in candidates_original:
+                if c and c not in seen:
+                    seen.add(c)
+                    uniq_candidates.append(c)
+
+            # Procurar um custom_tool cujo original_name bata com algum candidato
+            try:
+                match_key = None
+                for key, info in self.custom_tools.items():
+                    original = (info.get('original_name') or '').strip()
+                    if not original:
+                        continue
+                    for c in uniq_candidates:
+                        # Comparar em variações hífen/underscore
+                        if original == c or original.replace('-', '_') == c or original.replace('_', '-') == c:
+                            match_key = key
+                            break
+                    if match_key:
+                        break
+                if match_key:
+                    return await self._execute_custom_tool(match_key, arguments)
+            except Exception:
+                pass
+
+            # 3) Como fallback, tentar padrão "remoto" via manager (conexões padrão)
+            #    Preferir forma com hífen, que é a mais comum em servidores MCP
+            remote_name = None
+            for c in uniq_candidates:
+                if '-' in c:
+                    remote_name = c
+                    break
+            if not remote_name:
+                remote_name = uniq_candidates[0]
+            return await self._execute_standard_tool(remote_name, arguments)
         except Exception as e:
             logger.error(f"Error executing MCP tool {tool_name}: {str(e)}")
             return self._create_error_result(f"Error executing tool: {str(e)}")
