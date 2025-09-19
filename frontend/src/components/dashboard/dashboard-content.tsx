@@ -35,6 +35,7 @@ import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { BrandLogo } from '../sidebar/brand-logo';
 import { checkEnvironmentVariables } from '@/lib/env-check';
 import { useSidebarContext } from '@/contexts/sidebar-context';
+import { AutomationsPanel } from './automations-panel';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -234,6 +235,13 @@ export function DashboardContent() {
             />
           </div>
           <Examples onSelectPrompt={setInputValue} isVisible={isInputFocused} />
+        </div>
+
+        {/* Automations list (clean & subtle) */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full">
+          <div className="mx-auto max-w-3xl w-full">
+            {!isInputFocused && <AutomationsPanel />}
+          </div>
         </div>
         <BillingErrorAlert
           message={billingError?.message}
