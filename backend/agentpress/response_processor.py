@@ -1514,9 +1514,28 @@ class ResponseProcessor:
                                     if passes_allowlist(n):
                                         matches.append(n)
                             if len(matches) == 0:
-                                # Could not resolve -> return guided error rather than running wrong thing
-                                span.end(status_message="mcp_tool_resolution_failed", level="ERROR")
-                                return ToolResult(success=False, output=f"MCP tool '{provided}' not found. Use list_available_tools(include_descriptions=true) and pass the exact qualified name (e.g., provider:tool_name). If MCP/credentials are missing, configure um profile e inclua profile_id.")
+                                # Try derive from mcp_* naming (e.g., mcp_pipedream_supabase_select_row)
+                                derived = []
+                                for n in candidates:
+                                    try:
+                                        _n = n
+                                        if _n.startswith('custom_'):
+                                            _n = _n.split('_', 2)[-1]
+                                        if _n.startswith('mcp_') and _n.endswith(f"_{short}"):
+                                            parts = _n.split('_')
+                                            if len(parts) >= 3:
+                                                provider = parts[1]
+                                                derived.append(f"{provider}:{short}")
+                                    except Exception:
+                                        continue
+                                derived = sorted(set(derived))
+                                if len(derived) == 1:
+                                    arguments['tool_name'] = derived[0]
+                                    logger.info(f"Derived qualified MCP tool from mcp_* pattern: '{arguments['tool_name']}'")
+                                else:
+                                    # Could not resolve -> return guided error rather than running wrong thing
+                                    span.end(status_message="mcp_tool_resolution_failed", level="ERROR")
+                                    return ToolResult(success=False, output=f"MCP tool '{provided}' not found. Use list_available_tools(include_descriptions=true) e passe o nome qualificado exato (ex.: provider:tool_name). Se MCP/credenciais estiverem ausentes, configure um profile e inclua profile_id.")
                             if len(matches) >= 1:
                                 qualified_candidates = [n for n in matches if ':' in n]
                                 if len(qualified_candidates) == 1:
