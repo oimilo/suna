@@ -162,6 +162,9 @@ custom_agents = True
 # MCP module feature flag  
 mcp_module = True
 
+# Enforce remote MCP tool names strictly (use exact hyphenated names)
+mcp_strict_remote_names = False
+
 # Templates API feature flag
 templates_api = True
 

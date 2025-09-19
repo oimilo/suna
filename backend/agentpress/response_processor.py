@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, AsyncGenerator, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
 from utils.logger import logger
+from flags.flags import is_enabled
 from agentpress.tool import ToolResult
 from agentpress.tool_registry import ToolRegistry
 from agentpress.xml_tool_parser import XMLToolParser
@@ -1415,6 +1416,22 @@ class ResponseProcessor:
                     logger.info(f"Resolved hyphenated tool '{function_name}' -> '{normalized_name}' (direct registry call)")
                     function_name = normalized_name
             if not tool_fn:
+                # Strict mode: do NOT attempt alias resolution. Require exact tool names.
+                try:
+                    if await is_enabled("mcp_strict_remote_names"):
+                        logger.error(f"[STRICT] Tool function '{function_name}' not found (no alias resolution)")
+                        span.end(status_message="tool_not_found_strict", level="ERROR")
+                        return ToolResult(
+                            success=False,
+                            output=(
+                                "Tool function '" + str(function_name) + "' not found. "
+                                "Use list_available_tools(include_descriptions=true) e chame pelo nome EXATO. "
+                                "Para MCP via call_mcp_tool, use o nome remoto com hífen (ex.: 'supabase-select-row'); "
+                                "opcionalmente com prefixo provider (ex.: 'pipedream:supabase-select-row')."
+                            )
+                        )
+                except Exception:
+                    pass
                 # Fallback: resolve short -> qualified and delegate via call_mcp_tool if uniquely resolvable
                 try:
                     short = str(function_name).replace('-', '_')
@@ -1491,12 +1508,23 @@ class ResponseProcessor:
                 span.end(status_message="tool_not_found", level="ERROR")
                 return ToolResult(success=False, output=f"Tool function '{function_name}' not found")
 
-            # If we are about to execute call_mcp_tool, normalize tool_name argument from short -> qualified
+            # If we are about to execute call_mcp_tool, normalize tool_name argument
             try:
                 if function_name == 'call_mcp_tool' and isinstance(arguments, dict):
                     provided = arguments.get('tool_name')
                     if isinstance(provided, str) and provided:
-                        # If already qualified, keep; else try to resolve
+                        # STRICT: accept provider:tool (strip provider) or raw remote name; no aliasing
+                        try:
+                            if await is_enabled("mcp_strict_remote_names"):
+                                remote = provided.split(':', 1)[1] if ':' in provided else provided
+                                arguments['tool_name'] = remote
+                                logger.info(f"[STRICT] call_mcp_tool using remote name '{remote}'")
+                                raise RuntimeError("strict_done")  # skip legacy normalization below
+                        except RuntimeError:
+                            pass
+                        except Exception:
+                            pass
+                        # Legacy normalization: short -> qualified provider:tool
                         if ':' not in provided:
                             short = provided.replace('-', '_').strip()
                             registry_names = list(self.tool_registry.tools.keys())
