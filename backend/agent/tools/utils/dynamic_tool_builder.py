@@ -12,9 +12,17 @@ class DynamicToolBuilder:
         methods = {}
         
         for tool_info in tools_info:
-            tool_name = tool_info.get('name', '')
+            # Support both { name, description, parameters } and OpenAPI-like { function: { name, description, parameters } }
+            fn = tool_info.get('function') if isinstance(tool_info, dict) else None
+            tool_name = (tool_info.get('name') if isinstance(tool_info, dict) else None) or ((fn or {}).get('name') if isinstance(fn, dict) else '')
             if tool_name:
-                method = self._create_dynamic_method(tool_name, tool_info, execute_callback)
+                # Normalize to a flat structure for internal schema registration
+                normalized = {
+                    "name": tool_name,
+                    "description": (tool_info.get('description') if isinstance(tool_info, dict) else None) or ((fn or {}).get('description') or f"MCP tool {tool_name}"),
+                    "parameters": (tool_info.get('parameters') if isinstance(tool_info, dict) else None) or ((fn or {}).get('parameters') or {"type": "object", "properties": {}, "required": []})
+                }
+                method = self._create_dynamic_method(tool_name, normalized, execute_callback)
                 if method:
                     methods[method['method_name']] = method['method']
         
