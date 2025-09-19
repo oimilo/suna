@@ -302,8 +302,25 @@ async def run_agent(
 
                         # Only apply filtering if we actually received an allowlist
                         if len(allowed) > 0:
-                            # Normalize allowed names and build a matcher that accepts qualified or short names
-                            normalized_allowed = set(str(t).strip() for t in allowed if str(t).strip())
+                            # Normalize allowed names and build a matcher that accepts qualified (provider:tool),
+                            # MCP aliases (mcp_provider_tool/custom_provider_tool) e hífen/underscore variantes
+                            def _norm(s: str) -> str:
+                                try:
+                                    s = str(s).strip()
+                                    if ':' in s and not s.startswith(('mcp_', 'custom_')):
+                                        provider, short = s.split(':', 1)
+                                        s = f"mcp_{provider}_{short}"
+                                    # padroniza hífen/underscore somente no sufixo de ferramenta
+                                    try:
+                                        head, tail = s.rsplit('_', 1)
+                                        s = f"{head}_{tail.replace('-', '_')}"
+                                    except ValueError:
+                                        s = s.replace('-', '_')
+                                    return s
+                                except Exception:
+                                    return str(s)
+
+                            normalized_allowed = set(_norm(t) for t in allowed if str(t).strip())
 
                             def is_allowed_tool(tool_name: str) -> bool:
                                 if tool_name in normalized_allowed:
