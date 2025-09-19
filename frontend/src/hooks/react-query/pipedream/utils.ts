@@ -391,6 +391,8 @@ export const pipedreamApi = {
     const result = await backendApi.get<AppIconResponse>(
       `/pipedream/apps/${appSlug}/icon`,
       {
+        // Ícone é informação não crítica: não mostrar toast de erro
+        showErrors: false,
         errorContext: { operation: 'load app icon', resource: 'Pipedream app icon' },
       }
     );
