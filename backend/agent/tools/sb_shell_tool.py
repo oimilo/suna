@@ -118,6 +118,15 @@ class SandboxShellTool(SandboxToolsBase):
         timeout: int = 60
     ) -> ToolResult:
         try:
+            # Anti-shell guard: if intent declares MCP usage and MCPs are active, route via MCP instead of shell
+            try:
+                agent_cfg = getattr(self.thread_manager, 'agent_config', {}) or {}
+                has_mcp = bool(agent_cfg.get('configured_mcps') or agent_cfg.get('custom_mcps'))
+                if has_mcp and isinstance(command, str) and ('mcp' in command.lower() or 'supabase' in command.lower() or 'pipedream' in command.lower()):
+                    return self.fail_response("MCP intended. Use list_available_tools → call_mcp_tool com o nome qualificado (ex.: provider:tool_name) e profile_id. Shell bloqueado para evitar loops.")
+            except Exception:
+                pass
+
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
             
