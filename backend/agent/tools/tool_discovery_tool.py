@@ -27,26 +27,10 @@ class ToolDiscoveryTool(Tool):
 
             tools: Dict[str, Dict[str, Any]] = dict(registry.tools)
 
-            # Base: names already registrados no registry
-            registry_names: List[str] = list(tools.keys())
+            # Apenas ferramentas realmente registradas (executáveis via function calling)
+            combined_names: List[str] = list(tools.keys())
 
-            # Unir com integrações habilitadas no agente (configured/custom MCPs -> enabledTools)
-            combined_names: List[str] = []
-            combined_names.extend(registry_names)
-
-            try:
-                agent_cfg = getattr(self.thread_manager, 'agent_config', {}) or {}
-                enabled_from_mcps: List[str] = []
-                for coll_key in ['configured_mcps', 'custom_mcps']:
-                    for mcp in agent_cfg.get(coll_key, []) or []:
-                        for t in mcp.get('enabledTools', []) or []:
-                            if isinstance(t, str) and t.strip():
-                                enabled_from_mcps.append(t.strip())
-                combined_names.extend(enabled_from_mcps)
-            except Exception:
-                pass
-
-            # Apply allowlist se existir (aceita nome qualificado ou sufixo curto)
+            # Apply allowlist se existir (aceita nome qualificado ou sufixo curto) — não mistura nomes MCP remotos aqui
             try:
                 agent_cfg = getattr(self.thread_manager, 'agent_config', {}) or {}
                 allowed = agent_cfg.get('allowed_tools') or []
@@ -86,7 +70,7 @@ class ToolDiscoveryTool(Tool):
 
             if not include_descriptions:
                 return {
-                    "message": f"Found {len(tool_names)} available tool(s)",
+                    "message": f"Found {len(tool_names)} registered tool(s)",
                     "tools": tool_names,
                     "total": len(tool_names),
                 }
@@ -99,12 +83,12 @@ class ToolDiscoveryTool(Tool):
                         schema = tools[name]["schema"].schema or {}
                         func = schema.get("function", {}) if isinstance(schema, dict) else {}
                         desc = func.get("description", "")
-                    described.append({"name": name, "description": desc})
+                    described.append({"name": name, "description": desc, "source": "registry"})
                 except Exception:
-                    described.append({"name": name, "description": ""})
+                    described.append({"name": name, "description": "", "source": "registry"})
 
             return {
-                "message": f"Found {len(tool_names)} available tool(s)",
+                "message": f"Found {len(tool_names)} registered tool(s)",
                 "tools": described,
                 "total": len(tool_names)
             }
@@ -156,12 +140,61 @@ class ToolDiscoveryTool(Tool):
         }
     })
     async def list_mcp_tools(self) -> ToolResult:
-        data = self._enumerate_tools(include_descriptions=False)
-        return self.success_response({
-            "message": "MCP tool discovery redirected: using unified available tools list",
-            "tools": data["tools"],
-            "total": data["total"],
-            "tip": "Call list_available_tools for full discovery."
-        })
+        """Listar SOMENTE ferramentas remotas do MCP (nomes com hífen), não registradas.
+
+        Percorre o registry para achar o MCPToolWrapper ativo e consulta as tools remotas.
+        """
+        try:
+            registry = getattr(self.thread_manager, 'tool_registry', None)
+            if not registry or not hasattr(registry, 'tools'):
+                return self.success_response({
+                    "message": "No tool registry available",
+                    "tools": [],
+                    "total": 0
+                })
+
+            # Localizar MCPToolWrapper
+            mcp_wrapper = None
+            for _, info in registry.tools.items():
+                try:
+                    inst = info.get('instance') if isinstance(info, dict) else None
+                    # Evitar importar aqui para não quebrar dependências
+                    if inst and inst.__class__.__name__ == 'MCPToolWrapper':
+                        mcp_wrapper = inst
+                        break
+                except Exception:
+                    continue
+
+            if not mcp_wrapper or not hasattr(mcp_wrapper, 'get_available_tools'):
+                return self.success_response({
+                    "message": "No MCP wrapper initialized",
+                    "tools": [],
+                    "total": 0
+                })
+
+            remotes = await mcp_wrapper.get_available_tools()
+            names: List[str] = []
+            described: List[Dict[str, str]] = []
+            for t in remotes or []:
+                try:
+                    name = t.get('name') or ((t.get('function') or {}).get('name'))
+                    desc = t.get('description') or ((t.get('function') or {}).get('description') or '')
+                    if not name:
+                        continue
+                    names.append(name)
+                    described.append({"name": name, "description": desc, "source": "mcp"})
+                except Exception:
+                    continue
+
+            names = sorted(set(names))
+            return self.success_response({
+                "message": f"Found {len(names)} MCP remote tool(s)",
+                "tools": described,
+                "total": len(names),
+                "tip": "Use call_mcp_tool com o nome remoto exato (com hífen)."
+            })
+        except Exception as e:
+            logger.error(f"Error listing MCP remote tools: {e}")
+            return self.fail_response(f"Error listing MCP tools: {str(e)}")
 
 
