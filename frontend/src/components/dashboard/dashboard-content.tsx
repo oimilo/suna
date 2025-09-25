@@ -240,7 +240,7 @@ export function DashboardContent() {
         {/* Automations list fixed at bottom */}
         {!isInputFocused && (
           <div className="absolute left-1/2 -translate-x-1/2 w-full" style={{ bottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-            <div className="mx-auto max-w-3xl w-full px-4">
+            <div className="mx-auto w-[800px] max-w-[90%] px-4">
               <AutomationsPanel maxHeight={160} />
             </div>
           </div>
