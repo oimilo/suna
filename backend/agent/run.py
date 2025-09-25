@@ -106,6 +106,7 @@ async def run_agent(
         
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
+        from agent.tools.agent_builder_tools.mcp_configure_tool import MCPConfigureTool
         from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
         from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
@@ -118,6 +119,7 @@ async def run_agent(
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
+        thread_manager.add_tool(MCPConfigureTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         
@@ -127,6 +129,7 @@ async def run_agent(
     if is_agent_builder:
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
+        from agent.tools.agent_builder_tools.mcp_configure_tool import MCPConfigureTool
         from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
         from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
@@ -136,6 +139,7 @@ async def run_agent(
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
+        thread_manager.add_tool(MCPConfigureTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         
@@ -191,9 +195,9 @@ async def run_agent(
 
     # Register MCP tool wrapper if agent has configured MCPs or custom MCPs
     mcp_wrapper_instance = None
+    all_mcps = []
     if agent_config:
         # Merge configured_mcps and custom_mcps
-        all_mcps = []
         
         # Add standard configured MCPs
         if agent_config.get('configured_mcps'):
@@ -245,7 +249,7 @@ async def run_agent(
                 }
                 all_mcps.append(mcp_config)
         
-        if all_mcps:
+    if all_mcps:
             logger.info(f"Registering MCP tool wrapper for {len(all_mcps)} MCP servers (including {len(agent_config.get('custom_mcps', []))} custom)")
             thread_manager.add_tool(MCPToolWrapper, mcp_configs=all_mcps)
             
@@ -256,19 +260,10 @@ async def run_agent(
             
             if mcp_wrapper_instance:
                 try:
-                    await mcp_wrapper_instance.initialize_and_register_tools()
+                    await mcp_wrapper_instance.initialize_and_register_tools(thread_manager.tool_registry)
                     logger.info("MCP tools initialized successfully")
                     updated_schemas = mcp_wrapper_instance.get_schemas()
                     logger.info(f"MCP wrapper has {len(updated_schemas)} schemas available")
-                    for method_name, schema_list in updated_schemas.items():
-                        if method_name != 'call_mcp_tool':
-                            for schema in schema_list:
-                                if schema.schema_type == SchemaType.OPENAPI:
-                                    thread_manager.tool_registry.tools[method_name] = {
-                                        "instance": mcp_wrapper_instance,
-                                        "schema": schema
-                                    }
-                                    logger.info(f"Registered dynamic MCP tool: {method_name}")
                     
                     # Ensure credential profile management tools are available for any run with MCPs
                     try:

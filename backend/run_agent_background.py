@@ -219,9 +219,10 @@ async def run_agent_background(
                 break
 
             # Store response in Redis list and publish notification
+            # IMPORTANT: ensure ordering so that consumers see the pushed item when they receive the pubsub notification
             response_json = json.dumps(response)
-            pending_redis_operations.append(asyncio.create_task(redis.rpush(response_list_key, response_json)))
-            pending_redis_operations.append(asyncio.create_task(redis.publish(response_channel, "new")))
+            await redis.rpush(response_list_key, response_json)
+            await redis.publish(response_channel, "new")
             total_responses += 1
 
             # Check for agent-signaled completion or error

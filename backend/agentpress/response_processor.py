@@ -1513,6 +1513,15 @@ class ResponseProcessor:
                 if function_name == 'call_mcp_tool' and isinstance(arguments, dict):
                     provided = arguments.get('tool_name')
                     if isinstance(provided, str) and provided:
+                        # Step 0: prefixo automático do provider quando ausente
+                        try:
+                            if ':' not in provided and not provided.startswith(('mcp_', 'custom_')):
+                                # Heurística segura: prefixar com 'pipedream' por padrão quando não especificado
+                                arguments['tool_name'] = f"pipedream:{provided}"
+                                provided = arguments['tool_name']
+                                logger.info(f"Prefixed MCP tool with default provider -> {provided}")
+                        except Exception as _pref_err:
+                            logger.debug(f"Provider prefix step skipped: {_pref_err}")
                         # STRICT: accept provider:tool (strip provider) or raw remote name; no aliasing
                         try:
                             if await is_enabled("mcp_strict_remote_names"):

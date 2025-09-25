@@ -73,19 +73,26 @@ class DynamicToolBuilder:
         return tool_data
     
     def _parse_tool_name(self, tool_name: str) -> tuple[str, str, str]:
+        """Gera o nome de método invocável e separa o servidor do nome original.
+
+        Casos tratados:
+        - custom_{server_with_underscores}_{original-name-with-hyphens}
+        - mcp_{server}_{original}
+        - nomes já normalizados
+        """
         if tool_name.startswith("custom_"):
-            parts = tool_name.split("_")
-            if len(parts) >= 3:
-                clean_tool_name = "_".join(parts[2:])
-                server_name = parts[1] if len(parts) > 1 else "unknown"
+            body = tool_name[len("custom_"):]
+            if "_" in body:
+                # Divide no ÚLTIMO underscore: esquerda = server; direita = nome original da tool
+                server_name, clean_tool_name = body.rsplit("_", 1)
             else:
-                clean_tool_name = tool_name
-                server_name = "unknown"
+                server_name = body
+                clean_tool_name = body
         else:
             parts = tool_name.split("_", 2)
             clean_tool_name = parts[2] if len(parts) > 2 else tool_name
             server_name = parts[1] if len(parts) > 1 else "unknown"
-        
+
         method_name = clean_tool_name.replace('-', '_')
         return method_name, clean_tool_name, server_name
     
