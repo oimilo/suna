@@ -131,7 +131,7 @@ export default function DashboardLayoutContent({
       <WelcomeAnnouncement />
       <OnboardingTour />
       {/* <OnboardingFloatingButton /> */}
-      <OnboardingDevControls />
+      {/** <OnboardingDevControls /> */}
       <AnnouncementDialog />
     </DeleteOperationProvider>
   );

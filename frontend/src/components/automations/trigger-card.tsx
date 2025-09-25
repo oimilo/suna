@@ -87,7 +87,7 @@ export function TriggerCard({
 
   return (
     <TooltipProvider>
-      <div className="p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200">
+      <div className="relative overflow-hidden h-full p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200">
         <div className="flex items-start gap-3">
           {/* Ícone */}
           <div className="p-2 rounded-md bg-transparent border-0 shrink-0 opacity-60">
@@ -98,7 +98,7 @@ export function TriggerCard({
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <h4 className="text-sm font-medium truncate">
                   {trigger.name}
                 </h4>
@@ -113,7 +113,7 @@ export function TriggerCard({
               </div>
               
               {/* Ações */}
-              <div className="flex items-center gap-2 ml-2 shrink-0">
+              <div className="flex items-center gap-2 ml-2 shrink-0 sticky right-0">
                 <Switch
                   checked={trigger.is_active}
                   onCheckedChange={onToggle}
@@ -160,7 +160,7 @@ export function TriggerCard({
             </div>
             
             {/* Nome do Agente */}
-            <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5 mb-1">
               <Bot className="h-3 w-3 opacity-60" />
               <span className="text-xs text-muted-foreground">
                 {trigger.agent_name}
@@ -182,17 +182,13 @@ export function TriggerCard({
                   {getCronDescription(trigger.config.cron_expression)}
                   {nextRunText && ` • ${nextRunText}`}
                 </div>
-                {trigger.config.execution_type === 'agent' && trigger.config.agent_prompt && (
-                  <p className="text-xs text-muted-foreground/70">
-                    Prompt: {truncateString(trigger.config.agent_prompt, 60)}
-                  </p>
-                )}
+                {/* Ocultar prompt no card para não poluir visual */}
               </div>
             )}
             
             {trigger.trigger_type === 'webhook' && (
               <div className="flex items-center gap-2 mt-2">
-                <code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono truncate flex-1 border border-black/6 dark:border-white/8">
+                <code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono truncate flex-1 border border-black/6 dark:border-white/8 overflow-hidden">
                   {webhookUrl}
                 </code>
                 <Tooltip>

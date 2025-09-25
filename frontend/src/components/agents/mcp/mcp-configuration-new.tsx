@@ -26,11 +26,15 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(agentId);
 
   useEffect(() => {
-    setSelectedAgentId(agentId);
-  }, [agentId]);
+    if (agentId !== selectedAgentId) {
+      setSelectedAgentId(agentId);
+    }
+  }, [agentId, selectedAgentId]);
 
   const handleAgentChange = (newAgentId: string | undefined) => {
-    setSelectedAgentId(newAgentId);
+    if (newAgentId !== selectedAgentId) {
+      setSelectedAgentId(newAgentId);
+    }
   };
 
   const handleEditMCP = (index: number) => {

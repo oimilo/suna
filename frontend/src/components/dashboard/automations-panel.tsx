@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -9,9 +10,14 @@ import { Clock, Zap, Bot, Settings2 } from 'lucide-react';
 import { useAllUserTriggers } from '@/hooks/react-query/triggers/use-all-user-triggers';
 import { useToggleTrigger } from '@/hooks/react-query/triggers/use-agent-triggers';
 import { TriggerEditModal } from '@/components/sidebar/trigger-edit-modal';
+import { useDeleteTrigger } from '@/hooks/react-query/triggers/use-agent-triggers';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Trash2, Pencil } from 'lucide-react';
+// no sidebar coupling here; positioning handled by parent
 
 type Props = {
   className?: string;
+  maxHeight?: number; // altura máxima da lista interna
 };
 
 function getNextRunLabel(cron?: string): string {
@@ -77,12 +83,14 @@ function getNextRunLabel(cron?: string): string {
   }
 }
 
-export function AutomationsPanel({ className }: Props) {
+export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
   const router = useRouter();
   const { data: triggersData, isLoading, refetch } = useAllUserTriggers();
   const [selectedTrigger, setSelectedTrigger] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const toggleTriggerMutation = useToggleTrigger();
+  const deleteTriggerMutation = useDeleteTrigger();
+  // simple panel, no draggable sheet
 
   const triggers = triggersData || [];
 
@@ -107,14 +115,36 @@ export function AutomationsPanel({ className }: Props) {
     refetch();
   };
 
-  return (
-    <div className={cn('w-full', className)}>
-      <div className="mx-auto max-w-3xl px-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-muted-foreground">Automações ({activeCount}/{triggers.length} ativas)</div>
-        </div>
+  const handleDelete = async (trigger: any) => {
+    const name = trigger.name || 'automação';
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm(`Remover “${name}”? Esta ação não poderá ser desfeita.`);
+      if (!ok) return;
+    }
+    await deleteTriggerMutation.mutateAsync({ triggerId: trigger.trigger_id, agentId: trigger.agent_id });
+    refetch();
+  };
 
-        <div className="rounded-xl border border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] divide-y divide-black/5 dark:divide-white/10 overflow-hidden">
+  return (
+    <div className={cn('rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur bg-white/75 dark:bg-black/40 px-4 py-3', className)} role="region" aria-label="Automações">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium">Automações</div>
+            <div className="h-6 px-2 rounded-full text-xs bg-black/5 dark:bg-white/10 flex items-center gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span>{activeCount} ativas</span>
+            </div>
+            <div className="h-6 px-2 rounded-full text-xs bg-black/5 dark:bg-white/10 flex items-center">
+              {triggers.length} no total
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+              <Link href="/automations">Ver todas</Link>
+            </Button>
+          </div>
+        </div>
+        <div className={cn('grid grid-cols-1 gap-3 pr-1 overflow-y-auto')} style={{ maxHeight }}>
           {isLoading && (
             <div className="p-3 text-xs text-muted-foreground">Carregando…</div>
           )}
@@ -128,15 +158,15 @@ export function AutomationsPanel({ className }: Props) {
             const nextLabel = getNextRunLabel(cronStr);
             const agentName = (trigger as any).agent?.name || (trigger as any).agents?.name || 'Agente';
             return (
-              <div key={trigger.trigger_id} className="flex items-center justify-between px-3 py-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="shrink-0 w-7 h-7 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 flex items-center justify-center">
-                    <Icon className="h-3.5 w-3.5 opacity-60" />
+              <div key={trigger.trigger_id} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/30 backdrop-blur px-3 py-3 flex items-start justify-between shadow-sm">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="shrink-0 w-8 h-8 rounded-md bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 flex items-center justify-center">
+                    <Icon className="h-4 w-4 opacity-70" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm leading-tight truncate">{trigger.name || 'Automação sem nome'}</div>
+                    <div className="text-sm font-medium leading-tight truncate">{trigger.name || 'Automação sem nome'}</div>
                     <div className="text-xs text-muted-foreground truncate flex items-center gap-2">
-                      <span className="truncate">{agentName}{cronStr ? ` • ${cronStr}` : ''}</span>
+                      <span className="truncate">{agentName}</span>
                       {nextLabel && (
                         <span className="inline-flex items-center gap-1 text-muted-foreground/80">
                           <Clock className="h-3 w-3 opacity-60" />
@@ -148,12 +178,24 @@ export function AutomationsPanel({ className }: Props) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onEdit(trigger)}>Editar</Button>
                   <Switch
                     checked={trigger.is_active}
                     onCheckedChange={() => handleToggle(trigger)}
                     className="scale-75 data-[state=checked]:bg-emerald-500"
                   />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => onEdit(trigger)} className="text-xs">
+                        <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(trigger)} className="text-xs text-red-600 focus:text-red-600">
+                        <Trash2 className="h-3.5 w-3.5 mr-2" /> Remover
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             );
@@ -163,7 +205,6 @@ export function AutomationsPanel({ className }: Props) {
         {selectedTrigger && (
           <TriggerEditModal trigger={selectedTrigger} isOpen={isModalOpen} onClose={onCloseModal} />
         )}
-      </div>
     </div>
   );
 }

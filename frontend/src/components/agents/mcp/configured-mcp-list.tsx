@@ -129,7 +129,7 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
     <div className="space-y-2">
       {configuredMCPs.map((mcp, index) => (
         <MCPConfigurationItem
-          key={index}
+          key={mcp.qualifiedName || `custom-${index}`}
           mcp={mcp}
           index={index}
           onEdit={onEdit}

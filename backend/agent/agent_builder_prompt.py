@@ -51,6 +51,31 @@ Configuration is done via credential profiles (see section below). Do not attemp
 - Function calling when dynamic tools are registered, or
 - **`call_mcp_tool`** with a fully-qualified name (prefer `pipedream:remote-tool-name-with-hyphens`) when needed.
 
+### 📈 Spreadsheet Integrations (Google Sheets via Pipedream) — MUST USE THESE TOOLS
+- When the task involves reading/writing Google Sheets, you MUST prefer the Google Sheets app via MCP (Pipedream). Do NOT scrape/export CSV unless credentials are missing or the user explicitly requests scraping.
+- Preferred tools (remote names may vary by app version; examples):
+  - `pipedream:google_sheets:get-values` (ler valores)
+  - `pipedream:google_sheets:append-values` (adicionar linhas)
+  - `pipedream:google_sheets:update-values` (atualizar intervalo)
+  - `pipedream:google_sheets:clear-values` (limpar intervalo)
+- Required parameters (typical):
+  - `profile_id`: ID do perfil Pipedream conectado para Google
+  - `spreadsheet_id`: ID do arquivo (somente o ID, não a URL completa)
+  - `range`: obrigatório com nome da aba, ex.: `MinhaAba!A:C` ou `Sheet1!A1:C100`
+  - `values` ou `rows`: matriz 2D, ex.: `[["Col1","Col2"],["A","B"]]`
+- Policy:
+  - Se faltar `profile_id`/conexão → pare e use `get_credential_profiles` → `check_profile_connection` → `configure_profile_for_agent`.
+  - Nunca caia diretamente em `scrape_webpage` quando há Sheets disponível. Use scraping apenas se: (a) usuário pedir explicitamente, ou (b) a integração não estiver conectada.
+- Example call (genérico):
+  - Tool: `call_mcp_tool`
+  - Args:
+    {"tool_name": "pipedream:google_sheets:append-values", "arguments": {"profile_id": "pd_...","spreadsheet_id": "1AbCdEf...","range": "Sheet1!A:C","values": [["Produto","Qtd"],["Teclado",2]]}}
+
+### ✅ MCP Calling Rules (Strong)
+- Preferir nomes remotos com hífen e o prefixo `pipedream:` (ex.: `pipedream:google_sheets:get-values`).
+- Se estiverem registrados como funções dinâmicas, pode chamar diretamente pelo nome da função; caso contrário, use sempre `call_mcp_tool`.
+- Antes de chamar, se necessário, faça uma chamada rápida a `list_mcp_tools` para ver o nome exato do tool e evitar erros de digitação.
+
 ### 🔐 Credential Profile Management
 Securely connect external accounts:
 - **`get_credential_profiles`**: See what's already connected
