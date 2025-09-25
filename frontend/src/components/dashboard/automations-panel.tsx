@@ -126,7 +126,7 @@ export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
   };
 
   return (
-    <div className={cn('rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur bg-white/75 dark:bg-black/40 px-4 py-3', className)} role="region" aria-label="Automações">
+    <div className={cn('rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur bg-white/60 dark:bg-black/30 px-4 py-3', className)} role="region" aria-label="Automações">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <div className="text-sm font-medium">Automações</div>
@@ -158,7 +158,7 @@ export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
             const nextLabel = getNextRunLabel(cronStr);
             const agentName = (trigger as any).agent?.name || (trigger as any).agents?.name || 'Agente';
             return (
-              <div key={trigger.trigger_id} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/30 backdrop-blur px-3 py-3 flex items-start justify-between shadow-sm">
+              <div key={trigger.trigger_id} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/55 dark:bg-black/25 backdrop-blur px-3 py-3 flex items-start justify-between shadow-sm">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="shrink-0 w-8 h-8 rounded-md bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 flex items-center justify-center">
                     <Icon className="h-4 w-4 opacity-70" />
