@@ -21,9 +21,13 @@ from utils.logger import logger
 from utils.config import config
 from services.llm_openrouter_only import force_openrouter_prefix
 
-litellm.set_verbose=True  # Enable verbose logging to debug OpenRouter issue
+# Reduce verbose logging by default; enable via env LITELLM_VERBOSE=true only when debugging
 litellm.modify_params=True
-litellm._turn_on_debug()  # Enable debug mode for detailed error information
+_litellm_verbose = os.getenv("LITELLM_VERBOSE", "false").lower() == "true"
+try:
+    litellm.set_verbose = True if _litellm_verbose else False
+except Exception:
+    pass
 
 # Constants
 MAX_RETRIES = 2
