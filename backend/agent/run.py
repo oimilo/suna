@@ -106,6 +106,7 @@ async def run_agent(
         
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
+        from agent.tools.agent_builder_tools.mcp_configure_tool import MCPConfigureTool
         from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
         from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
@@ -118,6 +119,7 @@ async def run_agent(
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
+        thread_manager.add_tool(MCPConfigureTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         
@@ -127,6 +129,7 @@ async def run_agent(
     if is_agent_builder:
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
+        from agent.tools.agent_builder_tools.mcp_configure_tool import MCPConfigureTool
         from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
         from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
@@ -136,6 +139,7 @@ async def run_agent(
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
+        thread_manager.add_tool(MCPConfigureTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         
