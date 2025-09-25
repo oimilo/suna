@@ -240,9 +240,9 @@ export default function AutomationsPage() {
         {/* Automations Grid */}
         <div className="space-y-6">
           {isLoadingTriggers ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="h-[200px]">
+              <Card key={i} className="min-h-[200px] h-full">
                 <CardContent className="p-4 space-y-3">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -258,7 +258,7 @@ export default function AutomationsPage() {
         ) : triggersData?.triggers && triggersData.triggers.length > 0 ? (
           <>
             <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5"
               variants={staggerContainer}
               initial="initial"
               animate="animate"

@@ -237,12 +237,14 @@ export function DashboardContent() {
           <Examples onSelectPrompt={setInputValue} isVisible={isInputFocused} />
         </div>
 
-        {/* Automations list (clean & subtle) */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full">
-          <div className="mx-auto max-w-3xl w-full">
-            {!isInputFocused && <AutomationsPanel />}
+        {/* Automations list fixed at bottom */}
+        {!isInputFocused && (
+          <div className="absolute left-1/2 -translate-x-1/2 w-full" style={{ bottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+            <div className="mx-auto max-w-3xl w-full px-4">
+              <AutomationsPanel maxHeight={160} />
+            </div>
           </div>
-        </div>
+        )}
         <BillingErrorAlert
           message={billingError?.message}
           currentUsage={billingError?.currentUsage}
