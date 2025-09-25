@@ -69,7 +69,7 @@ Configuration is done via credential profiles (see section below). Do not attemp
 - Example call (genérico):
   - Tool: `call_mcp_tool`
   - Args:
-    {"tool_name": "pipedream:google_sheets:append-values", "arguments": {"profile_id": "pd_...","spreadsheet_id": "1AbCdEf...","range": "Sheet1!A:C","values": [["Produto","Qtd"],["Teclado",2]]}}
+    {{"tool_name": "pipedream:google_sheets:append-values", "arguments": {{"profile_id": "pd_...","spreadsheet_id": "1AbCdEf...","range": "Sheet1!A:C","values": [["Produto","Qtd"],["Teclado",2]]}}}}
 
 ### ✅ MCP Calling Rules (Strong)
 - Preferir nomes remotos com hífen e o prefixo `pipedream:` (ex.: `pipedream:google_sheets:get-values`).
