@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
 from agentpress.tool import ToolResult
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
@@ -173,8 +173,29 @@ class MCPToolExecutor:
                 async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                     async with ClientSession(read_stream, write_stream) as session:
                         await session.initialize()
-                        result = await session.call_tool(original_tool_name, arguments)
-                        return self._create_success_result(self._extract_content(result))
+
+                        # 1) Pré‑voo: buscar schema do tool e normalizar argumentos
+                        schema = await self._get_tool_schema(session, original_tool_name)
+                        normalized_args = self._normalize_arguments_by_schema(arguments or {}, schema)
+
+                        # 2) Primeira execução
+                        result = await session.call_tool(original_tool_name, normalized_args)
+                        content = self._extract_content(result)
+
+                        # 3) Detecção de erro de validação → uma reexecução com correções
+                        if self._looks_like_argument_error(content):
+                            retry_args = self._retry_corrections(normalized_args, schema, content)
+                            try:
+                                retry_result = await session.call_tool(original_tool_name, retry_args)
+                                retry_content = self._extract_content(retry_result)
+                                # Se ainda aparenta erro, devolver como erro estruturado com dicas de schema
+                                if self._looks_like_argument_error(retry_content):
+                                    return self._create_error_result(self._compose_schema_hint_message(retry_content, schema))
+                                return self._create_success_result(retry_content)
+                            except Exception as _e:
+                                return self._create_error_result(self._compose_schema_hint_message(str(_e), schema))
+
+                        return self._create_success_result(content)
                         
         except Exception as e:
             logger.error(f"Error executing Pipedream MCP tool: {str(e)}")
@@ -285,6 +306,154 @@ class MCPToolExecutor:
                 return str(content)
         else:
             return str(result)
+
+    async def _get_tool_schema(self, session: Any, tool_name: str) -> Optional[Dict[str, Any]]:
+        """Fetch input schema for a tool from the MCP server (list_tools)."""
+        try:
+            tools_result = await session.list_tools()
+            tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
+            for t in tools:
+                name = getattr(t, 'name', None)
+                if name == tool_name:
+                    # Some SDKs expose inputSchema; fallback to dict access
+                    schema = getattr(t, 'inputSchema', None)
+                    if schema is None and hasattr(t, 'input_schema'):
+                        schema = getattr(t, 'input_schema')
+                    # Convert dataclass/object to dict when possible
+                    try:
+                        if hasattr(schema, 'model_dump'):
+                            return schema.model_dump()
+                    except Exception:
+                        pass
+                    try:
+                        return dict(schema) if isinstance(schema, dict) else None
+                    except Exception:
+                        return None
+            return None
+        except Exception:
+            return None
+
+    def _normalize_arguments_by_schema(self, args: Dict[str, Any], schema: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Normalize arguments using JSON Schema (properties/required/type coercion) and basic synonyms.
+
+        This is provider‑agnostic and works for any Pipedream tool that exposes inputSchema over MCP.
+        """
+        if not schema or not isinstance(schema, dict):
+            return args
+
+        props = (schema.get('properties') or {}) if isinstance(schema.get('properties'), dict) else {}
+        required = schema.get('required') or []
+
+        normalized = dict(args) if isinstance(args, dict) else {}
+
+        # Synonyms: map common aliases → canonical
+        synonyms = {
+            'instruction': ['query', 'text', 'prompt', 'message', 'q', 'search', 'keywords'],
+        }
+        for canonical, aliases in synonyms.items():
+            if canonical not in normalized:
+                for alias in aliases:
+                    if alias in normalized and normalized[alias] not in (None, ''):
+                        normalized[canonical] = normalized.pop(alias)
+                        break
+
+        # Coerce types
+        for key, prop in props.items():
+            if key not in normalized:
+                continue
+            expected_type = prop.get('type')
+            try:
+                val = normalized[key]
+                if expected_type == 'string' and not isinstance(val, str):
+                    normalized[key] = json.dumps(val) if isinstance(val, (dict, list)) else str(val)
+                elif expected_type == 'number' and not isinstance(val, (int, float)):
+                    normalized[key] = float(val) if val not in (None, '') else val
+                elif expected_type == 'integer' and not isinstance(val, int):
+                    normalized[key] = int(float(val)) if str(val).strip() != '' else val
+                elif expected_type == 'boolean' and not isinstance(val, bool):
+                    if isinstance(val, str):
+                        normalized[key] = val.strip().lower() in ['1', 'true', 'yes', 'y']
+                elif expected_type == 'array' and not isinstance(val, list):
+                    if isinstance(val, str):
+                        try:
+                            j = json.loads(val)
+                            if isinstance(j, list):
+                                normalized[key] = j
+                        except Exception:
+                            normalized[key] = [val]
+                elif expected_type == 'object' and not isinstance(val, dict):
+                    if isinstance(val, str):
+                        try:
+                            j = json.loads(val)
+                            if isinstance(j, dict):
+                                normalized[key] = j
+                        except Exception:
+                            pass
+            except Exception:
+                # Best‑effort: keep original on failure
+                pass
+
+        # Drop unknown keys if additionalProperties is false
+        if schema.get('additionalProperties') is False:
+            normalized = {k: v for k, v in normalized.items() if k in props}
+
+        # Ensure required placeholders exist if we have reasonable synonyms
+        for r in required:
+            if r not in normalized and r == 'instruction':
+                # If nothing mapped, supply a minimal placeholder to trigger backend help
+                normalized[r] = ''
+
+        return normalized
+
+    def _looks_like_argument_error(self, content: str) -> bool:
+        if not isinstance(content, str):
+            try:
+                content = str(content)
+            except Exception:
+                return False
+        lc = content.lower()
+        return (
+            'error parsing arguments' in lc
+            or 'invalid_type' in lc
+            or 'required' in lc
+            or 'missing required' in lc
+        )
+
+    def _retry_corrections(self, args: Dict[str, Any], schema: Optional[Dict[str, Any]], content: str) -> Dict[str, Any]:
+        """Attempt lightweight corrections for a single retry based on error text and schema."""
+        corrected = dict(args)
+        if not schema:
+            return corrected
+        props = schema.get('properties') or {}
+        required = schema.get('required') or []
+
+        # If an explicit required field is mentioned, ensure it exists by promoting common aliases
+        for r in required:
+            if r not in corrected:
+                # Promote first available arg as string (very conservative)
+                if r == 'instruction':
+                    # nothing else to promote; leave empty string
+                    corrected[r] = ''
+        # If a property expects string but received undefined/empty, coerce
+        for k, p in props.items():
+            if k in corrected and (corrected[k] is None):
+                if p.get('type') == 'string':
+                    corrected[k] = ''
+        return corrected
+
+    def _compose_schema_hint_message(self, base_error: str, schema: Optional[Dict[str, Any]]) -> str:
+        if not schema:
+            return base_error
+        props = schema.get('properties') or {}
+        required = schema.get('required') or []
+        try:
+            prop_list = ', '.join(f"{k}:{(v.get('type') or 'any')}" for k, v in props.items()) if isinstance(props, dict) else ''
+        except Exception:
+            prop_list = ''
+        return (
+            f"{base_error}\n\nExpected parameters (from schema): {prop_list}."
+            + (f" Required: {', '.join(required)}." if required else '')
+        )
     
     def _create_success_result(self, content: Any) -> ToolResult:
         if self.tool_wrapper and hasattr(self.tool_wrapper, 'success_response'):
