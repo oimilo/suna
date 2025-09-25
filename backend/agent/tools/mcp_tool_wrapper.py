@@ -116,6 +116,16 @@ class MCPToolWrapper(Tool):
             ):
                 return tool_data.get('method')
 
+        # Fallback: mapear hífen -> underscore para métodos "built-in" (ex.: call_mcp_tool)
+        try:
+            if '-' in name:
+                underscored = name.replace('-', '_')
+                # Evitar recursão usando __getattribute__ direto
+                builtin = object.__getattribute__(self, underscored)
+                return builtin
+        except AttributeError:
+            pass
+
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
     async def initialize_and_register_tools(self, tool_registry=None):
