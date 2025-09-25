@@ -95,27 +95,36 @@ class MCPToolWrapper(Tool):
         method = self.tool_builder.find_method_by_name(name)
         if method:
             return method
-        
+
+        # Busca por método registrado
         for tool_data in self._dynamic_tools.values():
             if tool_data.get('method_name') == name:
                 return tool_data.get('method')
-        
+
+        # Variações hífen/underscore e sufixo "clean"
         name_with_hyphens = name.replace('_', '-')
+        name_with_underscores = name.replace('-', '_')
         for tool_name, tool_data in self._dynamic_tools.items():
-            if tool_data.get('method_name') == name or tool_name == name_with_hyphens:
+            clean_suffix = tool_data.get('clean_tool_name') or ''
+            if (
+                tool_data.get('method_name') == name or
+                tool_data.get('method_name') == name_with_underscores or
+                tool_name == name_with_hyphens or
+                clean_suffix == name or
+                clean_suffix == name_with_hyphens or
+                clean_suffix.replace('-', '_') == name_with_underscores
+            ):
                 return tool_data.get('method')
-        
+
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
     async def initialize_and_register_tools(self, tool_registry=None):
         await self._ensure_initialized()
         if tool_registry and (self._dynamic_tools or self._schemas):
             try:
-                # Register all dynamic methods into the openapi registry
+                # Register all dynamic methods into the openapi registry, incluindo alias com hífen
                 count = 0
                 for method_name, schema_list in (self._schemas or {}).items():
-                    if method_name in ['call_mcp_tool']:
-                        continue
                     for schema in schema_list:
                         try:
                             if hasattr(schema, 'schema_type') and schema.schema_type == SchemaType.OPENAPI:
@@ -123,10 +132,16 @@ class MCPToolWrapper(Tool):
                                     "instance": self,
                                     "schema": schema
                                 }
+                                alias = method_name.replace('_', '-')
+                                if alias != method_name:
+                                    tool_registry.tools[alias] = {
+                                        "instance": self,
+                                        "schema": schema
+                                    }
                                 count += 1
                         except Exception as _e:
                             logger.debug(f"Skip schema for {method_name}: {_e}")
-                logger.info(f"Registered {count} MCP tool functions into registry")
+                logger.info(f"Registered {count} MCP tool functions into registry (with hyphen aliases)")
             except Exception as e:
                 logger.warning(f"Failed to register MCP tools in registry: {e}")
              
