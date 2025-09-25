@@ -248,6 +248,7 @@ class ResponseProcessor:
 
                 if hasattr(chunk, 'choices') and chunk.choices and hasattr(chunk.choices[0], 'finish_reason') and chunk.choices[0].finish_reason:
                     finish_reason = chunk.choices[0].finish_reason
+                    # Debug level only; avoid info-level spam on every chunk
                     logger.debug(f"Detected finish_reason: {finish_reason}")
 
                 if hasattr(chunk, 'choices') and chunk.choices:
