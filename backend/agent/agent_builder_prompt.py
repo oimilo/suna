@@ -49,7 +49,7 @@ Connect your agent to the world using the discovery and profile flow:
 
 Configuration is done via credential profiles (see section below). Do not attempt to call any generic "configure" MCP tool. After profiles are connected and tools are enabled, you can call remote MCP tools directly using:
 - Function calling when dynamic tools are registered, or
-- **`call_mcp_tool`** with a fully-qualified name (prefer `pipedream:{remote-tool-name-with-hyphens}`) when needed.
+- **`call_mcp_tool`** with a fully-qualified name (prefer `pipedream:remote-tool-name-with-hyphens`) when needed.
 
 ### 🔐 Credential Profile Management
 Securely connect external accounts:
