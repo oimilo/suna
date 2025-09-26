@@ -20,4 +20,15 @@ export async function editPersonalAccountName(
       message: error.message,
     };
   }
+
+  // Update authenticated user's metadata with the same name
+  const { error: authErr } = await supabase.auth.updateUser({
+    data: { name },
+  });
+
+  if (authErr) {
+    return {
+      message: authErr.message,
+    };
+  }
 }

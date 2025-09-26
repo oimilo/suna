@@ -49,7 +49,7 @@ export default function ProfileSettings({ account, user }: ProfileSettingsProps)
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <h3 className="font-medium">{account.name || 'Usuário'}</h3>
+          <h3 className="font-medium">{user?.user_metadata?.name || account.name || 'Usuário'}</h3>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
         </div>
         <Button variant="outline" size="sm">
@@ -69,7 +69,7 @@ export default function ProfileSettings({ account, user }: ProfileSettingsProps)
           <Input
             id="name"
             name="name"
-            defaultValue={account.name}
+            defaultValue={user?.user_metadata?.name || account.name}
             placeholder="Seu nome"
           />
           <p className="text-xs text-muted-foreground">

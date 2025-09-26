@@ -160,7 +160,13 @@ class SessionManager:
             "thread_id": thread_id,
             "project_id": project_id,
             "account_id": account_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {
+                "is_automation": True,
+                "automation_source": "trigger",
+                "trigger_id": trigger_event.trigger_id,
+                "trigger_type": trigger_event.trigger_type.value
+            }
         }).execute()
         
         logger.info(f"Created agent session: project={project_id}, thread={thread_id}")

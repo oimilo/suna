@@ -507,7 +507,8 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
   const mappedThreads: Thread[] = (data || [])
     .filter((thread) => {
       const metadata = thread.metadata || {};
-      return !metadata.is_agent_builder;
+      // Oculta threads do agent builder e automações na sidebar
+      return !metadata.is_agent_builder && metadata.is_automation !== true;
     })
     .map((thread) => ({
       thread_id: thread.thread_id,

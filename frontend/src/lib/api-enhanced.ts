@@ -255,14 +255,16 @@ export const threadsApi = {
         const { data, error } = await query;
         if (error) return { data: null, error };
 
-        const mappedThreads: Thread[] = (data || []).map((thread) => ({
-          thread_id: thread.thread_id,
-          account_id: thread.account_id,
-          project_id: thread.project_id,
-          created_at: thread.created_at,
-          updated_at: thread.updated_at,
-          metadata: thread.metadata,
-        }));
+        const mappedThreads: Thread[] = (data || [])
+          .filter((thread) => !(thread?.metadata?.is_automation === true))
+          .map((thread) => ({
+            thread_id: thread.thread_id,
+            account_id: thread.account_id,
+            project_id: thread.project_id,
+            created_at: thread.created_at,
+            updated_at: thread.updated_at,
+            metadata: thread.metadata,
+          }));
 
         return { data: mappedThreads, error: null };
       },

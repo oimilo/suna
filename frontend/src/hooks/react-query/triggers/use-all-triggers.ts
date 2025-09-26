@@ -42,6 +42,24 @@ export interface TriggerStats {
   triggers_by_type: Record<string, number>;
 }
 
+// New: Automations list (grouped by trigger)
+export interface AutomationItem {
+  trigger_id?: string | null;
+  trigger_type?: string | null;
+  thread_id: string;
+  project_id?: string | null;
+  agent_id?: string | null;
+  name?: string | null;
+  is_active?: boolean | null;
+  last_run_at?: string | null;
+  runs_count: number;
+}
+
+export interface AutomationsResponse {
+  automations: AutomationItem[];
+  total_count: number;
+}
+
 interface UseAllTriggersParams {
   page?: number;
   per_page?: number;
@@ -183,5 +201,31 @@ export function useToggleTrigger() {
     onError: (error: Error) => {
       toast.error(error.message || 'Erro ao alternar automação');
     },
+  });
+}
+
+// Hook to fetch automations (threads with is_automation=true)
+async function fetchAutomations(): Promise<AutomationsResponse> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3008';
+  const res = await fetch(`${API_URL}/triggers/automations`, {
+    headers: { 'Authorization': `Bearer ${session.access_token}` },
+  });
+  if (!res.ok) {
+    let detail = 'Failed to fetch automations';
+    try { const json = await res.json(); detail = json?.detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export function useAutomations() {
+  return useQuery({
+    queryKey: ['automations-list'],
+    queryFn: fetchAutomations,
+    staleTime: 30000,
   });
 }

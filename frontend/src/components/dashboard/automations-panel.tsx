@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { Clock, Zap, Bot, Settings2 } from 'lucide-react';
+import { Clock, Zap, Bot, Settings2, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { useAllUserTriggers } from '@/hooks/react-query/triggers/use-all-user-triggers';
 import { useToggleTrigger } from '@/hooks/react-query/triggers/use-agent-triggers';
 import { TriggerEditModal } from '@/components/sidebar/trigger-edit-modal';
@@ -88,6 +88,7 @@ export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
   const { data: triggersData, isLoading, refetch } = useAllUserTriggers();
   const [selectedTrigger, setSelectedTrigger] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState<boolean>(false);
   const toggleTriggerMutation = useToggleTrigger();
   const deleteTriggerMutation = useDeleteTrigger();
   // simple panel, no draggable sheet
@@ -125,25 +126,43 @@ export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
     refetch();
   };
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('automations_panel_expanded');
+    setIsExpanded(saved === 'true');
+  }, []);
+
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('automations_panel_expanded', String(next));
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className={cn('rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur bg-white/60 dark:bg-black/30 px-4 py-3', className)} role="region" aria-label="Automações">
-        <div className="flex items-center justify-between mb-2">
+    <div className={cn('rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur bg-white/60 dark:bg-black/30 px-4', isExpanded ? 'py-3' : 'py-2', className)} role="region" aria-label="Automações">
+        <div className={cn('flex items-center justify-between', isExpanded ? 'mb-2' : 'mb-0')}>
           <div className="flex items-center gap-3">
-            <div className="text-sm font-medium">Automações</div>
-            <div className="h-6 px-2 rounded-full text-xs bg-black/5 dark:bg-white/10 flex items-center gap-1">
+            <div className="text-sm font-medium leading-none">Automações</div>
+            <div className="h-6 px-2 rounded-full text-xs border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/10 text-muted-foreground flex items-center gap-1">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
               <span>{activeCount} ativas</span>
             </div>
-            <div className="h-6 px-2 rounded-full text-xs bg-black/5 dark:bg-white/10 flex items-center">
+            <div className="h-6 px-2 rounded-full text-xs border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/10 text-muted-foreground flex items-center">
               {triggers.length} no total
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
-              <Link href="/automations">Ver todas</Link>
+          <div className="flex items-center gap-1.5">
+            <Button onClick={toggleExpanded} variant="ghost" size="icon" className="h-7 w-7" title={isExpanded ? 'Minimizar' : 'Expandir'} aria-label={isExpanded ? 'Minimizar' : 'Expandir'}>
+              {isExpanded ? (<ChevronDown className="h-4 w-4" />) : (<ChevronUp className="h-4 w-4" />)}
             </Button>
           </div>
         </div>
+        {isExpanded && (
+        <>
         <div className={cn('grid grid-cols-1 gap-3 pr-1 overflow-y-auto')} style={{ maxHeight }}>
           {isLoading && (
             <div className="p-3 text-xs text-muted-foreground">Carregando…</div>
@@ -201,6 +220,16 @@ export function AutomationsPanel({ className, maxHeight = 260 }: Props) {
             );
           })}
         </div>
+        <div className="mt-2 flex justify-end">
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" aria-label="Ver todas as automações">
+            <Link href="/automations" className="flex items-center gap-1">
+              <span>Ver todas</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+        </>
+        )}
 
         {selectedTrigger && (
           <TriggerEditModal trigger={selectedTrigger} isOpen={isModalOpen} onClose={onCloseModal} />
