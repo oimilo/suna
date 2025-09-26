@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Plug, ChevronRight, Zap } from 'lucide-react';
+import { Bot, Menu, Plus, Plug, ChevronRight, Zap, Sun, Moon } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useFeatureFlags } from '@/lib/feature-flags';
 import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
+import { useTheme } from 'next-themes';
 
 export function SidebarLeft({
   ...props
@@ -74,6 +75,7 @@ export function SidebarLeft({
   const customAgentsEnabled = flags.custom_agents;
   const createNewAgentMutation = useCreateNewAgent();
   const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   
   useEffect(() => {
@@ -140,6 +142,22 @@ export function SidebarLeft({
                   <SidebarTrigger className="h-8 w-8" />
                 </TooltipTrigger>
                 <TooltipContent>Alternar barra lateral (CMD+B)</TooltipContent>
+              </Tooltip>
+            )}
+            {state !== 'collapsed' && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent"
+                    title="Alternar tema"
+                    aria-label="Alternar tema"
+                  >
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Alternar tema</TooltipContent>
               </Tooltip>
             )}
             {isMobile && (
@@ -241,7 +259,7 @@ export function SidebarLeft({
                 })}>
                   <Plug className="h-4 w-4 mr-1" />
                   <span className="flex items-center justify-between w-full">
-                    Integrações
+                    Credenciais
                   </span>
                 </SidebarMenuButton>
               </Link>

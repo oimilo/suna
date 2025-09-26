@@ -119,6 +119,23 @@ class UpcomingRunsResponse(BaseModel):
     total_count: int
 
 
+class AutomationItem(BaseModel):
+    trigger_id: str | None = None
+    trigger_type: Optional[str] = None
+    thread_id: str
+    project_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    last_run_at: Optional[str] = None
+    runs_count: int = 0
+
+
+class AutomationsResponse(BaseModel):
+    automations: List[AutomationItem]
+    total_count: int
+
+
 # Workflow models
 class WorkflowStepRequest(BaseModel):
     name: str
@@ -187,6 +204,82 @@ async def get_providers():
         
     except Exception as e:
         logger.error(f"Error getting providers: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/automations", response_model=AutomationsResponse)
+async def list_automations(
+    user_id: str = Depends(get_current_user_id_from_jwt),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0)
+):
+    """List automations for the current user. An automation is any thread with metadata.is_automation=true.
+
+    Returns latest thread per trigger_id (when available), last_run_at and runs_count.
+    """
+    client = await db.client
+    try:
+        # Fetch automation threads
+        q = client.table('threads')\
+            .select('thread_id, project_id, account_id, metadata, created_at')\
+            .eq('account_id', user_id)\
+            .contains('metadata', { 'is_automation': True })\
+            .order('created_at', desc=True)
+
+        threads_res = await q.execute()
+        threads = threads_res.data or []
+        if not threads:
+            return AutomationsResponse(automations=[], total_count=0)
+
+        # Group by trigger_id (fallback: by thread_id when missing)
+        groups = {}
+        for t in threads:
+            md = t.get('metadata') or {}
+            key = md.get('trigger_id') or t['thread_id']
+            grp = groups.setdefault(key, {
+                'trigger_id': md.get('trigger_id'),
+                'trigger_type': md.get('trigger_type'),
+                'latest_thread': t,
+                'runs': [t]
+            })
+            # Latest is first due to order desc; just append runs
+            if grp['latest_thread']['created_at'] < t['created_at']:
+                grp['latest_thread'] = t
+            grp['runs'].append(t)
+
+        automations: List[AutomationItem] = []
+        for key, grp in groups.items():
+            latest = grp['latest_thread']
+            trigger_id = grp.get('trigger_id')
+            # Try enrich with trigger name/active
+            name = None
+            is_active = None
+            agent_id = None
+            try:
+                if trigger_id:
+                    trig = await client.table('agent_triggers').select('name, is_active, agent_id').eq('trigger_id', trigger_id).single().execute()
+                    if getattr(trig, 'data', None):
+                        name = trig.data.get('name')
+                        is_active = trig.data.get('is_active')
+                        agent_id = trig.data.get('agent_id')
+            except Exception:
+                pass
+
+            automations.append(AutomationItem(
+                trigger_id=trigger_id,
+                trigger_type=grp.get('trigger_type'),
+                thread_id=latest['thread_id'],
+                project_id=latest.get('project_id'),
+                agent_id=agent_id,
+                name=name,
+                is_active=is_active,
+                last_run_at=latest.get('created_at'),
+                runs_count=len(grp['runs'])
+            ))
+
+        return AutomationsResponse(automations=automations[:limit], total_count=len(automations))
+    except Exception as e:
+        logger.error(f"Error listing automations: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

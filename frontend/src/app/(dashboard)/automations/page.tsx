@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useAllTriggers, useTriggerStats, useToggleTrigger } from '@/hooks/react-query/triggers/use-all-triggers';
+import { useAllTriggers, useTriggerStats, useToggleTrigger, useAutomations } from '@/hooks/react-query/triggers/use-all-triggers';
 import { TriggerCard } from '@/components/automations/trigger-card';
 import { AutomationStats } from '@/components/automations/automation-stats';
 
@@ -82,6 +82,7 @@ export default function AutomationsPage() {
   });
 
   const { data: statsData } = useTriggerStats();
+  const { data: automationsData } = useAutomations();
   const toggleTriggerMutation = useToggleTrigger();
 
   const handleEditTrigger = (trigger: any) => {
@@ -237,7 +238,7 @@ export default function AutomationsPage() {
           </div>
         </div>
 
-        {/* Automations Grid */}
+        {/* Automations Grid (grouped by trigger via backend) */}
         <div className="space-y-6">
           {isLoadingTriggers ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
@@ -255,7 +256,7 @@ export default function AutomationsPage() {
               </Card>
             ))}
           </div>
-        ) : triggersData?.triggers && triggersData.triggers.length > 0 ? (
+        ) : automationsData?.automations && automationsData.automations.length > 0 ? (
           <>
             <motion.div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5"
@@ -264,9 +265,9 @@ export default function AutomationsPage() {
               animate="animate"
             >
               <AnimatePresence mode="popLayout">
-                {triggersData.triggers.map((trigger, index) => (
+                {automationsData.automations.map((auto, index) => (
                   <motion.div
-                    key={trigger.trigger_id}
+                    key={auto.trigger_id || auto.thread_id}
                     variants={fadeIn}
                     layout
                     initial="initial"
@@ -274,20 +275,46 @@ export default function AutomationsPage() {
                     exit="exit"
                     custom={index}
                   >
-                    <TriggerCard
-                      trigger={trigger}
-                      onEdit={() => handleEditTrigger(trigger)}
-                      onToggle={() => handleToggleTrigger(trigger.trigger_id)}
-                      onDelete={() => handleDeleteTrigger(trigger)}
-                      isToggling={toggleTriggerMutation.isPending}
-                    />
+                    {/* Reusa TriggerCard quando houver trigger_id; senão mostra card simplificado */}
+                    {auto.trigger_id ? (
+                      <TriggerCard
+                        trigger={{
+                          trigger_id: auto.trigger_id,
+                          agent_id: auto.agent_id,
+                          agent_name: (auto as any).agent_name || 'Agente',
+                          trigger_type: auto.trigger_type || 'schedule',
+                          name: auto.name || 'Automação',
+                          description: undefined,
+                          is_active: auto.is_active ?? true,
+                          config: {},
+                          created_at: auto.last_run_at || '',
+                          updated_at: auto.last_run_at || '',
+                          execution_count: auto.runs_count || 0,
+                          last_execution: auto.last_run_at || undefined,
+                          success_count: 0,
+                          failure_count: 0,
+                        }}
+                        onEdit={() => handleEditTrigger({ trigger_id: auto.trigger_id })}
+                        onToggle={() => handleToggleTrigger(auto.trigger_id!)}
+                        onDelete={() => handleDeleteTrigger({ trigger_id: auto.trigger_id })}
+                        isToggling={toggleTriggerMutation.isPending}
+                      />
+                    ) : (
+                      <Card className="h-full">
+                        <CardContent className="p-4">
+                          <div className="text-sm font-medium">Automação</div>
+                          <div className="text-xs text-muted-foreground mt-1">Thread: {auto.thread_id}</div>
+                          <div className="text-xs text-muted-foreground mt-1">Execuções: {auto.runs_count}</div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
 
             {/* Pagination */}
-            {triggersData.has_more && (
+            {false && (
               <div className="mt-8 flex justify-center">
                 <Button
                   variant="outline"

@@ -13,8 +13,7 @@ import {
   Plus,
   Settings,
   AudioWaveform,
-  Sun,
-  Moon,
+  Zap,
   KeyRound,
 } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -46,7 +45,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
-import { useTheme } from 'next-themes';
 import { isLocalMode } from '@/lib/config';
 
 export function NavUserWithTeams({
@@ -62,7 +60,7 @@ export function NavUserWithTeams({
   const { isMobile } = useSidebar();
   const { data: accounts } = useAccounts();
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
-  const { theme, setTheme } = useTheme();
+  
 
   // Prepare personal account and team accounts
   const personalAccount = React.useMemo(
@@ -274,14 +272,11 @@ export function NavUserWithTeams({
                     Gerenciador .Env Local
                   </Link>
                 </DropdownMenuItem>}
-                <DropdownMenuItem
-                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                >
-                  <div className="flex items-center gap-2">
-                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span>Tema</span>
-                  </div>
+                <DropdownMenuItem asChild>
+                  <Link href="/automations">
+                    <Zap className="h-4 w-4" />
+                    Automações
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
