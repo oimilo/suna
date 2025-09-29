@@ -122,7 +122,7 @@ class UpcomingRunsResponse(BaseModel):
 class AutomationItem(BaseModel):
     trigger_id: str | None = None
     trigger_type: Optional[str] = None
-    thread_id: str
+    thread_id: Optional[str] = None
     project_id: Optional[str] = None
     agent_id: Optional[str] = None
     name: Optional[str] = None
@@ -329,6 +329,33 @@ async def list_automations(
                     last_run_at=latest.get('started_at'),
                     runs_count=len(grp['runs'])
                 ))
+
+        # Ensure triggers without runs also appear (active or inactive)
+        try:
+            trigs_res = await client.table('agent_triggers')\
+                .select('trigger_id, name, is_active, agent_id, trigger_type')\
+                .eq('account_id', user_id)\
+                .order('created_at', desc=True)\
+                .execute()
+            present_ids = {a.trigger_id for a in automations if a.trigger_id}
+            for trig in (trigs_res.data or []):
+                tid = trig.get('trigger_id')
+                if not tid or tid in present_ids:
+                    continue
+                automations.append(AutomationItem(
+                    trigger_id=tid,
+                    trigger_type=trig.get('trigger_type'),
+                    thread_id=None,
+                    project_id=None,
+                    agent_id=trig.get('agent_id'),
+                    name=trig.get('name'),
+                    is_active=trig.get('is_active'),
+                    last_run_at=None,
+                    runs_count=0
+                ))
+        except Exception:
+            # Non-fatal: still return what we have
+            pass
 
         return AutomationsResponse(automations=automations[:limit], total_count=len(automations))
     except Exception as e:
