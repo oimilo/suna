@@ -140,19 +140,22 @@ async function toggleTrigger(triggerId: string): Promise<{ success: boolean; is_
     throw new Error('Not authenticated');
   }
 
-  // Buscar o estado atual do trigger
-  const { data: trigger, error: fetchError } = await supabase
+  // Buscar o estado atual do trigger (tolerante a múltiplas linhas)
+  const { data: rows, error: fetchError } = await supabase
     .from('agent_triggers')
     .select('is_active')
-    .eq('trigger_id', triggerId)
-    .single();
+    .eq('trigger_id', triggerId);
 
   if (fetchError) {
     throw new Error(fetchError.message);
   }
+  const current = Array.isArray(rows) ? rows[0] : rows;
+  if (!current) {
+    throw new Error('Trigger não encontrado');
+  }
 
   // Alternar o estado
-  const newState = !trigger.is_active;
+  const newState = !current.is_active;
   
   const { error: updateError } = await supabase
     .from('agent_triggers')

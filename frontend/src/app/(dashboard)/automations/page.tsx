@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn, staggerContainer } from '@/lib/animations';
@@ -299,12 +300,32 @@ export default function AutomationsPage() {
                         onDelete={() => handleDeleteTrigger({ trigger_id: auto.trigger_id })}
                         isToggling={toggleTriggerMutation.isPending}
                       />
+                      ) : null}
+                      {auto.trigger_id ? (
+                        auto.thread_id && (auto as any).project_id ? (
+                          <div className="mt-2">
+                            <Button asChild variant="link" size="sm" className="px-0">
+                              <Link href={`/projects/${(auto as any).project_id}/thread/${auto.thread_id}`}>
+                                Abrir última execução
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : null
                     ) : (
                       <Card className="h-full">
                         <CardContent className="p-4">
                           <div className="text-sm font-medium">Automação</div>
                           <div className="text-xs text-muted-foreground mt-1">Thread: {auto.thread_id}</div>
                           <div className="text-xs text-muted-foreground mt-1">Execuções: {auto.runs_count}</div>
+                          {auto.thread_id && (auto as any).project_id && (
+                            <div className="mt-1">
+                              <Button asChild variant="link" size="sm" className="px-0">
+                                <Link href={`/projects/${(auto as any).project_id}/thread/${auto.thread_id}`}>
+                                  Abrir última execução
+                                </Link>
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}

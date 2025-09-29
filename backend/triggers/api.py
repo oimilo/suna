@@ -318,11 +318,19 @@ async def list_automations(
 
                 # Resolve latest thread_id
                 thread_id = latest.get('thread_id')
+                project_id = None
+                try:
+                    if thread_id:
+                        tinfo = await client.table('threads').select('project_id').eq('thread_id', thread_id).limit(1).execute()
+                        if getattr(tinfo, 'data', None) and len(tinfo.data) > 0:
+                            project_id = tinfo.data[0].get('project_id')
+                except Exception:
+                    pass
                 automations.append(AutomationItem(
                     trigger_id=trigger_id,
                     trigger_type=None,
                     thread_id=thread_id,
-                    project_id=None,
+                    project_id=project_id,
                     agent_id=agent_id,
                     name=name,
                     is_active=is_active,
