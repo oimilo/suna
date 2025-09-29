@@ -219,7 +219,7 @@ async def list_automations(
     """
     client = await db.client
     try:
-        # Fetch automation threads
+        # Prefer explicit threads flagged as automations
         q = client.table('threads')\
             .select('thread_id, project_id, account_id, metadata, created_at')\
             .eq('account_id', user_id)\
@@ -228,54 +228,107 @@ async def list_automations(
 
         threads_res = await q.execute()
         threads = threads_res.data or []
-        if not threads:
-            return AutomationsResponse(automations=[], total_count=0)
-
-        # Group by trigger_id (fallback: by thread_id when missing)
-        groups = {}
-        for t in threads:
-            md = t.get('metadata') or {}
-            key = md.get('trigger_id') or t['thread_id']
-            grp = groups.setdefault(key, {
-                'trigger_id': md.get('trigger_id'),
-                'trigger_type': md.get('trigger_type'),
-                'latest_thread': t,
-                'runs': [t]
-            })
-            # Latest is first due to order desc; just append runs
-            if grp['latest_thread']['created_at'] < t['created_at']:
-                grp['latest_thread'] = t
-            grp['runs'].append(t)
 
         automations: List[AutomationItem] = []
-        for key, grp in groups.items():
-            latest = grp['latest_thread']
-            trigger_id = grp.get('trigger_id')
-            # Try enrich with trigger name/active
-            name = None
-            is_active = None
-            agent_id = None
-            try:
-                if trigger_id:
-                    trig = await client.table('agent_triggers').select('name, is_active, agent_id').eq('trigger_id', trigger_id).single().execute()
-                    if getattr(trig, 'data', None):
-                        name = trig.data.get('name')
-                        is_active = trig.data.get('is_active')
-                        agent_id = trig.data.get('agent_id')
-            except Exception:
-                pass
 
-            automations.append(AutomationItem(
-                trigger_id=trigger_id,
-                trigger_type=grp.get('trigger_type'),
-                thread_id=latest['thread_id'],
-                project_id=latest.get('project_id'),
-                agent_id=agent_id,
-                name=name,
-                is_active=is_active,
-                last_run_at=latest.get('created_at'),
-                runs_count=len(grp['runs'])
-            ))
+        if threads:
+            # Group by trigger_id (fallback: by thread_id when missing)
+            groups: Dict[str, Any] = {}
+            for t in threads:
+                md = t.get('metadata') or {}
+                key = md.get('trigger_id') or t['thread_id']
+                grp = groups.setdefault(key, {
+                    'trigger_id': md.get('trigger_id'),
+                    'trigger_type': md.get('trigger_type'),
+                    'latest_thread': t,
+                    'runs': [t]
+                })
+                if grp['latest_thread']['created_at'] < t['created_at']:
+                    grp['latest_thread'] = t
+                grp['runs'].append(t)
+
+            for key, grp in groups.items():
+                latest = grp['latest_thread']
+                trigger_id = grp.get('trigger_id')
+                name = None
+                is_active = None
+                agent_id = None
+                try:
+                    if trigger_id:
+                        trig = await client.table('agent_triggers').select('name, is_active, agent_id').eq('trigger_id', trigger_id).single().execute()
+                        if getattr(trig, 'data', None):
+                            name = trig.data.get('name')
+                            is_active = trig.data.get('is_active')
+                            agent_id = trig.data.get('agent_id')
+                except Exception:
+                    pass
+
+                automations.append(AutomationItem(
+                    trigger_id=trigger_id,
+                    trigger_type=grp.get('trigger_type'),
+                    thread_id=latest['thread_id'],
+                    project_id=latest.get('project_id'),
+                    agent_id=agent_id,
+                    name=name,
+                    is_active=is_active,
+                    last_run_at=latest.get('created_at'),
+                    runs_count=len(grp['runs'])
+                ))
+        else:
+            # Fallback: derive automations from agent_runs metadata
+            runs_q = client.table('agent_runs')\
+                .select('id, thread_id, status, started_at, metadata')\
+                .eq('account_id', user_id)\
+                .filter('metadata->>trigger_execution', 'eq', 'true')\
+                .order('started_at', desc=True)
+            runs_res = await runs_q.execute()
+            runs = runs_res.data or []
+
+            if not runs:
+                return AutomationsResponse(automations=[], total_count=0)
+
+            groups: Dict[str, Any] = {}
+            for r in runs:
+                md = r.get('metadata') or {}
+                key = md.get('trigger_id') or r['thread_id']
+                grp = groups.setdefault(key, {
+                    'trigger_id': md.get('trigger_id'),
+                    'latest_run': r,
+                    'runs': [r]
+                })
+                if grp['latest_run']['started_at'] < r['started_at']:
+                    grp['latest_run'] = r
+                grp['runs'].append(r)
+
+            for key, grp in groups.items():
+                latest = grp['latest_run']
+                trigger_id = grp.get('trigger_id')
+                name = None
+                is_active = None
+                agent_id = None
+                try:
+                    if trigger_id:
+                        trig = await client.table('agent_triggers').select('name, is_active, agent_id').eq('trigger_id', trigger_id).single().execute()
+                        if getattr(trig, 'data', None):
+                            name = trig.data.get('name')
+                            is_active = trig.data.get('is_active')
+                            agent_id = trig.data.get('agent_id')
+                except Exception:
+                    pass
+
+                # Resolve latest thread_id
+                thread_id = latest.get('thread_id')
+                automations.append(AutomationItem(
+                    trigger_id=trigger_id,
+                    trigger_type=None,
+                    thread_id=thread_id,
+                    project_id=None,
+                    agent_id=agent_id,
+                    name=name,
+                    is_active=is_active,
+                    last_run_at=latest.get('started_at'),
+                    runs_count=len(grp['runs'])
+                ))
 
         return AutomationsResponse(automations=automations[:limit], total_count=len(automations))
     except Exception as e:
