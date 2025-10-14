@@ -15,6 +15,41 @@ import inspect
 from enum import Enum
 from utils.logger import logger
 
+# --- Class metadata decorator (needed by upstream Suna tools) ---
+def tool_metadata(
+    display_name: str,
+    description: str,
+    icon: Optional[str] = None,
+    color: Optional[str] = None,
+    weight: Optional[int] = None,
+    visible: bool = True,
+):
+    """Attach display metadata to Tool classes.
+
+    This decorator mirrors the upstream Suna pattern so classes like
+    MCPToolWrapper and Agent Builder tools can declare UI metadata
+    without import errors.
+    """
+    def decorator(cls):
+        try:
+            setattr(
+                cls,
+                "tool_metadata",
+                {
+                    "display_name": display_name,
+                    "description": description,
+                    "icon": icon,
+                    "color": color,
+                    "weight": weight,
+                    "visible": visible,
+                },
+            )
+        except Exception:
+            # Fail-safe: still return class even if metadata setting fails
+            pass
+        return cls
+    return decorator
+
 class SchemaType(Enum):
     """Enumeration of supported schema types for tool definitions."""
     OPENAPI = "openapi"
