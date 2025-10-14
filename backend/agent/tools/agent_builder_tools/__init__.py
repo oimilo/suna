@@ -1,16 +1,11 @@
 from .base_tool import AgentBuilderBaseTool
 from .agent_config_tool import AgentConfigTool
 from .mcp_search_tool import MCPSearchTool
-# Import guarded para evitar crash de runtime em caso de problemas de compatibilidade
-try:
-    from .credential_profile_tool import CredentialProfileTool  # type: ignore
-except Exception:
-    CredentialProfileTool = None  # type: ignore
-from .workflow_tool import WorkflowTool
+from .credential_profile_tool import CredentialProfileTool
 from .trigger_tool import TriggerTool
 from typing import List, Type, Dict, Any
-from agentpress.thread_manager import ThreadManager
-from utils.logger import logger
+from core.agentpress.thread_manager import ThreadManager
+from core.utils.logger import logger
 
 
 class AgentBuilderToolRegistry:
@@ -20,16 +15,14 @@ class AgentBuilderToolRegistry:
         self.tools: Dict[str, Type[AgentBuilderBaseTool]] = {
             'agent_config': AgentConfigTool,
             'mcp_search': MCPSearchTool,
+            'credential_profile': CredentialProfileTool,
+            'trigger': TriggerTool,
         }
-        if CredentialProfileTool:
-            self.tools['credential_profile'] = CredentialProfileTool
-        self.tools['workflow'] = WorkflowTool
-        self.tools['trigger'] = TriggerTool
     
     def register_tool(self, name: str, tool_class: Type[AgentBuilderBaseTool]):
         """Register a new agent builder tool."""
         self.tools[name] = tool_class
-        logger.info(f"Registered agent builder tool: {name}")
+        logger.debug(f"Registered agent builder tool: {name}")
     
     def get_tool(self, name: str) -> Type[AgentBuilderBaseTool]:
         """Get a tool class by name."""
@@ -40,8 +33,8 @@ class AgentBuilderToolRegistry:
         return self.tools.copy()
     
     def register_all_tools(self, thread_manager: ThreadManager, db_connection, agent_id: str):
-        """Register all agent builder tools with the thread manager."""
-        logger.info(f"Registering {len(self.tools)} agent builder tools")
+        
+        logger.debug(f"Registering {len(self.tools)} agent builder tools")
         
         for tool_name, tool_class in self.tools.items():
             try:
@@ -51,7 +44,7 @@ class AgentBuilderToolRegistry:
                     db_connection=db_connection,
                     agent_id=agent_id
                 )
-                logger.info(f"Successfully registered agent builder tool: {tool_name}")
+                logger.debug(f"Successfully registered agent builder tool: {tool_name}")
             except Exception as e:
                 logger.error(f"Failed to register agent builder tool {tool_name}: {e}")
     
@@ -69,7 +62,6 @@ __all__ = [
     'AgentConfigTool',
     'MCPSearchTool',
     'CredentialProfileTool',
-    'WorkflowTool',
     'AgentBuilderToolRegistry',
     'agent_builder_registry'
 ]

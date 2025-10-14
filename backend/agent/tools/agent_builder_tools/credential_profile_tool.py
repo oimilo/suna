@@ -1,19 +1,13 @@
 from typing import Optional, List
 from uuid import uuid4
-from agentpress.tool import ToolResult, openapi_schema, tool_metadata
-from agentpress.thread_manager import ThreadManager
+from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
+from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
-from utils.logger import logger
-try:
-    from composio_integration.composio_service import get_integration_service  # type: ignore
-    from composio_integration.composio_profile_service import ComposioProfileService  # type: ignore
-except Exception:
-    def get_integration_service(*args, **kwargs):
-        raise RuntimeError("Composio integration not available")
-    ComposioProfileService = None
-from mcp_module import mcp_manager as mcp_service
+from core.composio_integration.composio_service import get_integration_service
+from core.composio_integration.composio_profile_service import ComposioProfileService
+from core.mcp_module.mcp_service import mcp_service
 from .mcp_search_tool import MCPSearchTool
-from utils.logger import logger
+from core.utils.logger import logger
 
 @tool_metadata(
     display_name="Credentials Manager",
@@ -48,8 +42,6 @@ class CredentialProfileTool(AgentBuilderBaseTool):
     async def get_credential_profiles(self, toolkit_slug: Optional[str] = None) -> ToolResult:
         try:
             account_id = await self._get_current_account_id()
-            if ComposioProfileService is None:
-                return self.fail_response("Composio integration not available")
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id, toolkit_slug)
             
@@ -189,8 +181,6 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             account_id = await self._get_current_account_id()
             client = await self.db.client
 
-            if ComposioProfileService is None:
-                return self.fail_response("Composio integration not available")
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
             
@@ -241,13 +231,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             current_tools['custom_mcp'] = updated_mcps
             current_config['tools'] = current_tools
             
-            from agent.versioning.infrastructure.dependencies import get_version_service, set_db_connection
-            from services.supabase import DBConnection
-            # garantir container com conexão
-            try:
-                set_db_connection(self.db if isinstance(self.db, DBConnection) else DBConnection())
-            except Exception:
-                pass
+            from core.versioning.version_service import get_version_service
             version_service = await get_version_service()
             new_version = await version_service.create_version(
                 agent_id=self.agent_id,
@@ -261,7 +245,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
 
             # Dynamically register the MCP tools in the current runtime
             try:
-                from agent.tools.mcp_tool_wrapper import MCPToolWrapper
+                from core.tools.mcp_tool_wrapper import MCPToolWrapper
                 
                 mcp_config_for_wrapper = {
                     'name': profile.toolkit_name,
@@ -327,53 +311,40 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             account_id = await self._get_current_account_id()
             client = await self.db.client
             
-            if ComposioProfileService is None:
-                return self.fail_response("Composio integration not available")
-
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
+            
             profile = None
             for p in profiles:
                 if p.profile_id == profile_id:
                     profile = p
                     break
-
+            
             if not profile:
                 return self.fail_response("Credential profile not found")
             
             # Remove from agent configuration if it exists
             agent_result = await client.table('agents').select('current_version_id').eq('agent_id', self.agent_id).execute()
             if agent_result.data and agent_result.data[0].get('current_version_id'):
-                version_result = await client.table('agent_versions') \
-                    .select('config') \
-                    .eq('version_id', agent_result.data[0]['current_version_id']) \
-                    .maybe_single() \
+                version_result = await client.table('agent_versions')\
+                    .select('config')\
+                    .eq('version_id', agent_result.data[0]['current_version_id'])\
+                    .maybe_single()\
                     .execute()
-
+                
                 if version_result.data and version_result.data.get('config'):
                     current_config = version_result.data['config']
-                current_tools = current_config.get('tools', {})
-                current_custom_mcps = current_tools.get('custom_mcp', [])
-                
-                    updated_mcps = [
-                        mcp for mcp in current_custom_mcps
-                        if mcp.get('config', {}).get('profile_id') != profile_id
-                    ]
-                
-                if len(updated_mcps) != len(current_custom_mcps):
-                        from agent.versioning.infrastructure.dependencies import get_version_service, set_db_connection
-                        from services.supabase import DBConnection
-                        try:
-                            # Atualizar config e criar nova versão
-                    current_tools['custom_mcp'] = updated_mcps
-                    current_config['tools'] = current_tools
+                    current_tools = current_config.get('tools', {})
+                    current_custom_mcps = current_tools.get('custom_mcp', [])
                     
-                            # Garantir container com conexão
-                            try:
-                                set_db_connection(self.db if isinstance(self.db, DBConnection) else DBConnection())
-                            except Exception:
-                                pass
-
+                    updated_mcps = [mcp for mcp in current_custom_mcps if mcp.get('config', {}).get('profile_id') != profile_id]
+                    
+                    if len(updated_mcps) != len(current_custom_mcps):
+                        from core.versioning.version_service import get_version_service
+                        try:
+                            current_tools['custom_mcp'] = updated_mcps
+                            current_config['tools'] = current_tools
+                            
                             version_service = await get_version_service()
                             await version_service.create_version(
                                 agent_id=self.agent_id,
@@ -384,9 +355,9 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
                                 change_description=f"Deleted credential profile {profile.display_name}"
                             )
-                        except Exception:
+                        except Exception as e:
                             return self.fail_response("Failed to update agent config")
-
+            
             # Delete the profile
             await profile_service.delete_profile(profile_id)
             
@@ -398,5 +369,5 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 }
             })
             
-        except Exception:
-            return self.fail_response("Error deleting credential profile")
+        except Exception as e:
+            return self.fail_response("Error deleting credential profile") 
