@@ -1,2 +1,33 @@
-# Alias module: core.mcp_module -> mcp_module
-from mcp_module import *  # noqa: F401,F403
+from .mcp_service import (
+    MCPService,
+    mcp_service,
+
+    MCPConnection, 
+    ToolExecutionResult,
+    CustomMCPConnectionResult,
+
+    MCPException,
+    MCPConnectionError,
+    MCPToolNotFoundError,
+    MCPToolExecutionError,
+    MCPProviderError,
+    MCPConfigurationError,
+    MCPAuthenticationError,
+    CustomMCPError,
+)
+
+__all__ = [
+    "MCPService",
+    "mcp_service",
+    "MCPConnection",
+    "ToolExecutionResult",
+    "CustomMCPConnectionResult",
+    "MCPException",
+    "MCPConnectionError",
+    "MCPToolNotFoundError",
+    "MCPToolExecutionError",
+    "MCPProviderError",
+    "MCPConfigurationError",
+    "MCPAuthenticationError",
+    "CustomMCPError"
+] 
