@@ -1,17 +1,14 @@
 from typing import Any, Dict, List, Optional
-from agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
-from mcp_module import mcp_manager as mcp_service
-from utils.logger import logger
+from core.agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
+from core.mcp_module import mcp_manager as mcp_service
+from core.utils.logger import logger
 import inspect
 import asyncio
 import time
 import hashlib
 import json
-from agent.tools.utils.mcp_connection_manager import MCPConnectionManager
-from agent.tools.utils.custom_mcp_handler import CustomMCPHandler
-from agent.tools.utils.dynamic_tool_builder import DynamicToolBuilder
-from agent.tools.utils.mcp_tool_executor import MCPToolExecutor
-from services import redis as redis_service
+from core.tools.utils import MCPConnectionManager, CustomMCPHandler, DynamicToolBuilder, MCPToolExecutor
+from core.services import redis as redis_service
 
 
 class MCPSchemaRedisCache:
@@ -306,19 +303,19 @@ class MCPToolWrapper(Tool):
     
     def __getattr__(self, name: str):
         if hasattr(self, 'tool_builder') and self.tool_builder:
-            method = self.tool_builder.find_method_by_name(name)
-            if method:
-                return method
+        method = self.tool_builder.find_method_by_name(name)
+        if method:
+            return method
         
         if hasattr(self, '_dynamic_tools') and self._dynamic_tools:
-            for tool_data in self._dynamic_tools.values():
-                if tool_data.get('method_name') == name:
-                    return tool_data.get('method')
-            
-            name_with_hyphens = name.replace('_', '-')
-            for tool_name, tool_data in self._dynamic_tools.items():
-                if tool_data.get('method_name') == name or tool_name == name_with_hyphens:
-                    return tool_data.get('method')
+        for tool_data in self._dynamic_tools.values():
+            if tool_data.get('method_name') == name:
+                return tool_data.get('method')
+        
+        name_with_hyphens = name.replace('_', '-')
+        for tool_name, tool_data in self._dynamic_tools.items():
+            if tool_data.get('method_name') == name or tool_name == name_with_hyphens:
+                return tool_data.get('method')
         
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
@@ -326,7 +323,7 @@ class MCPToolWrapper(Tool):
         await self._ensure_initialized()
         if tool_registry and self._dynamic_tools:
             logger.debug(f"Updating tool registry with {len(self._dynamic_tools)} MCP tools")
-            
+             
     async def get_available_tools(self) -> List[Dict[str, Any]]:
         await self._ensure_initialized()
         return self.mcp_manager.get_all_tools_openapi()
@@ -334,7 +331,7 @@ class MCPToolWrapper(Tool):
     async def _execute_mcp_tool(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
         await self._ensure_initialized()
         return await self.tool_executor.execute_tool(tool_name, arguments)
-    
+            
     async def cleanup(self):
         if self._initialized:
             try:
