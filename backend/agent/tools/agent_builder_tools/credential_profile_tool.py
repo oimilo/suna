@@ -329,27 +329,27 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             
             if ComposioProfileService is None:
                 return self.fail_response("Composio integration not available")
+
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
-            
             profile = None
             for p in profiles:
                 if p.profile_id == profile_id:
                     profile = p
                     break
-            
+
             if not profile:
                 return self.fail_response("Credential profile not found")
             
             # Remove from agent configuration if it exists
             agent_result = await client.table('agents').select('current_version_id').eq('agent_id', self.agent_id).execute()
             if agent_result.data and agent_result.data[0].get('current_version_id'):
-                version_result = await client.table('agent_versions')\
-                    .select('config')\
-                    .eq('version_id', agent_result.data[0]['current_version_id'])\
-                    .maybe_single()\
+                version_result = await client.table('agent_versions') \
+                    .select('config') \
+                    .eq('version_id', agent_result.data[0]['current_version_id']) \
+                    .maybe_single() \
                     .execute()
-                
+
                 if version_result.data and version_result.data.get('config'):
                     current_config = version_result.data['config']
                 current_tools = current_config.get('tools', {})
@@ -364,14 +364,16 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                         from agent.versioning.infrastructure.dependencies import get_version_service, set_db_connection
                         from services.supabase import DBConnection
                         try:
-                            # atualizar config e criar nova versão
+                            # Atualizar config e criar nova versão
                     current_tools['custom_mcp'] = updated_mcps
                     current_config['tools'] = current_tools
-                            # garantir container com conexão para o service
+                    
+                            # Garantir container com conexão
                             try:
                                 set_db_connection(self.db if isinstance(self.db, DBConnection) else DBConnection())
                             except Exception:
                                 pass
+
                             version_service = await get_version_service()
                             await version_service.create_version(
                                 agent_id=self.agent_id,
@@ -384,7 +386,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                             )
                         except Exception:
                             return self.fail_response("Failed to update agent config")
-            
+
             # Delete the profile
             await profile_service.delete_profile(profile_id)
             
@@ -396,5 +398,5 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 }
             })
             
-        except Exception as e:
-            return self.fail_response("Error deleting credential profile") 
+        except Exception:
+            return self.fail_response("Error deleting credential profile")
