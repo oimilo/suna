@@ -303,19 +303,19 @@ class MCPToolWrapper(Tool):
     
     def __getattr__(self, name: str):
         if hasattr(self, 'tool_builder') and self.tool_builder:
-        method = self.tool_builder.find_method_by_name(name)
-        if method:
-            return method
+            method = self.tool_builder.find_method_by_name(name)
+            if method:
+                return method
         
         if hasattr(self, '_dynamic_tools') and self._dynamic_tools:
-        for tool_data in self._dynamic_tools.values():
-            if tool_data.get('method_name') == name:
-                return tool_data.get('method')
-        
-        name_with_hyphens = name.replace('_', '-')
-        for tool_name, tool_data in self._dynamic_tools.items():
-            if tool_data.get('method_name') == name or tool_name == name_with_hyphens:
-                return tool_data.get('method')
+            for tool_data in self._dynamic_tools.values():
+                if tool_data.get('method_name') == name:
+                    return tool_data.get('method')
+            
+            name_with_hyphens = name.replace('_', '-')
+            for tool_name, tool_data in self._dynamic_tools.items():
+                if tool_data.get('method_name') == name or tool_name == name_with_hyphens:
+                    return tool_data.get('method')
         
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
