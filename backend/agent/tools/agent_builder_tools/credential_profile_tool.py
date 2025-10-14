@@ -327,6 +327,8 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             account_id = await self._get_current_account_id()
             client = await self.db.client
             
+            if ComposioProfileService is None:
+                return self.fail_response("Composio integration not available")
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
             
@@ -353,14 +355,23 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 current_tools = current_config.get('tools', {})
                 current_custom_mcps = current_tools.get('custom_mcp', [])
                 
-                    updated_mcps = [mcp for mcp in current_custom_mcps if mcp.get('config', {}).get('profile_id') != profile_id]
+                    updated_mcps = [
+                        mcp for mcp in current_custom_mcps
+                        if mcp.get('config', {}).get('profile_id') != profile_id
+                    ]
                 
                 if len(updated_mcps) != len(current_custom_mcps):
-                        from core.versioning.version_service import get_version_service
+                        from agent.versioning.infrastructure.dependencies import get_version_service, set_db_connection
+                        from services.supabase import DBConnection
                         try:
+                            # atualizar config e criar nova versão
                     current_tools['custom_mcp'] = updated_mcps
                     current_config['tools'] = current_tools
-                    
+                            # garantir container com conexão para o service
+                            try:
+                                set_db_connection(self.db if isinstance(self.db, DBConnection) else DBConnection())
+                            except Exception:
+                                pass
                             version_service = await get_version_service()
                             await version_service.create_version(
                                 agent_id=self.agent_id,
@@ -371,7 +382,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
                                 change_description=f"Deleted credential profile {profile.display_name}"
                             )
-                        except Exception as e:
+                        except Exception:
                             return self.fail_response("Failed to update agent config")
             
             # Delete the profile
