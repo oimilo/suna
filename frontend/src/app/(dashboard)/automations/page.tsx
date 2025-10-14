@@ -301,29 +301,24 @@ export default function AutomationsPage() {
                         isToggling={toggleTriggerMutation.isPending}
                       />
                       ) : null}
-                      {auto.trigger_id ? (
-                        auto.thread_id && (auto as any).project_id ? (
-                          <div className="mt-2">
-                            <Button asChild variant="link" size="sm" className="px-0">
-                              <Link href={`/projects/${(auto as any).project_id}/thread/${auto.thread_id}`}>
-                                Abrir última execução
-                              </Link>
-                            </Button>
-                          </div>
-                        ) : null
+                      {auto.trigger_id && auto.thread_id && auto.project_id ? (
+                        <div className="mt-2">
+                          <Link prefetch={false} href={`/projects/${auto.project_id}/thread/${auto.thread_id}`} className="text-sm text-primary hover:underline">
+                            Abrir última execução
+                          </Link>
+                        </div>
+                      ) : null}
                     ) : (
                       <Card className="h-full">
                         <CardContent className="p-4">
                           <div className="text-sm font-medium">Automação</div>
                           <div className="text-xs text-muted-foreground mt-1">Thread: {auto.thread_id}</div>
                           <div className="text-xs text-muted-foreground mt-1">Execuções: {auto.runs_count}</div>
-                          {auto.thread_id && (auto as any).project_id && (
+                          {auto.thread_id && auto.project_id && (
                             <div className="mt-1">
-                              <Button asChild variant="link" size="sm" className="px-0">
-                                <Link href={`/projects/${(auto as any).project_id}/thread/${auto.thread_id}`}>
-                                  Abrir última execução
-                                </Link>
-                              </Button>
+                              <Link prefetch={false} href={`/projects/${auto.project_id}/thread/${auto.thread_id}`} className="text-sm text-primary hover:underline">
+                                Abrir última execução
+                              </Link>
                             </div>
                           )}
                         </CardContent>
