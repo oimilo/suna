@@ -2554,8 +2554,8 @@ async def get_custom_mcp_tools_for_agent(
             except json.JSONDecodeError:
                 logger.warning("Failed to parse X-MCP-Headers as JSON")
         
-        from mcp_module import mcp_manager
-        discovery_result = await mcp_manager.discover_custom_tools(mcp_type, mcp_config)
+        from core.mcp_module import mcp_service
+        discovery_result = await mcp_service.discover_custom_tools(mcp_type, mcp_config)
         
         # Find existing MCP config for this server
         existing_mcp = None
