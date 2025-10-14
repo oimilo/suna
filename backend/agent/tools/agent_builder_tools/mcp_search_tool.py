@@ -1,18 +1,11 @@
 import json
 from typing import Optional
-from agentpress.tool import ToolResult, openapi_schema, tool_metadata
-from agentpress.thread_manager import ThreadManager
+from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
+from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
-from utils.logger import logger
-
-# Composio deps podem não existir neste repo; proteja import
-try:
-    from composio_integration.toolkit_service import ToolkitService  # type: ignore
-    from composio_integration.composio_service import get_integration_service  # type: ignore
-except Exception:  # pragma: no cover - fallback stub
-    ToolkitService = None
-    def get_integration_service(*args, **kwargs):
-        raise RuntimeError("Composio integration not available")
+from core.composio_integration.toolkit_service import ToolkitService
+from core.composio_integration.composio_service import get_integration_service
+from core.utils.logger import logger
 
 @tool_metadata(
     display_name="MCP Server Search",
@@ -55,8 +48,6 @@ class MCPSearchTool(AgentBuilderBaseTool):
         limit: int = 10
     ) -> ToolResult:
         try:
-            if ToolkitService is None:
-                return self.fail_response("Composio integration not available")
             toolkit_service = ToolkitService()
             integration_service = get_integration_service()
             
@@ -116,8 +107,6 @@ class MCPSearchTool(AgentBuilderBaseTool):
     })
     async def get_app_details(self, toolkit_slug: str) -> ToolResult:
         try:
-            if ToolkitService is None:
-                return self.fail_response("Composio integration not available")
             toolkit_service = ToolkitService()
             toolkit_data = await toolkit_service.get_toolkit_by_slug(toolkit_slug)
             
@@ -167,10 +156,8 @@ class MCPSearchTool(AgentBuilderBaseTool):
     async def discover_user_mcp_servers(self, profile_id: str) -> ToolResult:
         try:
             account_id = await self._get_current_account_id()
-            if ToolkitService is None:
-                return self.fail_response("Composio integration not available")
-            from composio_integration.composio_profile_service import ComposioProfileService  # type: ignore
-            from mcp_module import mcp_manager as mcp_service
+            from core.composio_integration.composio_profile_service import ComposioProfileService
+            from core.mcp_module.mcp_service import mcp_service
             
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
