@@ -6,7 +6,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
-from mcp_module import mcp_manager
+from core.mcp_module import mcp_service as mcp_manager
 from utils.logger import logger
 from flags.flags import is_enabled
 
