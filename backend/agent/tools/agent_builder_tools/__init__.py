@@ -1,7 +1,11 @@
 from .base_tool import AgentBuilderBaseTool
 from .agent_config_tool import AgentConfigTool
 from .mcp_search_tool import MCPSearchTool
-from .credential_profile_tool import CredentialProfileTool
+# Import guarded para evitar crash de runtime em caso de problemas de compatibilidade
+try:
+    from .credential_profile_tool import CredentialProfileTool  # type: ignore
+except Exception:
+    CredentialProfileTool = None  # type: ignore
 from .workflow_tool import WorkflowTool
 from .trigger_tool import TriggerTool
 from typing import List, Type, Dict, Any
@@ -16,10 +20,11 @@ class AgentBuilderToolRegistry:
         self.tools: Dict[str, Type[AgentBuilderBaseTool]] = {
             'agent_config': AgentConfigTool,
             'mcp_search': MCPSearchTool,
-            'credential_profile': CredentialProfileTool,
-            'workflow': WorkflowTool,
-            'trigger': TriggerTool,
         }
+        if CredentialProfileTool:
+            self.tools['credential_profile'] = CredentialProfileTool
+        self.tools['workflow'] = WorkflowTool
+        self.tools['trigger'] = TriggerTool
     
     def register_tool(self, name: str, tool_class: Type[AgentBuilderBaseTool]):
         """Register a new agent builder tool."""
