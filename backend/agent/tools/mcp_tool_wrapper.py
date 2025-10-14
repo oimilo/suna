@@ -1,17 +1,17 @@
 from typing import Any, Dict, List, Optional
-from core.agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
-from core.mcp_module import mcp_service
-from core.utils.logger import logger
+from agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
+from mcp_module import mcp_manager as mcp_service
+from utils.logger import logger
 import inspect
 import asyncio
 import time
 import hashlib
 import json
-from core.tools.utils.mcp_connection_manager import MCPConnectionManager
-from core.tools.utils.custom_mcp_handler import CustomMCPHandler
-from core.tools.utils.dynamic_tool_builder import DynamicToolBuilder
-from core.tools.utils.mcp_tool_executor import MCPToolExecutor
-from core.services import redis as redis_service
+from agent.tools.utils.mcp_connection_manager import MCPConnectionManager
+from agent.tools.utils.custom_mcp_handler import CustomMCPHandler
+from agent.tools.utils.dynamic_tool_builder import DynamicToolBuilder
+from agent.tools.utils.mcp_tool_executor import MCPToolExecutor
+from services import redis as redis_service
 
 
 class MCPSchemaRedisCache:

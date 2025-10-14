@@ -1,13 +1,19 @@
 from typing import Optional, List
 from uuid import uuid4
-from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
-from core.agentpress.thread_manager import ThreadManager
+from agentpress.tool import ToolResult, openapi_schema, tool_metadata
+from agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
-from core.composio_integration.composio_service import get_integration_service
-from core.composio_integration.composio_profile_service import ComposioProfileService
-from core.mcp_module.mcp_service import mcp_service
+from utils.logger import logger
+try:
+    from composio_integration.composio_service import get_integration_service  # type: ignore
+    from composio_integration.composio_profile_service import ComposioProfileService  # type: ignore
+except Exception:
+    def get_integration_service(*args, **kwargs):
+        raise RuntimeError("Composio integration not available")
+    ComposioProfileService = None
+from mcp_module import mcp_manager as mcp_service
 from .mcp_search_tool import MCPSearchTool
-from core.utils.logger import logger
+from utils.logger import logger
 
 @tool_metadata(
     display_name="Credentials Manager",
@@ -42,6 +48,8 @@ class CredentialProfileTool(AgentBuilderBaseTool):
     async def get_credential_profiles(self, toolkit_slug: Optional[str] = None) -> ToolResult:
         try:
             account_id = await self._get_current_account_id()
+            if ComposioProfileService is None:
+                return self.fail_response("Composio integration not available")
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id, toolkit_slug)
             
@@ -181,6 +189,8 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             account_id = await self._get_current_account_id()
             client = await self.db.client
 
+            if ComposioProfileService is None:
+                return self.fail_response("Composio integration not available")
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
             
@@ -231,7 +241,13 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             current_tools['custom_mcp'] = updated_mcps
             current_config['tools'] = current_tools
             
-            from core.versioning.version_service import get_version_service
+            from agent.versioning.infrastructure.dependencies import get_version_service, set_db_connection
+            from services.supabase import DBConnection
+            # garantir container com conexão
+            try:
+                set_db_connection(self.db if isinstance(self.db, DBConnection) else DBConnection())
+            except Exception:
+                pass
             version_service = await get_version_service()
             new_version = await version_service.create_version(
                 agent_id=self.agent_id,
@@ -245,7 +261,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
 
             # Dynamically register the MCP tools in the current runtime
             try:
-                from core.tools.mcp_tool_wrapper import MCPToolWrapper
+                from agent.tools.mcp_tool_wrapper import MCPToolWrapper
                 
                 mcp_config_for_wrapper = {
                     'name': profile.toolkit_name,
@@ -334,17 +350,17 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 
                 if version_result.data and version_result.data.get('config'):
                     current_config = version_result.data['config']
-                    current_tools = current_config.get('tools', {})
-                    current_custom_mcps = current_tools.get('custom_mcp', [])
-                    
+                current_tools = current_config.get('tools', {})
+                current_custom_mcps = current_tools.get('custom_mcp', [])
+                
                     updated_mcps = [mcp for mcp in current_custom_mcps if mcp.get('config', {}).get('profile_id') != profile_id]
-                    
-                    if len(updated_mcps) != len(current_custom_mcps):
+                
+                if len(updated_mcps) != len(current_custom_mcps):
                         from core.versioning.version_service import get_version_service
                         try:
-                            current_tools['custom_mcp'] = updated_mcps
-                            current_config['tools'] = current_tools
-                            
+                    current_tools['custom_mcp'] = updated_mcps
+                    current_config['tools'] = current_tools
+                    
                             version_service = await get_version_service()
                             await version_service.create_version(
                                 agent_id=self.agent_id,
