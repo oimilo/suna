@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from core.agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
-from core.mcp_module import mcp_manager as mcp_service
+from core.mcp_module import mcp_service
 from core.utils.logger import logger
 import inspect
 import asyncio
