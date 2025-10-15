@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-FREE_MODEL_ID = "moonshotai/kimi-k2"
+FREE_MODEL_ID = "deepseek/deepseek-chat-v3.1"
 
 # Set premium model ID based on environment
 if config.ENV_MODE == EnvMode.LOCAL:
@@ -226,25 +226,31 @@ class ModelRegistry:
         #     )
         # ))
         
-        # # DeepSeek Models
-        # self.register(Model(
-        #     id="openrouter/deepseek/deepseek-chat",
-        #     name="DeepSeek Chat",
-        #     provider=ModelProvider.OPENROUTER,
-        #     aliases=["deepseek", "deepseek-chat"],
-        #     context_window=128_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT, 
-        #         ModelCapability.FUNCTION_CALLING
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=0.38,
-        #         output_cost_per_million_tokens=0.89
-        #     ),
-        #     tier_availability=["free", "paid"],
-        #     priority=95,
-        #     enabled=False  # Currently disabled
-        # ))
+        # DeepSeek (OpenRouter) - free/padrão
+        self.register(Model(
+            id="openrouter/deepseek/deepseek-chat-v3.1",
+            name="DeepSeek V3.1",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["deepseek/deepseek-chat-v3.1", "deepseek-v3.1", "deepseek"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.38,
+                output_cost_per_million_tokens=0.89
+            ),
+            tier_availability=["free", "paid"],
+            priority=94,
+            enabled=True,
+            config=ModelConfig(
+                extra_headers={
+                    "HTTP-Referer": config.OR_SITE_URL if hasattr(config, 'OR_SITE_URL') and config.OR_SITE_URL else "",
+                    "X-Title": config.OR_APP_NAME if hasattr(config, 'OR_APP_NAME') and config.OR_APP_NAME else ""
+                }
+            )
+        ))
         
         # # Qwen Models
         # self.register(Model(
