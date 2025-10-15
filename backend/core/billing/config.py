@@ -38,10 +38,11 @@ TIERS: Dict[str, Tier] = {
         name='free',
         price_ids=[],
         monthly_credits=Decimal('0.00'),
-        display_name='Free Tier (Discontinued)',
+        display_name='Free',
         can_purchase_credits=False,
-        models=[],
-        project_limit=0
+        # Permite somente o modelo padrão gratuito
+        models=['openrouter/deepseek/deepseek-chat-v3.1', 'deepseek/deepseek-chat-v3.1'],
+        project_limit=10
     ),
     'tier_2_20': Tier(
         name='tier_2_20',
