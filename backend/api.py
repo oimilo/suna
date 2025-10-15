@@ -14,6 +14,8 @@ from core.utils.config import config, EnvMode
 import asyncio
 from core.utils.logger import logger, structlog
 import time
+import os
+import urllib.parse as urlparse
 from collections import OrderedDict
 
 from pydantic import BaseModel
@@ -129,9 +131,32 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
-# Define allowed origins based on environment
+def _add_origin(origins_list, origin_val):
+    if not origin_val:
+        return
+    origin = origin_val.rstrip('/')
+    if origin not in origins_list:
+        origins_list.append(origin)
+    try:
+        parsed = urlparse.urlparse(origin)
+        host = parsed.netloc
+        if host:
+            if host.startswith('www.'):
+                counterpart = f"{parsed.scheme}://{host[4:]}"
+            else:
+                counterpart = f"{parsed.scheme}://www.{host}"
+            if counterpart not in origins_list:
+                origins_list.append(counterpart)
+    except Exception:
+        pass
+
+# Define allowed origins based on environment and deployment URLs
 allowed_origins = ["https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
+
+# Include deployment/site URLs from env
+for var in ["OR_SITE_URL", "APP_URL", "DEPLOY_DOMAIN", "NEXT_PUBLIC_URL"]:
+    _add_origin(allowed_origins, os.getenv(var))
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
