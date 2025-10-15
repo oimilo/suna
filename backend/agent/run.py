@@ -32,6 +32,15 @@ from agent.gemini_prompt import get_gemini_system_prompt
 from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 from agentpress.tool import SchemaType
 
+# Guarded import for CredentialProfileTool
+try:
+    from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool  # type: ignore
+    _HAS_CRED_TOOL = True
+except Exception as _cred_import_err:  # pragma: no cover
+    from utils.logger import logger as _guard_logger
+    _guard_logger.warning(f"CredentialProfileTool unavailable: {_cred_import_err}")
+    _HAS_CRED_TOOL = False
+
 load_dotenv()
 
 async def run_agent(
@@ -106,8 +115,6 @@ async def run_agent(
         
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
-        from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
-        from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
         from services.supabase import DBConnection
         db = DBConnection()
@@ -117,8 +124,8 @@ async def run_agent(
         
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
-        thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
-        thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
+        if _HAS_CRED_TOOL:
+            thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=suna_agent_id)
         
         logger.info(f"Enabled Suna self-configuration with agent ID: {suna_agent_id}")
@@ -127,16 +134,14 @@ async def run_agent(
     if is_agent_builder:
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
         from agent.tools.agent_builder_tools.mcp_search_tool import MCPSearchTool
-        from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
-        from agent.tools.agent_builder_tools.workflow_tool import WorkflowTool
         from agent.tools.agent_builder_tools.trigger_tool import TriggerTool
         from services.supabase import DBConnection
         db = DBConnection()
         
         thread_manager.add_tool(AgentConfigTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(MCPSearchTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
-        thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
-        thread_manager.add_tool(WorkflowTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
+        if _HAS_CRED_TOOL:
+            thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         thread_manager.add_tool(TriggerTool, thread_manager=thread_manager, db_connection=db, agent_id=target_agent_id)
         
 
@@ -264,10 +269,10 @@ async def run_agent(
                     # Ensure credential profile management tools are available for any run with MCPs
                     try:
                         from services.supabase import DBConnection
-                        from agent.tools.agent_builder_tools.credential_profile_tool import CredentialProfileTool
                         db_for_profiles = DBConnection()
-                        thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db_for_profiles, agent_id=agent_config.get('agent_id'))
-                        logger.info("Registered CredentialProfileTool for credential management")
+                        if _HAS_CRED_TOOL:
+                            thread_manager.add_tool(CredentialProfileTool, thread_manager=thread_manager, db_connection=db_for_profiles, agent_id=agent_config.get('agent_id'))
+                            logger.info("Registered CredentialProfileTool for credential management")
                     except Exception as _cred_e:
                         logger.warning(f"Could not register CredentialProfileTool: {_cred_e}")
 
