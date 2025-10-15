@@ -27,6 +27,7 @@ def initialize():
     redis_host = os.getenv("REDIS_HOST", "redis")
     redis_port = int(os.getenv("REDIS_PORT", 6379))
     redis_password = os.getenv("REDIS_PASSWORD", "")
+    use_ssl = os.getenv("REDIS_SSL", "false").lower() in ("1", "true", "yes")
     
     # Connection pool configuration - optimized for production
     max_connections = 128            # Reasonable limit for production
@@ -48,6 +49,8 @@ def initialize():
         retry_on_timeout=retry_on_timeout,
         health_check_interval=30,
         max_connections=max_connections,
+        ssl=use_ssl,
+        ssl_cert_reqs=None if use_ssl else None,
     )
 
     # Create Redis client from connection pool
