@@ -23,7 +23,9 @@ def initialize():
     # Load environment variables if not already loaded
     load_dotenv()
 
-    # Get Redis configuration
+    # Prefer a full REDIS_URL when provided (supports rediss:// for TLS)
+    redis_url = os.getenv("REDIS_URL")
+    # Host/port fallback
     redis_host = os.getenv("REDIS_HOST", "redis")
     redis_port = int(os.getenv("REDIS_PORT", 6379))
     redis_password = os.getenv("REDIS_PASSWORD", "")
@@ -35,26 +37,47 @@ def initialize():
     connect_timeout = 10.0           # 10 seconds connection timeout
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
 
-    logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} with max {max_connections} connections")
+    if redis_url:
+        logger.info(f"Initializing Redis via URL (max {max_connections} connections)")
+        client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            health_check_interval=30,
+            retry_on_timeout=retry_on_timeout,
+            max_connections=max_connections,
+        )
+        # Expose underlying pool for graceful close
+        pool = client.connection_pool
+    else:
+        logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} with max {max_connections} connections")
+        # Use correct SSL connection class for TLS
+        connection_kwargs = dict(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+        )
+        if use_ssl:
+            try:
+                from redis.asyncio.connection import SSLConnection
+                connection_kwargs["connection_class"] = SSLConnection
+                # Optionally relax certs if env demands; Upstash usually works without this
+                # connection_kwargs["ssl_cert_reqs"] = None
+            except Exception:
+                pass
 
-    # Create connection pool with production-optimized settings
-    pool = redis.ConnectionPool(
-        host=redis_host,
-        port=redis_port,
-        password=redis_password,
-        decode_responses=True,
-        socket_timeout=socket_timeout,
-        socket_connect_timeout=connect_timeout,
-        socket_keepalive=True,
-        retry_on_timeout=retry_on_timeout,
-        health_check_interval=30,
-        max_connections=max_connections,
-        ssl=use_ssl,
-        ssl_cert_reqs=None if use_ssl else None,
-    )
-
-    # Create Redis client from connection pool
-    client = redis.Redis(connection_pool=pool)
+        # Create connection pool with production-optimized settings
+        pool = redis.ConnectionPool(**connection_kwargs)
+        # Create Redis client from connection pool
+        client = redis.Redis(connection_pool=pool)
 
     return client
 
