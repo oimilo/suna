@@ -55,7 +55,7 @@ TIERS: Dict[str, Tier] = {
         display_name='Starter',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=100
+        project_limit=5000
     ),
     'tier_6_50': Tier(
         name='tier_6_50',
