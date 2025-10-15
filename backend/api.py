@@ -1,6 +1,11 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
+import sys
+# Ensure imports like `from core import ...` work when running from repo root
+sys.path.append(os.path.dirname(__file__))
+
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse

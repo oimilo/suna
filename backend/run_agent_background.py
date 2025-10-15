@@ -1,5 +1,8 @@
+import os
+import sys
 import dotenv
 dotenv.load_dotenv(".env")
+sys.path.append(os.path.dirname(__file__))
 
 import sentry
 import asyncio

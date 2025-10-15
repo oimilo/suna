@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from fastapi import APIRouter
 from .versioning.api import router as agent_versioning_router
 from .core_utils import initialize, cleanup
