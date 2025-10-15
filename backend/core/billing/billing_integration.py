@@ -125,7 +125,12 @@ class BillingIntegration:
                 }
             
             # Check billing/credits
-            can_run, message, reservation_id = await BillingIntegration.check_and_reserve_credits(account_id)
+            try:
+                can_run, message, reservation_id = await BillingIntegration.check_and_reserve_credits(account_id)
+            except Exception as e:
+                logger.error(f"Billing credit reservation failed (tolerating): {e}")
+                # Em caso de falha infra (ex.: Redis), não derrubar a requisição
+                can_run, message, reservation_id = True, "Billing temporarily unavailable - bypass", None
             if not can_run:
                 return False, f"Billing check failed: {message}", {
                     "tier_info": tier_info,
