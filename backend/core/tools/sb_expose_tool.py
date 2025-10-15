@@ -4,6 +4,9 @@ from core.agentpress.thread_manager import ThreadManager
 import asyncio
 import time
 
+# Hardcoded proxy base (mantém compat com frontend atual)
+_PROXY_BASE = "https://prophet.build/proxy"
+
 @tool_metadata(
     display_name="Port Exposure",
     description="Share your local development servers with preview URLs",
@@ -63,12 +66,25 @@ class SandboxExposeTool(SandboxToolsBase):
             preview_link = await self.sandbox.get_preview_link(port)
             
             # Extract the actual URL from the preview link object
-            url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+
+            # Rewrite to proxy base (hardcoded)
+            # Ex.: original_url: https://daytona-host.example.com/proxy/8080 -> https://prophet.build/proxy/8080
+            # Mantemos apenas o sufixo "/proxy/<port>" quando existir; caso contrário, anexamos "/proxy/<port>".
+            try:
+                suffix = f"/proxy/{port}"
+                if suffix not in original_url:
+                    proxied_url = f"{_PROXY_BASE}/{port}"
+                else:
+                    proxied_url = _PROXY_BASE + suffix.replace("/proxy", "") if _PROXY_BASE.endswith("/proxy") else _PROXY_BASE + suffix
+            except Exception:
+                proxied_url = f"{_PROXY_BASE}/{port}"
             
             return self.success_response({
-                "url": url,
+                "url": proxied_url,
                 "port": port,
-                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {url}"
+                "message": f"Successfully exposed port {port}. Access via proxy: {proxied_url}",
+                "original_url": original_url
             })
                 
         except ValueError:
