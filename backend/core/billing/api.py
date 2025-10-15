@@ -822,11 +822,13 @@ async def get_available_models(
         
         db = DBConnection()
         client = await db.client
-        account_result = await client.from_('credit_accounts').select('tier').eq('account_id', account_id).execute()
-        
         tier_name = 'none'
-        if account_result.data and len(account_result.data) > 0:
-            tier_name = account_result.data[0].get('tier', 'none')
+        try:
+            account_result = await client.from_('credit_accounts').select('tier').eq('account_id', account_id).execute()
+            if account_result.data and len(account_result.data) > 0:
+                tier_name = account_result.data[0].get('tier', 'none')
+        except Exception as e:
+            logger.warning(f"credit_accounts missing or inaccessible, defaulting tier to 'none': {e}")
         
         from .subscription_service import subscription_service
         tier = await subscription_service.get_user_subscription_tier(account_id)
