@@ -34,7 +34,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
-        console.log('🔵 Initial session check:', { hasSession: !!currentSession, user: !!currentSession?.user });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔵 Initial session check:', { hasSession: !!currentSession, user: !!currentSession?.user });
+        }
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
       } catch (error) {
@@ -48,12 +50,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('🔵 Auth state change:', { 
-          event, 
-          hasSession: !!newSession, 
-          hasUser: !!newSession?.user,
-          expiresAt: newSession?.expires_at 
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔵 Auth state change:', { 
+            event, 
+            hasSession: !!newSession, 
+            hasUser: !!newSession?.user,
+            expiresAt: newSession?.expires_at 
+          });
+        }
         
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -64,21 +68,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         switch (event) {
           case 'SIGNED_IN':
             if (newSession?.user) {
-              console.log('✅ User signed in');
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('✅ User signed in');
+              }
               await checkAndInstallProphetAgent(newSession.user.id, newSession.user.created_at);
             }
             break;
           case 'SIGNED_OUT':
-            console.log('✅ User signed out');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('✅ User signed out');
+            }
             break;
           case 'TOKEN_REFRESHED':
-            console.log('🔄 Token refreshed successfully');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('🔄 Token refreshed successfully');
+            }
             break;
           case 'MFA_CHALLENGE_VERIFIED':
-            console.log('✅ MFA challenge verified');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('✅ MFA challenge verified');
+            }
             break;
           default:
-            console.log(`🔵 Auth event: ${event}`);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`🔵 Auth event: ${event}`);
+            }
         }
       },
     );
@@ -90,7 +104,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      console.log('🔵 Signing out...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔵 Signing out...');
+      }
       await supabase.auth.signOut();
       // State updates will be handled by onAuthStateChange
     } catch (error) {
