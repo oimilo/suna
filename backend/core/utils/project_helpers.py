@@ -23,6 +23,7 @@ async def generate_and_update_project_name(project_id: str, prompt: str):
         db_conn = DBConnection()
         client = await db_conn.client
 
+        # Use Suna-standard lightweight model for metadata tasks
         model_name = "openai/gpt-5-nano"
         
         # Use pre-loaded Lucide React icons
@@ -46,8 +47,8 @@ async def generate_and_update_project_name(project_id: str, prompt: str):
         response = await make_llm_api_call(
             messages=messages, 
             model_name=model_name, 
-            max_tokens=1000, 
-            temperature=0.7,
+            max_tokens=256, 
+            temperature=1,
             response_format={"type": "json_object"},
             stream=False
         )
