@@ -139,7 +139,7 @@ export default function AgentsPage() {
     const kortixItems: MarketplaceTemplate[] = [];
     const communityItems: MarketplaceTemplate[] = [];
 
-    if (marketplaceTemplates) {
+    if (Array.isArray(marketplaceTemplates)) {
       marketplaceTemplates.forEach(template => {
         const item: MarketplaceTemplate = {
           id: template.template_id,
