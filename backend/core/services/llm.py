@@ -117,7 +117,13 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
             "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0": [
                 "anthropic/claude-3-7-sonnet-latest"
             ]
-        }
+        },
+        # Lightweight auxiliary model fallback: GPT-5-nano -> DeepSeek Chat v3.1
+        {
+            "openai/gpt-5-nano": [
+                "openrouter/deepseek/deepseek-chat-v3.1"
+            ]
+        },
     ]
     
     provider_router = Router(
