@@ -32,7 +32,8 @@ rabbitmq_url = os.getenv("RABBITMQ_URL")
 try:
     if rabbitmq_url:
         logger.info("🔧 Configuring Dramatiq broker: RabbitMQ")
-        broker = RabbitmqBroker(url=rabbitmq_url)
+        # IMPORTANT: Async actors require AsyncIO middleware regardless of broker type
+        broker = RabbitmqBroker(url=rabbitmq_url, middleware=[dramatiq.middleware.AsyncIO()])
     else:
         logger.info(f"🔧 Configuring Dramatiq broker: Redis at {redis_host}:{redis_port}")
         broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
