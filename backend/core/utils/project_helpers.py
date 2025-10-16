@@ -90,17 +90,26 @@ async def generate_and_update_project_name(project_id: str, prompt: str):
             logger.warning(f"Failed to get valid response from LLM for project {project_id} naming. Response: {response}")
 
         if generated_name:
-            # Store title and icon in dedicated fields
+            # Store title and icon when possible; fall back if icon column doesn't exist
             update_data = {"name": generated_name}
             if selected_icon:
                 update_data["icon_name"] = selected_icon
                 logger.debug(f"Storing project {project_id} with title: '{generated_name}' and icon: '{selected_icon}'")
             else:
                 logger.debug(f"Storing project {project_id} with title: '{generated_name}' (no icon)")
-            
-            update_result = await client.table('projects').update(update_data).eq("project_id", project_id).execute()
+
+            try:
+                update_result = await client.table('projects').update(update_data).eq("project_id", project_id).execute()
+            except Exception as e:
+                err_msg = str(e)
+                if "icon_name" in update_data and ("icon_name" in err_msg or "PGRST204" in err_msg or "schema cache" in err_msg):
+                    logger.warning(f"projects.icon_name not present. Retrying update without icon_name for project {project_id}")
+                    update_result = await client.table('projects').update({"name": generated_name}).eq("project_id", project_id).execute()
+                else:
+                    raise
+
             if hasattr(update_result, 'data') and update_result.data:
-                logger.debug(f"Successfully updated project {project_id} with clean title and dedicated icon field")
+                logger.debug(f"Successfully updated project {project_id} title (and icon if supported)")
             else:
                 logger.error(f"Failed to update project {project_id} in database. Update result: {update_result}")
         else:
