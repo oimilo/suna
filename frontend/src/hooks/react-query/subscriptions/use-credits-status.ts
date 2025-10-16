@@ -2,25 +2,29 @@ import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
 
+// Alinha com Suna: usar /billing/check e shape simplificado
 export interface CreditsStatus {
-  daily_credits: number;
-  daily_credits_used: number;
-  daily_credits_granted: number;
-  daily_expires_in: string | null;
-  tier_credits_limit: number;
-  tier_credits_used: number;
-  tier_credits_remaining: number;
-  total_credits_available: number;
-  subscription_name: string;
+  can_run: boolean;
+  message: string;
+  credit_balance: number;
+  subscription?: {
+    price_id?: string | null;
+    plan_name?: string;
+    display_name?: string;
+    tier?: string;
+    is_trial?: boolean;
+  } | null;
 }
 
 async function fetchCreditsStatus(token: string | null): Promise<CreditsStatus | null> {
   if (!token) return null;
   
   try {
-    const response = await fetch(`${API_URL}/billing/credits-status`, {
+    const response = await fetch(`${API_URL}/billing/check`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
     });
 
@@ -28,7 +32,13 @@ async function fetchCreditsStatus(token: string | null): Promise<CreditsStatus |
       throw new Error('Failed to fetch credits status');
     }
 
-    return response.json();
+    const data = await response.json();
+    return {
+      can_run: !!data.can_run,
+      message: data.message || '',
+      credit_balance: typeof data.balance === 'number' ? data.balance : (data.credit_balance ?? 0),
+      subscription: data.subscription ?? null,
+    };
   } catch (error) {
     console.error('Error fetching credits status:', error);
     return null;
