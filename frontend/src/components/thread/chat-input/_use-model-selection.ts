@@ -170,7 +170,9 @@ export const useModelSelection = () => {
   useEffect(() => {
     if (typeof window === 'undefined' || hasInitialized) return;
     
-    console.log('Initializing model selection from localStorage...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Initializing model selection from localStorage...');
+    }
     
     try {
       // Skip localStorage during SSR/build
@@ -193,7 +195,9 @@ export const useModelSelection = () => {
         ? savedModel 
         : defaultModel;
       
-      console.log('Selected model:', modelToUse, 'Subscription:', subscriptionStatus);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Selected model:', modelToUse, 'Subscription:', subscriptionStatus);
+      }
       
       // Clear old localStorage versions
       localStorage.removeItem('suna-preferred-model-v3');

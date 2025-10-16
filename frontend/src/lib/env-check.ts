@@ -7,12 +7,15 @@ export const checkEnvironmentVariables = () => {
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
     NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL,
   };
-
-  console.log('Environment Variables Check:', envVars);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Environment Variables Check:', envVars);
+  }
 
   // Check if backend URL is properly set
   if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
-    console.error('WARNING: NEXT_PUBLIC_BACKEND_URL is not set!');
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('WARNING: NEXT_PUBLIC_BACKEND_URL is not set!');
+    }
   }
 
   return envVars;
