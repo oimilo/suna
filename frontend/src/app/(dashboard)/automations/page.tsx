@@ -278,36 +278,37 @@ export default function AutomationsPage() {
                   >
                     {/* Reusa TriggerCard quando houver trigger_id; senão mostra card simplificado */}
                     {auto.trigger_id ? (
-                      <TriggerCard
-                        trigger={{
-                          trigger_id: auto.trigger_id,
-                          agent_id: auto.agent_id,
-                          agent_name: (auto as any).agent_name || 'Agente',
-                          trigger_type: auto.trigger_type || 'schedule',
-                          name: auto.name || 'Automação',
-                          description: undefined,
-                          is_active: auto.is_active ?? true,
-                          config: {},
-                          created_at: auto.last_run_at || '',
-                          updated_at: auto.last_run_at || '',
-                          execution_count: auto.runs_count || 0,
-                          last_execution: auto.last_run_at || undefined,
-                          success_count: 0,
-                          failure_count: 0,
-                        }}
-                        onEdit={() => handleEditTrigger({ trigger_id: auto.trigger_id })}
-                        onToggle={() => handleToggleTrigger(auto.trigger_id!)}
-                        onDelete={() => handleDeleteTrigger({ trigger_id: auto.trigger_id })}
-                        isToggling={toggleTriggerMutation.isPending}
-                      />
-                      ) : null}
-                      {auto.trigger_id && auto.thread_id && auto.project_id ? (
-                        <div className="mt-2">
-                          <Link prefetch={false} href={`/projects/${auto.project_id}/thread/${auto.thread_id}`} className="text-sm text-primary hover:underline">
-                            Abrir última execução
-                          </Link>
-                        </div>
-                      ) : null}
+                      <>
+                        <TriggerCard
+                          trigger={{
+                            trigger_id: auto.trigger_id,
+                            agent_id: auto.agent_id,
+                            agent_name: (auto as any).agent_name || 'Agente',
+                            trigger_type: auto.trigger_type || 'schedule',
+                            name: auto.name || 'Automação',
+                            description: undefined,
+                            is_active: auto.is_active ?? true,
+                            config: {},
+                            created_at: auto.last_run_at || '',
+                            updated_at: auto.last_run_at || '',
+                            execution_count: auto.runs_count || 0,
+                            last_execution: auto.last_run_at || undefined,
+                            success_count: 0,
+                            failure_count: 0,
+                          }}
+                          onEdit={() => handleEditTrigger({ trigger_id: auto.trigger_id })}
+                          onToggle={() => handleToggleTrigger(auto.trigger_id!)}
+                          onDelete={() => handleDeleteTrigger({ trigger_id: auto.trigger_id })}
+                          isToggling={toggleTriggerMutation.isPending}
+                        />
+                        {auto.thread_id && auto.project_id && (
+                          <div className="mt-2">
+                            <Link prefetch={false} href={`/projects/${auto.project_id}/thread/${auto.thread_id}`} className="text-sm text-primary hover:underline">
+                              Abrir última execução
+                            </Link>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <Card className="h-full">
                         <CardContent className="p-4">
