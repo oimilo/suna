@@ -16,6 +16,7 @@ from core.agentpress.thread_manager import ThreadManager
 from core.services.supabase import DBConnection
 from core.services import redis
 from dramatiq.brokers.redis import RedisBroker
+from dramatiq.brokers.rabbitmq import RabbitmqBroker
 import os
 from core.services.langfuse import langfuse
 from core.utils.retry import retry
@@ -26,10 +27,19 @@ from typing import Dict, Any
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
 
-logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
-
-dramatiq.set_broker(redis_broker)
+broker = None
+rabbitmq_url = os.getenv("RABBITMQ_URL")
+try:
+    if rabbitmq_url:
+        logger.info("🔧 Configuring Dramatiq broker: RabbitMQ")
+        broker = RabbitmqBroker(url=rabbitmq_url)
+    else:
+        logger.info(f"🔧 Configuring Dramatiq broker: Redis at {redis_host}:{redis_port}")
+        broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+    dramatiq.set_broker(broker)
+except Exception as e:
+    logger.error(f"Failed to configure Dramatiq broker: {e}")
+    raise
 
 _initialized = False
 db = DBConnection()
