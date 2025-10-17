@@ -39,66 +39,32 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     const getUsageDisplay = () => {
-        // Always use the same structure to avoid layout shift
-        const tier_credits_used = creditsData?.tier_credits_used ?? (subscriptionData?.current_usage ? subscriptionData.current_usage * 100 : 0);
-        const tier_credits_limit = creditsData?.tier_credits_limit ?? (subscriptionData?.cost_limit ? subscriptionData.cost_limit * 100 : 0);
-        const daily_credits = creditsData?.daily_credits ?? 0;
-        const daily_credits_granted = creditsData?.daily_credits_granted ?? 0;
-        const subscription_name = creditsData?.subscription_name ?? subscriptionData?.subscription_name ?? '';
-        
-        // Check if user is on free plan (no daily credits for free users)
-        const isFreeUser = subscription_name === 'free' || tier_credits_limit === 0;
-        
-        // Show proper status based on what credits are available
-        // Never show values above the limit
-        const displayedUsed = Math.min(tier_credits_used, tier_credits_limit);
-        
-        // For free users, only show plan credits
-        if (isFreeUser) {
+        // Prefer credit_balance when available
+        if (creditsData) {
             return (
-                <span className={cn(
-                    "text-xs",
-                    tier_credits_used >= tier_credits_limit && "text-red-600 dark:text-red-400"
-                )}>
-                    {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
-                    {tier_credits_limit > 0 && ` (acima do limite)`}
+                <span className="text-xs">
+                    {formatCredits(creditsData.credit_balance)} créditos disponíveis
                 </span>
             );
         }
-        
-        // For paid users, always show the same structure
+        // Fallback to subscription dollars -> credits
+        const used = subscriptionData?.current_usage ? subscriptionData.current_usage * 100 : 0;
+        const limit = subscriptionData?.cost_limit ? subscriptionData.cost_limit * 100 : 0;
+        const displayedUsed = Math.min(used, limit);
         return (
-            <span className="inline-flex items-center gap-2 text-xs">
-                <span className={cn(
-                    tier_credits_used >= tier_credits_limit && "text-amber-600 dark:text-amber-400"
-                )}>
-                    {formatCredits(displayedUsed)} / {formatCredits(tier_credits_limit)} créditos
-                </span>
-                {daily_credits_granted > 0 && (
-                    <>
-                        <span className="text-black/20 dark:text-white/20">•</span>
-                        <span className={cn(
-                            "inline-flex items-center gap-1",
-                            daily_credits > 0 
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-muted-foreground/60"
-                        )}>
-                            <Clock className="h-3 w-3" />
-                            {formatCredits(daily_credits)} diários
-                        </span>
-                    </>
-                )}
+            <span className={cn(
+                "text-xs",
+                used >= limit && "text-red-600 dark:text-red-400"
+            )}>
+                {formatCredits(displayedUsed)} / {formatCredits(limit)} créditos
             </span>
         );
     };
 
     const isOverLimit = () => {
-        // Check using credits data if available
         if (creditsData) {
-            return creditsData.total_credits_available <= 0;
+            return (creditsData.credit_balance || 0) <= 0;
         }
-        
-        // Fallback to old check
         if (!subscriptionData) return false;
         const current = subscriptionData.current_usage || 0;
         const limit = subscriptionData.cost_limit || 0;
@@ -124,7 +90,7 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                         ? "text-red-600 dark:text-red-400"
                         : "text-foreground"
                 )}>
-                    {isOverLimit() ? "Créditos esgotados" : "Créditos limitados"}
+                    {isOverLimit() ? "Créditos esgotados" : "Créditos"}
                 </span>
                 <span className="text-black/20 dark:text-white/20">•</span>
                 <span className="text-xs text-muted-foreground">
@@ -158,7 +124,7 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
             )}
 
             <button 
-                className="p-1 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors" 
+                className="p-1 flex-shrink-0 hover:bg-black/5 dark:hover:bg:white/5 rounded transition-colors" 
                 onClick={(e) => { 
                     e.stopPropagation(); 
                     onClose?.(); 

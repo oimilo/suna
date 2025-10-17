@@ -22,7 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
 import { Separator } from "@/components/ui/separator";
 import { extractCreateCredentialProfileData, CredentialProfile } from './_utils';
-import { usePipedreamAppIcon } from '@/hooks/react-query/pipedream/use-pipedream';
+// Removed Pipedream icon fetch; logoUrl will be undefined and fallback avatar shown
 
 export function CreateCredentialProfileToolView({
   name = 'create-credential-profile',
@@ -53,12 +53,7 @@ export function CreateCredentialProfileToolView({
 
   const toolTitle = getToolTitle(name);
 
-  // Fetch app icon using the logo hook
-  const { data: iconData } = usePipedreamAppIcon(app_slug || '', {
-    enabled: !!app_slug
-  });
-
-  const logoUrl = iconData?.icon_url;
+  const logoUrl = undefined as unknown as string | undefined;
 
   const formatCreatedAt = (dateString: string) => {
     return formatDateTime(dateString);

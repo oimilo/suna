@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Settings, X, Sparkles, Key, AlertTriangle } from 'lucide-react';
 import { MCPConfiguration } from './types';
 import { useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
-import { usePipedreamAppIcon } from '@/hooks/react-query/pipedream/use-pipedream';
+// Removed Pipedream icon dependency; fallback skeleton will render
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ConfiguredMcpListProps {
@@ -29,13 +29,7 @@ const extractAppSlug = (mcp: MCPConfiguration): string | null => {
 };
 
 const MCPLogo: React.FC<{ mcp: MCPConfiguration }> = ({ mcp }) => {
-  const appSlug = extractAppSlug(mcp);
-  const { data: iconData } = usePipedreamAppIcon(appSlug || '', {
-    enabled: !!appSlug
-  });
-
-  const logoUrl = iconData?.icon_url;
-
+  const logoUrl = undefined as unknown as string | undefined;
   return (
     <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 overflow-hidden">
       {logoUrl ? (
