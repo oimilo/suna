@@ -50,32 +50,21 @@ class SandboxExposeTool(SandboxToolsBase):
             if not 1 <= port <= 65535:
                 return self.fail_response(f"Invalid port number: {port}. Must be between 1 and 65535.")
 
-            # Check if something is actually listening on the port (for custom ports)
-            if port not in [6080, 8080, 8003]:  # Skip check for known sandbox ports
-                try:
-                    port_check = await self.sandbox.process.exec(f"netstat -tlnp | grep :{port}", timeout=5)
-                    if port_check.exit_code != 0:
-                        return self.fail_response(f"No service is currently listening on port {port}. Please start a service on this port first.")
-                except Exception:
-                    # If we can't check, proceed anyway - the user might be starting a service
-                    pass
-
-            # Get the preview link for the specified port
+            # Get the preview link for the specified port (ensures the preview is available at provider)
             preview_link = await self.sandbox.get_preview_link(port)
-            
-            # Extract the actual URL from the preview link object
             original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
 
-            # Rewrite to external proxy (hardcoded fallback), allowing env override
-            proxy_base = os.getenv('SANDBOX_PROXY_BASE_URL', 'https://prophet.build/proxy')
-            proxy_base = proxy_base.rstrip('/')
-            rewritten_url = f"{proxy_base}/{port}"
+            # Build unique per-project proxy URL (backup logic)
+            base_host = os.getenv('NEXT_PUBLIC_APP_URL') or os.getenv('APP_URL') or 'https://www.prophet.build'
+            base_host = base_host.rstrip('/')
+            # Route supports /api/preview/:projectId/p/:port/*
+            proxy_url = f"{base_host}/api/preview/{self.project_id}/p/{port}/"
 
             return self.success_response({
-                "url": rewritten_url,
+                "url": proxy_url,
                 "original_url": original_url,
                 "port": port,
-                "message": f"Successfully exposed port {port}. Use {rewritten_url} (proxied). Original: {original_url}"
+                "message": f"Successfully exposed port {port}. Use {proxy_url} (project-scoped proxy). Original: {original_url}"
             })
                 
         except ValueError:
