@@ -1927,9 +1927,11 @@ export const checkBillingStatus = async (): Promise<BillingStatusResponse> => {
       throw new NoAccessTokenAvailableError();
     }
 
-    const response = await fetch(`${BASE_URL}/billing/check-status`, {
+    const response = await fetch(`${BASE_URL}/billing/check`, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
       },
     });
 
