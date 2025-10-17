@@ -1,14 +1,11 @@
 'use client';
 
 import { createMutationHook } from '@/hooks/use-query';
-import { 
-  createThread, 
-  addUserMessage 
-} from '@/lib/api';
+import { sunaThreads } from '@/upstream/suna/threads';
 import { toast } from 'sonner';
 
 export const useCreateThread = createMutationHook(
-  ({ projectId }: { projectId: string }) => createThread(projectId),
+  ({ projectId }: { projectId: string }) => sunaThreads.createThread(projectId),
   {
     onSuccess: () => {
       toast.success('Conversa criada com sucesso');
@@ -22,7 +19,7 @@ export const useCreateThread = createMutationHook(
 
 export const useAddUserMessage = createMutationHook(
   ({ threadId, content }: { threadId: string; content: string }) => 
-    addUserMessage(threadId, content),
+    sunaThreads.addUserMessage(threadId, content),
   {
     errorContext: {
       operation: 'add message',

@@ -1,11 +1,11 @@
 import { createMutationHook, createQueryHook } from "@/hooks/use-query";
 import { threadKeys } from "./keys";
-import { addUserMessage, getMessages } from "@/lib/api";
+import { sunaThreads } from "@/upstream/suna/threads";
 
 export const useMessagesQuery = (threadId: string) =>
   createQueryHook(
     threadKeys.messages(threadId),
-    () => getMessages(threadId),
+    () => sunaThreads.getMessages(threadId),
     {
       enabled: !!threadId,
       retry: 1,
@@ -20,5 +20,5 @@ export const useAddUserMessageMutation = () =>
     }: {
       threadId: string;
       message: string;
-    }) => addUserMessage(threadId, message)
+    }) => sunaThreads.addUserMessage(threadId, message)
   )();

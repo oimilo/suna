@@ -39,6 +39,7 @@ export function CreateCredentialProfileToolView({
     profile_name,
     display_name,
     message,
+    auth_url,
     profile,
     actualIsSuccess,
     actualToolTimestamp,
@@ -207,6 +208,17 @@ export function CreateCredentialProfileToolView({
                         <p className="text-xs text-blue-700 dark:text-blue-300">
                           Este perfil de credencial precisa ser conectado antes de poder ser usado. Siga o fluxo de autenticação para completar a configuração.
                         </p>
+                        {auth_url && (
+                          <a
+                            href={auth_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex mt-3 items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <Link2 className="w-3 h-3" />
+                            Abrir link de autenticação
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

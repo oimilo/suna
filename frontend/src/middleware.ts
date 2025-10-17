@@ -1,7 +1,29 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PUBLIC_ROUTES = [
+  '/auth',
+  '/auth/callback',
+  '/auth/signup',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/legal',
+  '/api/auth',
+]
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  // Skip public, static, and API routes early (align with Suna)
+  if (
+    PUBLIC_ROUTES.some(route => pathname.startsWith(route)) ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.includes('.') ||
+    pathname.startsWith('/api/')
+  ) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -35,7 +57,7 @@ export async function middleware(request: NextRequest) {
 
   // Define protected routes
   const protectedRoutes = ['/dashboard', '/agents', '/projects', '/settings', '/invitation']
-  const authRoutes = ['/auth', '/login', '/signup']
+  const authRoutes = ['/auth', '/auth/callback', '/auth/forgot-password', '/auth/reset-password', '/login', '/signup']
   
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -80,6 +102,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 } 

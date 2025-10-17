@@ -16,6 +16,7 @@ export interface CreateCredentialProfileData {
   profile_name: string | null;
   display_name: string | null;
   message: string | null;
+  auth_url?: string | null;
   profile: CredentialProfile | null;
   success?: boolean;
   timestamp?: string;
@@ -57,6 +58,14 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
       profile_name: args.profile_name || null,
       display_name: args.display_name || null,
       message: parsedOutput.message || null,
+      auth_url: (
+        parsedOutput.auth_url ||
+        parsedOutput.auth_link ||
+        parsedOutput.authorization_url ||
+        parsedOutput.authUrl ||
+        parsedOutput.url ||
+        null
+      ),
       profile: parsedOutput.profile || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
@@ -71,6 +80,14 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
       profile_name: parsedContent.parameters?.profile_name || null,
       display_name: parsedContent.parameters?.display_name || null,
       message: parsedContent.output?.message || null,
+      auth_url: (
+        parsedContent.output?.auth_url ||
+        parsedContent.output?.auth_link ||
+        parsedContent.output?.authorization_url ||
+        parsedContent.output?.authUrl ||
+        parsedContent.output?.url ||
+        null
+      ),
       profile: parsedContent.output?.profile || null,
       success: parsedContent.success,
       timestamp: undefined
@@ -121,18 +138,25 @@ export function extractCreateCredentialProfileData(
   profile_name: string | null;
   display_name: string | null;
   message: string | null;
+  auth_url: string | null;
   profile: CredentialProfile | null;
   actualIsSuccess: boolean;
   actualToolTimestamp?: string;
   actualAssistantTimestamp?: string;
 } {
   let data: CreateCredentialProfileData;
+  const findUrl = (text: string | null): string | null => {
+    if (!text) return null;
+    const match = text.match(/https?:\/\/[^\s)]+/i);
+    return match ? match[0] : null;
+  };
   
   if (toolContent) {
     data = extractFromNewFormat(toolContent);
     if (data.success !== undefined || data.profile) {
       return {
         ...data,
+        auth_url: data.auth_url || findUrl(data.message || null),
         actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
         actualToolTimestamp: data.timestamp || toolTimestamp,
         actualAssistantTimestamp: assistantTimestamp
@@ -145,6 +169,7 @@ export function extractCreateCredentialProfileData(
     if (data.success !== undefined || data.profile) {
       return {
         ...data,
+        auth_url: data.auth_url || findUrl(data.message || null),
         actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
         actualToolTimestamp: toolTimestamp,
         actualAssistantTimestamp: data.timestamp || assistantTimestamp
@@ -160,6 +185,7 @@ export function extractCreateCredentialProfileData(
     profile_name: toolLegacy.profile_name || assistantLegacy.profile_name,
     display_name: toolLegacy.display_name || assistantLegacy.display_name,
     message: toolLegacy.message || assistantLegacy.message,
+    auth_url: findUrl((toolLegacy.message || assistantLegacy.message) as string | null),
     profile: toolLegacy.profile || assistantLegacy.profile,
     actualIsSuccess: isSuccess,
     actualToolTimestamp: toolTimestamp,
