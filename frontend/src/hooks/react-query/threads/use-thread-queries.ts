@@ -1,13 +1,13 @@
 'use client';
 
 import { createQueryHook } from '@/hooks/use-query';
-import { getThreads } from '@/lib/api';
+import { sunaThreads } from '@/upstream/suna/threads';
 import { threadKeys } from './keys';
 
 export const useThreadsByProject = (projectId?: string) =>
   createQueryHook(
     threadKeys.byProject(projectId || ''),
-    () => projectId ? getThreads(projectId) : Promise.resolve([]),
+    () => projectId ? sunaThreads.getThreads(projectId) : Promise.resolve([]),
     {
       enabled: !!projectId,
       staleTime: 2 * 60 * 1000, 
@@ -17,7 +17,7 @@ export const useThreadsByProject = (projectId?: string) =>
 
 export const useAllThreads = createQueryHook(
   threadKeys.all,
-  () => getThreads(),
+  () => sunaThreads.getThreads(),
   {
     staleTime: 2 * 60 * 1000, 
     refetchOnWindowFocus: false,

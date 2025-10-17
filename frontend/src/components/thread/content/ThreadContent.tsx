@@ -813,6 +813,21 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         break;
                                                                                     }
                                                                                 }
+                                                                                // Fuzzy detection for partial/incomplete tags (backup behavior)
+                                                                                if (!detectedTag) {
+                                                                                    const fuzzyMatch = /<\s*(?:funct|function|invok|invoke|param|tool|call|ask|compl|execut|browser|sb_|mcp|data_|web|xml)/i.exec(streamingTextContent);
+                                                                                    if (fuzzyMatch) {
+                                                                                        detectedTag = 'partial';
+                                                                                        tagStartIndex = fuzzyMatch.index;
+                                                                                    } else {
+                                                                                        // If there is a '<' near the end without a closing '>' yet, treat as start of a tag
+                                                                                        const lastLt = streamingTextContent.lastIndexOf('<');
+                                                                                        if (lastLt !== -1 && streamingTextContent.indexOf('>', lastLt) === -1) {
+                                                                                            detectedTag = 'partial';
+                                                                                            tagStartIndex = lastLt;
+                                                                                        }
+                                                                                    }
+                                                                                }
                                                                             }
                                                                         }
 
@@ -871,6 +886,20 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         detectedTag = tag;
                                                                                         tagStartIndex = index;
                                                                                         break;
+                                                                                    }
+                                                                                }
+                                                                                // Fuzzy detection for partial/incomplete tags (backup behavior)
+                                                                                if (!detectedTag) {
+                                                                                    const fuzzyMatch = /<\s*(?:funct|function|invok|invoke|param|tool|call|ask|compl|execut|browser|sb_|mcp|data_|web|xml)/i.exec(streamingText);
+                                                                                    if (fuzzyMatch) {
+                                                                                        detectedTag = 'partial';
+                                                                                        tagStartIndex = fuzzyMatch.index;
+                                                                                    } else {
+                                                                                        const lastLt = streamingText.lastIndexOf('<');
+                                                                                        if (lastLt !== -1 && streamingText.indexOf('>', lastLt) === -1) {
+                                                                                            detectedTag = 'partial';
+                                                                                            tagStartIndex = lastLt;
+                                                                                        }
                                                                                     }
                                                                                 }
                                                                             }

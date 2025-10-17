@@ -1,11 +1,12 @@
 import { createMutationHook, createQueryHook } from "@/hooks/use-query";
 import { threadKeys } from "./keys";
-import { BillingError, getAgentRuns, startAgent, stopAgent } from "@/lib/api";
+import { BillingError } from "@/lib/api";
+import { sunaThreads } from "@/upstream/suna/threads";
 
 export const useAgentRunsQuery = (threadId: string) =>
   createQueryHook(
     threadKeys.agentRuns(threadId),
-    () => getAgentRuns(threadId),
+    () => sunaThreads.getAgentRuns(threadId),
     {
       enabled: !!threadId,
       retry: 1,
@@ -26,7 +27,7 @@ export const useStartAgentMutation = () =>
         stream?: boolean;
         agent_id?: string;
       };
-    }) => startAgent(threadId, options),
+    }) => sunaThreads.startAgent(threadId, options),
     {
       onError: (error) => {
         if (!(error instanceof BillingError)) {
@@ -37,4 +38,4 @@ export const useStartAgentMutation = () =>
   )();
 
 export const useStopAgentMutation = () =>
-  createMutationHook((agentRunId: string) => stopAgent(agentRunId))();
+  createMutationHook((agentRunId: string) => sunaThreads.stopAgent(agentRunId))();

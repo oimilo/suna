@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFeatureFlag } from '@/lib/feature-flags';
-import { backendApi } from '@/lib/api-client';
+import { sunaApi } from '@/upstream/suna/api';
 
 type ComposioProfileSummary = {
   profile_id: string;
@@ -48,9 +48,9 @@ export default function AppProfilesPage() {
       try {
         setLoadingList(true);
         setErrorMsg(null);
-        const res = await backendApi.get<ComposioCredentialsResponse>('/secure-mcp/composio-profiles');
+        const res = await sunaApi.getComposioProfiles();
         if (res.success && res.data) {
-          setToolkits(res.data.toolkits || []);
+          setToolkits((res.data as ComposioCredentialsResponse).toolkits || []);
         } else {
           setErrorMsg('Falha ao carregar credenciais.');
         }
