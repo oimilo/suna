@@ -123,17 +123,32 @@ class ThreadManager:
             logger.info(f"💰 Processing billing for LLM response: {llm_response_id}")
             
             usage = content.get("usage", {})
+            # Normalize usage to a dict
+            if usage is None:
+                usage = {}
+            elif isinstance(usage, str):
+                try:
+                    usage = json.loads(usage)
+                except Exception:
+                    usage = {}
             
-            prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
-            completion_tokens = int(usage.get("completion_tokens", 0) or 0)
-            is_estimated = usage.get("estimated", False)
-            is_fallback = usage.get("fallback", False)
+            prompt_tokens = int((usage.get("prompt_tokens") or 0))
+            completion_tokens = int((usage.get("completion_tokens") or 0))
+            is_estimated = bool(usage.get("estimated", False))
+            is_fallback = bool(usage.get("fallback", False))
             
-            cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
+            # Cache read tokens can come in two shapes; be defensive with None/str
+            cache_read_tokens = int((usage.get("cache_read_input_tokens") or 0))
             if cache_read_tokens == 0:
-                cache_read_tokens = int(usage.get("prompt_tokens_details", {}).get("cached_tokens", 0) or 0)
+                prompt_tokens_details = usage.get("prompt_tokens_details") or {}
+                if isinstance(prompt_tokens_details, str):
+                    try:
+                        prompt_tokens_details = json.loads(prompt_tokens_details)
+                    except Exception:
+                        prompt_tokens_details = {}
+                cache_read_tokens = int((prompt_tokens_details.get("cached_tokens") or 0))
             
-            cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
+            cache_creation_tokens = int((usage.get("cache_creation_input_tokens") or 0))
             model = content.get("model")
             
             usage_type = "FALLBACK ESTIMATE" if is_fallback else ("ESTIMATED" if is_estimated else "EXACT")
