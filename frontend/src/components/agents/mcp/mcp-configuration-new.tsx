@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { MCPConfigurationProps, MCPConfiguration as MCPConfigurationType } from './types';
 import { ConfiguredMcpList } from './configured-mcp-list';
 import { CustomMCPDialog } from './custom-mcp-dialog';
-import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
+// import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
 import { ToolsManager } from './tools-manager';
 import { toast } from 'sonner';
 
@@ -39,33 +39,18 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
 
   const handleEditMCP = (index: number) => {
     const mcp = configuredMCPs[index];
-    if (mcp.customType === 'pipedream') {
-      setEditingIndex(index);
-      setShowCustomDialog(true);
-    } else {
-      setEditingIndex(index);
-      setShowCustomDialog(true);
-    }
+    setEditingIndex(index);
+    setShowCustomDialog(true);
   };
 
   const handleConfigureTools = (index: number) => {
     const mcp = configuredMCPs[index];
-    console.log('[MCPConfiguration] Configure tools clicked for MCP:', {
-      index,
-      mcp,
-      enabledTools: mcp.enabledTools,
-      customType: mcp.customType
-    });
     setSelectedMCPForTools(mcp);
-    if (mcp.customType === 'pipedream') {
-      const profileId = mcp.selectedProfileId || mcp.config?.profile_id;
-      if (profileId) {
-        setShowPipedreamToolsManager(true);
-      } else {
-        console.warn('Pipedream MCP has no profile_id:', mcp);
-      }
-    } else {
+    if (mcp.customType && mcp.customType !== 'pipedream') {
       setShowCustomToolsManager(true);
+    } else {
+      // Pipedream removido: não abrir mais gerenciador específico
+      toast.warning('Integrações Pipedream foram descontinuadas. Use MCP personalizado ou Composio.');
     }
   };
 
@@ -88,87 +73,6 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
     onConfigurationChange([...configuredMCPs, mcpConfig]);
   };
 
-  const handleToolsSelected = async (profileId: string, selectedTools: string[], appName: string, appSlug: string) => {
-    // If we have an agent ID and we're in direct save mode, use the backend API to preserve existing tools
-    if (selectedAgentId && saveMode === 'direct') {
-      try {
-        // Use the robust backend API that preserves all existing tools
-        const response = await fetch(`/api/agents/${selectedAgentId}/pipedream-tools/${profileId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ enabled_tools: selectedTools }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to update tools');
-        }
-        
-        // The backend now handles preserving all existing tools and creating a new version
-        setShowRegistryDialog(false);
-        
-        // Invalidate queries to refresh the UI
-        // Note: We'll need to import queryClient for this to work
-        toast.success(`${selectedTools.length} ferramentas do ${appName} adicionadas!`);
-        return;
-      } catch (error) {
-        console.error('Error updating tools via backend:', error);
-        toast.error('Falha ao adicionar ferramentas. Por favor, tente novamente.');
-        return;
-      }
-    }
-    
-    // Fallback to frontend-only mode for callback mode or when no agent is selected
-    const pipedreamMCP: MCPConfigurationType = {
-      name: appName,
-      qualifiedName: `pipedream_${appSlug}_${profileId}`,
-      config: {
-        url: 'https://remote.mcp.pipedream.net',
-        headers: {
-          'x-pd-app-slug': appSlug,
-        },
-        profile_id: profileId
-      },
-      enabledTools: selectedTools,
-      isCustom: true,
-      customType: 'pipedream',
-      selectedProfileId: profileId
-    };
-    const nonPipedreamMCPs = configuredMCPs.filter(mcp => 
-      mcp.customType !== 'pipedream' || 
-      mcp.selectedProfileId !== profileId
-    );
-    onConfigurationChange([...nonPipedreamMCPs, pipedreamMCP]);
-    setShowRegistryDialog(false);
-  };
-
-  const handlePipedreamToolsUpdate = (enabledTools: string[]) => {
-    if (!selectedMCPForTools) return;
-    
-    const updatedMCPs = configuredMCPs.map(mcp => 
-      mcp === selectedMCPForTools 
-        ? { ...mcp, enabledTools }
-        : mcp
-    );
-    onConfigurationChange(updatedMCPs);
-    setShowPipedreamToolsManager(false);
-    setSelectedMCPForTools(null);
-  };
-
-  const handleCustomToolsUpdate = (enabledTools: string[]) => {
-    if (!selectedMCPForTools) return;
-    
-    const updatedMCPs = configuredMCPs.map(mcp => 
-      mcp === selectedMCPForTools 
-        ? { ...mcp, enabledTools }
-        : mcp
-    );
-    onConfigurationChange(updatedMCPs);
-    setShowCustomToolsManager(false);
-    setSelectedMCPForTools(null);
-  };
-
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-y-auto">
@@ -181,13 +85,14 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               Nenhuma integração configurada
             </h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Navegue pelo registro de apps para conectar seus aplicativos através do Pipedream ou adicione servidores MCP personalizados
+              Adicione servidores MCP personalizados (ou use o fluxo Composio pela Configuração do Agente)
             </p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={() => setShowRegistryDialog(true)} variant="default">
+              {/* Registro de apps (Pipedream) desabilitado */}
+              {/* <Button onClick={() => setShowRegistryDialog(true)} variant="default">
                 <Store className="h-4 w-4" />
                 Explorar Apps
-              </Button>
+              </Button> */}
               <Button onClick={() => setShowCustomDialog(true)} variant="outline">
                 <Server className="h-4 w-4" />
                 MCP Personalizado
@@ -211,10 +116,11 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       {configuredMCPs.length > 0 && (
         <div className="flex-shrink-0 pt-4">
           <div className="flex gap-2 justify-center">
-            <Button onClick={() => setShowRegistryDialog(true)} variant="default">
+            {/* Registro de apps (Pipedream) desabilitado */}
+            {/* <Button onClick={() => setShowRegistryDialog(true)} variant="default">
               <Store className="h-4 w-4" />
               Explorar Apps
-            </Button>
+            </Button> */}
             <Button onClick={() => setShowCustomDialog(true)} variant="outline">
               <Server className="h-4 w-4" />
               MCP Personalizado
@@ -223,42 +129,21 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
         </div>
       )}
       
-      <Dialog open={showRegistryDialog} onOpenChange={setShowRegistryDialog}>
+      {/* Dialog de registro Pipedream removido */}
+      {/* <Dialog open={showRegistryDialog} onOpenChange={setShowRegistryDialog}>
         <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="sr-only">
             <DialogTitle>Selecionar Integração</DialogTitle>
           </DialogHeader>
           <PipedreamRegistry showAgentSelector={false} selectedAgentId={selectedAgentId} onAgentChange={handleAgentChange} onToolsSelected={handleToolsSelected} versionData={versionData} versionId={versionId} />
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
       <CustomMCPDialog
         open={showCustomDialog}
         onOpenChange={setShowCustomDialog}
         onSave={handleSaveCustomMCP}
       />
-      {selectedMCPForTools && selectedMCPForTools.customType === 'pipedream' && (selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id) && (
-        <ToolsManager
-          mode="pipedream"
-          agentId={selectedAgentId}
-          profileId={selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id}
-          appName={selectedMCPForTools.name}
-          open={showPipedreamToolsManager}
-          onOpenChange={setShowPipedreamToolsManager}
-          onToolsUpdate={handlePipedreamToolsUpdate}
-          versionData={versionData}
-          saveMode={saveMode}
-          versionId={versionId}
-          initialEnabledTools={(() => {
-            console.log('[MCPConfiguration] Rendering Pipedream ToolsManager with:', {
-              selectedMCPForTools,
-              enabledTools: selectedMCPForTools.enabledTools,
-              profileId: selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id
-            });
-            return selectedMCPForTools.enabledTools;
-          })()}
-        />
-      )}
-      {selectedMCPForTools && selectedMCPForTools.customType !== 'pipedream' && (
+      {selectedMCPForTools && selectedMCPForTools.customType && selectedMCPForTools.customType !== 'pipedream' && (
         <ToolsManager
           mode="custom"
           agentId={selectedAgentId}
@@ -269,18 +154,21 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
           mcpName={selectedMCPForTools.name}
           open={showCustomToolsManager}
           onOpenChange={setShowCustomToolsManager}
-          onToolsUpdate={handleCustomToolsUpdate}
+          onToolsUpdate={(enabledTools) => {
+            if (!selectedMCPForTools) return;
+            const updatedMCPs = configuredMCPs.map(mcp => 
+              mcp === selectedMCPForTools 
+                ? { ...mcp, enabledTools }
+                : mcp
+            );
+            onConfigurationChange(updatedMCPs);
+            setShowCustomToolsManager(false);
+            setSelectedMCPForTools(null);
+          }}
           versionData={versionData}
           saveMode={saveMode}
           versionId={versionId}
-          initialEnabledTools={(() => {
-            console.log('[MCPConfiguration] Rendering Custom ToolsManager with:', {
-              selectedMCPForTools,
-              enabledTools: selectedMCPForTools.enabledTools,
-              customType: selectedMCPForTools.customType
-            });
-            return selectedMCPForTools.enabledTools;
-          })()}
+          initialEnabledTools={selectedMCPForTools.enabledTools}
         />
       )}
     </div>

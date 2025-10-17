@@ -109,25 +109,17 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
               </div>
               <div className="flex justify-between items-center gap-4">
                 <span className="text-sm font-medium text-foreground/90">
-                  Créditos Este Mês
+                  Créditos Disponíveis
                 </span>
                 <div className="flex items-center gap-3">
                   {creditsData ? (
                     <>
                       <span className="text-sm font-medium text-card-title">
-                        {Math.min(Math.floor(creditsData.tier_credits_used), Math.floor(creditsData.tier_credits_limit)).toLocaleString('pt-BR')} /{' '}
-                        {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
+                        {Math.floor(creditsData.credit_balance).toLocaleString('pt-BR')}
                       </span>
-                      {creditsData.daily_credits > 0 && (
-                        <span className="text-sm font-medium text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          +{Math.floor(creditsData.daily_credits)} diários
-                        </span>
-                      )}
                     </>
                   ) : subscriptionData ? (
                     <span className="text-sm font-medium text-card-title">
-                      {Math.min(Math.round((subscriptionData.current_usage || 0) * 100), Math.round((subscriptionData.cost_limit || 0) * 100)).toLocaleString('pt-BR')} /{' '}
                       {Math.round((subscriptionData.cost_limit || 0) * 100).toLocaleString('pt-BR')}
                     </span>
                   ) : (
@@ -173,21 +165,14 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
 
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-foreground/90">
-                  Créditos Este Mês
+                  Créditos Disponíveis
                 </span>
                 <div className="flex items-center gap-3">
                   {creditsData ? (
                     <>
                       <span className="text-sm font-medium text-card-title">
-                        {Math.min(Math.floor(creditsData.tier_credits_used), Math.floor(creditsData.tier_credits_limit)).toLocaleString('pt-BR')} /{' '}
-                        {Math.floor(creditsData.tier_credits_limit).toLocaleString('pt-BR')}
+                        {Math.floor(creditsData.credit_balance).toLocaleString('pt-BR')}
                       </span>
-                      {creditsData.daily_credits > 0 && (
-                        <span className="text-sm font-medium text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          +{Math.floor(creditsData.daily_credits)} diários
-                        </span>
-                      )}
                     </>
                   ) : (
                     <Skeleton className="h-4 w-24" />

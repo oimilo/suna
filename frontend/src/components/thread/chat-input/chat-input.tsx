@@ -21,7 +21,6 @@ import { Brain, Zap, Database } from 'lucide-react';
 import { FaGoogle, FaDiscord } from 'react-icons/fa';
 import { SiNotion } from 'react-icons/si';
 import { AgentConfigModal } from '@/components/agents/agent-config-modal';
-import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSubscriptionWithStreaming } from '@/hooks/react-query/subscriptions/use-subscriptions';
 import { isLocalMode } from '@/lib/config';
@@ -132,7 +131,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [configModalOpen, setConfigModalOpen] = useState(false);
     const [configModalTab, setConfigModalTab] = useState('integrations');
-    const [registryDialogOpen, setRegistryDialogOpen] = useState(false);
+    // Removed Pipedream registry dialog; we open AgentConfigModal instead
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
     const [billingModalOpen, setBillingModalOpen] = useState(false);
@@ -469,7 +468,10 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   toolCallIndex={toolCallIndex}
                   showToolPreview={showToolPreview}
                   onExpandToolPreview={onExpandToolPreview}
-                  onOpenIntegrations={() => setRegistryDialogOpen(true)}
+                  onOpenIntegrations={() => {
+                    setConfigModalTab('integrations');
+                    setConfigModalOpen(true);
+                  }}
                 />
               </div>
 
@@ -478,7 +480,10 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none">
                     <button
-                      onClick={() => setRegistryDialogOpen(true)}
+                      onClick={() => {
+                        setConfigModalTab('integrations');
+                        setConfigModalOpen(true);
+                      }}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <div className="flex items-center -space-x-0.5">
@@ -541,21 +546,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             onAgentSelect={onAgentSelect}
             initialTab={configModalTab}
           />
-          <Dialog open={registryDialogOpen} onOpenChange={setRegistryDialogOpen}>
-            <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader className="sr-only">
-                <DialogTitle>Integrações</DialogTitle>
-              </DialogHeader>
-              <PipedreamRegistry
-                showAgentSelector={true}
-                selectedAgentId={selectedAgentId}
-                onAgentChange={onAgentSelect}
-                onToolsSelected={(profileId, selectedTools, appName, appSlug) => {
-                  console.log('Tools selected:', { profileId, selectedTools, appName, appSlug });
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+          {null}
           <BillingModal
             open={billingModalOpen}
             onOpenChange={setBillingModalOpen}

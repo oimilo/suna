@@ -31,7 +31,7 @@ import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
 
 // Import agent configuration components
-import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
+// PipedreamRegistry removed; align to Suna using only Custom MCP and backend tools
 import { CustomMCPDialog } from '@/components/agents/mcp/custom-mcp-dialog';
 import { useAgent, useUpdateAgent } from '@/hooks/react-query/agents/use-agents';
 import { useQueryClient } from '@tanstack/react-query';
@@ -62,7 +62,7 @@ const StepNode = ({ id, data, selected }: any) => {
   
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isToolSelectOpen, setIsToolSelectOpen] = useState(false);
-  const [showPipedreamRegistry, setShowPipedreamRegistry] = useState(false);
+  // Removed showPipedreamRegistry; use custom MCP dialog only
   const [showCustomMCPDialog, setShowCustomMCPDialog] = useState(false);
   const [editData, setEditData] = useState({
     name: data.name || '',
@@ -106,61 +106,7 @@ const StepNode = ({ id, data, selected }: any) => {
     setIsToolSelectOpen(false);
   };
 
-  const handlePipedreamToolsSelected = async (profileId: string, selectedTools: string[], appName: string, appSlug: string) => {
-    try {
-      const pipedreamMCP = {
-        name: appName,
-        qualifiedName: `pipedream_${appSlug}_${profileId}`,
-        config: {
-          url: 'https://remote.mcp.pipedream.net',
-          headers: {
-            'x-pd-app-slug': appSlug,
-          },
-          profile_id: profileId
-        },
-        enabledTools: selectedTools,
-        selectedProfileId: profileId
-      };
-
-      // Update agent with new MCP
-      const existingCustomMCPs = agent?.custom_mcps || [];
-      const nonPipedreamMCPs = existingCustomMCPs.filter((mcp: any) => 
-        mcp.type !== 'pipedream' || mcp.config?.profile_id !== profileId
-      );
-
-      await updateAgentMutation.mutateAsync({
-        agentId,
-        custom_mcps: [
-          ...nonPipedreamMCPs,
-          {
-            name: appName,
-            type: 'json',
-            config: pipedreamMCP.config,
-            enabledTools: selectedTools
-          }
-        ]
-      });
-
-      // Auto-select the first tool
-      if (selectedTools.length > 0) {
-        setEditData({ ...editData, tool: `pipedream_${appSlug}:${selectedTools[0]}` });
-      }
-
-      // Invalidate queries to refresh tools
-      queryClient.invalidateQueries({ queryKey: ['agent', agentId] });
-      queryClient.invalidateQueries({ queryKey: ['agent-tools', agentId] });
-      
-      // Trigger parent tools update
-      if (onToolsUpdate) {
-        onToolsUpdate();
-      }
-      
-      setShowPipedreamRegistry(false);
-      toast.success(`Added ${selectedTools.length} tools from ${appName}!`);
-    } catch (error) {
-      toast.error('Failed to add integration');
-    }
-  };
+  // Removed Pipedream tools selection handler
 
   const handleCustomMCPSave = async (customConfig: any) => {
     try {
@@ -375,21 +321,7 @@ const StepNode = ({ id, data, selected }: any) => {
                                 )}
                                 <CommandSeparator />
                                 <CommandGroup heading="Add New">
-                                  <CommandItem
-                                    onSelect={() => {
-                                      setIsToolSelectOpen(false);
-                                      setShowPipedreamRegistry(true);
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Store className="h-4 w-4 text-blue-500" />
-                                      <div className="flex flex-col">
-                                        <span>Browse App Registry</span>
-                                        <span className="text-xs text-muted-foreground">GitHub, Slack, Google Drive...</span>
-                                      </div>
-                                    </div>
-                                    <Plus className="ml-auto h-3 w-3" />
-                                  </CommandItem>
+                                  {null}
                                   <CommandItem
                                     onSelect={() => {
                                       setIsToolSelectOpen(false);
@@ -495,27 +427,7 @@ const StepNode = ({ id, data, selected }: any) => {
         className="react-flow__handle"
       />
 
-      {/* Pipedream Registry Dialog */}
-      <Dialog open={showPipedreamRegistry} onOpenChange={setShowPipedreamRegistry}>
-        <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Browse App Registry</DialogTitle>
-          </DialogHeader>
-                     <PipedreamRegistry
-             showAgentSelector={false}
-             selectedAgentId={agentId}
-             onAgentChange={() => {}}
-             onToolsSelected={handlePipedreamToolsSelected}
-             versionData={versionData ? {
-               configured_mcps: versionData.configured_mcps || [],
-               custom_mcps: versionData.custom_mcps || [],
-               system_prompt: versionData.system_prompt || '',
-               agentpress_tools: versionData.agentpress_tools || {}
-             } : undefined}
-             versionId={versionData?.version_id || 'current'}
-           />
-        </DialogContent>
-      </Dialog>
+      {/* Pipedream removed */}
 
       {/* Custom MCP Dialog */}
       <CustomMCPDialog
