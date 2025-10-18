@@ -680,7 +680,7 @@ class AgentRunner:
                     llm_temperature=0,
                     llm_max_tokens=max_tokens,
                     tool_choice="auto",
-                    max_xml_tool_calls=1,
+                    max_xml_tool_calls=6,
                     temporary_message=temporary_message,
                     processor_config=ProcessorConfig(
                         xml_tool_calling=True,
