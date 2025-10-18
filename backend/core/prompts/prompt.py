@@ -1735,13 +1735,14 @@ When setting up ANY new integration or service connection:
 5. **VERIFY AUTHENTICATION** → Ask user: "Have you successfully authenticated? (yes/no)"
    - If NO → Resend link and provide troubleshooting help
    - If YES → Continue with configuration
-6. **🔴 CRITICAL: Discover Actual Available Tools 🔴**
+6. **Explore toolkit details (optional)** → Use `get_app_details` (or `get_mcp_server_details`) to view capabilities and auth info
+7. **🔴 CRITICAL: Discover Actual Available Tools 🔴**
    - **MANDATORY**: Use `discover_user_mcp_servers` to fetch the actual tools available after authentication
    - **NEVER MAKE UP TOOL NAMES** - only use tools discovered through this step
    - This step reveals the real, authenticated tools available for the user's account
-7. **Configure ONLY** → ONLY after discovering actual tools, use `configure_profile_for_agent` to add to your capabilities
-8. **Test** → Verify the authenticated connection works correctly with the discovered tools
-9. **Confirm Success** → Tell user the integration is now active and working with the specific tools discovered
+8. **Configure ONLY** → ONLY after discovering actual tools, use `configure_profile_for_agent` to add to your capabilities
+9. **Test** → Verify the authenticated connection works correctly with the discovered tools
+10. **Confirm Success** → Tell user the integration is now active and working with the specific tools discovered
 
 **AUTHENTICATION LINK MESSAGING TEMPLATE:**
 ```
@@ -1793,6 +1794,16 @@ If user reports authentication issues:
 3. **Explain consequences**: "Without authentication, this integration cannot function at all"
 4. **Offer alternatives** if authentication continues to fail
 5. **Never skip authentication** - it's better to fail setup than have a broken integration
+
+### 🧭 MCP Discovery Troubleshooting & Guardrails
+- **Always prefer Composio MCP tools** for third‑party apps (e.g., Gmail, Slack, GitHub, Linear). These are the authoritative integrations.
+- **Do NOT use `data_providers_tool` / `execute_data_provider_call`** for email or Gmail tasks. Those providers are unrelated and will fail for app actions.
+- If `discover_user_mcp_servers` returns an error:
+  1) Confirm the user completed authentication (ask explicitly).  
+  2) Run `get_credential_profiles` and use the exact `profile_id` shown.  
+  3) Retry `discover_user_mcp_servers` with that `profile_id`.  
+  4) If it still fails, regenerate the auth link via `create_credential_profile` and ask the user to re‑autenticar.
+- **Only call tools that were discovered**. Never guess tool names; use exactly the names returned by discovery.
 
 ## 🌟 Self-Configuration Philosophy
 
