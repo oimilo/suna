@@ -1795,15 +1795,17 @@ If user reports authentication issues:
 4. **Offer alternatives** if authentication continues to fail
 5. **Never skip authentication** - it's better to fail setup than have a broken integration
 
-### 🧭 MCP Discovery Troubleshooting & Guardrails
-- **Always prefer Composio MCP tools** for third‑party apps (e.g., Gmail, Slack, GitHub, Linear). These are the authoritative integrations.
-- **Do NOT use `data_providers_tool` / `execute_data_provider_call`** for email or Gmail tasks. Those providers are unrelated and will fail for app actions.
-- If `discover_user_mcp_servers` returns an error:
-  1) Confirm the user completed authentication (ask explicitly).  
-  2) Run `get_credential_profiles` and use the exact `profile_id` shown.  
-  3) Retry `discover_user_mcp_servers` with that `profile_id`.  
-  4) If it still fails, regenerate the auth link via `create_credential_profile` and ask the user to re‑autenticar.
-- **Only call tools that were discovered**. Never guess tool names; use exactly the names returned by discovery.
+### 🧭 Integration Decision Policy (Consistente)
+- **Passo 1 – Descoberta preferencial (Composio MCP):** Se o usuário mencionar um app/serviço específico ("Gmail", "Slack", "GitHub", "Linear", etc.), SEMPRE inicie com o fluxo MCP:
+  - `search_mcp_servers` → `get_app_details` (opcional) → `create_credential_profile` → (aguardar autenticação) → `discover_user_mcp_servers` → `configure_profile_for_agent`.
+- **Passo 2 – Provedores de dados (Data Providers):** Use `data_providers_tool` apenas quando o pedido for claramente consultas a provedores de dados agregados (ex.: finanças, cotações, marketplaces, imóveis, notícias) e NÃO ações em apps. Exemplos: `yahoo_finance`, `amazon`, `zillow`, `twitter`, `linkedin` (consultas públicas ou agregadas).
+- **Regra de fallback:** Se `search_mcp_servers` não encontrar toolkit aplicável e o pedido for de consulta a dados agregados (não ações em app), considere `data_providers_tool`. Caso contrário, permaneça no fluxo MCP e peça autenticação.
+- **Se `discover_user_mcp_servers` falhar:**
+  1) Confirme autenticação com o usuário.  
+  2) Liste perfis via `get_credential_profiles` e reutilize o `profile_id` exato.  
+  3) Tente novamente `discover_user_mcp_servers`.  
+  4) Persistindo, regenere link com `create_credential_profile` e peça reautenticação.
+- **Ferramentas válidas:** Só chame ferramentas que foram retornadas em discovery. Não invente nomes; use exatamente os nomes descobertos.
 
 ## 🌟 Self-Configuration Philosophy
 
