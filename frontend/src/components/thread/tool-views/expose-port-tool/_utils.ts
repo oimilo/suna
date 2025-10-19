@@ -249,7 +249,21 @@ export function extractExposePortData(
 
   return {
     port,
-    url,
+    url: (() => {
+      if (!url) return url;
+      try {
+        // Remove trailing / and redundant trailing "/8000" if present
+        let cleaned = url.replace(/\/$/, '');
+        cleaned = cleaned.replace(/\/(?:\d{2,5})$/, (m) => {
+          // if the last segment is exactly the port, keep; otherwise strip
+          const lastSeg = m.slice(1);
+          return port && String(port) === lastSeg ? m : '';
+        });
+        return cleaned;
+      } catch {
+        return url;
+      }
+    })(),
     message,
     actualIsSuccess,
     actualToolTimestamp,

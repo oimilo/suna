@@ -77,6 +77,8 @@ export async function GET(
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
         'X-Frame-Options': 'SAMEORIGIN',
+        'X-Upstream-URL': daytonaPreviewUrl,
+        'X-Proxy-Project': projectId,
       }
     })
   } catch (error) {

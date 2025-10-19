@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Proxy variant that supports arbitrary ports: /api/preview/:projectId/p/:port/*
+// Root proxy for a specific port: /api/preview/:projectId/p/:port
+// Forwards to the Daytona preview root ("/") on the requested port
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string; port: string; path: string[] }> }
+  { params }: { params: Promise<{ projectId: string; port: string }> }
 ) {
-  const { projectId, port, path } = await params
-  const filePath = path.join('/')
+  const { projectId, port } = await params
 
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -30,13 +30,10 @@ export async function GET(
     return NextResponse.json({ error: 'No sandbox available for this project' }, { status: 404 })
   }
 
-  // Original sandbox_url is typically like https://8080-<id>.proxy.daytona.works
+  // sandbox_url example: https://8080-<id>.proxy.daytona.works
   const sandboxUrl: string = project.sandbox.sandbox_url
-
-  // Rewrite the leading port segment to the requested port
   const rewritten = sandboxUrl.replace(/https:\/\/(\d+)-/, `https://${port}-`)
-  const cleanPath = filePath.replace(/^\/+/, '')
-  const daytonaPreviewUrl = `${rewritten}/${cleanPath}`
+  const daytonaPreviewUrl = `${rewritten}/`
 
   try {
     const response = await fetch(daytonaPreviewUrl, {
@@ -60,13 +57,10 @@ export async function GET(
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
         'X-Frame-Options': 'SAMEORIGIN',
-        'X-Upstream-URL': daytonaPreviewUrl,
-        'X-Proxy-Project': projectId,
-        'X-Proxy-Port': port,
       },
     })
   } catch (error) {
-    console.error('Preview proxy (ported) error:', error)
+    console.error('Preview proxy (root) error:', error)
     return NextResponse.json({ error: 'Failed to fetch file from sandbox' }, { status: 500 })
   }
 }
