@@ -9,6 +9,8 @@ import { AttachmentGroup } from './attachment-group';
 import { HtmlRenderer } from './preview-renderers/html-renderer';
 import { MarkdownRenderer } from './preview-renderers/markdown-renderer';
 import { CsvRenderer } from './preview-renderers/csv-renderer';
+import { PdfRenderer } from './preview-renderers/pdf-renderer';
+import { XlsxRenderer } from './preview-renderers/xlsx-renderer';
 import { useFileContent, useImageContent } from '@/hooks/react-query/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api';
@@ -385,7 +387,10 @@ export function FileAttachment({
         'md': MarkdownRenderer,
         'markdown': MarkdownRenderer,
         'csv': CsvRenderer,
-        'tsv': CsvRenderer
+        'tsv': CsvRenderer,
+        'pdf': PdfRenderer,
+        'xlsx': XlsxRenderer,
+        'xls': XlsxRenderer,
     };
 
     // HTML/MD/CSV preview when not collapsed and in grid layout

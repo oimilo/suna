@@ -46,26 +46,62 @@ const defaultRegistry: ToolViewRegistryType = {
   'browser-select-dropdown-option': BrowserToolView,
   'browser-drag-drop': BrowserToolView,
   'browser-click-coordinates': BrowserToolView,
+  // underscore aliases
+  'browser_navigate_to': BrowserToolView,
+  'browser_go_back': BrowserToolView,
+  'browser_wait': BrowserToolView,
+  'browser_click_element': BrowserToolView,
+  'browser_input_text': BrowserToolView,
+  'browser_send_keys': BrowserToolView,
+  'browser_switch_tab': BrowserToolView,
+  'browser_close_tab': BrowserToolView,
+  'browser_scroll_down': BrowserToolView,
+  'browser_scroll_up': BrowserToolView,
+  'browser_scroll_to_text': BrowserToolView,
+  'browser_get_dropdown_options': BrowserToolView,
+  'browser_select_dropdown_option': BrowserToolView,
+  'browser_drag_drop': BrowserToolView,
+  'browser_click_coordinates': BrowserToolView,
 
   'execute-command': CommandToolView,
   'check-command-output': GenericToolView,
   'terminate-command': TerminateCommandToolView,
   'list-commands': GenericToolView,
+  // underscore aliases
+  'execute_command': CommandToolView,
+  'check_command_output': GenericToolView,
+  'terminate_command': TerminateCommandToolView,
+  'list_commands': GenericToolView,
 
   'create-file': FileOperationToolView,
   'delete-file': FileOperationToolView,
   'full-file-rewrite': FileOperationToolView,
   'read-file': FileOperationToolView,
   'edit-file': FileOperationToolView,
+  // underscore aliases
+  'create_file': FileOperationToolView,
+  'delete_file': FileOperationToolView,
+  'full_file_rewrite': FileOperationToolView,
+  'read_file': FileOperationToolView,
+  'edit_file': FileOperationToolView,
 
   'str-replace': StrReplaceToolView,
+  // underscore alias
+  'str_replace': StrReplaceToolView,
 
   'web-search': WebSearchToolView,
   'crawl-webpage': WebCrawlToolView,
   'scrape-webpage': WebScrapeToolView,
+  // underscore aliases
+  'web_search': WebSearchToolView,
+  'crawl_webpage': WebCrawlToolView,
+  'scrape_webpage': WebScrapeToolView,
 
   'execute-data-provider-call': ExecuteDataProviderCallToolView,
   'get-data-provider-endpoints': DataProviderEndpointsToolView,
+  // underscore aliases
+  'execute_data_provider_call': ExecuteDataProviderCallToolView,
+  'get_data_provider_endpoints': DataProviderEndpointsToolView,
 
   'search-mcp-servers': SearchMcpServersToolView,
   'get-app-details': GetAppDetailsToolView,
@@ -75,12 +111,27 @@ const defaultRegistry: ToolViewRegistryType = {
   'configure-profile-for-agent': ConfigureProfileForAgentToolView,
   'get-credential-profiles': GetCredentialProfilesToolView,
   'get-current-agent-config': GetCurrentAgentConfigToolView,
+  // underscore aliases
+  'search_mcp_servers': SearchMcpServersToolView,
+  'get_app_details': GetAppDetailsToolView,
+  'create_credential_profile': CreateCredentialProfileToolView,
+  'connect_credential_profile': ConnectCredentialProfileToolView,
+  'check_profile_connection': CheckProfileConnectionToolView,
+  'configure_profile_for_agent': ConfigureProfileForAgentToolView,
+  'get_credential_profiles': GetCredentialProfilesToolView,
+  'get_current_agent_config': GetCurrentAgentConfigToolView,
 
   'expose-port': ExposePortToolView,
+  // underscore alias
+  'expose_port': ExposePortToolView,
 
   'see-image': SeeImageToolView,
+  // underscore alias
+  'see_image': SeeImageToolView,
 
   'call-mcp-tool': GenericToolView,
+  // underscore alias
+  'call_mcp_tool': GenericToolView,
 
   'ask': AskToolView,
   'complete': CompleteToolView,
