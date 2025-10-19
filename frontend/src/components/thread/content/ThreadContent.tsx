@@ -102,6 +102,26 @@ export function renderMarkdownContent(
     project?: Project,
     debugMode?: boolean
 ) {
+    // Rewrite Daytona preview links to our project-scoped proxy
+    const rewriteDaytonaToProxy = (text: string): string => {
+        try {
+            const projectId = (project as any)?.project_id || (project as any)?.id;
+            if (!projectId) return text;
+            // Matches: https://8080-xxxx.proxy.daytona.works[/path]
+            const re = /https?:\/\/(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works(\/[\w\-./%?=&#]*)?/g;
+            return text.replace(re, (_m, port: string, path: string | undefined) => {
+                const cleanPath = (path || '').replace(/^\/+/, '');
+                return `/api/preview/${projectId}/p/${port}${cleanPath ? '/' + cleanPath : ''}`;
+            });
+        } catch {
+            return text;
+        }
+    };
+
+    // Apply rewrite before any parsing unless in debug mode
+    if (!debugMode && typeof content === 'string') {
+        content = rewriteDaytonaToProxy(content);
+    }
     // If in debug mode, just display raw content in a pre tag
     if (debugMode) {
         return (

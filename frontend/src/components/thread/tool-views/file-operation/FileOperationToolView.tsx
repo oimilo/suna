@@ -123,9 +123,14 @@ export function FileOperationToolView({
   const hasHighlighting = hasLanguageHighlighting(language);
   const contentLines = splitContentIntoLines(fileContent);
 
-  // Use proxy URL instead of Daytona URL to avoid warning
+  // Heurística adicional: tratar como HTML se o conteúdo aparenta ser HTML (ou HTML escapado)
+  const looksLikeHtml = typeof fileContent === 'string' && /<(?:!DOCTYPE|html)[\s>]/i.test(fileContent);
+  const looksLikeEncodedHtml = typeof fileContent === 'string' && /&lt;\s*(?:!DOCTYPE|html)[\s>]/i.test(fileContent);
+  const isHtmlFile = isHtml || looksLikeHtml || looksLikeEncodedHtml;
+
+  // Use proxy URL quando possível (render em servidor), senão fallback com srcDoc
   const htmlPreviewUrl =
-    isHtml && project && processedFilePath
+    isHtmlFile && project && processedFilePath
       ? `/api/preview/${(project as any)?.project_id || (project as any)?.id}/${processedFilePath.replace(/^\/workspace\//, '').replace(/^\//, '')}`
       : undefined;
 
@@ -199,7 +204,7 @@ export function FileOperationToolView({
       );
     }
 
-    if (isHtml) {
+    if (isHtmlFile) {
       // Prefer project proxy when available; otherwise, inline preview via srcDoc
       if (htmlPreviewUrl) {
       // Don't render iframe when panel is minimized
@@ -313,13 +318,23 @@ export function FileOperationToolView({
       }
 
       // Inline fallback when we don't have a proxied preview URL yet
+      const decodeEntities = (s: string) =>
+        s
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+      const srcDocContent = typeof fileContent === 'string'
+        ? (looksLikeEncodedHtml ? decodeEntities(fileContent) : fileContent)
+        : '';
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
             title={`Preview (inline) de ${fileName}`}
             className="flex-grow border-0 bg-white"
-            // Render HTML directly; relative assets (e.g., style.css) may not resolve
-            srcDoc={fileContent || ''}
+            // Render HTML diretamente; assets relativos podem não resolver antes do servidor
+            srcDoc={srcDocContent}
             sandbox="allow-same-origin allow-scripts"
           />
         </div>
@@ -504,6 +519,34 @@ export function FileOperationToolView({
         </CardHeader>
 
         <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
+          <TabsContent value="preview" className="w-full flex-1 h-full mt-0 p-0 overflow-hidden">
+            <ScrollArea className="h-full w-full min-h-0">
+              {isStreaming && !fileContent ? (
+                <LoadingState
+                  icon={Icon}
+                  iconColor={config.color}
+                  bgColor={config.bgColor}
+                  title={config.progressMessage}
+                  filePath={processedFilePath || 'Processing file...'}
+                  subtitle="Por favor aguarde enquanto o arquivo está sendo processado"
+                  showProgress={false}
+                />
+              ) : operation === 'delete' ? (
+                renderDeleteOperation()
+              ) : (
+                renderFilePreview()
+              )}
+              {isStreaming && fileContent && (
+                <div className="sticky bottom-4 right-4 float-right mr-4 mb-4">
+                  <Badge className="bg-blue-500/90 text-white border-none shadow-lg animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    Streaming...
+                  </Badge>
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
           <TabsContent value="code" className="flex-1 h-full mt-0 p-0 overflow-hidden">
             <ScrollArea className="h-full w-full min-h-0">
               {isStreaming && !fileContent ? (
@@ -532,34 +575,6 @@ export function FileOperationToolView({
                 </div>
               ) : (
                 renderSourceCode()
-              )}
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="preview" className="w-full flex-1 h-full mt-0 p-0 overflow-hidden">
-            <ScrollArea className="h-full w-full min-h-0">
-              {isStreaming && !fileContent ? (
-                <LoadingState
-                  icon={Icon}
-                  iconColor={config.color}
-                  bgColor={config.bgColor}
-                  title={config.progressMessage}
-                  filePath={processedFilePath || 'Processing file...'}
-                  subtitle="Por favor aguarde enquanto o arquivo está sendo processado"
-                  showProgress={false}
-                />
-              ) : operation === 'delete' ? (
-                renderDeleteOperation()
-              ) : (
-                renderFilePreview()
-              )}
-              {isStreaming && fileContent && (
-                <div className="sticky bottom-4 right-4 float-right mr-4 mb-4">
-                  <Badge className="bg-blue-500/90 text-white border-none shadow-lg animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    Streaming...
-                  </Badge>
-                </div>
               )}
             </ScrollArea>
           </TabsContent>
