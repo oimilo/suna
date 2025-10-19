@@ -129,10 +129,9 @@ export function FileOperationToolView({
   const isHtmlFile = isHtml || looksLikeHtml || looksLikeEncodedHtml;
 
   // Use proxy URL quando possível (render em servidor), senão fallback com srcDoc
-  const htmlPreviewUrl =
-    isHtmlFile && project && processedFilePath
-      ? `/api/preview/${(project as any)?.project_id || (project as any)?.id}/${processedFilePath.replace(/^\/workspace\//, '').replace(/^\//, '')}`
-      : undefined;
+  // Importante: para garantir preview imediato e evitar 404 do provider antes do servidor subir,
+  // usamos srcDoc inline para HTML. Mantemos o botão externo apenas quando disponível em outras views.
+  const htmlPreviewUrl = undefined as unknown as string | undefined;
 
   const FileIcon = getFileIcon(fileName);
 
