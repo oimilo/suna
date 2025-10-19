@@ -133,6 +133,26 @@ export function FileOperationToolView({
   // usamos srcDoc inline para HTML. Mantemos o botão externo apenas quando disponível em outras views.
   const htmlPreviewUrl = undefined as unknown as string | undefined;
 
+  // Deriva porta provável do preview (padrão 8080), lendo dicas do conteúdo
+  const projectId = (project as any)?.project_id || (project as any)?.id;
+  const derivePreviewPort = React.useCallback(() => {
+    const a = normalizeContentToString(assistantContent) || '';
+    const t = normalizeContentToString(toolContent) || '';
+    const s = `${a}\n${t}`;
+    // Ex.: "HTTP server available at: https://8080-xxxx.proxy.daytona.works"
+    const m1 = s.match(/https?:\/\/(\d{2,5})-/i);
+    if (m1 && m1[1]) return parseInt(m1[1], 10);
+    // Ex.: python3 -m http.server 8080
+    const m2 = s.match(/http\.server\s+(\d{2,5})/i);
+    if (m2 && m2[1]) return parseInt(m2[1], 10);
+    // Ex.: Port 3000/5173 citado em logs
+    const m3 = s.match(/port\s*(\d{2,5})/i);
+    if (m3 && m3[1]) return parseInt(m3[1], 10);
+    return 8080;
+  }, [assistantContent, toolContent]);
+  const previewPort = derivePreviewPort();
+  const proxiedBaseHref = projectId && previewPort ? `/api/preview/${projectId}/p/${previewPort}/` : undefined;
+
   const FileIcon = getFileIcon(fileName);
 
   // Initial load delay to give sandbox time to start - only if not minimized
@@ -324,9 +344,20 @@ export function FileOperationToolView({
           .replace(/&amp;/g, '&')
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'");
-      const srcDocContent = typeof fileContent === 'string'
+      let srcDocContent = typeof fileContent === 'string'
         ? (looksLikeEncodedHtml ? decodeEntities(fileContent) : fileContent)
         : '';
+      // Injeta <base href> para resolver CSS/JS relativos via proxy do projeto
+      if (proxiedBaseHref) {
+        if (/<head[\s>]/i.test(srcDocContent)) {
+          srcDocContent = srcDocContent.replace(/<head(\s*[^>]*)?>/i, (m) => `${m}<base href="${proxiedBaseHref}">`);
+        } else if (/<html[\s>]/i.test(srcDocContent)) {
+          srcDocContent = srcDocContent.replace(/<html(\s*[^>]*)>/i, (m) => `${m}<head><base href="${proxiedBaseHref}"></head>`);
+        } else {
+          // Fallback: prefixa head mínimo
+          srcDocContent = `<head><base href="${proxiedBaseHref}"></head>` + srcDocContent;
+        }
+      }
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe

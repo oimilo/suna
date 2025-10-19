@@ -121,6 +121,32 @@ const defaultRegistry: ToolViewRegistryType = {
   'get_credential_profiles': GetCredentialProfilesToolView,
   'get_current_agent_config': GetCurrentAgentConfigToolView,
 
+  // Agent creation/integration (agent_creation_tool)
+  // hyphen variants
+  'search-mcp-servers-for-agent': SearchMcpServersToolView,
+  'get-mcp-server-details': GetAppDetailsToolView,
+  'create-credential-profile-for-agent': CreateCredentialProfileToolView,
+  'discover-mcp-tools-for-agent': GenericToolView,
+  'configure-agent-integration': ConfigureProfileForAgentToolView,
+  'create-agent-scheduled-trigger': GenericToolView,
+  'list-agent-scheduled-triggers': GenericToolView,
+  'toggle-agent-scheduled-trigger': GenericToolView,
+  'delete-agent-scheduled-trigger': GenericToolView,
+  'update-agent-config': GenericToolView,
+  'create-new-agent': GenericToolView,
+  // underscore variants
+  'search_mcp_servers_for_agent': SearchMcpServersToolView,
+  'get_mcp_server_details': GetAppDetailsToolView,
+  'create_credential_profile_for_agent': CreateCredentialProfileToolView,
+  'discover_mcp_tools_for_agent': GenericToolView,
+  'configure_agent_integration': ConfigureProfileForAgentToolView,
+  'create_agent_scheduled_trigger': GenericToolView,
+  'list_agent_scheduled_triggers': GenericToolView,
+  'toggle_agent_scheduled_trigger': GenericToolView,
+  'delete_agent_scheduled_trigger': GenericToolView,
+  'update_agent_config': GenericToolView,
+  'create_new_agent': GenericToolView,
+
   'expose-port': ExposePortToolView,
   // underscore alias
   'expose_port': ExposePortToolView,
