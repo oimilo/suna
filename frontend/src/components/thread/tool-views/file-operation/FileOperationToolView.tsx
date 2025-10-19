@@ -199,7 +199,9 @@ export function FileOperationToolView({
       );
     }
 
-    if (isHtml && htmlPreviewUrl) {
+    if (isHtml) {
+      // Prefer project proxy when available; otherwise, inline preview via srcDoc
+      if (htmlPreviewUrl) {
       // Don't render iframe when panel is minimized
       if (isPanelMinimized) {
         return (
@@ -271,40 +273,54 @@ export function FileOperationToolView({
         );
       }
 
-      // Only render iframe when not loading or retrying
+        // Only render iframe when not loading or retrying
+        return (
+          <div className="flex flex-col h-[calc(100vh-16rem)]">
+            <iframe
+              ref={iframeRef}
+              src={htmlPreviewUrl}
+              title={`Visualização HTML de ${fileName}`}
+              className="flex-grow border-0"
+              sandbox="allow-same-origin allow-scripts"
+              onError={() => setIframeError(true)}
+              onLoad={(e) => {
+                // Check if the iframe loaded successfully
+                const iframe = e.target as HTMLIFrameElement;
+                try {
+                  // This will throw if we can't access the contentDocument (CORS)
+                  // But that's OK for external content
+                  const doc = iframe.contentDocument;
+                  const bodyContent = doc?.body?.innerHTML || '';
+                  // Check for both 502 and 404 errors, and other gateway errors
+                  if (bodyContent.includes('File not found: 502') || 
+                      bodyContent.includes('File not found: 404') ||
+                      bodyContent.includes('"error":"File not found: 404"') ||
+                      bodyContent.includes('502 Bad Gateway') ||
+                      bodyContent.includes('status of 502')) {
+                    setIframeError(true);
+                  } else {
+                    // Successfully loaded
+                    setIsRetrying(false);
+                  }
+                } catch {
+                  // CORS error is expected for external content, assume success
+                  setIsRetrying(false);
+                }
+              }}
+            />
+          </div>
+        );
+      }
+
+      // Inline fallback when we don't have a proxied preview URL yet
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
           <iframe
-            ref={iframeRef}
-            src={htmlPreviewUrl}
-            title={`Visualização HTML de ${fileName}`}
-            className="flex-grow border-0"
+            title={`Preview (inline) de ${fileName}`}
+            className="flex-grow border-0 bg-white"
+            // Render HTML directly; relative assets (e.g., style.css) may not resolve
+            srcDoc={fileContent || ''}
             sandbox="allow-same-origin allow-scripts"
-            onError={() => setIframeError(true)}
-            onLoad={(e) => {
-              // Check if the iframe loaded successfully
-              const iframe = e.target as HTMLIFrameElement;
-              try {
-                // This will throw if we can't access the contentDocument (CORS)
-                // But that's OK for external content
-                const doc = iframe.contentDocument;
-                const bodyContent = doc?.body?.innerHTML || '';
-                // Check for both 502 and 404 errors, and other gateway errors
-                if (bodyContent.includes('File not found: 502') || 
-                    bodyContent.includes('File not found: 404') ||
-                    bodyContent.includes('"error":"File not found: 404"') ||
-                    bodyContent.includes('502 Bad Gateway') ||
-                    bodyContent.includes('status of 502')) {
-                  setIframeError(true);
-                } else {
-                  // Successfully loaded
-                  setIsRetrying(false);
-                }
-              } catch {
-                // CORS error is expected for external content, assume success
-                setIsRetrying(false);
-              }
-            }}
           />
         </div>
       );

@@ -610,9 +610,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         const messageContent = (() => {
                                             try {
                                                 const parsed = safeJsonParse<ParsedContent>(message.content, { content: message.content });
-                                                return parsed.content || message.content;
+                                                const raw = (parsed as any)?.content ?? message.content;
+                                                return typeof raw === 'string' ? raw : JSON.stringify(raw);
                                             } catch {
-                                                return message.content;
+                                                return typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
                                             }
                                         })();
 
@@ -757,8 +758,12 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         if (!parsedContent.content) return;
 
 
+                                                                        const assistantContentStr = typeof (parsedContent as any).content === 'string'
+                                                                          ? (parsedContent as any).content
+                                                                          : JSON.stringify((parsedContent as any).content);
+
                                                                         const renderedContent = renderMarkdownContent(
-                                                                            parsedContent.content,
+                                                                            assistantContentStr,
                                                                             handleToolClick,
                                                                             message.message_id,
                                                                             handleOpenFileViewer,
