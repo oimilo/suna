@@ -65,9 +65,12 @@ export const ModernPlaybackControls = ({
   const [streamingText, setStreamingText] = useState('');
   const [isStreamingText, setIsStreamingText] = useState(false);
   const [currentToolCall, setCurrentToolCall] = useState<any | null>(null);
+  const [toolPlaybackIndex, setToolPlaybackIndex] = useState<number>(-1);
   const [progress, setProgress] = useState(0);
 
   const playbackTimeout = useRef<NodeJS.Timeout | null>(null);
+  const streamingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const streamingCancelledRef = useRef<boolean>(false);
   const [showWelcome, setShowWelcome] = useState(true);
 
   // Update visible messages based on current index
@@ -144,22 +147,177 @@ export const ModernPlaybackControls = ({
     }
   }, [messages, toolCalls.length, onOpenSidePanel]);
 
-  // Playback logic
+  // Helper: stream assistant text with typing effect
+  const streamAssistantText = useCallback((fullText: string, onDone: () => void) => {
+    // Clean up any previous stream
+    if (streamingTimeoutRef.current) {
+      clearTimeout(streamingTimeoutRef.current);
+    }
+    streamingCancelledRef.current = false;
+
+    setIsStreamingText(true);
+    setStreamingText('');
+
+    let index = 0;
+    const typeNext = () => {
+      if (streamingCancelledRef.current) {
+        setIsStreamingText(false);
+        return;
+      }
+      if (!isPlaying) {
+        // Pause/resume support: retry shortly while paused
+        streamingTimeoutRef.current = setTimeout(typeNext, 100);
+        return;
+      }
+      if (index >= fullText.length) {
+        setIsStreamingText(false);
+        onDone();
+        return;
+      }
+
+      const char = fullText[index];
+      setStreamingText(prev => prev + char);
+      index += 1;
+
+      // Dynamic delay: faster base, slight pause on punctuation
+      const base = 6; // ms
+      let delay = base + Math.random() * 6;
+      if ('.!?,;:'.includes(char)) {
+        delay = 80 + Math.random() * 80;
+      }
+      streamingTimeoutRef.current = setTimeout(typeNext, delay);
+    };
+
+    typeNext();
+  }, [isPlaying]);
+
+  // Playback logic: message-by-message with assistant streaming
+  // Tool tag detection set (match hiding behavior)
+  const HIDE_STREAMING_XML_TAGS = new Set([
+    'execute-command',
+    'create-file',
+    'delete-file',
+    'full-file-rewrite',
+    'str-replace',
+    'edit-file',
+    'browser-click-element',
+    'browser-close-tab',
+    'browser-drag-drop',
+    'browser-get-dropdown-options',
+    'browser-go-back',
+    'browser-input-text',
+    'browser-navigate-to',
+    'browser-scroll-down',
+    'browser-scroll-to-text',
+    'browser-scroll-up',
+    'browser-select-dropdown-option',
+    'browser-send-keys',
+    'browser-switch-tab',
+    'browser-wait',
+    'deploy',
+    'ask',
+    'complete',
+    'crawl-webpage',
+    'web-search',
+    'see-image',
+    'call-mcp-tool',
+  ]);
+
+  const findFirstToolInText = useCallback((text: string): { name: string; index: number } | null => {
+    const toolCallRegex = /<([a-zA-Z\-_]+)(?:\s+[^>]*)?>(?:[\s\S]*?)<\/\1>|<([a-zA-Z\-_]+)(?:\s+[^>]*)?\/>/g;
+    let match: RegExpExecArray | null;
+    while ((match = toolCallRegex.exec(text)) !== null) {
+      const toolName = (match[1] || match[2] || '').toLowerCase();
+      if (HIDE_STREAMING_XML_TAGS.has(toolName)) {
+        return { name: toolName, index: match.index };
+      }
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
-    if (isPlaying && currentMessageIndex < messages.length) {
-      playbackTimeout.current = setTimeout(() => {
-        setCurrentMessageIndex(prev => prev + 1);
-      }, 500);
-    } else if (isPlaying && currentMessageIndex >= messages.length) {
+    if (!isPlaying) return;
+    if (currentMessageIndex >= messages.length) {
       setIsPlaying(false);
+      return;
     }
 
-    return () => {
-      if (playbackTimeout.current) {
-        clearTimeout(playbackTimeout.current);
+    const current = messages[currentMessageIndex];
+
+    // Cancel any in-flight streaming before starting a new one
+    if (streamingTimeoutRef.current) clearTimeout(streamingTimeoutRef.current);
+    streamingCancelledRef.current = false;
+
+    // For assistant messages, simulate typing stream
+    if (current.type === 'assistant') {
+      // Extract content (handles { content: string } JSON wrapper)
+      let content = '';
+      try {
+        const parsed = typeof current.content === 'string' ? JSON.parse(current.content) : current.content;
+        content = (parsed && typeof parsed === 'object' && 'content' in parsed) ? (parsed as any).content : (current.content as string);
+      } catch {
+        content = (current.content as string) || '';
       }
+
+      // Pre-scan for first tool in content
+      const firstTool = findFirstToolInText(content);
+      const toolTriggerRef = { triggered: false } as { triggered: boolean };
+
+      // Start streaming
+      streamAssistantText(content, () => {
+        // Push the complete assistant message into visible list
+        setVisibleMessages(prev => [...prev, current]);
+        // Advance to next message after a short pause
+        playbackTimeout.current = setTimeout(() => setCurrentMessageIndex(prev => prev + 1), 250);
+      });
+
+      // While streaming, poll streamingText length to trigger tool panel when reaching the tool tag
+      if (firstTool) {
+        const interval = setInterval(() => {
+          if (toolTriggerRef.triggered) {
+            clearInterval(interval);
+            return;
+          }
+          // If cancelled or not playing, stop
+          if (streamingCancelledRef.current || !isPlaying) return;
+          // Trigger when streamed length reaches the tool index
+          if (typeof streamingText === 'string' && streamingText.length >= firstTool.index) {
+            toolTriggerRef.triggered = true;
+            // Map to next tool call index with same normalized name
+            const normalized = firstTool.name.toLowerCase();
+            const nextIndex = toolCalls.findIndex((tc, i) => {
+              const name = (tc.assistantCall?.name || '').toString().replace(/_/g, '-').toLowerCase();
+              return i > toolPlaybackIndex && (name === normalized);
+            });
+            const targetIndex = nextIndex !== -1 ? nextIndex : Math.min(toolPlaybackIndex + 1, Math.max(0, toolCalls.length - 1));
+            if (targetIndex >= 0) {
+              setCurrentToolIndex(targetIndex);
+              setToolPlaybackIndex(targetIndex);
+            }
+            if (onOpenSidePanel) onOpenSidePanel();
+            // Show transient currentToolCall indicator
+            setCurrentToolCall({ name: normalized });
+            setTimeout(() => setCurrentToolCall(null), 600);
+            clearInterval(interval);
+          }
+        }, 50);
+        return () => clearInterval(interval);
+      }
+      return () => {
+        streamingCancelledRef.current = true;
+        if (streamingTimeoutRef.current) clearTimeout(streamingTimeoutRef.current);
+        if (playbackTimeout.current) clearTimeout(playbackTimeout.current);
+      };
+    }
+
+    // Non-assistant messages: add and step forward
+    setVisibleMessages(prev => [...prev, current]);
+    playbackTimeout.current = setTimeout(() => setCurrentMessageIndex(prev => prev + 1), 450);
+
+    return () => {
+      if (playbackTimeout.current) clearTimeout(playbackTimeout.current);
     };
-  }, [isPlaying, currentMessageIndex, messages.length]);
+  }, [isPlaying, currentMessageIndex, messages, streamAssistantText]);
 
   // Modern header with glass morphism
   const renderHeader = useCallback(() => (

@@ -4,8 +4,17 @@ import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-pa
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';
 import styles from '@/styles/toolcalls.module.css';
 
-// Only show streaming for file operation tools (disabled - no tools expand)
-const FILE_OPERATION_TOOLS = new Set([]);
+// Ferramentas que têm conteúdo de streaming útil para expandir (arquivo/exec/proxy)
+const FILE_OPERATION_TOOLS = new Set([
+  'create-file',
+  'full-file-rewrite',
+  'edit-file',
+  'str-replace',
+  'execute-command',
+  'check-command-output',
+  'expose-port',
+  'deploy',
+]);
 
 interface ShowToolStreamProps {
     content: string;

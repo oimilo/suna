@@ -390,7 +390,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
-    const [, setUserHasScrolled] = useState(false);
+    const userHasScrolledRef = React.useRef(false);
     const { session } = useAuth();
 
     // React Query file preloader
@@ -408,7 +408,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
         const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
         setShowScrollButton(isScrolledUp);
-        setUserHasScrolled(isScrolledUp);
+        userHasScrolledRef.current = isScrolledUp;
         
         // Call parent's onScroll handler if provided
         if (parentOnScroll) {
@@ -419,6 +419,24 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior });
     }, []);
+
+    // Auto-scroll to bottom on new content when user hasn't scrolled up
+    React.useEffect(() => {
+        if (!messagesContainerRef.current) return;
+        if (userHasScrolledRef.current) return; // respect manual scroll up
+        // Defer to allow DOM to paint before scrolling
+        const timer = setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [
+        displayMessages,
+        streamingTextContent,
+        streamingText,
+        currentToolCall,
+        agentStatus,
+        readOnly,
+    ]);
 
     // Preload all message attachments when messages change or sandboxId is provided
     React.useEffect(() => {
