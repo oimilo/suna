@@ -158,6 +158,37 @@ export default function ThreadPage({
   const handleProjectRenamed = useCallback((newName: string) => {
   }, []);
 
+  const handleSidePanelClose = useCallback(() => {
+    setIsSidePanelOpen(false);
+    userClosedPanelRef.current = true;
+    setAutoOpenedPanel(true);
+    setIsPanelMinimized(false);
+  }, [setIsSidePanelOpen, setAutoOpenedPanel, setIsPanelMinimized]);
+
+  const handleSidePanelMinimize = useCallback(() => {
+    console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
+    setIsPanelMinimized(true);
+    setHasMainFileDetected(false);
+  }, [setIsPanelMinimized, setHasMainFileDetected]);
+
+  const handleSidePanelMaximize = useCallback(() => {
+    console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
+    setIsPanelMinimized(false);
+    setIsSidePanelOpen(true);
+    setHasMainFileDetected(true);
+  }, [setIsPanelMinimized, setIsSidePanelOpen, setHasMainFileDetected]);
+
+  const handleSidePanelRequestOpen = useCallback(() => {
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, [setIsSidePanelOpen]);
+
+  const handleExpandToolPreview = useCallback(() => {
+    setIsPanelMinimized(false);
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, [setIsPanelMinimized, setIsSidePanelOpen]);
+
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
@@ -828,29 +859,10 @@ export default function ThreadPage({
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={() => {
-          setIsSidePanelOpen(false);
-          userClosedPanelRef.current = true;
-          setAutoOpenedPanel(true);
-          setIsPanelMinimized(false);
-        }}
-        onSidePanelMinimize={() => {
-          console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
-          setIsPanelMinimized(true);
-          setHasMainFileDetected(false); // Reset flag when user manually minimizes
-          // Mantém o painel aberto mas minimizado
-          // Isso garante que o indicador minimizado continue visível
-        }}
-        onSidePanelMaximize={() => {
-          console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
-          setIsPanelMinimized(false);
-          setIsSidePanelOpen(true);
-          setHasMainFileDetected(true);
-        }}
-        onSidePanelRequestOpen={() => {
-          setIsSidePanelOpen(true);
-          userClosedPanelRef.current = false;
-        }}
+        onSidePanelClose={handleSidePanelClose}
+        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelMaximize={handleSidePanelMaximize}
+        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -890,29 +902,10 @@ export default function ThreadPage({
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={() => {
-          setIsSidePanelOpen(false);
-          userClosedPanelRef.current = true;
-          setAutoOpenedPanel(true);
-          setIsPanelMinimized(false);
-        }}
-        onSidePanelMinimize={() => {
-          console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
-          setIsPanelMinimized(true);
-          setHasMainFileDetected(false); // Reset flag when user manually minimizes
-          // Mantém o painel aberto mas minimizado
-          // Isso garante que o indicador minimizado continue visível
-        }}
-        onSidePanelMaximize={() => {
-          console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
-          setIsPanelMinimized(false);
-          setIsSidePanelOpen(true);
-          setHasMainFileDetected(true);
-        }}
-        onSidePanelRequestOpen={() => {
-          setIsSidePanelOpen(true);
-          userClosedPanelRef.current = false;
-        }}
+        onSidePanelClose={handleSidePanelClose}
+        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelMaximize={handleSidePanelMaximize}
+        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -983,11 +976,7 @@ export default function ThreadPage({
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
               showToolPreview={isPanelMinimized && toolCalls.length > 0}
-              onExpandToolPreview={() => {
-                setIsPanelMinimized(false);
-                setIsSidePanelOpen(true);
-                userClosedPanelRef.current = false;
-              }}
+              onExpandToolPreview={handleExpandToolPreview}
               defaultShowSnackbar="tokens"
             />
           </div>
