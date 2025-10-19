@@ -183,10 +183,23 @@ export function FileAttachment({
     const [hasError, setHasError] = React.useState(false);
 
     // Basic file info
-    const filename = filepath.split('/').pop() || 'file';
+    // Normalize any server-returned uploads path to /workspace
+    const normalizedPath = React.useMemo(() => {
+        if (!filepath) return filepath;
+        // Common server uploads dir
+        if (filepath.startsWith('/workspace/uploads/')) return filepath;
+        if (filepath.startsWith('/uploads/')) return `/workspace${filepath}`;
+        // If path has no leading workspace and no other root, assume /workspace
+        if (!filepath.startsWith('/workspace') && !filepath.startsWith('/')) {
+            return `/workspace/${filepath}`;
+        }
+        return filepath;
+    }, [filepath]);
+
+    const filename = normalizedPath.split('/').pop() || 'file';
     const extension = filename.split('.').pop()?.toLowerCase() || '';
     const fileType = getFileType(filename);
-    const fileUrl = localPreviewUrl || (sandboxId ? getFileUrl(sandboxId, filepath) : filepath);
+    const fileUrl = localPreviewUrl || (sandboxId ? getFileUrl(sandboxId, normalizedPath) : normalizedPath);
     const typeLabel = getTypeLabel(fileType, extension);
     const fileSize = getFileSize(filepath, fileType);
     const IconComponent = getFileIcon(fileType);
