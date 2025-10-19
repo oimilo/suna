@@ -795,10 +795,20 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                         if (!parsedContent.content) return;
 
-
-                                                                        const assistantContentStr = typeof (parsedContent as any).content === 'string'
-                                                                          ? (parsedContent as any).content
-                                                                          : JSON.stringify((parsedContent as any).content);
+                                                                        // Garantir string segura para React
+                                                                        const assistantContentStr = (() => {
+                                                                            try {
+                                                                                const raw = (parsedContent as any).content;
+                                                                                if (typeof raw === 'string') return raw;
+                                                                                return JSON.stringify(raw ?? '');
+                                                                            } catch {
+                                                                                try {
+                                                                                    return String((parsedContent as any).content ?? '');
+                                                                                } catch {
+                                                                                    return '';
+                                                                                }
+                                                                            }
+                                                                        })();
 
                                                                         const renderedContent = renderMarkdownContent(
                                                                             assistantContentStr,
