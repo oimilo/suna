@@ -396,6 +396,31 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['get_popular_mcp_servers', 'Obtendo Servidores MCP Populares'],
   ['test_mcp_server_connection', 'Testando Conexão do Servidor MCP'],
 
+  // Agent creation/integration (frontend display)
+  ['search-mcp-servers-for-agent', 'Pesquisando Servidores MCP'],
+  ['get-mcp-server-details', 'Detalhes do Servidor MCP'],
+  ['create-credential-profile-for-agent', 'Criando Perfil de Credencial'],
+  ['discover-mcp-tools-for-agent', 'Descobrindo Ferramentas MCP'],
+  ['configure-agent-integration', 'Configurando Integração'],
+  ['create-agent-scheduled-trigger', 'Criando Agendamento'],
+  ['list-agent-scheduled-triggers', 'Listando Agendamentos'],
+  ['toggle-agent-scheduled-trigger', 'Alternando Agendamento'],
+  ['delete-agent-scheduled-trigger', 'Excluindo Agendamento'],
+  ['update-agent-config', 'Atualizando Config do Agente'],
+  ['create-new-agent', 'Criando Novo Agente'],
+  // underscore aliases
+  ['search_mcp_servers_for_agent', 'Pesquisando Servidores MCP'],
+  ['get_mcp_server_details', 'Detalhes do Servidor MCP'],
+  ['create_credential_profile_for_agent', 'Criando Perfil de Credencial'],
+  ['discover_mcp_tools_for_agent', 'Descobrindo Ferramentas MCP'],
+  ['configure_agent_integration', 'Configurando Integração'],
+  ['create_agent_scheduled_trigger', 'Criando Agendamento'],
+  ['list_agent_scheduled_triggers', 'Listando Agendamentos'],
+  ['toggle_agent_scheduled_trigger', 'Alternando Agendamento'],
+  ['delete_agent_scheduled_trigger', 'Excluindo Agendamento'],
+  ['update_agent_config', 'Atualizando Config do Agente'],
+  ['create_new_agent', 'Criando Novo Agente'],
+
 ]);
 
 
