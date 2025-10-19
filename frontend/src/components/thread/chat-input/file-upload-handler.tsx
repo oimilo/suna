@@ -109,31 +109,46 @@ const uploadFiles = async (
         throw new Error(`Upload failed: ${response.status === 402 ? 'Pagamento Necessário' : response.statusText}`);
       }
 
+      // Read server response to capture the actual stored path and filename
+      let serverJson: any = null;
+      try {
+        serverJson = await response.json();
+      } catch {
+        serverJson = null;
+      }
+
+      const returnedPath: string = (serverJson?.path as string) || uploadPath;
+      const finalFilename: string = (serverJson?.final_filename as string) || normalizedName;
+
       // If file was already in chat and we have queryClient, invalidate its cache
       if (isFileInChat && queryClient) {
         console.log(`Invalidating cache for existing file: ${uploadPath}`);
 
         // Invalidate all content types for this file
         ['text', 'blob', 'json'].forEach(contentType => {
-          const queryKey = fileQueryKeys.content(sandboxId, uploadPath, contentType);
+          const queryKey = fileQueryKeys.content(sandboxId, returnedPath, contentType);
           queryClient.removeQueries({ queryKey });
         });
 
         // Also invalidate directory listing
-        const directoryPath = uploadPath.substring(0, uploadPath.lastIndexOf('/'));
+        const directoryPath = returnedPath.substring(0, returnedPath.lastIndexOf('/'));
         queryClient.invalidateQueries({
           queryKey: fileQueryKeys.directory(sandboxId, directoryPath),
         });
       }
 
       newUploadedFiles.push({
-        name: normalizedName,
-        path: uploadPath,
+        name: finalFilename,
+        path: returnedPath,
         size: file.size,
         type: file.type || 'application/octet-stream',
       });
 
-      toast.success(`File uploaded: ${normalizedName}`);
+      if (serverJson?.renamed && finalFilename !== normalizedName) {
+        toast.success(`Arquivo enviado: ${finalFilename} (renomeado de ${normalizedName})`);
+      } else {
+        toast.success(`Arquivo enviado: ${finalFilename}`);
+      }
     }
 
     setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
