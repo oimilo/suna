@@ -49,6 +49,12 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   useEffect(() => {
     let isMounted = true;
 
+    // Reset state when thread changes
+    agentRunsCheckedRef.current = false;
+    messagesLoadedRef.current = false;
+    initialLoadCompleted.current = false;
+    setMessages([]);
+
     async function initializeData() {
       if (!initialLoadCompleted.current) setIsLoading(true);
       setError(null);
@@ -83,10 +89,33 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
               metadata: msg.metadata || '{}',
               created_at: msg.created_at || new Date().toISOString(),
               updated_at: msg.updated_at || new Date().toISOString(),
+              agent_id: (msg as any).agent_id,
+              agents: (msg as any).agents,
             }));
 
-          setMessages(unifiedMessages);
-          console.log('[PAGE] Loaded Messages (excluding status, keeping browser_state):', unifiedMessages.length);
+          const serverIds = new Set(
+            unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
+          );
+          const localExtras = (messages || []).filter(
+            (m) =>
+              !m.message_id ||
+              (typeof m.message_id === 'string' &&
+                m.message_id.startsWith('temp-')) ||
+              !serverIds.has(m.message_id as string),
+          );
+          const mergedMessages = [...unifiedMessages, ...localExtras].sort(
+            (a, b) => {
+              const aTime = a.created_at
+                ? new Date(a.created_at).getTime()
+                : 0;
+              const bTime = b.created_at
+                ? new Date(b.created_at).getTime()
+                : 0;
+              return aTime - bTime;
+            },
+          );
+
+          setMessages(mergedMessages);
           messagesLoadedRef.current = true;
 
           if (!hasInitiallyScrolled.current) {
@@ -95,16 +124,18 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
         }
 
         if (agentRunsQuery.data && !agentRunsCheckedRef.current && isMounted) {
-          console.log('[PAGE] Checking for active agent runs...');
           agentRunsCheckedRef.current = true;
 
-          const activeRun = agentRunsQuery.data.find((run) => run.status === 'running');
-          if (activeRun && isMounted) {
-            console.log('[PAGE] Found active run on load:', activeRun.id);
-            setAgentRunId(activeRun.id);
+          const runningRuns = agentRunsQuery.data.filter(
+            (r) => r.status === 'running',
+          );
+          if (runningRuns.length > 0) {
+            const latestRunning = runningRuns[0];
+            setAgentRunId(latestRunning.id);
+            setAgentStatus('running');
           } else {
-            console.log('[PAGE] No active agent runs found');
-            if (isMounted) setAgentStatus('idle');
+            setAgentStatus('idle');
+            setAgentRunId(null);
           }
         }
 
@@ -143,8 +174,12 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   ]);
 
   useEffect(() => {
-    if (messagesQuery.data && messagesQuery.status === 'success') {
-      if (!isLoading && agentStatus !== 'running' && agentStatus !== 'connecting') {
+    if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
+      const shouldReload =
+        messages.length === 0 ||
+        messagesQuery.data.length > messages.length + 50;
+
+      if (shouldReload) {
         const unifiedMessages = (messagesQuery.data || [])
           .filter((msg) => msg.type !== 'status')
           .map((msg: ApiMessageType) => ({
@@ -160,10 +195,32 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
             agents: (msg as any).agents,
           }));
 
-        setMessages(unifiedMessages);
+        setMessages((prev) => {
+          const serverIds = new Set(
+            unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
+          );
+          const localExtras = (prev || []).filter(
+            (m) =>
+              !m.message_id ||
+              (typeof m.message_id === 'string' &&
+                m.message_id.startsWith('temp-')) ||
+              !serverIds.has(m.message_id as string),
+          );
+          const merged = [...unifiedMessages, ...localExtras].sort((a, b) => {
+            const aTime = a.created_at
+              ? new Date(a.created_at).getTime()
+              : 0;
+            const bTime = b.created_at
+              ? new Date(b.created_at).getTime()
+              : 0;
+            return aTime - bTime;
+          });
+
+          return merged;
+        });
       }
     }
-  }, [messagesQuery.data, messagesQuery.status, isLoading, agentStatus, threadId]);
+  }, [messagesQuery.data, messagesQuery.status, isLoading, messages, threadId]);
 
   return {
     messages,

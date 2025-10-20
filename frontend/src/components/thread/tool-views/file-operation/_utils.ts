@@ -185,6 +185,7 @@ export const isFileType = {
   markdown: (fileExtension: string): boolean => fileExtension === 'md',
   html: (fileExtension: string): boolean => fileExtension === 'html' || fileExtension === 'htm',
   csv: (fileExtension: string): boolean => fileExtension === 'csv',
+  xlsx: (fileExtension: string): boolean => fileExtension === 'xlsx',
 };
 
 export const hasLanguageHighlighting = (language: string): boolean => {
@@ -196,3 +197,60 @@ export const splitContentIntoLines = (fileContent: string | null): string[] => {
     ? fileContent.replace(/\\n/g, '\n').split('\n')
     : [];
 };
+
+// Minimal extractor for edit-file to unblock build
+export const extractFileEditData = (
+  assistantContent: any,
+  toolContent: any,
+  isSuccess: boolean,
+  toolTimestamp?: string,
+  assistantTimestamp?: string
+) => {
+  const toStr = (v: any) => (typeof v === 'string' ? v : JSON.stringify(v || ''));
+  const merge = `${toStr(assistantContent)}\n${toStr(toolContent)}`;
+  // Try to find file_path
+  const filePathMatch = merge.match(/file_path=(?:"|')([^"']+)(?:"|')/);
+  const file_path = filePathMatch ? filePathMatch[1] : null;
+  // Try to find content
+  const updatedMatch = merge.match(/updated_content=(?:"|')([\s\S]*?)(?:"|')/);
+  const originalMatch = merge.match(/original_content=(?:"|')([\s\S]*?)(?:"|')/);
+  const updatedContent = updatedMatch ? updatedMatch[1] : null;
+  const originalContent = originalMatch ? originalMatch[1] : null;
+  return {
+    filePath: file_path,
+    originalContent,
+    updatedContent,
+    actualIsSuccess: isSuccess,
+    actualToolTimestamp: toolTimestamp,
+    errorMessage: undefined as string | undefined,
+  };
+};
+
+// Diff helpers (unified minimal versions)
+export type DiffType = 'unchanged' | 'added' | 'removed';
+export interface LineDiff { type: DiffType; oldLine: string | null; newLine: string | null; lineNumber: number }
+export interface DiffStats { additions: number; deletions: number }
+
+const parseNewlines = (text: string): string => text.replace(/\\n/g, '\n');
+
+export const generateLineDiff = (oldText: string, newText: string): LineDiff[] => {
+  const oldLines = parseNewlines(oldText || '').split('\n');
+  const newLines = parseNewlines(newText || '').split('\n');
+  const out: LineDiff[] = [];
+  const max = Math.max(oldLines.length, newLines.length);
+  for (let i = 0; i < max; i++) {
+    const o = i < oldLines.length ? oldLines[i] : null;
+    const n = i < newLines.length ? newLines[i] : null;
+    if (o === n) out.push({ type: 'unchanged', oldLine: o, newLine: n, lineNumber: i + 1 });
+    else {
+      if (o !== null) out.push({ type: 'removed', oldLine: o, newLine: null, lineNumber: i + 1 });
+      if (n !== null) out.push({ type: 'added', oldLine: null, newLine: n, lineNumber: i + 1 });
+    }
+  }
+  return out;
+};
+
+export const calculateDiffStats = (lineDiff: LineDiff[]): DiffStats => ({
+  additions: lineDiff.filter(l => l.type === 'added').length,
+  deletions: lineDiff.filter(l => l.type === 'removed').length,
+});

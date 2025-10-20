@@ -3,6 +3,8 @@ import { extractToolData, normalizeContentToString } from '../utils';
 export interface ExposePortData {
   port: number | null;
   url: string | null;
+  proxyUrl: string | null;
+  directUrl: string | null;
   message: string | null;
   success?: boolean;
   timestamp?: string;
@@ -19,17 +21,27 @@ const parseContent = (content: any): any => {
   return content;
 };
 
-const extractFromNewFormat = (content: any): { 
-  port: number | null; 
+const extractFromNewFormat = (content: any): {
+  port: number | null;
   url: string | null;
+  proxyUrl: string | null;
+  directUrl: string | null;
   message: string | null;
-  success?: boolean; 
+  success?: boolean;
   timestamp?: string;
 } => {
   const parsedContent = parseContent(content);
   
   if (!parsedContent || typeof parsedContent !== 'object') {
-    return { port: null, url: null, message: null, success: undefined, timestamp: undefined };
+    return {
+      port: null,
+      url: null,
+      proxyUrl: null,
+      directUrl: null,
+      message: null,
+      success: undefined,
+      timestamp: undefined
+    };
   }
 
   if ('tool_execution' in parsedContent && typeof parsedContent.tool_execution === 'object') {
@@ -46,7 +58,9 @@ const extractFromNewFormat = (content: any): {
 
     const extractedData = {
       port: args.port ? parseInt(args.port, 10) : (parsedOutput?.port ? parseInt(parsedOutput.port, 10) : null),
-      url: parsedOutput?.url || null,
+      url: parsedOutput?.proxy_url || parsedOutput?.url || parsedOutput?.original_url || null,
+      proxyUrl: parsedOutput?.proxy_url || null,
+      directUrl: parsedOutput?.original_url || parsedOutput?.url || null,
       message: parsedOutput?.message || parsedContent.summary || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
@@ -55,6 +69,8 @@ const extractFromNewFormat = (content: any): {
     console.log('ExposePortToolView: Extracted from new format:', {
       port: extractedData.port,
       hasUrl: !!extractedData.url,
+      hasProxy: !!extractedData.proxyUrl,
+      hasDirect: !!extractedData.directUrl,
       hasMessage: !!extractedData.message,
       success: extractedData.success
     });
@@ -66,7 +82,15 @@ const extractFromNewFormat = (content: any): {
     return extractFromNewFormat(parsedContent.content);
   }
 
-  return { port: null, url: null, message: null, success: undefined, timestamp: undefined };
+  return {
+    port: null,
+    url: null,
+    proxyUrl: null,
+    directUrl: null,
+    message: null,
+    success: undefined,
+    timestamp: undefined
+  };
 };
 
 const extractPortFromAssistantContent = (content: string | object | undefined | null): number | null => {
@@ -82,9 +106,11 @@ const extractPortFromAssistantContent = (content: string | object | undefined | 
   }
 };
 
-const extractFromLegacyFormat = (content: any): { 
-  port: number | null; 
+const extractFromLegacyFormat = (content: any): {
+  port: number | null;
   url: string | null;
+  proxyUrl: string | null;
+  directUrl: string | null;
   message: string | null;
 } => {
   const toolData = extractToolData(content);
@@ -97,13 +123,15 @@ const extractFromLegacyFormat = (content: any): {
     return {
       port: toolData.arguments.port ? parseInt(toolData.arguments.port, 10) : null,
       url: null,
+      proxyUrl: null,
+      directUrl: null,
       message: null
     };
   }
 
   const contentStr = normalizeContentToString(content);
   if (!contentStr) {
-    return { port: null, url: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   }
   try {
     const parsed = JSON.parse(contentStr);
@@ -111,6 +139,8 @@ const extractFromLegacyFormat = (content: any): {
       return {
         port: parseInt(parsed.port, 10),
         url: parsed.url,
+        proxyUrl: parsed.proxy_url || null,
+        directUrl: parsed.original_url || parsed.url || null,
         message: parsed.message || null
       };
     }
@@ -134,6 +164,8 @@ const extractFromLegacyFormat = (content: any): {
       return {
         port: result.port ? parseInt(result.port, 10) : null,
         url: result.url || null,
+        proxyUrl: result.proxy_url || null,
+        directUrl: result.original_url || result.url || null,
         message: result.message || null
       };
     }
@@ -147,15 +179,17 @@ const extractFromLegacyFormat = (content: any): {
       return {
         port: result.port ? parseInt(result.port, 10) : null,
         url: result.url || null,
+        proxyUrl: result.proxy_url || null,
+        directUrl: result.original_url || result.url || null,
         message: result.message || null
       };
     }
     
-    return { port: null, url: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   } catch (e) {
     console.error('Failed to parse tool content:', e);
     console.error('Tool content was:', contentStr);
-    return { port: null, url: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   }
 };
 
@@ -168,6 +202,8 @@ export function extractExposePortData(
 ): {
   port: number | null;
   url: string | null;
+  proxyUrl: string | null;
+  directUrl: string | null;
   message: string | null;
   actualIsSuccess: boolean;
   actualToolTimestamp?: string;
@@ -175,6 +211,8 @@ export function extractExposePortData(
 } {
   let port: number | null = null;
   let url: string | null = null;
+  let proxyUrl: string | null = null;
+  let directUrl: string | null = null;
   let message: string | null = null;
   let actualIsSuccess = isSuccess;
   let actualToolTimestamp = toolTimestamp;
@@ -187,11 +225,15 @@ export function extractExposePortData(
     assistantNewFormat: {
       hasPort: !!assistantNewFormat.port,
       hasUrl: !!assistantNewFormat.url,
+      hasProxy: !!assistantNewFormat.proxyUrl,
+      hasDirect: !!assistantNewFormat.directUrl,
       hasMessage: !!assistantNewFormat.message
     },
     toolNewFormat: {
       hasPort: !!toolNewFormat.port,
       hasUrl: !!toolNewFormat.url,
+      hasProxy: !!toolNewFormat.proxyUrl,
+      hasDirect: !!toolNewFormat.directUrl,
       hasMessage: !!toolNewFormat.message
     }
   });
@@ -199,6 +241,8 @@ export function extractExposePortData(
   if (assistantNewFormat.port || assistantNewFormat.url || assistantNewFormat.message) {
     port = assistantNewFormat.port;
     url = assistantNewFormat.url;
+    proxyUrl = assistantNewFormat.proxyUrl;
+    directUrl = assistantNewFormat.directUrl;
     message = assistantNewFormat.message;
     if (assistantNewFormat.success !== undefined) {
       actualIsSuccess = assistantNewFormat.success;
@@ -210,6 +254,8 @@ export function extractExposePortData(
   } else if (toolNewFormat.port || toolNewFormat.url || toolNewFormat.message) {
     port = toolNewFormat.port;
     url = toolNewFormat.url;
+    proxyUrl = toolNewFormat.proxyUrl;
+    directUrl = toolNewFormat.directUrl;
     message = toolNewFormat.message;
     if (toolNewFormat.success !== undefined) {
       actualIsSuccess = toolNewFormat.success;
@@ -224,6 +270,8 @@ export function extractExposePortData(
 
     port = assistantLegacy.port || toolLegacy.port;
     url = assistantLegacy.url || toolLegacy.url;
+    proxyUrl = assistantLegacy.proxyUrl || toolLegacy.proxyUrl;
+    directUrl = assistantLegacy.directUrl || toolLegacy.directUrl || url;
     message = assistantLegacy.message || toolLegacy.message;
     
     if (!port) {
@@ -243,30 +291,36 @@ export function extractExposePortData(
   console.log('ExposePortToolView: Final extracted data:', {
     port,
     hasUrl: !!url,
+    hasProxy: !!proxyUrl,
+    hasDirect: !!directUrl,
     hasMessage: !!message,
     actualIsSuccess
   });
 
+  const normaliseUrl = (value: string | null) => {
+    if (!value) return value;
+    try {
+      let cleaned = value.trim();
+      cleaned = cleaned.replace(/\s+/g, '');
+      cleaned = cleaned.replace(/([^:])\/\/+/g, (_, prefix) => `${prefix}/`);
+      return cleaned;
+    } catch {
+      return value;
+    }
+  };
+
+  const normalizedProxy = normaliseUrl(proxyUrl);
+  const normalizedDirect = normaliseUrl(directUrl);
+  const normalizedUrl = normaliseUrl(url) || normalizedProxy || normalizedDirect;
+
   return {
     port,
-    url: (() => {
-      if (!url) return url;
-      try {
-        // Remove trailing / and redundant trailing "/8000" if present
-        let cleaned = url.replace(/\/$/, '');
-        cleaned = cleaned.replace(/\/(?:\d{2,5})$/, (m) => {
-          // if the last segment is exactly the port, keep; otherwise strip
-          const lastSeg = m.slice(1);
-          return port && String(port) === lastSeg ? m : '';
-        });
-        return cleaned;
-      } catch {
-        return url;
-      }
-    })(),
+    url: normalizedUrl,
+    proxyUrl: normalizedProxy,
+    directUrl: normalizedDirect,
     message,
     actualIsSuccess,
     actualToolTimestamp,
     actualAssistantTimestamp
   };
-} 
+}

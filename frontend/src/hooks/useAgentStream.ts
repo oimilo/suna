@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   streamAgent,
   getAgentStatus,
@@ -13,6 +14,10 @@ import {
   ParsedMetadata,
 } from '@/components/thread/types';
 import { safeJsonParse } from '@/components/thread/utils';
+import { agentKeys } from '@/hooks/react-query/agents/keys';
+import { composioKeys } from '@/hooks/react-query/composio/keys';
+import { workflowKeys } from '@/hooks/react-query/agents/workflow-keys';
+import { knowledgeBaseKeys } from '@/hooks/react-query/knowledge-base/keys';
 
 interface ApiMessageType {
   message_id?: string;
@@ -77,7 +82,9 @@ export function useAgentStream(
   callbacks: AgentStreamCallbacks,
   threadId: string,
   setMessages: (messages: UnifiedMessage[]) => void,
+  agentId?: string,
 ): UseAgentStreamResult {
+  const queryClient = useQueryClient();
   const [agentRunId, setAgentRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('idle');
   const [textContent, setTextContent] = useState<
@@ -181,6 +188,36 @@ export function useAgentStream(
       setAgentRunId(null);
       currentRunIdRef.current = null;
 
+      if (agentId) {
+        queryClient.invalidateQueries({ queryKey: agentKeys.detail(agentId) });
+        queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: ['agent-tools', agentId] });
+        queryClient.invalidateQueries({
+          queryKey: ['custom-mcp-tools', agentId],
+        });
+        queryClient.invalidateQueries({ queryKey: composioKeys.mcpServers() });
+        queryClient.invalidateQueries({
+          queryKey: composioKeys.profiles.all(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: composioKeys.profiles.credentials(),
+        });
+        queryClient.invalidateQueries({ queryKey: ['triggers', agentId] });
+        queryClient.invalidateQueries({
+          queryKey: workflowKeys.agent(agentId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: knowledgeBaseKeys.agent(agentId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['versions', 'list', agentId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['versions', 'detail'],
+          predicate: (query) => query.queryKey.includes(agentId),
+        });
+      }
+
       // --- Reliable Message Refetch on Finalization ---
       // Only refetch if the stream ended with a terminal status indicating the run is likely over
       const terminalStatuses = [
@@ -239,7 +276,7 @@ export function useAgentStream(
         });
       }
     },
-    [agentRunId, updateStatus],
+    [agentRunId, updateStatus, agentId, queryClient],
   );
 
   // --- Stream Callback Handlers ---
