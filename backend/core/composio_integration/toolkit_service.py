@@ -129,6 +129,24 @@ class ToolkitService:
                 response_data = toolkits_response
             
             items = response_data.get('items', [])
+
+            try:
+                sample_slugs = []
+                for idx, raw_item in enumerate(items):
+                    slug = getattr(raw_item, 'slug', None)
+                    if slug:
+                        sample_slugs.append(slug)
+                    elif isinstance(raw_item, dict):
+                        sample_slugs.append(raw_item.get('slug'))
+                    if idx >= 9:
+                        break
+                logger.debug(
+                    "Composio returned %d raw toolkits (sample: %s)",
+                    len(items),
+                    sample_slugs,
+                )
+            except Exception as log_err:
+                logger.debug("Failed to log toolkit sample: %s", log_err)
             
             toolkits = []
             for item in items:
@@ -149,8 +167,12 @@ class ToolkitService:
                 supports_managed_oauth = "OAUTH2" in normalized_managed_schemes
 
                 if not supports_oauth and not supports_managed_oauth:
-                    # Skip toolkits that do not expose OAuth at all – without it we cannot
-                    # prompt the user through a connection flow or manage credentials.
+                    logger.debug(
+                        "Skipping toolkit %s: auth_schemes=%s managed_auth_schemes=%s",
+                        toolkit_data.get("slug"),
+                        normalized_auth_schemes or raw_auth_schemes,
+                        normalized_managed_schemes,
+                    )
                     continue
                 
                 logo_url = None
