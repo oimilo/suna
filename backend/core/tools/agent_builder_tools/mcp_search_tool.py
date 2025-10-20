@@ -157,8 +157,8 @@ class MCPSearchTool(AgentBuilderBaseTool):
         try:
             account_id = await self._get_current_account_id()
             from core.composio_integration.composio_profile_service import ComposioProfileService
-from core.mcp_module.mcp_service import mcp_service
-from core.composio_integration.connected_account_service import ConnectedAccountService
+            from core.mcp_module.mcp_service import mcp_service
+            from core.composio_integration.connected_account_service import ConnectedAccountService
             
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
