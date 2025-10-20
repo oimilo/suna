@@ -166,12 +166,12 @@ class ToolkitService:
                 supports_oauth = "OAUTH2" in normalized_auth_schemes
                 supports_managed_oauth = "OAUTH2" in normalized_managed_schemes
 
-                if not supports_oauth and not supports_managed_oauth:
+                if not normalized_auth_schemes and not normalized_managed_schemes:
                     logger.debug(
-                        "Skipping toolkit %s: auth_schemes=%s managed_auth_schemes=%s",
+                        "Skipping toolkit %s: no auth schemes defined (raw auth=%s managed=%s)",
                         toolkit_data.get("slug"),
-                        normalized_auth_schemes or raw_auth_schemes,
-                        normalized_managed_schemes,
+                        raw_auth_schemes,
+                        raw_managed_auth_schemes,
                     )
                     continue
                 
