@@ -37,6 +37,7 @@ export function getToolTitle(toolName: string): string {
     'full-file-rewrite': 'Reescrever Arquivo',
     'delete-file': 'Deletar Arquivo',
     'web-search': 'Busca na Web',
+    'image-search': 'Busca de Imagens',
     'crawl-webpage': 'Explorar Página Web',
     'scrape-webpage': 'Extrair Dados da Web',
     'browser-navigate': 'Navegar no Browser',

@@ -35,6 +35,8 @@ interface AttachmentGroupProps {
     gridImageHeight?: number; // New prop for grid image height
     collapsed?: boolean; // Add new collapsed prop
     project?: Project; // Add project prop
+    standalone?: boolean;
+    alignRight?: boolean;
 }
 
 export function AttachmentGroup({
@@ -48,7 +50,9 @@ export function AttachmentGroup({
     maxHeight = '216px',
     gridImageHeight = 180, // Increased from 120 for better visibility
     collapsed = true, // By default, HTML/MD files are collapsed
-    project // Add project prop
+    project, // Add project prop
+    standalone = false,
+    alignRight = false
 }: AttachmentGroupProps) {
     // State for modal
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -245,6 +249,8 @@ export function AttachmentGroup({
                                             }
                                 }
                                 collapsed={collapsed} // Pass collapsed prop
+                                standalone={standalone}
+                                alignRight={alignRight}
                                 project={project} // Pass project to FileAttachment
                             />
                             {onRemove && (
@@ -287,6 +293,8 @@ export function AttachmentGroup({
                                 showPreview={showPreviews}
                                 localPreviewUrl={getLocalPreviewUrl(item.file)}
                                 collapsed={true} // Always collapsed in inline mode
+                                standalone={standalone}
+                                alignRight={alignRight}
                             />
                             {onRemove && (
                                 <div

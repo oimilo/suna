@@ -171,7 +171,7 @@ export default function AgentConfigurationPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [agent, formData, isViewingOldVersion, agentId, createVersionMutation, updateAgentMutation, queryClient]);
+  }, [agent, formData, originalData, isViewingOldVersion, agentId, createVersionMutation, updateAgentMutation, queryClient]);
 
   const handleFieldChange = useCallback((field: keyof FormData, value: any) => {
     if (isViewingOldVersion) {

@@ -86,7 +86,10 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     useSidebarSafe();
   const { isPinned } = useSidebarContext();
   const { data: agentsResponse } = useAgents();
-  const agents = agentsResponse?.agents || [];
+  const agents = useMemo(
+    () => agentsResponse?.agents ?? [],
+    [agentsResponse?.agents],
+  );
   const {
     selectedAgentId,
     setSelectedAgent,
@@ -162,10 +165,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     subscriptionData?.status === 'active' ? 'active' : 'no_subscription';
 
   // Memoize project for VNC preloader to prevent re-preloading on every render
-  const memoizedProject = useMemo(
-    () => project,
-    [project?.id, project?.sandbox?.vnc_preview, project?.sandbox?.pass],
-  );
+  const memoizedProject = useMemo(() => project, [project]);
 
   useVncPreloader(memoizedProject);
   useProjectRealtime(projectId);
@@ -485,6 +485,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
       setMessages,
       setShowBillingAlert,
       startAgentMutation,
+      setAgentRunId,
       threadId,
     ],
   );

@@ -3,7 +3,7 @@ import { ArrowDown, CircleDashed, CheckCircle, AlertTriangle } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
 import { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/components/thread/types';
-import { FileAttachmentGrid } from '@/components/thread/file-attachment';
+import { AttachmentGroup } from '@/components/thread/attachment-group';
 import { useFilePreloader, FileCache } from '@/hooks/react-query/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api';
@@ -76,20 +76,46 @@ function getEnhancedToolDisplayName(toolName: string, rawXml?: string): string {
     return getUserFriendlyToolName(toolName);
 }
 
-// Helper function to render attachments (keeping original implementation for now)
-export function renderAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project) {
+export function renderStandaloneAttachments(
+    attachments: string[],
+    fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void,
+    sandboxId?: string,
+    project?: Project,
+    alignRight: boolean = false
+) {
     if (!attachments || attachments.length === 0) return null;
 
-    // Note: Preloading is now handled by React Query in the main ThreadContent component
-    // to avoid duplicate requests with different content types
+    const validAttachments = attachments
+        .map(attachment => (typeof attachment === 'string' ? attachment.trim() : ''))
+        .filter(attachment => attachment.length > 0);
 
-    return <FileAttachmentGrid
-        attachments={attachments}
-        onFileClick={fileViewerHandler}
-        showPreviews={true}
-        sandboxId={sandboxId}
-        project={project}
-    />;
+    if (validAttachments.length === 0) return null;
+
+    return (
+        <div className={alignRight ? "w-full flex justify-end mt-3" : "w-full flex justify-start mt-3"}>
+            <AttachmentGroup
+                files={validAttachments}
+                onFileClick={fileViewerHandler}
+                sandboxId={sandboxId}
+                showPreviews={true}
+                layout="grid"
+                collapsed={false}
+                project={project}
+                standalone
+                alignRight={alignRight}
+            />
+        </div>
+    );
+}
+
+// Backwards-compatible helper retained for existing call sites
+export function renderAttachments(
+    attachments: string[],
+    fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void,
+    sandboxId?: string,
+    project?: Project
+) {
+    return renderStandaloneAttachments(attachments, fileViewerHandler, sandboxId, project, false);
 }
 
 // Render Markdown content while preserving XML tags that should be displayed as tool calls
@@ -416,9 +442,12 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         }
     };
 
-    const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-        messagesEndRef.current?.scrollIntoView({ behavior });
-    }, []);
+    const scrollToBottom = useCallback(
+        (behavior: ScrollBehavior = 'smooth') => {
+            messagesEndRef.current?.scrollIntoView({ behavior });
+        },
+        [messagesEndRef],
+    );
 
     // Auto-scroll to bottom on new content when user hasn't scrolled up
     React.useEffect(() => {
@@ -436,6 +465,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         currentToolCall,
         agentStatus,
         readOnly,
+        messagesEndRef,
     ]);
 
     // Preload all message attachments when messages change or sandboxId is provided
@@ -690,7 +720,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         )}
 
                                                         {/* Use the helper function to render user attachments */}
-                                                        {renderAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project)}
+                                                        {renderStandaloneAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project, true)}
                                                     </div>
                                                 </div>
                                             </div>

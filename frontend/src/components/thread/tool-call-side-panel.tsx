@@ -18,6 +18,15 @@ import { ToolNavigationDropdown } from './tool-navigation-dropdown';
 import { WindowControls } from './window-controls';
 // Debug logger removido - usar console.log diretamente
 
+const FILE_PATTERNS = {
+  web: ['index.html', 'home.html', 'main.html', 'app.html'],
+  game: ['game.html', 'play.html', 'index.html', 'main.js'],
+  python: ['main.py', 'app.py', 'server.py', 'bot.py', 'script.py'],
+  node: ['index.js', 'app.js', 'server.js', 'main.js', 'index.ts'],
+  dashboard: ['dashboard.html', 'admin.html', 'panel.html', 'index.html'],
+  api: ['webhook.js', 'api.py', 'handler.js', 'function.js'],
+};
+
 export interface ToolCallInput {
   assistantCall: {
     content?: string;
@@ -120,18 +129,8 @@ export function ToolCallSidePanel({
     }
   }, [onMinimize]);
 
-  // Padrões de arquivos principais por tipo de projeto
-  const FILE_PATTERNS = {
-    web: ['index.html', 'home.html', 'main.html', 'app.html'],
-    game: ['game.html', 'play.html', 'index.html', 'main.js'],
-    python: ['main.py', 'app.py', 'server.py', 'bot.py', 'script.py'],
-    node: ['index.js', 'app.js', 'server.js', 'main.js', 'index.ts'],
-    dashboard: ['dashboard.html', 'admin.html', 'panel.html', 'index.html'],
-    api: ['webhook.js', 'api.py', 'handler.js', 'function.js']
-  };
-
   // Extrai o nome do arquivo do conteúdo do tool call
-  const extractFileName = (rawContent: any): string | null => {
+  const extractFileName = React.useCallback((rawContent: any): string | null => {
     // console.log('[DEBUG-EXTRACT] Tipo do conteúdo recebido:', typeof rawContent);
     
     if (!rawContent) {
@@ -201,10 +200,10 @@ export function ToolCallSidePanel({
     
     // console.log('[DEBUG-EXTRACT] ✗ Nenhum padrão encontrou match');
     return null;
-  };
+  }, []);
 
   // Detecta se é um momento de entrega relevante
-  const isDeliveryMoment = (toolCall: ToolCallInput): boolean => {
+  const isDeliveryMoment = React.useCallback((toolCall: ToolCallInput): boolean => {
     const name = toolCall.assistantCall?.name;
     // console.log('[DEBUG-DELIVERY] Tool name:', name);
     
@@ -277,10 +276,10 @@ export function ToolCallSidePanel({
     // Por padrão, retorna false (não é uma entrega relevante)
     // Apenas casos específicos acima (arquivos principais, deploy, etc.) são considerados entregas
     return false;
-  };
+  }, [extractFileName]);
 
   // Detecta o arquivo principal baseado no contexto do projeto
-  const detectMainFile = (calls: ToolCallInput[]): number => {
+  const detectMainFile = React.useCallback((calls: ToolCallInput[]): number => {
     // console.log('[DEBUG-DETECT] ========== INICIANDO DETECÇÃO DE ARQUIVO PRINCIPAL ==========');
     // console.log('[DEBUG-DETECT] Total de tool calls:', calls.length);
     
@@ -343,7 +342,7 @@ export function ToolCallSidePanel({
     // Não retorna mais o primeiro arquivo como fallback
     // console.log('[DEBUG-DETECT] Nenhum arquivo principal detectado');
     return -1;
-  };
+  }, [extractFileName]);
 
   // Verifica se é uma operação técnica que deve ser ocultada
   const isTechnicalOperation = (name?: string): boolean => {
@@ -447,7 +446,7 @@ export function ToolCallSidePanel({
       // console.log('[DEBUG-USEEFFECT] ✗ Nenhum arquivo principal. Resetando mainDeliveryIndex para -1');
       setMainDeliveryIndex(-1);
     }
-  }, [toolCalls]); // Roda sempre que toolCalls mudar
+  }, [toolCalls, detectMainFile]); // Roda sempre que toolCalls mudar
 
   // Auto-abertura inteligente e navegação para arquivo principal
   React.useEffect(() => {

@@ -223,8 +223,8 @@ export const FileUploadHandler = forwardRef<
     useEffect(() => {
       return () => {
         // Clean up any object URLs to avoid memory leaks
-        setUploadedFiles(prev => {
-          prev.forEach(file => {
+        setUploadedFiles((prev) => {
+          prev.forEach((file) => {
             if (file.localUrl) {
               URL.revokeObjectURL(file.localUrl);
             }
@@ -232,7 +232,7 @@ export const FileUploadHandler = forwardRef<
           return prev;
         });
       };
-    }, []);
+    }, [setUploadedFiles]);
 
     const handleFileUpload = () => {
       if (ref && 'current' in ref && ref.current) {

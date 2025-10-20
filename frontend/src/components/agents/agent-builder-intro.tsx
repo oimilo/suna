@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+const INTRO_MESSAGES = [
+  "Olá! Eu sou o Prophet, vou te ajudar a configurar seu novo agente",
+  "Vamos transformar este agente em algo especial, personalizado para suas necessidades",
+  "Me conte que tipo de tarefas você quer que ele execute",
+  "Posso configurar integrações com Gmail, Slack, Notion, Google Calendar e mais de 2700 serviços",
+  "Como você gostaria que seu agente te ajudasse no dia a dia?"
+];
+
 export function AgentBuilderIntro() {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
@@ -9,13 +17,7 @@ export function AgentBuilderIntro() {
   const [showDots, setShowDots] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const messages = [
-    "Olá! Eu sou o Prophet, vou te ajudar a configurar seu novo agente",
-    "Vamos transformar este agente em algo especial, personalizado para suas necessidades",
-    "Me conte que tipo de tarefas você quer que ele execute",
-    "Posso configurar integrações com Gmail, Slack, Notion, Google Calendar e mais de 2700 serviços",
-    "Como você gostaria que seu agente te ajudasse no dia a dia?"
-  ];
+  const messages = INTRO_MESSAGES;
 
   useEffect(() => {
     if (currentMessageIndex >= messages.length) return;
@@ -50,7 +52,7 @@ export function AgentBuilderIntro() {
     }, typingSpeed);
 
     return () => clearInterval(typingInterval);
-  }, [currentMessageIndex]);
+  }, [currentMessageIndex, messages]);
   
   // Auto scroll quando nova mensagem aparece
   useEffect(() => {

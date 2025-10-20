@@ -106,7 +106,7 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
       setLocalTools(toolsMap);
       setHasChanges(false);
     }
-  }, [data, initialEnabledTools]);
+  }, [data, initialEnabledTools, mode]);
 
   const enabledCount = useMemo(() => {
     return Object.values(localTools).filter(Boolean).length;

@@ -43,8 +43,8 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
   
   // Removed Pipedream connector and hooks to align with Suna
   const pipedreamProfiles = undefined as unknown as any[] | undefined;
-  const configProperties = serverDetails?.connections?.[0]?.configSchema?.properties || {};
-  const requiredFields = serverDetails?.connections?.[0]?.configSchema?.required || [];
+  const configProperties = useMemo(() => serverDetails?.connections?.[0]?.configSchema?.properties ?? {}, [serverDetails]);
+  const requiredFields = useMemo(() => serverDetails?.connections?.[0]?.configSchema?.required ?? [], [serverDetails]);
   
   const hasConnectedPipedreamProfile = false;
 
@@ -121,9 +121,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
     }
   }, [handleCreateProfile, profileStep]);
 
-  const isFieldRequired = (fieldName: string) => {
-    return requiredFields.includes(fieldName);
-  };
+  const isFieldRequired = useCallback((fieldName: string) => requiredFields.includes(fieldName), [requiredFields]);
 
   const SelectProfileStep = useMemo(() => (
     <div className="space-y-4">
@@ -161,10 +159,7 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
   ), [
     step.service_name,
     step.qualified_name,
-    step.app_slug,
-    isPipedreamStep,
     selectedProfileId,
-    hasConnectedPipedreamProfile,
     onProfileSelect
   ]);
 

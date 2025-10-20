@@ -27,6 +27,8 @@ function SafeImage({ src, alt, filePath, className }: { src: string; alt: string
   const { session } = useAuth();
 
   useEffect(() => {
+    let objectUrl: string | null = null;
+
     const setupAuthenticatedImage = async () => {
       if (src.includes('/sandboxes/') && src.includes('/files/content')) {
         try {
@@ -42,6 +44,7 @@ function SafeImage({ src, alt, filePath, className }: { src: string; alt: string
 
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
+          objectUrl = url;
           setImgSrc(url);
         } catch (err) {
           console.error('Error loading authenticated image:', err);
@@ -57,8 +60,8 @@ function SafeImage({ src, alt, filePath, className }: { src: string; alt: string
     setAttempts(0);
 
     return () => {
-      if (imgSrc && imgSrc.startsWith('blob:')) {
-        URL.revokeObjectURL(imgSrc);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
       }
     };
   }, [src, session?.access_token]);
@@ -150,6 +153,7 @@ function SafeImage({ src, alt, filePath, className }: { src: string; alt: string
         isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
       )}>
         <div className="relative flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imgSrc}
             alt={alt}

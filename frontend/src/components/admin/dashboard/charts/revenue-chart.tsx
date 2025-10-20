@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,13 +21,9 @@ interface BillingStats {
 export function RevenueChart() {
   const [stats, setStats] = useState<BillingStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchBillingStats()
-  }, [])
-
-  async function fetchBillingStats() {
+  const fetchBillingStats = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -87,7 +83,11 @@ export function RevenueChart() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    void fetchBillingStats()
+  }, [fetchBillingStats])
 
   if (isLoading) {
     return (

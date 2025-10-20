@@ -326,6 +326,8 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
     isInView,
     squareSize,
     gridGap,
+    canvasSize.height,
+    canvasSize.width,
   ]);
 
   return (

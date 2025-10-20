@@ -372,19 +372,21 @@ export function useCachedFile<T = string>(
     staleTime: options.expiration,
   });
   
+  const { processFn } = options;
+
   // Process data if processFn is provided
   const processedData = React.useMemo(() => {
-    if (!query.data || !options.processFn) {
+    if (!query.data || !processFn) {
       return query.data as T;
     }
     
     try {
-      return options.processFn(query.data);
+      return processFn(query.data);
     } catch (error) {
       console.error('Error processing file data:', error);
       return null;
     }
-  }, [query.data, options.processFn]);
+  }, [query.data, processFn]);
   
   return {
     data: processedData,

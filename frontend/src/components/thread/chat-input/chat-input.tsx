@@ -6,6 +6,7 @@ import React, {
   useEffect,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from 'react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
 
@@ -183,7 +184,10 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const hasLoadedFromLocalStorage = useRef(false);
     
     const { data: agentsResponse } = useAgents();
-    const agents = agentsResponse?.agents || [];
+    const agents = useMemo(
+      () => agentsResponse?.agents ?? [],
+      [agentsResponse?.agents],
+    );
 
     useImperativeHandle(ref, () => ({
       getPendingFiles: () => pendingFiles,

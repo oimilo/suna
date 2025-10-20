@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import { ContentFormat, FormatDetectionResult } from './mcp-format-detector';
 import { MarkdownRenderer } from '@/components/file-renderers/markdown-renderer';

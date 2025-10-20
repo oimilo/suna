@@ -104,7 +104,7 @@ function LegalContent() {
     }
     if (current) result.push(current);
     return result;
-  }, [privacyPolicyRaw]);
+  }, []);
 
   const sanitizeId = (id: string) => id.replace(/\./g, '-');
 
@@ -145,7 +145,7 @@ function LegalContent() {
     }
     if (current) result.push(current);
     return result;
-  }, [termsRaw]);
+  }, []);
 
   const termsSectionsSidebar = termsSectionsParsed.map((s) => ({
     id: sanitizeId(s.id),

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,13 +24,9 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
   const [agentsData, setAgentsData] = useState<ChartData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedMetric, setSelectedMetric] = useState("messages")
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchChartData()
-  }, [period, selectedMetric])
-
-  async function fetchChartData() {
+  const fetchChartData = useCallback(async () => {
     try {
       setIsLoading(true)
       const days = parseInt(period) || 7
@@ -80,7 +76,11 @@ export function UsageChart({ period = "7d" }: UsageChartProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase, period, selectedMetric])
+  
+  useEffect(() => {
+    void fetchChartData()
+  }, [fetchChartData])
   
   function processDataByDay(items: any[], days: number): ChartData[] {
     const dailyData: Record<string, number> = {}

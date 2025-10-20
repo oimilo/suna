@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   Search,
   CheckCircle,
@@ -35,6 +36,7 @@ export function SearchMcpServersToolView({
   isStreaming = false,
 }: ToolViewProps) {
   const [expandedResults, setExpandedResults] = useState<Record<number, boolean>>({});
+  const [failedLogos, setFailedLogos] = useState<Record<string, boolean>>({});
 
   const {
     query,
@@ -143,23 +145,24 @@ export function SearchMcpServersToolView({
                     <div className="flex items-start gap-3">
                       <div className="relative flex-shrink-0">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted/50 border flex items-center justify-center">
-                          {result.logo_url ? (
-                            <img
-                              src={result.logo_url}
-                              alt={`${result.name} logo`}
-                              className="w-8 h-8 object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-zinc-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg></div>`;
-                                }
-                              }}
-                            />
-                          ) : (
-                            <Server className="w-6 h-6 text-zinc-400" />
-                          )}
+                          {(() => {
+                            const logoKey = result.app_slug || result.name || String(index);
+                            if (result.logo_url && !failedLogos[logoKey]) {
+                              return (
+                                <Image
+                                  src={result.logo_url}
+                                  alt={`${result.name} logo`}
+                                  width={32}
+                                  height={32}
+                                  className="w-8 h-8 object-cover"
+                                  onError={() => {
+                                    setFailedLogos((prev) => ({ ...prev, [logoKey]: true }));
+                                  }}
+                                />
+                              );
+                            }
+                            return <Server className="w-6 h-6 text-zinc-400" />;
+                          })()}
                         </div>
                         {result.is_verified && (
                           <div className="absolute -top-1 -right-1">

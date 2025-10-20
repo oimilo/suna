@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
@@ -17,13 +17,9 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    checkAdminAccess()
-  }, [])
-
-  async function checkAdminAccess() {
+  const checkAdminAccess = useCallback(async () => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser()
@@ -55,7 +51,11 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router, supabase])
+
+  useEffect(() => {
+    void checkAdminAccess()
+  }, [checkAdminAccess])
 
   if (isLoading) {
     return (
