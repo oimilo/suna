@@ -30,7 +30,11 @@ import {
 } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { formatTimestamp, extractToolData, getToolTitle } from '../utils';
-import { downloadPresentation, handleGoogleSlidesUpload } from '../utils/presentation-utils';
+import {
+  downloadPresentation,
+  fetchSandboxJsonWithWarningBypass,
+  handleGoogleSlidesUpload,
+} from '../utils/presentation-utils';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import { LoadingState } from '../shared/LoadingState';
@@ -143,8 +147,16 @@ export function PresentationViewer({
 
   // Load metadata.json for the presentation with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    if (!extractedPresentationName || !project?.sandbox?.sandbox_url) return;
-    
+    if (!extractedPresentationName || !project?.sandbox?.sandbox_url) {
+      setIsLoadingMetadata(false);
+      if (backgroundRetryRef.current) {
+        clearInterval(backgroundRetryRef.current);
+        backgroundRetryRef.current = null;
+      }
+      setIsBackgroundRetryActive(false);
+      return;
+    }
+
     setIsLoadingMetadata(true);
     setError(null);
     setRetryAttempt(retryCount);
@@ -163,30 +175,30 @@ export function PresentationViewer({
       
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
-      const response = await fetch(urlWithCacheBust, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
+      const data = await fetchSandboxJsonWithWarningBypass<PresentationMetadata>(
+        urlWithCacheBust,
+        {
+          unexpectedContentHandler: (contentType) => {
+            console.warn(
+              'Presentation metadata fetch returned unexpected content type:',
+              contentType,
+            );
+          },
+        },
+      );
+
+      setMetadata(data);
+      console.log('Successfully loaded presentation metadata:', data);
+      setIsLoadingMetadata(false);
       
-      if (response.ok) {
-        const data = await response.json();
-        setMetadata(data);
-        console.log('Successfully loaded presentation metadata:', data);
-        setIsLoadingMetadata(false);
-        
-        // Clear background retry interval on success
-        if (backgroundRetryRef.current) {
-          clearInterval(backgroundRetryRef.current);
-          backgroundRetryRef.current = null;
-        }
-        setIsBackgroundRetryActive(false);
-        
-        return; // Success, exit early
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // Clear background retry interval on success
+      if (backgroundRetryRef.current) {
+        clearInterval(backgroundRetryRef.current);
+        backgroundRetryRef.current = null;
       }
+      setIsBackgroundRetryActive(false);
+      
+      return; // Success, exit early
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
       
@@ -380,41 +392,40 @@ export function PresentationViewer({
   // Memoized slide iframe component to prevent unnecessary re-renders
   const SlideIframe = useMemo(() => {
     const SlideIframeComponent = React.memo(({ slide }: { slide: SlideMetadata & { number: number } }) => {
-      const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+      const containerRef = useRef<HTMLDivElement | null>(null);
       const [scale, setScale] = useState(1);
 
+      const updateScale = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+
+        const scaleX = containerWidth / 1920;
+        const scaleY = containerHeight / 1080;
+        const newScale = Math.min(scaleX, scaleY);
+
+        setScale((prev) => (Math.abs(newScale - prev) > 0.001 ? newScale : prev));
+      }, []);
+
       useEffect(() => {
-        if (containerRef) {
-          const updateScale = () => {
-            const containerWidth = containerRef.offsetWidth;
-            const containerHeight = containerRef.offsetHeight;
-            
-            // Calculate scale to fit 1920x1080 into container while maintaining aspect ratio
-            const scaleX = containerWidth / 1920;
-            const scaleY = containerHeight / 1080;
-            const newScale = Math.min(scaleX, scaleY);
-            
-            // Only update if scale actually changed to prevent unnecessary re-renders
-            if (Math.abs(newScale - scale) > 0.001) {
-              setScale(newScale);
-            }
-          };
+        const container = containerRef.current;
+        if (!container) return;
 
-          // Use a debounced version for resize events to prevent excessive updates
-          let resizeTimeout: NodeJS.Timeout;
-          const debouncedUpdateScale = () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(updateScale, 100);
-          };
-
+        const resizeObserver = new ResizeObserver(() => {
           updateScale();
-          window.addEventListener('resize', debouncedUpdateScale);
-          return () => {
-            window.removeEventListener('resize', debouncedUpdateScale);
-            clearTimeout(resizeTimeout);
-          };
-        }
-      }, [containerRef, scale]);
+        });
+
+        resizeObserver.observe(container);
+        updateScale();
+
+        window.addEventListener('resize', updateScale);
+        return () => {
+          resizeObserver.disconnect();
+          window.removeEventListener('resize', updateScale);
+        };
+      }, [updateScale]);
 
       if (!project?.sandbox?.sandbox_url) {
         return (
@@ -434,7 +445,7 @@ export function PresentationViewer({
       return (
         <div className="w-full h-full flex items-center justify-center bg-transparent">
           <div 
-            ref={setContainerRef}
+            ref={containerRef}
             className="relative w-full h-full bg-background rounded-lg overflow-hidden"
             style={{
               containIntrinsicSize: '1920px 1080px',

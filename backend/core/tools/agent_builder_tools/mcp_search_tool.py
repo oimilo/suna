@@ -75,7 +75,7 @@ class MCPSearchTool(AgentBuilderBaseTool):
             
             if not formatted_toolkits:
                 return ToolResult(
-                    success=False,
+                    success=True,
                     output=json.dumps([], ensure_ascii=False)
                 )
             

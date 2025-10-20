@@ -47,13 +47,19 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   const agentRunsQuery = useAgentRunsQuery(threadId);
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Reset state when thread changes
     agentRunsCheckedRef.current = false;
     messagesLoadedRef.current = false;
     initialLoadCompleted.current = false;
+    hasInitiallyScrolled.current = false;
+    setIsLoading(true);
+    setError(null);
     setMessages([]);
+    setAgentRunId(null);
+    setAgentStatus('idle');
+  }, [threadId]);
+
+  useEffect(() => {
+    let isMounted = true;
 
     async function initializeData() {
       if (!initialLoadCompleted.current) setIsLoading(true);
@@ -93,18 +99,19 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
               agents: (msg as any).agents,
             }));
 
-          const serverIds = new Set(
-            unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
-          );
-          const localExtras = (messages || []).filter(
-            (m) =>
-              !m.message_id ||
-              (typeof m.message_id === 'string' &&
-                m.message_id.startsWith('temp-')) ||
-              !serverIds.has(m.message_id as string),
-          );
-          const mergedMessages = [...unifiedMessages, ...localExtras].sort(
-            (a, b) => {
+          setMessages((prev = []) => {
+            const serverIds = new Set(
+              unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
+            );
+            const localExtras = prev.filter(
+              (m) =>
+                !m.message_id ||
+                (typeof m.message_id === 'string' &&
+                  m.message_id.startsWith('temp-')) ||
+                !serverIds.has(m.message_id as string),
+            );
+
+            return [...unifiedMessages, ...localExtras].sort((a, b) => {
               const aTime = a.created_at
                 ? new Date(a.created_at).getTime()
                 : 0;
@@ -112,10 +119,8 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
                 ? new Date(b.created_at).getTime()
                 : 0;
               return aTime - bTime;
-            },
-          );
-
-          setMessages(mergedMessages);
+            });
+          });
           messagesLoadedRef.current = true;
 
           if (!hasInitiallyScrolled.current) {
@@ -171,7 +176,6 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
     projectQuery.data,
     messagesQuery.data,
     agentRunsQuery.data,
-    messages
   ]);
 
   useEffect(() => {
@@ -221,7 +225,13 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
         });
       }
     }
-  }, [messagesQuery.data, messagesQuery.status, isLoading, messages, threadId]);
+  }, [
+    messagesQuery.data,
+    messagesQuery.status,
+    isLoading,
+    messages.length,
+    threadId,
+  ]);
 
   return {
     messages,
