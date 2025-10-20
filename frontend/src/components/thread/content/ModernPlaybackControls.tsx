@@ -17,6 +17,36 @@ import Link from 'next/link';
 import { UnifiedMessage } from '../types';
 import { ToolCallInput } from '../tool-call-side-panel';
 
+const HIDE_STREAMING_XML_TAGS = new Set([
+  'execute-command',
+  'create-file',
+  'delete-file',
+  'full-file-rewrite',
+  'str-replace',
+  'edit-file',
+  'browser-click-element',
+  'browser-close-tab',
+  'browser-drag-drop',
+  'browser-get-dropdown-options',
+  'browser-go-back',
+  'browser-input-text',
+  'browser-navigate-to',
+  'browser-scroll-down',
+  'browser-scroll-to-text',
+  'browser-scroll-up',
+  'browser-select-dropdown-option',
+  'browser-send-keys',
+  'browser-switch-tab',
+  'browser-wait',
+  'deploy',
+  'ask',
+  'complete',
+  'crawl-webpage',
+  'web-search',
+  'see-image',
+  'call-mcp-tool',
+]);
+
 interface PlaybackState {
   isPlaying: boolean;
   currentMessageIndex: number;
@@ -95,7 +125,7 @@ export const ModernPlaybackControls = ({
     if (showWelcome && onCloseSidePanel) {
       onCloseSidePanel();
     }
-  }, [showWelcome]); // Removido onCloseSidePanel da dependência para evitar loops
+  }, [showWelcome, onCloseSidePanel]);
 
   const togglePlayback = useCallback(() => {
     if (currentMessageIndex >= messages.length && !isPlaying) {
@@ -116,7 +146,7 @@ export const ModernPlaybackControls = ({
         onOpenSidePanel(); // Abrir painel se houver tool calls
       }, 100); // Pequeno delay para evitar conflitos com o fechamento
     }
-  }, [isPlaying, currentMessageIndex, messages.length, toolCalls.length, onOpenSidePanel]);
+  }, [isPlaying, currentMessageIndex, messages.length, toolCalls, onOpenSidePanel]);
 
   const resetPlayback = useCallback(() => {
     setIsPlaying(false);
@@ -145,7 +175,7 @@ export const ModernPlaybackControls = ({
     if (toolCalls.length > 0 && onOpenSidePanel) {
       onOpenSidePanel();
     }
-  }, [messages, toolCalls.length, onOpenSidePanel]);
+  }, [messages, toolCalls, onOpenSidePanel]);
 
   // Helper: stream assistant text with typing effect
   const streamAssistantText = useCallback((fullText: string, onDone: () => void) => {
@@ -193,36 +223,6 @@ export const ModernPlaybackControls = ({
 
   // Playback logic: message-by-message with assistant streaming
   // Tool tag detection set (match hiding behavior)
-  const HIDE_STREAMING_XML_TAGS = new Set([
-    'execute-command',
-    'create-file',
-    'delete-file',
-    'full-file-rewrite',
-    'str-replace',
-    'edit-file',
-    'browser-click-element',
-    'browser-close-tab',
-    'browser-drag-drop',
-    'browser-get-dropdown-options',
-    'browser-go-back',
-    'browser-input-text',
-    'browser-navigate-to',
-    'browser-scroll-down',
-    'browser-scroll-to-text',
-    'browser-scroll-up',
-    'browser-select-dropdown-option',
-    'browser-send-keys',
-    'browser-switch-tab',
-    'browser-wait',
-    'deploy',
-    'ask',
-    'complete',
-    'crawl-webpage',
-    'web-search',
-    'see-image',
-    'call-mcp-tool',
-  ]);
-
   const findFirstToolInText = useCallback((text: string): { name: string; index: number } | null => {
     const toolCallRegex = /<([a-zA-Z\-_]+)(?:\s+[^>]*)?>(?:[\s\S]*?)<\/\1>|<([a-zA-Z\-_]+)(?:\s+[^>]*)?\/>/g;
     let match: RegExpExecArray | null;
@@ -317,7 +317,20 @@ export const ModernPlaybackControls = ({
     return () => {
       if (playbackTimeout.current) clearTimeout(playbackTimeout.current);
     };
-  }, [isPlaying, currentMessageIndex, messages, streamAssistantText]);
+  }, [
+    isPlaying,
+    currentMessageIndex,
+    messages,
+    streamAssistantText,
+    toolCalls,
+    toolPlaybackIndex,
+    streamingText,
+    onOpenSidePanel,
+    setCurrentToolIndex,
+    setCurrentToolCall,
+    setToolPlaybackIndex,
+    findFirstToolInText,
+  ]);
 
   // Modern header with glass morphism
   const renderHeader = useCallback(() => (
@@ -586,13 +599,7 @@ export const ModernPlaybackControls = ({
         </motion.div>
       )}
     </AnimatePresence>
-  ), [
-    showWelcome,
-    messages.length,
-    toolCalls.length,
-    togglePlayback,
-    skipToEnd,
-  ]);
+  ), [showWelcome, messages.length, togglePlayback, skipToEnd]);
 
   return {
     playbackState: {

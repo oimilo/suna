@@ -340,7 +340,7 @@ export default function WorkflowPage() {
     } catch (error) {
       toast.error(`Falha ao ${isEditing ? 'atualizar' : 'criar'} workflow`);
     }
-  }, [workflowName, workflowDescription, triggerPhrase, isDefault, steps, agentId, workflowId, isEditing, createWorkflowMutation, updateWorkflowMutation, router]);
+  }, [workflowName, workflowDescription, triggerPhrase, isDefault, steps, agentId, workflowId, isEditing, createWorkflowMutation, updateWorkflowMutation]);
 
   if (isLoading || isLoadingWorkflows) {
     return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,13 +20,9 @@ interface UserGrowthChartProps {
 export function UserGrowthChart({ period = "30d" }: UserGrowthChartProps) {
   const [data, setData] = useState<ChartData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchChartData()
-  }, [period])
-
-  async function fetchChartData() {
+  const fetchChartData = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -76,7 +72,11 @@ export function UserGrowthChart({ period = "30d" }: UserGrowthChartProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase, period])
+
+  useEffect(() => {
+    void fetchChartData()
+  }, [fetchChartData])
 
   // Simple bar chart visualization (can be replaced with a proper charting library)
   const maxValue = Math.max(...data.map(d => d.value), 1)

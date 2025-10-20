@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import {
     FileText, FileImage, FileCode, FileSpreadsheet, FileVideo,
@@ -158,6 +159,8 @@ interface FileAttachmentProps {
      */
     collapsed?: boolean;
     project?: Project;
+    standalone?: boolean;
+    alignRight?: boolean;
 }
 
 // Cache fetched content between mounts to avoid duplicate fetches
@@ -174,7 +177,9 @@ export function FileAttachment({
     localPreviewUrl,
     customStyle,
     collapsed = true,
-    project
+    project,
+    standalone = false,
+    alignRight = false
 }: FileAttachmentProps) {
     // Authentication 
     const { session } = useAuth();
@@ -509,7 +514,7 @@ export function FileAttachment({
     delete safeStyle.height;
     delete (safeStyle as any)['--attachment-height'];
 
-    return (
+    const baseAttachment = (
         <button
             onClick={handleClick}
             className={cn(
@@ -546,6 +551,16 @@ export function FileAttachment({
             </div>
         </button>
     );
+
+    if (standalone) {
+        return (
+            <div className={cn("w-full mt-2", alignRight ? "flex justify-end" : "flex justify-start")}>
+                {baseAttachment}
+            </div>
+        );
+    }
+
+    return baseAttachment;
 }
 
 interface FileAttachmentGridProps {

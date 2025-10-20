@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense, useEffect, useRef } from 'react';
+import React, { useState, Suspense, useEffect, useRef, useCallback } from 'react';
 import { BRANDING } from '@/lib/branding';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -108,7 +108,7 @@ export function DashboardContent() {
   const secondaryGradient =
     'bg-gradient-to-r from-blue-500 to-blue-500 bg-clip-text text-transparent';
 
-  const handleSubmit = async (
+  const handleSubmit = useCallback(async (
     message: string,
     options?: {
       model_name?: string;
@@ -168,7 +168,7 @@ export function DashboardContent() {
       }
       setIsSubmitting(false);
     }
-  };
+  }, [chatInputRef, initiateAgentMutation, isSubmitting, onOpen, selectedAgentId, setInitiatedThreadId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -192,7 +192,7 @@ export function DashboardContent() {
 
       return () => clearTimeout(timer);
     }
-  }, [autoSubmit, inputValue, isSubmitting]);
+  }, [autoSubmit, handleSubmit, inputValue, isSubmitting]);
 
   return (
     <>

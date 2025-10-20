@@ -170,7 +170,8 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
     threadQuery.error,
     projectQuery.data,
     messagesQuery.data,
-    agentRunsQuery.data
+    agentRunsQuery.data,
+    messages
   ]);
 
   useEffect(() => {

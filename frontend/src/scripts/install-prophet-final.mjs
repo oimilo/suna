@@ -143,7 +143,7 @@ async function main() {
     // 3. Instalar em contas pessoais primeiro
     console.log(`👤 Instalando em ${personalAccounts.length} contas pessoais:\n`);
     
-    let stats = {
+    const stats = {
       success: 0,
       existed: 0,
       failed: 0

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { fetchAdminApi } from "@/lib/api/admin"
 import { Loader2, CheckCircle, AlertTriangle, XCircle } from "lucide-react"
@@ -22,15 +22,9 @@ interface HealthMetric {
 export function SystemHealth() {
   const [metrics, setMetrics] = useState<HealthMetric[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchHealthMetrics()
-    const interval = setInterval(fetchHealthMetrics, 30000) // Refresh every 30 seconds
-    return () => clearInterval(interval)
-  }, [])
-
-  async function fetchHealthMetrics() {
+  const fetchHealthMetrics = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -51,7 +45,13 @@ export function SystemHealth() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    void fetchHealthMetrics()
+    const interval = setInterval(fetchHealthMetrics, 30000) // Refresh every 30 seconds
+    return () => clearInterval(interval)
+  }, [fetchHealthMetrics])
 
   const getStatusIcon = (status: string) => {
     switch (status) {

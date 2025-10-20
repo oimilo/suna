@@ -38,7 +38,7 @@ export function useModelWithFallback(options?: UseModelWithFallbackOptions) {
     } finally {
       setIsRetrying(false);
     }
-  }, [options]);
+  }, []);
 
   return {
     startAgentWithFallback,

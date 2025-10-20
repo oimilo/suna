@@ -5,7 +5,7 @@ import type { PricingTier } from '@/lib/home';
 import { siteConfig } from '@/lib/home';
 import { cn } from '@/lib/utils';
 import { motion } from 'motion/react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckIcon, Sparkles, TrendingUp, Shield, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -511,7 +511,7 @@ export function PricingSection({
   const currentSubscription = subscriptionData || null;
 
   // Determine default billing period based on user's current subscription
-  const getDefaultBillingPeriod = (): 'monthly' | 'yearly' => {
+  const getDefaultBillingPeriod = useCallback((): 'monthly' | 'yearly' => {
     if (!isAuthenticated || !currentSubscription) {
       // Default to yearly for non-authenticated users or users without subscription
       return 'yearly';
@@ -533,15 +533,15 @@ export function PricingSection({
 
     // Default to yearly if we can't determine current plan type
     return 'yearly';
-  };
+  }, [currentSubscription, isAuthenticated]);
 
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>(getDefaultBillingPeriod());
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>(() => getDefaultBillingPeriod());
   const [planLoadingStates, setPlanLoadingStates] = useState<Record<string, boolean>>({});
 
   // Update billing period when subscription data changes
   useEffect(() => {
     setBillingPeriod(getDefaultBillingPeriod());
-  }, [isAuthenticated, currentSubscription?.price_id]);
+  }, [getDefaultBillingPeriod]);
 
   const handlePlanSelect = (planId: string) => {
     setPlanLoadingStates((prev) => ({ ...prev, [planId]: true }));

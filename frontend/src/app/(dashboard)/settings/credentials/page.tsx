@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useFeatureFlag } from '@/lib/feature-flags';
 import { sunaApi } from '@/upstream/suna/api';
 
@@ -114,7 +115,13 @@ export default function AppProfilesPage() {
               <div key={tk.toolkit_slug} className="space-y-3">
                 <div className="flex items-center gap-3">
                   {tk.icon_url ? (
-                    <img src={tk.icon_url} alt={tk.toolkit_name} className="h-6 w-6 rounded" />
+                    <Image
+                      src={tk.icon_url}
+                      alt={tk.toolkit_name}
+                      width={24}
+                      height={24}
+                      className="h-6 w-6 rounded object-cover"
+                    />
                   ) : (
                     <div className="h-6 w-6 rounded bg-muted" />
                   )}

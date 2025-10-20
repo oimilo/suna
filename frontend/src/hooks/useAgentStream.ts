@@ -440,8 +440,6 @@ export function useAgentStream(
       }
     },
     [
-      threadId,
-      setMessages,
       status,
       toolCall,
       callbacks,

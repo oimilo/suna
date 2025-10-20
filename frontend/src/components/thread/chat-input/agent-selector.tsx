@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Settings, ChevronRight, Bot, Presentation, FileSpreadsheet, Search, Plus, User, Check, ChevronDown, CircleDashed, Maximize2, ChevronLeft } from 'lucide-react';
 import { BRANDING } from '@/lib/branding';
 import Image from 'next/image';
@@ -85,7 +85,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   const router = useRouter();
 
   const { data: agentsResponse, isLoading: agentsLoading } = useAgents();
-  const agents = agentsResponse?.agents || [];
+  const agents = useMemo(
+    () => agentsResponse?.agents ?? [],
+    [agentsResponse?.agents],
+  );
   const createNewAgentMutation = useCreateNewAgent();
 
   // Debug: Log agents to see what we're getting
@@ -96,25 +99,33 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     }
   }, [agents]);
 
-  const allAgents = [
-    ...PREDEFINED_AGENTS.map(agent => ({
-      ...agent,
-      type: 'predefined' as const
-    })),
-    ...agents.map((agent: any) => ({
-      ...agent,
-      id: agent.agent_id,
-      type: 'custom' as const,
-      icon: agent.avatar || <Bot className="h-4 w-4" />
-    }))
-  ];
-
-  const filteredAgents = allAgents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const allAgents = useMemo(
+    () => [
+      ...PREDEFINED_AGENTS.map((agent) => ({
+        ...agent,
+        type: 'predefined' as const,
+      })),
+      ...agents.map((agent: any) => ({
+        ...agent,
+        id: agent.agent_id,
+        type: 'custom' as const,
+        icon: agent.avatar || <Bot className="h-4 w-4" />,
+      })),
+    ],
+    [agents],
   );
 
-  const sortedFilteredAgents = React.useMemo(() => {
+  const filteredAgents = useMemo(
+    () =>
+      allAgents.filter(
+        (agent) =>
+          agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          agent.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [allAgents, searchQuery],
+  );
+
+  const sortedFilteredAgents = useMemo(() => {
     if (!selectedAgentId) {
       return filteredAgents;
     }

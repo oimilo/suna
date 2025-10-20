@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { ThreadContent } from '@/components/thread/content/ThreadContent';
 import { useAgentStream } from '@/hooks/useAgentStream';
@@ -88,10 +88,11 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const chatHistoryQuery = useAgentBuilderChatHistory(agentId);
   const queryClient = useQueryClient();
   const { data: agentsResponse } = useAgents();
-  const agents = agentsResponse?.agents || [];
+  const agentList = agentsResponse?.agents;
+  const agents = useMemo(() => agentList ?? [], [agentList]);
   
   // Find the default Prophet/Suna agent to use for execution
-  const defaultProphetAgent = agents.find((agent: any) => agent.metadata?.is_suna_default === true);
+  const defaultProphetAgent = useMemo(() => agents.find((agent: any) => agent.metadata?.is_suna_default === true), [agents]);
   const prophetAgentId = defaultProphetAgent?.agent_id;
   
   // Debug log
@@ -196,7 +197,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
         setAgentStatus('running');
         break;
     }
-  }, []);
+  }, [agentId, queryClient]);
 
   const handleStreamError = useCallback((errorMessage: string) => {
     if (!errorMessage.toLowerCase().includes('not found') &&

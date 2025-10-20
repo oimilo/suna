@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Activity, Database, Server, Shield, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react"
-import { useEffect, useState } from "react"
-import { fetchAdminApi } from "@/lib/api/admin"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -27,9 +26,9 @@ export default function AdminSystemPage() {
   const [health, setHealth] = useState<SystemHealth | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  async function checkSystemHealth() {
+  const checkSystemHealth = useCallback(async () => {
     setIsLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -70,13 +69,13 @@ export default function AdminSystemPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase, toast])
 
   useEffect(() => {
-    checkSystemHealth()
+    void checkSystemHealth()
     const interval = setInterval(checkSystemHealth, 30000) // Refresh every 30s
     return () => clearInterval(interval)
-  }, [])
+  }, [checkSystemHealth])
 
   const getStatusBadge = (status: string) => {
     switch (status) {

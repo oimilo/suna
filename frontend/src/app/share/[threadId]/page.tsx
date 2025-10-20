@@ -152,35 +152,32 @@ export default function ThreadPage({
     }
   }, []);
 
-  const handleStreamStatusChange = useCallback(
-    (hookStatus: string) => {
-      console.log(`[PAGE] Hook status changed: ${hookStatus}`);
-      switch (hookStatus) {
-        case 'idle':
-        case 'completed':
-        case 'stopped':
-        case 'agent_not_running':
+  const handleStreamStatusChange = useCallback((hookStatus: string) => {
+    console.log(`[PAGE] Hook status changed: ${hookStatus}`);
+    switch (hookStatus) {
+      case 'idle':
+      case 'completed':
+      case 'stopped':
+      case 'agent_not_running':
+        setAgentStatus('idle');
+        setAgentRunId(null);
+        setAutoOpenedPanel(false);
+        break;
+      case 'connecting':
+        setAgentStatus('connecting');
+        break;
+      case 'streaming':
+        setAgentStatus('running');
+        break;
+      case 'error':
+        setAgentStatus('error');
+        setTimeout(() => {
           setAgentStatus('idle');
           setAgentRunId(null);
-          setAutoOpenedPanel(false);
-          break;
-        case 'connecting':
-          setAgentStatus('connecting');
-          break;
-        case 'streaming':
-          setAgentStatus('running');
-          break;
-        case 'error':
-          setAgentStatus('error');
-          setTimeout(() => {
-            setAgentStatus('idle');
-            setAgentRunId(null);
-          }, 3000);
-          break;
-      }
-    },
-    [threadId],
-  );
+        }, 3000);
+        break;
+    }
+  }, []);
 
   const handleStreamError = useCallback((errorMessage: string) => {
     console.error(`[PAGE] Stream hook error: ${errorMessage}`);
@@ -289,8 +286,6 @@ export default function ThreadPage({
   useEffect(() => {
     if (!isPlaying || messages.length === 0) return;
 
-    let playbackTimeout: NodeJS.Timeout;
-
     const playbackNextMessage = async () => {
       if (currentMessageIndex >= messages.length) {
         setIsPlaying(false);
@@ -306,7 +301,7 @@ export default function ThreadPage({
 
       setCurrentMessageIndex((prevIndex) => prevIndex + 1);
     };
-    playbackTimeout = setTimeout(playbackNextMessage, 500);
+    const playbackTimeout = setTimeout(playbackNextMessage, 500);
 
     return () => {
       clearTimeout(playbackTimeout);

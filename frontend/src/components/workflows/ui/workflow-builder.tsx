@@ -84,6 +84,12 @@ function WorkflowBuilderInner({
   const [isInternalUpdate, setIsInternalUpdate] = useState(false);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const lastConvertedSteps = useRef<string>('');
+  const nodeCount = nodes.length;
+
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+  }, [setNodes, setEdges]);
   
   useEffect(() => {
     if (!isInternalUpdate && nodes.length > 0) {
@@ -115,7 +121,7 @@ function WorkflowBuilderInner({
       
       setNodes(nodesWithTools);
       setEdges(convertedEdges);
-    } else if (nodes.length === 0) {
+    } else if (nodeCount === 0) {
       const defaultNodes: Node[] = [
         {
           id: '1',
@@ -140,17 +146,12 @@ function WorkflowBuilderInner({
     setTimeout(() => {
       setIsInternalUpdate(false);
     }, 100);
-  }, [agentTools, isLoadingTools, versionData, onToolsUpdate]);
+  }, [agentTools, isLoadingTools, versionData, onToolsUpdate, steps, handleNodeDelete, agentId, nodeCount, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
-
-  const handleNodeDelete = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-  }, [setNodes, setEdges]);
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node.id);
@@ -221,7 +222,7 @@ function WorkflowBuilderInner({
         return newEdges;
       });
     }
-  }, [nodes, selectedNode, handleNodeDelete, setNodes, setEdges, agentTools, isLoadingTools, versionData, onToolsUpdate]);
+  }, [nodes, selectedNode, handleNodeDelete, setNodes, setEdges, agentTools, isLoadingTools, versionData, onToolsUpdate, agentId]);
 
   const addConditionBranch = useCallback((type: 'if' | 'if-else' | 'if-elseif-else') => {
     if (!selectedNode) {
@@ -296,7 +297,7 @@ function WorkflowBuilderInner({
       );
       return uniqueEdges;
     });
-  }, [selectedNode, nodes, handleNodeDelete, setNodes, setEdges, agentTools, isLoadingTools, versionData, onToolsUpdate]);
+  }, [selectedNode, nodes, handleNodeDelete, setNodes, setEdges, agentTools, isLoadingTools, versionData, onToolsUpdate, agentId]);
 
   return (
     <div className="h-full w-full border rounded-none border-none bg-muted/10 react-flow-container">

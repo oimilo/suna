@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 
 // Global cache to persist between component mounts
@@ -71,6 +71,7 @@ export function useCachedFile<T = string>(
   const [error, setError] = useState<Error | null>(null);
   const { session } = useAuth();
   const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
+  const localBlobUrlRef = useRef<string | null>(null);
 
   // Calculate cache key from sandbox ID and file path
   const cacheKey = sandboxId && filePath
@@ -78,7 +79,7 @@ export function useCachedFile<T = string>(
     : null;
 
   // Create a cached fetch function
-  const getCachedFile = async (key: string, force = false) => {
+  const getCachedFile = useCallback(async (key: string, force = false) => {
     // Check if we have a valid cached version
     const cached = fileCache.get(key);
     const now = Date.now();
@@ -222,22 +223,26 @@ export function useCachedFile<T = string>(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session?.access_token, sandboxId, filePath, options.contentType, options.expiration]);
+
+  const expirationMs = options.expiration || CACHE_EXPIRATION;
 
   // Function to get data from cache first, then network if needed
-  const getFileContent = async () => {
+  const getFileContent = useCallback(async () => {
     if (!cacheKey) return;
 
     const processContent = (content: any) => {
-      if (localBlobUrl) {
-        URL.revokeObjectURL(localBlobUrl);
+      if (localBlobUrlRef.current) {
+        URL.revokeObjectURL(localBlobUrlRef.current);
       }
 
       if (content instanceof Blob) {
         const newUrl = URL.createObjectURL(content);
+        localBlobUrlRef.current = newUrl;
         setLocalBlobUrl(newUrl);
         setData(newUrl as any);
       } else {
+        localBlobUrlRef.current = null;
         setLocalBlobUrl(null);
         setData(content);
       }
@@ -251,7 +256,7 @@ export function useCachedFile<T = string>(
         processContent(cachedItem.content);
         
         // If cache is expired, refresh in background
-        if (Date.now() - cachedItem.timestamp > (options.expiration || CACHE_EXPIRATION)) {
+        if (Date.now() - cachedItem.timestamp > expirationMs) {
           getCachedFile(cacheKey, true)
             .then(freshData => processContent(freshData))
             .catch(err => console.error("Background refresh failed:", err));
@@ -267,11 +272,11 @@ export function useCachedFile<T = string>(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [cacheKey, expirationMs, getCachedFile]);
 
   useEffect(() => {
     if (sandboxId && filePath) {
-      getFileContent();
+      void getFileContent();
     } else {
       // Reset state if we don't have necessary params
       setData(null);
@@ -281,12 +286,13 @@ export function useCachedFile<T = string>(
     
     // Clean up the local blob URL when component unmounts
     return () => {
-      if (localBlobUrl) {
-        URL.revokeObjectURL(localBlobUrl);
+      if (localBlobUrlRef.current) {
+        URL.revokeObjectURL(localBlobUrlRef.current);
+        localBlobUrlRef.current = null;
         setLocalBlobUrl(null);
       }
     };
-  }, [sandboxId, filePath, options.contentType]);
+  }, [sandboxId, filePath, getFileContent]);
 
   // Expose the cache manipulation functions
   return {

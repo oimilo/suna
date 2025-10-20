@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { UserPlus, Shield, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { fetchAdminApi } from "@/lib/api/admin"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
@@ -28,13 +28,9 @@ export default function AdminAdminsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchAdmins()
-  }, [])
-
-  async function fetchAdmins() {
+  const fetchAdmins = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -67,7 +63,11 @@ export default function AdminAdminsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase, toast])
+
+  useEffect(() => {
+    void fetchAdmins()
+  }, [fetchAdmins])
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {

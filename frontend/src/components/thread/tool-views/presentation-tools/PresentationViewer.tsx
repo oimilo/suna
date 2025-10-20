@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -76,12 +76,14 @@ export function PresentationViewer({
   const [error, setError] = useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [hasScrolledToCurrentSlide, setHasScrolledToCurrentSlide] = useState(false);
-  const [backgroundRetryInterval, setBackgroundRetryInterval] = useState<NodeJS.Timeout | null>(null);
+  const backgroundRetryRef = useRef<NodeJS.Timeout | null>(null);
 
   const [visibleSlide, setVisibleSlide] = useState<number | null>(null);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [fullScreenInitialSlide, setFullScreenInitialSlide] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [refreshTimestamp, setRefreshTimestamp] = useState(() => Date.now());
+  const [isBackgroundRetryActive, setIsBackgroundRetryActive] = useState(false);
 
   // Extract presentation info from tool data
   const { toolResult } = extractToolData(toolContent);
@@ -135,12 +137,12 @@ export function PresentationViewer({
   const toolTitle = getToolTitle(name || 'presentation-viewer');
 
   // Helper function to sanitize filename (matching backend logic)
-  const sanitizeFilename = (name: string): string => {
+  const sanitizeFilename = useCallback((name: string): string => {
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
-  };
+  }, []);
 
   // Load metadata.json for the presentation with retry logic
-  const loadMetadata = async (retryCount = 0, maxRetries = 5) => {
+  const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
     if (!extractedPresentationName || !project?.sandbox?.sandbox_url) return;
     
     setIsLoadingMetadata(true);
@@ -175,10 +177,11 @@ export function PresentationViewer({
         setIsLoadingMetadata(false);
         
         // Clear background retry interval on success
-        if (backgroundRetryInterval) {
-          clearInterval(backgroundRetryInterval);
-          setBackgroundRetryInterval(null);
+        if (backgroundRetryRef.current) {
+          clearInterval(backgroundRetryRef.current);
+          backgroundRetryRef.current = null;
         }
+        setIsBackgroundRetryActive(false);
         
         return; // Success, exit early
       } else {
@@ -204,51 +207,88 @@ export function PresentationViewer({
       setIsLoadingMetadata(false);
       
       // Start background retry every 10 seconds
-      if (!backgroundRetryInterval) {
-        const interval = setInterval(() => {
+      if (!backgroundRetryRef.current) {
+        backgroundRetryRef.current = setInterval(() => {
           console.log('Background retry attempt...');
           loadMetadata(0, 2); // Fewer retries for background attempts
         }, 10000);
-        setBackgroundRetryInterval(interval);
+        setIsBackgroundRetryActive(true);
       }
     }
-  };
+  }, [extractedPresentationName, project?.sandbox?.sandbox_url, sanitizeFilename]);
 
   useEffect(() => {
-    // Clear any existing background retry when dependencies change
-    if (backgroundRetryInterval) {
-      clearInterval(backgroundRetryInterval);
-      setBackgroundRetryInterval(null);
+    if (backgroundRetryRef.current) {
+      clearInterval(backgroundRetryRef.current);
+      backgroundRetryRef.current = null;
+      setIsBackgroundRetryActive(false);
     }
     loadMetadata();
-  }, [extractedPresentationName, project?.sandbox?.sandbox_url, toolContent]);
+  }, [loadMetadata, toolContent]);
 
-  // Cleanup background retry interval on unmount
   useEffect(() => {
     return () => {
-      if (backgroundRetryInterval) {
-        clearInterval(backgroundRetryInterval);
+      if (backgroundRetryRef.current) {
+        clearInterval(backgroundRetryRef.current);
+        backgroundRetryRef.current = null;
+        setIsBackgroundRetryActive(false);
       }
     };
-  }, [backgroundRetryInterval]);
+  }, []);
+
+  useEffect(() => {
+    setRefreshTimestamp(Date.now());
+  }, [metadata]);
 
   // Reset scroll state when tool content changes (new tool call)
   useEffect(() => {
     setHasScrolledToCurrentSlide(false);
   }, [toolContent, currentSlideNumber]);
 
-  // Scroll to current slide when metadata loads or when tool content changes
+  const slides = useMemo(() => {
+    if (!metadata) {
+      return [];
+    }
+    return Object.entries(metadata.slides)
+      .map(([num, slide]) => ({ number: parseInt(num, 10), ...slide }))
+      .sort((a, b) => a.number - b.number);
+  }, [metadata]);
+
+  // Helper function to scroll to current slide
+  const scrollToCurrentSlide = useCallback((delay: number = 200) => {
+    if (!currentSlideNumber || !metadata) return;
+    
+    setTimeout(() => {
+      const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
+      
+      if (slideElement) {
+        slideElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else {
+        // Fallback: try again after a short delay if the element is not yet available
+        setTimeout(() => {
+          const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
+          if (retryElement) {
+            retryElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 500);
+      }
+    }, delay);
+  }, [currentSlideNumber, metadata]);
+
   useEffect(() => {
     if (metadata && currentSlideNumber && !hasScrolledToCurrentSlide) {
-      // Wait longer for memoized components to render
       scrollToCurrentSlide(800);
       setHasScrolledToCurrentSlide(true);
     }
-  }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide]);
-
-  const slides = metadata ? Object.entries(metadata.slides)
-      .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
-    .sort((a, b) => a.number - b.number) : [];
+  }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide, scrollToCurrentSlide]);
 
   // Additional effect to scroll when slides are actually rendered
   useEffect(() => {
@@ -261,7 +301,7 @@ export function PresentationViewer({
 
       return () => clearTimeout(timer);
     }
-  }, [slides.length, currentSlideNumber, metadata, hasScrolledToCurrentSlide]);
+  }, [slides, currentSlideNumber, metadata, hasScrolledToCurrentSlide, scrollToCurrentSlide]);
 
   // Scroll-based slide detection with proper edge handling
   useEffect(() => {
@@ -337,39 +377,6 @@ export function PresentationViewer({
       }
     };
   }, [slides]);
-
-  // Helper function to scroll to current slide
-  const scrollToCurrentSlide = (delay: number = 200) => {
-    if (!currentSlideNumber || !metadata) return;
-    
-    setTimeout(() => {
-      const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
-      
-      if (slideElement) {
-        slideElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-      } else {
-        // Fallback: try again after a longer delay if element not found yet
-        setTimeout(() => {
-          const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
-          if (retryElement) {
-            retryElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        }, 500);
-      }
-    }, delay);
-  };
-
-  // Create a refresh timestamp when metadata changes
-  const refreshTimestamp = useMemo(() => Date.now(), [metadata]);
-
   // Memoized slide iframe component to prevent unnecessary re-renders
   const SlideIframe = useMemo(() => {
     const SlideIframeComponent = React.memo(({ slide }: { slide: SlideMetadata & { number: number } }) => {
@@ -623,7 +630,7 @@ export function PresentationViewer({
                 Attempted {retryAttempt + 1} times
               </p>
             )}
-            {backgroundRetryInterval && !toolExecutionError && (
+            {isBackgroundRetryActive && !toolExecutionError && (
               <p className="text-xs text-blue-500 dark:text-blue-400 mb-4 flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Retrying in background...

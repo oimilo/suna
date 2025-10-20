@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,11 +56,10 @@ import {
   useUpdateKnowledgeBaseEntry,
   useDeleteKnowledgeBaseEntry,
   useUploadAgentFiles,
-  useCloneGitRepository,
   useAgentProcessingJobs,
 } from '@/hooks/react-query/knowledge-base/use-knowledge-base-queries';
 import { cn, truncateString } from '@/lib/utils';
-import { CreateKnowledgeBaseEntryRequest, KnowledgeBaseEntry, UpdateKnowledgeBaseEntryRequest, ProcessingJob } from '@/hooks/react-query/knowledge-base/types';
+import { CreateKnowledgeBaseEntryRequest, KnowledgeBaseEntry, UpdateKnowledgeBaseEntryRequest } from '@/hooks/react-query/knowledge-base/types';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
@@ -314,15 +313,39 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
     usage_context: 'always',
   });
 
-  const { data: knowledgeBase, isLoading, error } = useAgentKnowledgeBaseEntries(agentId);
-  const { data: processingJobsData } = useAgentProcessingJobs(agentId);
+  const { data: knowledgeBase, isLoading, error, refetch } = useAgentKnowledgeBaseEntries(agentId);
+  const { data: processingJobsData, refetch: refetchJobs } = useAgentProcessingJobs(agentId);
   const createMutation = useCreateAgentKnowledgeBaseEntry();
   const updateMutation = useUpdateKnowledgeBaseEntry();
   const deleteMutation = useDeleteKnowledgeBaseEntry();
   const uploadMutation = useUploadAgentFiles();
-  const cloneMutation = useCloneGitRepository();
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
+  useEffect(() => {
+    if (!processingJobsData?.jobs?.length) {
+      return;
+    }
+
+    const hasProcessingJobs = processingJobsData.jobs.some(job => job.status === 'processing');
+    const hasRecentlyCompleted = processingJobsData.jobs.some(job => {
+      if (job.status !== 'completed' || !job.completed_at) {
+        return false;
+      }
+      return new Date(job.completed_at).getTime() > Date.now() - 10_000;
+    });
+
+    if (!hasProcessingJobs && !hasRecentlyCompleted) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      refetchJobs();
+      refetch();
+    }, hasProcessingJobs ? 2000 : 5000);
+
+    return () => clearInterval(interval);
+  }, [processingJobsData?.jobs, refetch, refetchJobs]);
+
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -330,17 +353,126 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
     } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const extractZipFile = async (zipFile: File, zipId: string) => {
+    try {
+      setUploadedFiles(prev =>
+        prev.map(f => (f.id === zipId ? { ...f, status: 'extracting' as const } : f)),
+      );
+
+      const zip = new JSZip();
+      const zipContent = await zip.loadAsync(zipFile);
+      const extractedFiles: UploadedFile[] = [];
+      const rejectedFiles: string[] = [];
+      const supportedExtensions = ['.txt', '.pdf', '.docx'];
+
+      for (const [path, file] of Object.entries(zipContent.files)) {
+        if (!file.dir && !path.startsWith('__MACOSX/') && !path.includes('/.')) {
+          const fileName = path.split('/').pop() || path;
+          const extensionIndex = fileName.lastIndexOf('.');
+          const fileExtension = extensionIndex >= 0 ? fileName.toLowerCase().slice(extensionIndex) : '';
+
+          if (!supportedExtensions.includes(fileExtension)) {
+            rejectedFiles.push(fileName);
+            continue;
+          }
+
+          try {
+            const blob = await file.async('blob');
+            const extractedFile = new File([blob], fileName);
+
+            extractedFiles.push({
+              file: extractedFile,
+              id: Math.random().toString(36).slice(2, 11),
+              status: 'pending',
+              isFromZip: true,
+              zipParentId: zipId,
+              originalPath: path,
+            });
+          } catch (zipError) {
+            console.warn(`Failed to extract ${path}:`, zipError);
+          }
+        }
+      }
+
+      setUploadedFiles(prev => [
+        ...prev.map(f => (f.id === zipId ? { ...f, status: 'success' as const } : f)),
+        ...extractedFiles,
+      ]);
+
+      let message = `Extraímos ${extractedFiles.length} arquivo${extractedFiles.length === 1 ? '' : 's'} de ${zipFile.name}`;
+      if (rejectedFiles.length > 0) {
+        message += `. Ignoramos ${rejectedFiles.length} arquivo${rejectedFiles.length === 1 ? '' : 's'} não suportado${rejectedFiles.length === 1 ? '' : 's'}: ${rejectedFiles
+          .slice(0, 5)
+          .join(', ')}${rejectedFiles.length > 5 ? '...' : ''}`;
+      }
+      toast.success(message);
+    } catch (zipError) {
+      console.error('Error extracting ZIP:', zipError);
+      setUploadedFiles(prev =>
+        prev.map(f =>
+          f.id === zipId
+            ? { ...f, status: 'error', error: 'Falha ao extrair o arquivo ZIP' }
+            : f,
+        ),
+      );
+      toast.error('Falha ao extrair o arquivo ZIP');
+    }
+  };
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const supportedExtensions = ['.txt', '.pdf', '.docx'];
+    const newFiles: UploadedFile[] = [];
+    const rejectedFiles: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const extensionIndex = file.name.lastIndexOf('.');
+      const fileExtension = extensionIndex >= 0 ? file.name.toLowerCase().slice(extensionIndex) : '';
+
+      if (!supportedExtensions.includes(fileExtension) && fileExtension !== '.zip') {
+        rejectedFiles.push(file.name);
+        continue;
+      }
+
+      const fileId = Math.random().toString(36).slice(2, 11);
+      const queuedFile: UploadedFile = {
+        file,
+        id: fileId,
+        status: 'pending',
+      };
+
+      newFiles.push(queuedFile);
+
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        setTimeout(() => extractZipFile(file, fileId), 100);
+      }
+    }
+
+    if (rejectedFiles.length > 0) {
+      toast.error(`Formato não suportado: ${rejectedFiles.join(', ')}. Aceitamos apenas .txt, .pdf, .docx ou .zip.`);
+    }
+
+    if (newFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      setAddDialogTab('files');
+      setAddDialogOpen(true);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileUpload(e.dataTransfer.files);
     }
-  }, []);
+  };
 
   const handleOpenAddDialog = (tab: 'manual' | 'files' | 'repo' = 'manual') => {
     setAddDialogTab(tab);
@@ -359,7 +491,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
       name: entry.name,
       description: entry.description || '',
       content: entry.content,
-      usage_context: entry.usage_context || 'always',
+      usage_context: entry.usage_context,
     });
     setEditDialog({ entry, isOpen: true });
   };
@@ -367,6 +499,7 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
   const handleCloseDialog = () => {
     setEditDialog({ isOpen: false });
     setAddDialogOpen(false);
+    setAddDialogTab('manual');
     setFormData({
       name: '',
       description: '',
@@ -378,8 +511,9 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.content.trim()) {
+      toast.error('Preencha nome e conteúdo antes de salvar.');
       return;
     }
 
@@ -391,17 +525,28 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
           content: formData.content !== editDialog.entry.content ? formData.content : undefined,
           usage_context: formData.usage_context !== editDialog.entry.usage_context ? formData.usage_context : undefined,
         };
+
         const hasChanges = Object.values(updateData).some(value => value !== undefined);
-        if (hasChanges) {
-          await updateMutation.mutateAsync({ entryId: editDialog.entry.entry_id, data: updateData });
+        if (!hasChanges) {
+          toast.info('Nenhuma alteração para salvar.');
+          return;
         }
+
+        await updateMutation.mutateAsync({
+          entryId: editDialog.entry.entry_id,
+          data: updateData,
+        });
+        toast.success('Conhecimento atualizado com sucesso.');
       } else {
         await createMutation.mutateAsync({ agentId, data: formData });
+        toast.success('Conhecimento adicionado com sucesso.');
       }
-      
+
+      await Promise.all([refetch(), refetchJobs()]);
       handleCloseDialog();
-    } catch (error) {
-      console.error('Error saving agent knowledge base entry:', error);
+    } catch (submitError) {
+      console.error('Error saving agent knowledge base entry:', submitError);
+      toast.error('Não foi possível salvar o conhecimento. Tente novamente.');
     }
   };
 
@@ -409,8 +554,11 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
     try {
       await deleteMutation.mutateAsync(entryId);
       setDeleteEntryId(null);
-    } catch (error) {
-      console.error('Error deleting agent knowledge base entry:', error);
+      toast.success('Entrada removida.');
+      await Promise.all([refetch(), refetchJobs()]);
+    } catch (deleteError) {
+      console.error('Error deleting agent knowledge base entry:', deleteError);
+      toast.error('Erro ao remover entrada. Tente novamente.');
     }
   };
 
@@ -418,155 +566,72 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
     try {
       await updateMutation.mutateAsync({
         entryId: entry.entry_id,
-        data: { is_active: !entry.is_active }
+        data: { is_active: !entry.is_active },
       });
-    } catch (error) {
-      console.error('Error toggling entry status:', error);
-    }
-  };
-
-  const extractZipFile = async (zipFile: File, zipId: string) => {
-    try {
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === zipId ? { ...f, status: 'extracting' } : f
-      ));
-
-      const zip = new JSZip();
-      const zipContent = await zip.loadAsync(zipFile);
-      const extractedFiles: UploadedFile[] = [];
-      const rejectedFiles: string[] = [];
-      const supportedExtensions = ['.txt', '.pdf', '.docx'];
-
-      for (const [path, file] of Object.entries(zipContent.files)) {
-        if (!file.dir && !path.startsWith('__MACOSX/') && !path.includes('/.')) {
-          const fileName = path.split('/').pop() || path;
-          const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-          
-          // Only process supported file formats
-          if (!supportedExtensions.includes(fileExtension)) {
-            rejectedFiles.push(fileName);
-            continue;
-          }
-          
-          try {
-            const blob = await file.async('blob');
-            const extractedFile = new File([blob], fileName);
-
-            extractedFiles.push({
-              file: extractedFile,
-              id: Math.random().toString(36).substr(2, 9),
-              status: 'pending' as const,
-              isFromZip: true,
-              zipParentId: zipId,
-              originalPath: path
-            });
-          } catch (error) {
-            console.warn(`Failed to extract ${path}:`, error);
-          }
-        }
-      }
-
-      setUploadedFiles(prev => [
-        ...prev.map(f => f.id === zipId ? { ...f, status: 'success' as const } : f),
-        ...extractedFiles
-      ]);
-
-      let message = `Extracted ${extractedFiles.length} supported files from ${zipFile.name}`;
-      if (rejectedFiles.length > 0) {
-        message += `. Skipped ${rejectedFiles.length} unsupported files: ${rejectedFiles.slice(0, 5).join(', ')}${rejectedFiles.length > 5 ? '...' : ''}`;
-      }
-      
-      toast.success(message);
-    } catch (error) {
-      console.error('Error extracting ZIP:', error);
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === zipId ? { 
-          ...f, 
-          status: 'error', 
-          error: 'Failed to extract ZIP file' 
-        } : f
-      ));
-      toast.error('Failed to extract ZIP file');
-    }
-  };
-
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    const supportedExtensions = ['.txt', '.pdf', '.docx'];
-    const newFiles: UploadedFile[] = [];
-    const rejectedFiles: string[] = [];
-    
-    for (const file of Array.from(files)) {
-      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-      
-      // Allow ZIP files as they can contain supported formats
-      if (!supportedExtensions.includes(fileExtension) && fileExtension !== '.zip') {
-        rejectedFiles.push(file.name);
-        continue;
-      }
-      
-      const fileId = Math.random().toString(36).substr(2, 9);
-      const uploadedFile: UploadedFile = {
-        file,
-        id: fileId,
-        status: 'pending'
-      };
-      
-      newFiles.push(uploadedFile);
-      
-      // Extract ZIP files to get individual files
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        setTimeout(() => extractZipFile(file, fileId), 100);
-      }
-    }
-    
-    if (rejectedFiles.length > 0) {
-      toast.error(`Unsupported file format(s): ${rejectedFiles.join(', ')}. Only .txt, .pdf, .docx, and .zip files are supported.`);
-    }
-    
-    if (newFiles.length > 0) {
-      setUploadedFiles(prev => [...prev, ...newFiles]);
-      if (!addDialogOpen) {
-        setAddDialogTab('files');
-        setAddDialogOpen(true);
-      }
+      toast.success(`Entrada ${entry.is_active ? 'desativada' : 'ativada'} com sucesso.`);
+      await refetch();
+    } catch (toggleError) {
+      console.error('Error toggling entry status:', toggleError);
+      toast.error('Não foi possível atualizar o status da entrada.');
     }
   };
 
   const uploadFiles = async () => {
-    const filesToUpload = uploadedFiles.filter(f => 
-      f.status === 'pending' && 
-      (f.isFromZip || !f.file.name.toLowerCase().endsWith('.zip'))
+    const filesToUpload = uploadedFiles.filter(
+      file =>
+        file.status === 'pending' &&
+        (file.isFromZip || !file.file.name.toLowerCase().endsWith('.zip')),
     );
-    for (const uploadedFile of filesToUpload) {
+
+    if (filesToUpload.length === 0) {
+      return;
+    }
+
+    let allSuccessful = true;
+
+    for (const queuedFile of filesToUpload) {
       try {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === uploadedFile.id ? { ...f, status: 'uploading' as const } : f
-        ));
-        
-        await uploadMutation.mutateAsync({ agentId, file: uploadedFile.file });
-        
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === uploadedFile.id ? { ...f, status: 'success' as const } : f
-        ));
-      } catch (error) {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === uploadedFile.id ? { 
-            ...f, 
-            status: 'error' as const, 
-            error: error instanceof Error ? error.message : 'Upload failed' 
-          } : f
-        ));
+        setUploadedFiles(prev =>
+          prev.map(f => (f.id === queuedFile.id ? { ...f, status: 'uploading' as const } : f)),
+        );
+
+        await uploadMutation.mutateAsync({ agentId, file: queuedFile.file });
+
+        setUploadedFiles(prev =>
+          prev.map(f => (f.id === queuedFile.id ? { ...f, status: 'success' as const } : f)),
+        );
+      } catch (uploadError) {
+        allSuccessful = false;
+        setUploadedFiles(prev =>
+          prev.map(f =>
+            f.id === queuedFile.id
+              ? {
+                  ...f,
+                  status: 'error' as const,
+                  error: uploadError instanceof Error ? uploadError.message : 'Falha no upload',
+                }
+              : f,
+          ),
+        );
+        toast.error(`Falha ao enviar ${queuedFile.file.name}.`);
       }
     }
-    
-    setTimeout(() => {
-      const nonZipFiles = uploadedFiles.filter(f => !f.file.name.toLowerCase().endsWith('.zip') || f.isFromZip);
-      if (nonZipFiles.every(f => f.status === 'success')) {
+
+    if (allSuccessful) {
+      refetchJobs();
+
+      setTimeout(() => {
+        toast.success(
+          `Upload concluído: ${filesToUpload.length} arquivo${filesToUpload.length === 1 ? '' : 's'}. Os registros aparecerão após o processamento.`,
+        );
         handleCloseDialog();
-      }
-    }, 1000);
+
+        setTimeout(() => {
+          refetch();
+          refetchJobs();
+        }, 500);
+      }, 1000);
+    }
   };
 
   const removeFile = (fileId: string) => {
@@ -1359,4 +1424,4 @@ export const AgentKnowledgeBaseManager = ({ agentId, agentName }: AgentKnowledge
       </div>
     </TooltipProvider>
   );
-}; 
+};
