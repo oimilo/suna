@@ -300,10 +300,7 @@ export function extractExposePortData(
   const normaliseUrl = (value: string | null) => {
     if (!value) return value;
     try {
-      let cleaned = value.trim();
-      cleaned = cleaned.replace(/\s+/g, '');
-      cleaned = cleaned.replace(/([^:])\/\/+/g, (_, prefix) => `${prefix}/`);
-      return cleaned;
+      return value.trim();
     } catch {
       return value;
     }

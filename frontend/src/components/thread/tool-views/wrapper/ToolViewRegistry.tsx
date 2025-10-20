@@ -3,19 +3,32 @@ import { ToolViewProps } from '../types';
 import { GenericToolView } from '../GenericToolView';
 import { BrowserToolView } from '../BrowserToolView';
 import { CommandToolView } from '../command-tool/CommandToolView';
+import { CheckCommandOutputToolView } from '../command-tool/CheckCommandOutputToolView';
 import { ExposePortToolView } from '../expose-port-tool/ExposePortToolView';
 import { FileOperationToolView } from '../file-operation/FileOperationToolView';
+import { FileEditToolView } from '../file-operation/FileEditToolView';
 import { StrReplaceToolView } from '../str-replace/StrReplaceToolView';
 import { WebCrawlToolView } from '../WebCrawlToolView';
 import { WebScrapeToolView } from '../web-scrape-tool/WebScrapeToolView';
 import { WebSearchToolView } from '../web-search-tool/WebSearchToolView';
+// Optional research tool views may not exist in this fork; fallback to Generic
+const PeopleSearchToolView = GenericToolView;
+const CompanySearchToolView = GenericToolView;
+const PaperSearchToolView = GenericToolView;
+const PaperDetailsToolView = GenericToolView;
+const AuthorSearchToolView = GenericToolView;
+const AuthorDetailsToolView = GenericToolView;
+const AuthorPapersToolView = GenericToolView;
+const PaperCitationsToolView = GenericToolView;
+const PaperReferencesToolView = GenericToolView;
+const DocumentParserToolView = GenericToolView;
 import { SeeImageToolView } from '../see-image-tool/SeeImageToolView';
 import { TerminateCommandToolView } from '../command-tool/TerminateCommandToolView';
 import { AskToolView } from '../ask-tool/AskToolView';
 import { CompleteToolView } from '../CompleteToolView';
+const WaitToolView = GenericToolView;
 import { ExecuteDataProviderCallToolView } from '../data-provider-tool/ExecuteDataProviderCallToolView';
 import { DataProviderEndpointsToolView } from '../data-provider-tool/DataProviderEndpointsToolView';
-import { DeployToolView } from '../DeployToolView';
 import { SearchMcpServersToolView } from '../search-mcp-servers/search-mcp-servers';
 import { GetAppDetailsToolView } from '../get-app-details/get-app-details';
 import { CreateCredentialProfileToolView } from '../create-credential-profile/create-credential-profile';
@@ -24,6 +37,40 @@ import { CheckProfileConnectionToolView } from '../check-profile-connection/chec
 import { ConfigureProfileForAgentToolView } from '../configure-profile-for-agent/configure-profile-for-agent';
 import { GetCredentialProfilesToolView } from '../get-credential-profiles/get-credential-profiles';
 import { GetCurrentAgentConfigToolView } from '../get-current-agent-config/get-current-agent-config';
+import { TaskListToolView } from '../task-list/TaskListToolView';
+import { PresentationOutlineToolView } from '../presentation-tools/PresentationOutlineToolView';
+import { ListPresentationTemplatesToolView } from '../presentation-tools/ListPresentationTemplatesToolView';
+import { PresentationViewer } from '../presentation-tools/PresentationViewer';
+import { ListPresentationsToolView } from '../presentation-tools/ListPresentationsToolView';
+import { DeleteSlideToolView } from '../presentation-tools/DeleteSlideToolView';
+import { DeletePresentationToolView } from '../presentation-tools/DeletePresentationToolView';
+// import { PresentationStylesToolView } from '../presentation-tools/PresentationStylesToolView';
+import { PresentPresentationToolView } from '../presentation-tools/PresentPresentationToolView';
+import { SheetsToolView } from '../sheets-tools/sheets-tool-view';
+import { GetProjectStructureView } from '../web-dev/GetProjectStructureView';
+import { ImageEditGenerateToolView } from '../image-edit-generate-tool/ImageEditGenerateToolView';
+const DesignerToolView = GenericToolView;
+import { UploadFileToolView } from '../UploadFileToolView';
+import { DeployToolView } from '../DeployToolView';
+import { DocsToolView, ListDocumentsToolView, DeleteDocumentToolView } from '../docs-tool';
+import { CreateNewAgentToolView } from '../create-new-agent/create-new-agent';
+const UpdateAgentToolView = GenericToolView;
+const SearchMcpServersForAgentToolView = GenericToolView;
+const CreateCredentialProfileForAgentToolView = GenericToolView;
+import { DiscoverMcpToolsForAgentToolView } from '../discover-mcp-tools-for-agent/discover-mcp-tools-for-agent';
+const DiscoverUserMcpServersToolView = GenericToolView;
+const ConfigureAgentIntegrationToolView = GenericToolView;
+import CreateAgentScheduledTriggerToolView from '../create-agent-scheduled-trigger/create-agent-scheduled-trigger';
+const MakeCallToolView = GenericToolView;
+const CallStatusToolView = GenericToolView;
+const EndCallToolView = GenericToolView;
+const ListCallsToolView = GenericToolView;
+const MonitorCallToolView = GenericToolView;
+const WaitForCallCompletionToolView = GenericToolView;
+import { createPresentationViewerToolContent, parsePresentationSlidePath } from '../utils/presentation-utils';
+import { extractToolData } from '../utils';
+const KbToolView = GenericToolView;
+const ExpandMessageToolView = GenericToolView;
 
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
@@ -32,76 +79,41 @@ type ToolViewRegistryType = Record<string, ToolViewComponent>;
 
 const defaultRegistry: ToolViewRegistryType = {
   'browser-navigate-to': BrowserToolView,
-  'browser-go-back': BrowserToolView,
-  'browser-wait': BrowserToolView,
-  'browser-click-element': BrowserToolView,
-  'browser-input-text': BrowserToolView,
-  'browser-send-keys': BrowserToolView,
-  'browser-switch-tab': BrowserToolView,
-  'browser-close-tab': BrowserToolView,
-  'browser-scroll-down': BrowserToolView,
-  'browser-scroll-up': BrowserToolView,
-  'browser-scroll-to-text': BrowserToolView,
-  'browser-get-dropdown-options': BrowserToolView,
-  'browser-select-dropdown-option': BrowserToolView,
-  'browser-drag-drop': BrowserToolView,
-  'browser-click-coordinates': BrowserToolView,
-  // underscore aliases
-  'browser_navigate_to': BrowserToolView,
-  'browser_go_back': BrowserToolView,
-  'browser_wait': BrowserToolView,
-  'browser_click_element': BrowserToolView,
-  'browser_input_text': BrowserToolView,
-  'browser_send_keys': BrowserToolView,
-  'browser_switch_tab': BrowserToolView,
-  'browser_close_tab': BrowserToolView,
-  'browser_scroll_down': BrowserToolView,
-  'browser_scroll_up': BrowserToolView,
-  'browser_scroll_to_text': BrowserToolView,
-  'browser_get_dropdown_options': BrowserToolView,
-  'browser_select_dropdown_option': BrowserToolView,
-  'browser_drag_drop': BrowserToolView,
-  'browser_click_coordinates': BrowserToolView,
+  'browser-act': BrowserToolView,
+  'browser-extract-content': BrowserToolView,
+  'browser-screenshot': BrowserToolView,
 
   'execute-command': CommandToolView,
-  'check-command-output': GenericToolView,
+  'check-command-output': CheckCommandOutputToolView,
   'terminate-command': TerminateCommandToolView,
   'list-commands': GenericToolView,
-  // underscore aliases
-  'execute_command': CommandToolView,
-  'check_command_output': GenericToolView,
-  'terminate_command': TerminateCommandToolView,
-  'list_commands': GenericToolView,
 
   'create-file': FileOperationToolView,
   'delete-file': FileOperationToolView,
   'full-file-rewrite': FileOperationToolView,
   'read-file': FileOperationToolView,
-  'edit-file': FileOperationToolView,
-  // underscore aliases
-  'create_file': FileOperationToolView,
-  'delete_file': FileOperationToolView,
-  'full_file_rewrite': FileOperationToolView,
-  'read_file': FileOperationToolView,
-  'edit_file': FileOperationToolView,
+  'edit-file': FileEditToolView,
+
+  'parse-document': DocumentParserToolView,
 
   'str-replace': StrReplaceToolView,
-  // underscore alias
-  'str_replace': StrReplaceToolView,
 
   'web-search': WebSearchToolView,
+  'people-search': PeopleSearchToolView,
+  'company-search': CompanySearchToolView,
+  'paper-search': PaperSearchToolView,
+  'get-paper-details': PaperDetailsToolView,
+  'search-authors': AuthorSearchToolView,
+  'get-author-details': AuthorDetailsToolView,
+  'get-author-papers': AuthorPapersToolView,
+  'get-paper-citations': PaperCitationsToolView,
+  'get-paper-references': PaperReferencesToolView,
   'crawl-webpage': WebCrawlToolView,
   'scrape-webpage': WebScrapeToolView,
-  // underscore aliases
-  'web_search': WebSearchToolView,
-  'crawl_webpage': WebCrawlToolView,
-  'scrape_webpage': WebScrapeToolView,
+  'image-search': WebSearchToolView,
 
   'execute-data-provider-call': ExecuteDataProviderCallToolView,
   'get-data-provider-endpoints': DataProviderEndpointsToolView,
-  // underscore aliases
-  'execute_data_provider_call': ExecuteDataProviderCallToolView,
-  'get_data_provider_endpoints': DataProviderEndpointsToolView,
 
   'search-mcp-servers': SearchMcpServersToolView,
   'get-app-details': GetAppDetailsToolView,
@@ -111,114 +123,120 @@ const defaultRegistry: ToolViewRegistryType = {
   'configure-profile-for-agent': ConfigureProfileForAgentToolView,
   'get-credential-profiles': GetCredentialProfilesToolView,
   'get-current-agent-config': GetCurrentAgentConfigToolView,
-  // underscore aliases
-  'search_mcp_servers': SearchMcpServersToolView,
-  'get_app_details': GetAppDetailsToolView,
-  'create_credential_profile': CreateCredentialProfileToolView,
-  'connect_credential_profile': ConnectCredentialProfileToolView,
-  'check_profile_connection': CheckProfileConnectionToolView,
-  'configure_profile_for_agent': ConfigureProfileForAgentToolView,
-  'get_credential_profiles': GetCredentialProfilesToolView,
-  'get_current_agent_config': GetCurrentAgentConfigToolView,
+  'create-tasks': TaskListToolView,
+  'view-tasks': TaskListToolView,
+  'update-tasks': TaskListToolView,
+  'delete-tasks': TaskListToolView,
+  'clear-all': TaskListToolView,
 
-  // Agent creation/integration (agent_creation_tool)
-  // hyphen variants
-  'search-mcp-servers-for-agent': SearchMcpServersToolView,
-  'get-mcp-server-details': GetAppDetailsToolView,
-  'create-credential-profile-for-agent': CreateCredentialProfileToolView,
-  'discover-mcp-tools-for-agent': GenericToolView,
-  'configure-agent-integration': ConfigureProfileForAgentToolView,
-  'create-agent-scheduled-trigger': GenericToolView,
-  'list-agent-scheduled-triggers': GenericToolView,
-  'toggle-agent-scheduled-trigger': GenericToolView,
-  'delete-agent-scheduled-trigger': GenericToolView,
-  'update-agent-config': GenericToolView,
-  'create-new-agent': GenericToolView,
-  // underscore variants
-  'search_mcp_servers_for_agent': SearchMcpServersToolView,
-  'get_mcp_server_details': GetAppDetailsToolView,
-  'create_credential_profile_for_agent': CreateCredentialProfileToolView,
-  'discover_mcp_tools_for_agent': GenericToolView,
-  'configure_agent_integration': ConfigureProfileForAgentToolView,
-  'create_agent_scheduled_trigger': GenericToolView,
-  'list_agent_scheduled_triggers': GenericToolView,
-  'toggle_agent_scheduled_trigger': GenericToolView,
-  'delete_agent_scheduled_trigger': GenericToolView,
-  'update_agent_config': GenericToolView,
-  'create_new_agent': GenericToolView,
 
   'expose-port': ExposePortToolView,
-  // underscore alias
-  'expose_port': ExposePortToolView,
 
-  'see-image': SeeImageToolView,
-  // underscore alias
-  'see_image': SeeImageToolView,
-
-  'call-mcp-tool': GenericToolView,
-  // underscore alias
-  'call_mcp_tool': GenericToolView,
+  'load-image': SeeImageToolView,
+  'clear-images-from-context': SeeImageToolView,
+  'image-edit-or-generate': ImageEditGenerateToolView,
+  'designer-create-or-edit': DesignerToolView,
+  'designer_create_or_edit': DesignerToolView,
+  'deploy': DeployToolView,
 
   'ask': AskToolView,
   'complete': CompleteToolView,
+  'wait': WaitToolView,
+  'expand_message': ExpandMessageToolView,
+  'expand-message': ExpandMessageToolView,
 
-  'deploy': DeployToolView,
 
-  // Task management
-  'create-tasks': GenericToolView,
-  'view-tasks': GenericToolView,
-  'update-tasks': GenericToolView,
-  'delete-tasks': GenericToolView,
-  'clear-all': GenericToolView,
+  'create-presentation-outline': PresentationOutlineToolView,
+  'list-presentation-templates': ListPresentationTemplatesToolView,
 
-  // Presentation tools
-  'create-presentation-outline': GenericToolView,
-  'list-presentation-templates': GenericToolView,
-  'create-slide': GenericToolView,
-  'list-slides': GenericToolView,
-  'list-presentations': GenericToolView,
-  'delete-slide': GenericToolView,
-  'delete-presentation': GenericToolView,
-  'presentation-styles': GenericToolView,
-  'present-presentation': GenericToolView,
+  // New per-slide presentation tools
+  'create-slide': PresentationViewer,
+  'list-slides': PresentationViewer,
+  'list-presentations': ListPresentationsToolView,
+  'delete-slide': DeleteSlideToolView,
+  'delete-presentation': DeletePresentationToolView,
+  'validate-slide': PresentationViewer,
+  // 'presentation-styles': PresentationStylesToolView,
+  'present-presentation': PresentPresentationToolView,
 
-  // Sheets utilities
-  'create-sheet': GenericToolView,
-  'update-sheet': GenericToolView,
-  'view-sheet': GenericToolView,
-  'analyze-sheet': GenericToolView,
-  'visualize-sheet': GenericToolView,
-  'format-sheet': GenericToolView,
+  'create-sheet': SheetsToolView,
+  'update-sheet': SheetsToolView,
+  'view-sheet': SheetsToolView,
+  'analyze-sheet': SheetsToolView,
+  'visualize-sheet': SheetsToolView,
+  'format-sheet': SheetsToolView,
 
-  // Web dev helper
-  'get-project-structure': GenericToolView,
+  'get-project-structure': GetProjectStructureView,
   'list-web-projects': GenericToolView,
 
-  // Upload and documents
-  'upload-file': GenericToolView,
-  'create-document': GenericToolView,
-  'update-document': GenericToolView,
-  'read-document': GenericToolView,
-  'list-documents': GenericToolView,
-  'delete-document': GenericToolView,
-  'export-document': GenericToolView,
-  'create_document': GenericToolView,
-  'update_document': GenericToolView,
-  'read_document': GenericToolView,
-  'list_documents': GenericToolView,
-  'delete_document': GenericToolView,
-  'export_document': GenericToolView,
+  'upload-file': UploadFileToolView,
+
+  // Knowledge Base tools
+  'init_kb': KbToolView,
+  'init-kb': KbToolView,
+  'search_files': KbToolView,
+  'search-files': KbToolView,
+  'ls_kb': KbToolView,
+  'ls-kb': KbToolView,
+  'cleanup_kb': KbToolView,
+  'cleanup-kb': KbToolView,
+  'global_kb_sync': KbToolView,
+  'global-kb-sync': KbToolView,
+  'global_kb_create_folder': KbToolView,
+  'global-kb-create-folder': KbToolView,
+  'global_kb_upload_file': KbToolView,
+  'global-kb-upload-file': KbToolView,
+  'global_kb_list_contents': KbToolView,
+  'global-kb-list-contents': KbToolView,
+  'global_kb_delete_item': KbToolView,
+  'global-kb-delete-item': KbToolView,
+  'global_kb_enable_item': KbToolView,
+  'global-kb-enable-item': KbToolView,
+
+  // Document operations - using specific views for different operations
+  'create-document': DocsToolView,
+  'update-document': DocsToolView,
+  'read-document': DocsToolView,
+  'list-documents': ListDocumentsToolView,
+  'delete-document': DeleteDocumentToolView,
+  'export-document': DocsToolView,
+  'create_document': DocsToolView,
+  'update_document': DocsToolView,
+  'read_document': DocsToolView,
+  'list_documents': ListDocumentsToolView,
+  'delete_document': DeleteDocumentToolView,
+  'export_document': DocsToolView,
+  'get_tiptap_format_guide': DocsToolView,
 
   'default': GenericToolView,
+
+  'create-new-agent': CreateNewAgentToolView,
+  'update-agent': UpdateAgentToolView,
+  'search-mcp-servers-for-agent': SearchMcpServersForAgentToolView,
+  'create-credential-profile-for-agent': CreateCredentialProfileForAgentToolView,
+  'discover-mcp-tools-for-agent': DiscoverMcpToolsForAgentToolView,
+  'discover-user-mcp-servers': DiscoverUserMcpServersToolView,
+  'configure-agent-integration': ConfigureAgentIntegrationToolView,
+  'create-agent-scheduled-trigger': CreateAgentScheduledTriggerToolView,
+
+  'make_phone_call': MakeCallToolView,
+  'make-phone-call': MakeCallToolView,
+  'end_call': EndCallToolView,
+  'end-call': EndCallToolView,
+  'get_call_details': CallStatusToolView,
+  'get-call-details': CallStatusToolView,
+  'list_calls': ListCallsToolView,
+  'list-calls': ListCallsToolView,
+  'monitor_call': MonitorCallToolView,
+  'monitor-call': MonitorCallToolView,
+  'wait_for_call_completion': WaitForCallCompletionToolView,
+  'wait-for-call-completion': WaitForCallCompletionToolView,
 };
 
 class ToolViewRegistry {
   private registry: ToolViewRegistryType;
-
   constructor(initialRegistry: Partial<ToolViewRegistryType> = {}) {
     this.registry = { ...defaultRegistry };
-    
-    // Only add non-undefined values from initialRegistry
     Object.entries(initialRegistry).forEach(([key, value]) => {
       if (value !== undefined) {
         this.registry[key] = value;
@@ -257,7 +275,41 @@ export function useToolView(toolName: string): ToolViewComponent {
   return useMemo(() => toolViewRegistry.get(toolName), [toolName]);
 }
 
-export function ToolView({ name = 'default', ...props }: ToolViewProps) {
-  const ToolViewComponent = useToolView(name);
-  return <ToolViewComponent name={name} {...props} />;
+
+
+export function ToolView({ name = 'default', assistantContent, toolContent, ...props }: ToolViewProps) {
+  const toolToolData = extractToolData(toolContent);
+
+  // find the file path from the tool arguments
+  const toolArguments = toolToolData.arguments || {};
+  const filePath = toolArguments.file_path || toolArguments.target_file;
+
+  // check if the file path is a presentation slide
+  const { isValid: isPresentationSlide, presentationName, slideNumber } = parsePresentationSlidePath(filePath);
+  let modifiedToolContent = toolContent;
+
+  // define presentation-related tools that shouldn't be transformed
+  const presentationTools = [
+    'create-slide',
+    'list-slides',
+    'delete-slide',
+    'delete-presentation',
+    'validate-slide',
+    // 'presentation-styles',
+    'present-presentation',
+  ]
+
+  const isAlreadyPresentationTool = presentationTools.includes(name);
+
+  // if the file path is a presentation slide, we need to modify the tool content to match the expected structure for PresentationViewer
+  if (isPresentationSlide && filePath && presentationName && slideNumber && !isAlreadyPresentationTool) {
+    modifiedToolContent = createPresentationViewerToolContent(presentationName, filePath, slideNumber);
+  }
+
+  // determine the effective tool name
+  const effectiveToolName = (isPresentationSlide && !isAlreadyPresentationTool) ? 'create-slide' : name;
+
+  // use the tool view component
+  const ToolViewComponent = useToolView(effectiveToolName);
+  return <ToolViewComponent name={effectiveToolName} toolContent={modifiedToolContent} {...props} />;
 }
