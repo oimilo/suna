@@ -2,6 +2,11 @@ import { backendApi } from '@/lib/api-client';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
+export {
+  fetchSandboxJsonWithWarningBypass,
+  type DaytonaBypassOptions,
+} from './sandbox-fetch';
+
 export enum DownloadFormat {
   PDF = 'pdf',
   PPTX = 'pptx',
@@ -68,6 +73,7 @@ export async function downloadPresentation(
           presentation_path: presentationPath,
           download: true,
         }),
+        credentials: 'include',
       },
     );
 

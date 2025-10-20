@@ -22,13 +22,15 @@ export function OnboardingTour() {
   // Only show questions if welcome was seen and tour step is 0 AND not completed
   const shouldShowQuestions = hasSeenWelcome && tourStep === 0 && !isCompleted;
   
-  // Debug logs
-  console.log('[OnboardingTour] Debug:', {
-    hasSeenWelcome: hasSeenWelcome || false,
-    tourStep: tourStep || 0,
-    shouldShowQuestions,
-    isCompleted
-  });
+  // Debug logs (opt-in via env flag to avoid console spam in production)
+  if (process.env.NEXT_PUBLIC_DEBUG_ONBOARDING === 'true') {
+    console.debug('[OnboardingTour] Debug:', {
+      hasSeenWelcome: hasSeenWelcome || false,
+      tourStep: tourStep || 0,
+      shouldShowQuestions,
+      isCompleted,
+    });
+  }
 
   const handleQuestionsComplete = async (responses: any) => {
     try {

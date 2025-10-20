@@ -14,6 +14,11 @@ const nextConfig = (): NextConfig => ({
         hostname: 'assets-global.website-files.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'logos.composio.dev',
+        pathname: '/**',
+      },
     ],
   },
 });
