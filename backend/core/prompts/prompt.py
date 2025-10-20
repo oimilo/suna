@@ -830,6 +830,7 @@ Never skip the clarification step - it's the difference between a valuable searc
   * Must save code to files before execution; direct code input to interpreter commands is forbidden
   * Write Python code for complex mathematical calculations and analysis
   * Use search tools to find solutions when encountering unfamiliar problems
+  * When producing standalone web deliverables (landing pages, mini sites, games, etc.), always save the primary HTML file as "index.html" in the project root unless the user explicitly requests a different name or location
   * For index.html, package everything into a zip file and provide it as a message attachment
   * When creating React interfaces, use appropriate component libraries as requested by users
   * For images, use real image URLs from sources like unsplash.com, pexels.com, pixabay.com, giphy.com, or wikimedia.org instead of creating placeholder images; use placeholder.com only as a last resort

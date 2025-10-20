@@ -26,6 +26,8 @@ export function ExposePortToolView({
   const {
     port,
     url,
+    proxyUrl,
+    directUrl,
     message,
     actualIsSuccess,
     actualToolTimestamp
@@ -76,21 +78,55 @@ export function ExposePortToolView({
         ) : (
           <ScrollArea className="h-full w-full">
             <div className="p-4 pt-4 pb-0 space-y-6">
-              {url && (
+              {(url || proxyUrl || directUrl) && (
                 <div className="space-y-4">
                   {/* URL Exposta Section */}
                   <div>
-                    <h3 className="text-xs font-medium text-muted-foreground mb-2">URL Exposta</h3>
+                    <h3 className="text-xs font-medium text-muted-foreground mb-2">URLs Disponíveis</h3>
                     <div className="bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 rounded-lg p-3">
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
-                      >
-                        {url}
-                        <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
-                      </a>
+                      {proxyUrl && (
+                        <div className="mb-2 last:mb-0">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                            Proxy do Projeto
+                          </div>
+                          <a
+                            href={proxyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
+                          >
+                            {proxyUrl}
+                            <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
+                          </a>
+                        </div>
+                      )}
+                      {directUrl && (!proxyUrl || directUrl !== proxyUrl) && (
+                        <div className="mt-2">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                            URL Direta (Daytona)
+                          </div>
+                          <a
+                            href={directUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
+                          >
+                            {directUrl}
+                            <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
+                          </a>
+                        </div>
+                      )}
+                      {!proxyUrl && !directUrl && url && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
+                        >
+                          {url}
+                          <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -120,7 +156,7 @@ export function ExposePortToolView({
               )}
 
               {/* Empty State */}
-              {!port && !url && !isStreaming && (
+              {!port && !url && !proxyUrl && !directUrl && !isStreaming && (
                 <div className="flex flex-col items-center justify-center py-12 px-6">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
                     <Computer className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />

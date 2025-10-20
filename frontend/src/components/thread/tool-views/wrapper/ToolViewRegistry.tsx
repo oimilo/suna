@@ -164,6 +164,51 @@ const defaultRegistry: ToolViewRegistryType = {
 
   'deploy': DeployToolView,
 
+  // Task management
+  'create-tasks': GenericToolView,
+  'view-tasks': GenericToolView,
+  'update-tasks': GenericToolView,
+  'delete-tasks': GenericToolView,
+  'clear-all': GenericToolView,
+
+  // Presentation tools
+  'create-presentation-outline': GenericToolView,
+  'list-presentation-templates': GenericToolView,
+  'create-slide': GenericToolView,
+  'list-slides': GenericToolView,
+  'list-presentations': GenericToolView,
+  'delete-slide': GenericToolView,
+  'delete-presentation': GenericToolView,
+  'presentation-styles': GenericToolView,
+  'present-presentation': GenericToolView,
+
+  // Sheets utilities
+  'create-sheet': GenericToolView,
+  'update-sheet': GenericToolView,
+  'view-sheet': GenericToolView,
+  'analyze-sheet': GenericToolView,
+  'visualize-sheet': GenericToolView,
+  'format-sheet': GenericToolView,
+
+  // Web dev helper
+  'get-project-structure': GenericToolView,
+  'list-web-projects': GenericToolView,
+
+  // Upload and documents
+  'upload-file': GenericToolView,
+  'create-document': GenericToolView,
+  'update-document': GenericToolView,
+  'read-document': GenericToolView,
+  'list-documents': GenericToolView,
+  'delete-document': GenericToolView,
+  'export-document': GenericToolView,
+  'create_document': GenericToolView,
+  'update_document': GenericToolView,
+  'read_document': GenericToolView,
+  'list_documents': GenericToolView,
+  'delete_document': GenericToolView,
+  'export_document': GenericToolView,
+
   'default': GenericToolView,
 };
 

@@ -151,7 +151,16 @@ export function FileOperationToolView({
     return 8080;
   }, [assistantContent, toolContent]);
   const previewPort = derivePreviewPort();
-  const proxiedBaseHref = projectId && previewPort ? `/api/preview/${projectId}/p/${previewPort}/` : undefined;
+  const proxiedBaseHref = (() => {
+    if (projectId && previewPort) {
+      return `/api/preview/${projectId}/p/${previewPort}/`;
+    }
+    const sandboxUrl = (project as any)?.sandbox?.sandbox_url;
+    if (sandboxUrl) {
+      return `${sandboxUrl.replace(/\/$/, '')}/`;
+    }
+    return undefined;
+  })();
 
   const FileIcon = getFileIcon(fileName);
 
