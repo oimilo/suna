@@ -23,7 +23,7 @@ export type Agent = {
   }>;
   custom_mcps?: Array<{
     name: string;
-    type: 'json' | 'sse';
+    type: 'http' | 'json' | 'sse' | 'composio';
     config: Record<string, any>;
     enabledTools: string[];
   }>;
@@ -96,7 +96,7 @@ export type AgentCreateRequest = {
   }>;
   custom_mcps?: Array<{
     name: string;
-    type: 'json' | 'sse';
+    type: 'http' | 'json' | 'sse' | 'composio';
     config: Record<string, any>;
     enabledTools: string[];
   }>;
@@ -112,7 +112,7 @@ export type AgentVersionCreateRequest = {
   }>;
   custom_mcps?: Array<{
     name: string;
-    type: 'json' | 'sse';
+    type: 'http' | 'json' | 'sse' | 'composio';
     config: Record<string, any>;
     enabledTools: string[];
   }>;
@@ -147,7 +147,7 @@ export type AgentUpdateRequest = {
   }>;
   custom_mcps?: Array<{
     name: string;
-    type: 'json' | 'sse';
+    type: 'http' | 'json' | 'sse' | 'composio';
     config: Record<string, any>;
     enabledTools: string[];
   }>;
@@ -155,6 +155,7 @@ export type AgentUpdateRequest = {
   is_default?: boolean;
   avatar?: string;
   avatar_color?: string;
+  replace_mcps?: boolean;
 };
 
 export const getAgents = async (params: AgentsParams = {}): Promise<AgentsResponse> => {

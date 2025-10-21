@@ -1,13 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Settings, X, Sparkles, Key, AlertTriangle } from 'lucide-react';
+import { Settings, X, Key } from 'lucide-react';
 import { MCPConfiguration } from './types';
 import { useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
-// Removed Pipedream icon dependency; fallback skeleton will render
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface ConfiguredMcpListProps {
   configuredMCPs: MCPConfiguration[];
@@ -16,38 +11,11 @@ interface ConfiguredMcpListProps {
   onConfigureTools?: (index: number) => void;
 }
 
-const extractAppSlug = (mcp: MCPConfiguration): string | null => {
-  if (mcp.customType === 'pipedream') {
-    const qualifiedMatch = mcp.qualifiedName.match(/^pipedream_([^_]+)_/);
-    if (qualifiedMatch) {
-      return qualifiedMatch[1];
-    }
-    if (mcp.config?.headers?.['x-pd-app-slug']) {
-      return mcp.config.headers['x-pd-app-slug'];
-    }
-  }
-  return null;
-};
-
 const MCPLogo: React.FC<{ mcp: MCPConfiguration }> = ({ mcp }) => {
-  const logoUrl = undefined as unknown as string | undefined;
+  const firstLetter = mcp.name.charAt(0).toUpperCase();
   return (
-    <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 overflow-hidden">
-      {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt={mcp.name}
-          className="w-full h-full object-cover rounded"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
-          }}
-        />
-      ) : null}
-      <div className={logoUrl ? "hidden" : "block"}>
-        <Skeleton className="h-6 w-6" />
-      </div>
+    <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 overflow-hidden rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+      {firstLetter}
     </div>
   );
 };
@@ -59,7 +27,11 @@ const MCPConfigurationItem: React.FC<{
   onRemove: (index: number) => void;
   onConfigureTools?: (index: number) => void;
 }> = ({ mcp, index, onEdit, onRemove, onConfigureTools }) => {
-  const { data: profiles = [] } = useCredentialProfilesForMcp(mcp.qualifiedName);
+  const qualifiedNameForLookup =
+    mcp.customType === 'composio' || mcp.isComposio
+      ? mcp.mcp_qualified_name || mcp.config?.mcp_qualified_name || mcp.qualifiedName
+      : mcp.qualifiedName;
+  const { data: profiles = [] } = useCredentialProfilesForMcp(qualifiedNameForLookup);
   const profileId = mcp.selectedProfileId || mcp.config?.profile_id;
   const selectedProfile = profiles.find(p => p.profile_id === profileId);
   

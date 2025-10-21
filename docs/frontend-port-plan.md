@@ -24,13 +24,15 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - Ported core hooks/utilities under `frontend/src/hooks/react-query/composio/` (toolkits, profiles, triggers, mutations, utils).
 - Added diagnostics page `/composio-test` with health check, search, and connector launch (`frontend/src/app/(dashboard)/composio-test/page.tsx`).
 - Ported connector/tool manager components (`frontend/src/components/agents/composio/*`).
+- Integrated the Composio registry and tools manager into agent configuration (`frontend/src/components/agents/mcp/mcp-configuration-new.tsx`) including MCP list updates and agent MCP mutation hook.
+- Ported the credential/connections manager (`/settings/credentials`) with bulk actions, MCP URL viewer, and registry shortcut.
+- Tool selector now tolerates missing `/secure-mcp/composio-profiles/save-tools` endpoint (logs + soft-fall back) so agents still get their tools via the agent update path.
 - Remaining:
-  - Integrate connector/tools manager into agent settings so discovery isn’t dashboard-only.
-  - Add credential list/bulk actions (registry, connections section) once backend endpoints are verified.
   - Re-enable tool save endpoint when backend supports `/secure-mcp/composio-profiles/save-tools`.
 
 ### 3. Knowledge Base & Templates ☐
-- TODO: port knowledge base components and templates route; ensure Supabase queries align.
+- Ported knowledge base manager page (`/knowledge`) with folders/files UI, including new `knowledge-base/*` components, Supabase-driven hooks, and sidebar navigation.
+- TODO: template catalog parity review (marketplace tab still disabled upstream); confirm backend endpoints for publishing/cloning templates.
 
 ### 4. Subscription & Billing Flows ☐
 - TODO: port subscription pages/hooks and reconcile UI with billing integration checks.
@@ -40,6 +42,8 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 
 ### 6. Supporting Hooks & Shared Utilities 🚧
 - Added Composio hook suite; triggers powered by backend API client.
+- Brought in `use-update-agent-mcps` to let registry invalidate agent cache on connector changes.
+- Upgraded `DataTable` to support row selection/header actions required by the Composio connections grid.
 - TODO: port other upstream helpers (`use-model-selection`, `use-thread-agent-status`, realtime/VAPI hooks, telemetry helpers) as needed by upcoming surfaces.
 
 ## Testing & Validation
@@ -50,6 +54,7 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
   - Knowledge base upload + search.
   - Subscription upgrade path.
 - Regression: ensure existing sidebar and dashboard widgets still render; run `pnpm lint` and `pnpm test` in `frontend`.
+- ✅ `pnpm build` (frontend) after Composio integration refresh.
 
 ## Rollout Considerations
 - Stagger releases per workstream behind feature flags if necessary.
