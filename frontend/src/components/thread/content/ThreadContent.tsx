@@ -469,6 +469,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     // In playback mode, we use visibleMessages instead of messages
     const displayMessages = readOnly && visibleMessages ? visibleMessages : messages;
 
+    const latestStatus = [...displayMessages].reverse().find(msg => msg.type === 'status');
+    const latestStatusContent = latestStatus ? safeJsonParse<ParsedContent>(latestStatus.content, {}) : undefined;
+    const latestStatusType = latestStatusContent?.status_type;
+    const latestStatusText = typeof latestStatusContent?.message === 'string'
+        ? latestStatusContent.message.trim()
+        : undefined;
+    const terminalStatusTypes = new Set(['finish', 'tool_failed', 'thread_run_end', 'thread_run_error']);
+    const hasTerminalStatus = latestStatusType ? terminalStatusTypes.has(latestStatusType) : false;
+    const shouldShowToolFailureBanner = latestStatusType === 'tool_failed' && latestStatusText;
+
     const handleScroll = () => {
         if (!messagesContainerRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -1084,7 +1094,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                             })()}
                             {((agentStatus === 'running' || agentStatus === 'connecting') && !streamingTextContent &&
                                 !readOnly &&
-                                (messages.length === 0 || messages[messages.length - 1].type === 'user')) && (
+                                (messages.length === 0 || messages[messages.length - 1].type === 'user') &&
+                                !hasTerminalStatus) && (
                                     <div ref={latestMessageRef} className='w-full h-22 rounded'>
                                         <div className="flex flex-col gap-2">
                                             {/* Logo positioned above the loader */}
@@ -1102,6 +1113,15 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         </div>
                                     </div>
                                 )}
+
+                            {shouldShowToolFailureBanner && (
+                                <div ref={latestMessageRef} className="flex justify-start">
+                                    <div className="flex max-w-[85%] items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                                        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                        <span>{latestStatusText}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* For playback mode - Show tool call animation if active */}
                             {readOnly && currentToolCall && (
