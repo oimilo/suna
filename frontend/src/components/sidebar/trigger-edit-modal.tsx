@@ -11,13 +11,13 @@ import { toast } from 'sonner';
 interface TriggerWithAgent {
   trigger_id: string;
   agent_id: string;
-  agent_name: string;
+  agent_name?: string;
   agent_description?: string;
   trigger_type: string;
   name: string;
   description?: string;
   is_active: boolean;
-  config: Record<string, any>;
+  config?: Record<string, any>;
   created_at: string;
   updated_at: string;
   provider_id?: string;

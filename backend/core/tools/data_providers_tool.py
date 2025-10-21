@@ -142,7 +142,8 @@ class DataProvidersTool(Tool):
                     f"Bloqueado: '{service_name}' não faz parte do catálogo de data_providers. "
                     f"Somente serviços públicos são aceitos: {available}. "
                     "Se você está trabalhando com um app gerenciado via Composio/MCP (Google Calendar, Trello, Slack, etc.), "
-                    "continue no fluxo MCP usando discover_user_mcp_servers/configure_profile_for_agent + call_mcp_tool em vez de execute_data_provider_call."
+                    "continue no fluxo MCP usando discover_user_mcp_servers/configure_profile_for_agent e, depois, "
+                    "invoque diretamente a ferramenta MCP correspondente (ex.: `googlecalendar_list_events`) em vez de execute_data_provider_call."
                 )
             
             data_provider = self.register_data_providers[service_name]
@@ -155,7 +156,8 @@ class DataProvidersTool(Tool):
                 return self.fail_response(
                     f"O endpoint '{route}' não existe para o data_provider '{service_name}'. "
                     "Reveja os endpoints com get_data_provider_endpoints. "
-                    "Se a intenção era acionar uma ação MCP autenticada, volte para o fluxo Composio (discover → configure → call_mcp_tool)."
+                    "Se a intenção era acionar uma ação MCP autenticada, volte para o fluxo Composio (discover → configure) "
+                    "e chame o método MCP retornado pelo discovery (por exemplo, `googlecalendar_list_events`)."
                 )
             
             

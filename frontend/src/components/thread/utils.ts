@@ -386,8 +386,6 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['web_search', 'Pesquisando na Web'],
   ['see_image', 'Visualizando Imagem'],
   
-  ['call_mcp_tool', 'Ferramenta Externa'],
-
   ['update_agent', 'Atualizando Agente'],
   ['get_current_agent_config', 'Obtendo Config do Agente'],
   ['search_mcp_servers', 'Pesquisando Servidores MCP'],

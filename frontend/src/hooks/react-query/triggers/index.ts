@@ -5,4 +5,5 @@ export {
   useUpdateTrigger,
   useDeleteTrigger,
   useToggleTrigger
-} from './use-agent-triggers'; 
+} from './use-agent-triggers';
+export { useAllTriggers, type TriggerWithAgent } from './use-all-triggers';

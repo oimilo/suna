@@ -28,7 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AgentTriggersConfiguration } from '../agents/triggers/agent-triggers-configuration';
-import { useAllTriggers } from '@/hooks/react-query/triggers/use-all-triggers';
+import { useAllTriggers } from '@/hooks/react-query/triggers';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -45,15 +45,9 @@ export function NavAutomations({ className }: NavAutomationsProps) {
   const isCollapsed = state === 'collapsed';
   
   // Fetch real data
-  const { data: triggersData, isLoading } = useAllTriggers({
-    per_page: 10,
-    is_active: true, // Only show active triggers in sidebar
-    sort_by: 'updated_at',
-    sort_order: 'desc'
-  });
-
-  const triggers = triggersData?.triggers || [];
-  const displayedTriggers = showAll ? triggers : triggers.slice(0, 3);
+  const { data: triggers = [], isLoading } = useAllTriggers();
+  const activeTriggers = triggers.filter((trigger) => trigger.is_active);
+  const displayedTriggers = showAll ? activeTriggers : activeTriggers.slice(0, 3);
 
   const handleTriggerClick = (trigger: any) => {
     setSelectedTrigger(trigger);
@@ -74,23 +68,21 @@ export function NavAutomations({ className }: NavAutomationsProps) {
         return Zap;
     }
   };
-  
-  const getNextRunText = (trigger: any) => {
-    if (trigger.next_execution) {
-      return formatDistanceToNow(new Date(trigger.next_execution), {
-        addSuffix: true,
-        locale: ptBR
-      });
-    }
-    if (trigger.last_execution) {
-      return `Última: ${formatDistanceToNow(new Date(trigger.last_execution), {
-        addSuffix: true,
-        locale: ptBR
-      })}`;
-    }
-    return null;
+
+  const getScheduleText = (trigger: any) => {
+    const cron = trigger.config?.cron_expression;
+    if (!cron) return null;
+    return cron;
   };
 
+  const getUpdatedText = (trigger: any) => {
+    if (!trigger.updated_at) return null;
+    return formatDistanceToNow(new Date(trigger.updated_at), {
+      addSuffix: true,
+      locale: ptBR
+    });
+  };
+  
   if (isCollapsed) {
     return (
       <SidebarGroup className={className}>
@@ -149,7 +141,8 @@ export function NavAutomations({ className }: NavAutomationsProps) {
               <>
                 {displayedTriggers.map((trigger) => {
                   const Icon = getTriggerIcon(trigger.trigger_type);
-                  const nextRunText = getNextRunText(trigger);
+                  const scheduleText = getScheduleText(trigger);
+                  const updatedText = getUpdatedText(trigger);
                   
                   return (
                     <SidebarMenuItem key={trigger.trigger_id}>
@@ -177,9 +170,14 @@ export function NavAutomations({ className }: NavAutomationsProps) {
                               <span className="text-[10px] text-muted-foreground truncate">
                                 {trigger.agent_name}
                               </span>
-                              {nextRunText && (
+                              {(scheduleText || updatedText) && (
                                 <span className="text-[10px] text-muted-foreground">
-                                  • {nextRunText}
+                                  {[
+                                    scheduleText,
+                                    updatedText ? `Atualizado ${updatedText}` : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' • ')}
                                 </span>
                               )}
                             </div>
@@ -191,14 +189,14 @@ export function NavAutomations({ className }: NavAutomationsProps) {
                   );
                 })}
                 
-                {triggers.length > 3 && (
+                {activeTriggers.length > 3 && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       onClick={() => setShowAll(!showAll)}
                       className="w-full justify-center px-2 py-1 h-auto"
                     >
                       <span className="text-xs text-muted-foreground">
-                        {showAll ? 'Mostrar menos' : `Ver mais ${triggers.length - 3}`}
+                        {showAll ? 'Mostrar menos' : `Ver mais ${activeTriggers.length - 3}`}
                       </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -230,7 +228,7 @@ export function NavAutomations({ className }: NavAutomationsProps) {
                 <Link href="/automations" className="w-full justify-between">
                   <span className="text-xs font-medium">Ver todas</span>
                   <Badge variant="secondary" className="text-[10px] px-1 h-4">
-                    {triggers.length}
+                    {activeTriggers.length}
                   </Badge>
                 </Link>
               </SidebarMenuButton>
