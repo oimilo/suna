@@ -199,19 +199,28 @@ export class FileNameValidator {
 }
 
 /**
- * Hook for real-time name validation with debouncing
+ * Hook for real-time name validation with conflict checking
  */
-export function useNameValidation(name: string, itemType: 'file' | 'folder' = 'file', existingNames: string[] = []) {
+export function useNameValidation(
+  name: string,
+  itemType: 'file' | 'folder' = 'file',
+  existingNames: string[] = [],
+) {
   const validation = FileNameValidator.validateName(name, itemType);
   const hasConflict = validation.isValid && FileNameValidator.checkNameConflict(name, existingNames);
-  
+
   return {
     isValid: validation.isValid && !hasConflict,
-    error: hasConflict 
+    error: hasConflict
       ? `A ${itemType} with this name already exists`
       : validation.error,
     friendlyError: hasConflict
       ? `A ${itemType} with this name already exists`
-      : FileNameValidator.getFriendlyErrorMessage(name, itemType)
+      : FileNameValidator.getFriendlyErrorMessage(name, itemType),
   };
 }
+
+/**
+ * Hook for real-time name validation with debouncing
+ */
+// Deprecated duplicate removed; keep a single exported hook above.
