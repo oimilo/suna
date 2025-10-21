@@ -71,9 +71,10 @@ export function AutomationCard({
   };
 
   const Icon = getTriggerIcon();
-  
-  const successRate = trigger.execution_count > 0 
-    ? Math.round((trigger.success_count / trigger.execution_count) * 100)
+  const executionCount = trigger.execution_count ?? 0;
+  const successCount = trigger.success_count ?? 0;
+  const successRate = executionCount > 0
+    ? Math.round((successCount / executionCount) * 100)
     : 0;
 
   const getStatusColor = () => {
@@ -184,7 +185,7 @@ export function AutomationCard({
           <div className="flex items-center gap-1.5">
             <Activity className={cn("h-3 w-3", getStatusColor())} />
             <span className="text-muted-foreground">
-              {trigger.execution_count} execuções
+              {executionCount} execuções
             </span>
           </div>
           {successRate > 0 && (
