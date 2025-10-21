@@ -9,7 +9,7 @@ from core.agentpress.thread_manager import ThreadManager
 
 @tool_metadata(
     display_name="Terminal & Commands",
-    description="Run commands, install packages, and execute scripts in your workspace",
+    description="Run commands, install packages, and execute scripts in your workspace. **Never use this tool to trigger MCP integrations (`call_mcp_tool`, curl localhost, etc.) — use the dedicated `call_mcp_tool` function instead.**",
     icon="Terminal",
     color="bg-gray-100 dark:bg-gray-800/50",
     is_core=True,
@@ -50,7 +50,7 @@ class SandboxShellTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "execute_command",
-            "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations.",
+            "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations. ⚠️ Do not use this tool to trigger MCP integrations (e.g., `call_mcp_tool`, `curl http://localhost:8001`).",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -90,6 +90,14 @@ class SandboxShellTool(SandboxToolsBase):
         timeout: int = 60
     ) -> ToolResult:
         try:
+            lower_cmd = command.lower()
+            if "call_mcp_tool" in lower_cmd or "localhost:8001/call_mcp_tool" in lower_cmd:
+                return self.fail_response(
+                    "Comandos MCP devem usar o tool `call_mcp_tool` diretamente (descubra com "
+                    "`discover_user_mcp_servers` e depois invoque o nome qualificado). "
+                    "Evite shell/curl para acionar MCP."
+                )
+
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
             

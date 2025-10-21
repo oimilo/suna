@@ -14,6 +14,33 @@ class CustomMCPHandler:
         self.connection_manager = connection_manager
         self.custom_tools = {}
     
+    @staticmethod
+    def _normalize_tool_name(name: Any) -> str:
+        if not name:
+            return ""
+        normalized = str(name).strip().lower()
+        for char in ("-", " ", ".", "/", ":"):
+            normalized = normalized.replace(char, "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return normalized
+    
+    @classmethod
+    def _is_tool_enabled(cls, tool_name: str, enabled_tools: List[str]) -> bool:
+        if not enabled_tools:
+            return True
+        if tool_name in enabled_tools:
+            return True
+        normalized_tool = cls._normalize_tool_name(tool_name)
+        for candidate in enabled_tools:
+            if not candidate:
+                continue
+            if candidate in ("*", "all"):
+                return True
+            if cls._normalize_tool_name(candidate) == normalized_tool:
+                return True
+        return False
+    
     async def initialize_custom_mcps(self, custom_configs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         initialization_tasks = []
         
@@ -165,7 +192,12 @@ class CustomMCPHandler:
         
         for tool in tools:
             tool_name_from_server = tool.name
-            if not enabled_tools or tool_name_from_server in enabled_tools:
+            if self._is_tool_enabled(tool_name_from_server, enabled_tools):
+                if enabled_tools and tool_name_from_server not in enabled_tools:
+                    logger.debug(
+                        f"Normalized custom MCP tool name '{tool_name_from_server}' matched "
+                        f"configured list {enabled_tools}"
+                    )
                 tool_name = f"custom_{server_name.replace(' ', '_').lower()}_{tool_name_from_server}"
                 self.custom_tools[tool_name] = {
                     'name': tool_name,
@@ -187,7 +219,12 @@ class CustomMCPHandler:
         
         for tool_info in tools_info:
             tool_name_from_server = tool_info['name']
-            if not enabled_tools or tool_name_from_server in enabled_tools:
+            if self._is_tool_enabled(tool_name_from_server, enabled_tools):
+                if enabled_tools and tool_name_from_server not in enabled_tools:
+                    logger.debug(
+                        f"Normalized custom MCP tool name '{tool_name_from_server}' matched "
+                        f"configured list {enabled_tools}"
+                    )
                 tool_name = f"custom_{server_name.replace(' ', '_').lower()}_{tool_name_from_server}"
                 self.custom_tools[tool_name] = {
                     'name': tool_name,

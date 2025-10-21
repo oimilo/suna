@@ -100,6 +100,36 @@ class MCPService:
         self._logger = logger
         self._connections: Dict[str, MCPConnection] = {}
         self._encryption_service = EncryptionService()
+    
+    def _normalize_tool_name(self, name: Optional[str]) -> str:
+        if not name:
+            return ""
+        normalized = str(name).strip().lower()
+        for char in ("-", " ", ".", "/", ":"):
+            normalized = normalized.replace(char, "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return normalized
+    
+    def _tool_name_in_list(self, tool_name: str, names: Optional[List[str]]) -> bool:
+        if not names:
+            return True
+        if tool_name in names:
+            return True
+        normalized_target = self._normalize_tool_name(tool_name)
+        for candidate in names:
+            if not candidate:
+                continue
+            if candidate in ("*", "all"):
+                return True
+            if self._normalize_tool_name(candidate) == normalized_target:
+                if candidate != tool_name:
+                    self._logger.debug(
+                        f"Normalized MCP tool name match: requested '{tool_name}' "
+                        f"matched configured '{candidate}'"
+                    )
+                return True
+        return False
 
     async def connect_server(self, mcp_config: Dict[str, Any], external_user_id: Optional[str] = None) -> MCPConnection:
         # Determine provider from type field
@@ -240,7 +270,7 @@ class MCPService:
                 continue
             
             for tool in connection.tools:
-                if tool.name not in connection.enabled_tools:
+                if not self._tool_name_in_list(tool.name, connection.enabled_tools):
                     continue
                 
                 openapi_tool = {
@@ -266,14 +296,20 @@ class MCPService:
     async def _execute_tool_internal(self, request: ToolExecutionRequest) -> ToolExecutionResult:
         self._logger.debug(f"Executing tool: {request.tool_name}")
         
-        connection = self._find_tool_connection(request.tool_name)
-        if not connection:
+        connection, resolved_tool_name = self._find_tool_connection(request.tool_name)
+        if not connection or not resolved_tool_name:
             raise MCPToolNotFoundError(f"Tool not found: {request.tool_name}")
         
         if not connection.session:
             raise MCPToolExecutionError(f"No active session for tool: {request.tool_name}")
         
-        if request.tool_name not in connection.enabled_tools:
+        if resolved_tool_name != request.tool_name:
+            self._logger.debug(
+                f"Normalized MCP tool request '{request.tool_name}' to '{resolved_tool_name}'"
+            )
+            request.tool_name = resolved_tool_name
+        
+        if not self._tool_name_in_list(request.tool_name, connection.enabled_tools):
             raise MCPToolExecutionError(f"Tool not enabled: {request.tool_name}")
         
         try:
@@ -308,16 +344,20 @@ class MCPService:
                 error=error_msg
             )
     
-    def _find_tool_connection(self, tool_name: str) -> Optional[MCPConnection]:
+    def _find_tool_connection(self, tool_name: str) -> Tuple[Optional[MCPConnection], Optional[str]]:
+        normalized_target = self._normalize_tool_name(tool_name)
         for connection in self.get_all_connections():
             if not connection.tools:
                 continue
             
             for tool in connection.tools:
                 if tool.name == tool_name:
-                    return connection
+                    return connection, tool.name
+                
+                if self._normalize_tool_name(tool.name) == normalized_target:
+                    return connection, tool.name
         
-        return None
+        return None, None
 
     async def discover_custom_tools(self, request_type: str, config: Dict[str, Any]) -> CustomMCPConnectionResult:
         # Preserve upstream behavior but add graceful fallback between HTTP and SSE
