@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Plug, ChevronRight, Zap, Sun, Moon } from 'lucide-react';
+import { Bot, Menu, Plus, Plug, ChevronRight, Zap, Sun, Moon, BookOpen } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
@@ -250,6 +250,16 @@ export function SidebarLeft({
                   <Zap className="h-4 w-4 mr-1" />
                   <span className="flex items-center justify-between w-full">
                     Automações
+                  </span>
+                </SidebarMenuButton>
+              </Link>
+              <Link href="/knowledge">
+                <SidebarMenuButton className={cn({
+                  'bg-accent text-accent-foreground font-medium': pathname === '/knowledge',
+                })}>
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  <span className="flex items-center justify-between w-full">
+                    Base de Conhecimento
                   </span>
                 </SidebarMenuButton>
               </Link>

@@ -239,11 +239,25 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
     if (!profileId) return;
     setIsSaving(true);
     try {
-      await backendApi.post('/secure-mcp/composio-profiles/save-tools', {
-        profile_id: profileId,
-        agent_id: agentId,
-        enabled_tools: selectedTools,
-      });
+      const saveResponse = await backendApi.post(
+        '/secure-mcp/composio-profiles/save-tools',
+        {
+          profile_id: profileId,
+          agent_id: agentId,
+          enabled_tools: selectedTools,
+        },
+        { showErrors: false }
+      );
+
+      if (!saveResponse.success) {
+        const status = saveResponse.error?.status;
+        if (status === 404) {
+          console.info('composio-profiles/save-tools not available; continuing without persisting profile tools');
+        } else {
+          throw saveResponse.error ?? new Error('Failed to save tools');
+        }
+      }
+
       toast.success('Tools saved successfully');
       await onSave?.();
     } catch (err) {
