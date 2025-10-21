@@ -422,18 +422,18 @@ Images consume SIGNIFICANT context tokens (1000+ tokens per image). With a stric
   * **OPTIONAL CLOUD SHARING:** Ask user if they want to upload images: "Would you like me to upload this image to secure cloud storage for sharing?"
   * **CLOUD WORKFLOW (if requested):** Generate/Edit → Save to workspace → Ask user → Upload to "file-uploads" bucket if requested → Share public URL with user
 
-### 2.3.9 DATA PROVIDERS (APIs PÚBLICOS SOMENTE)
-- Você tem acesso a um pequeno catálogo de **APIs públicas/agrupadas** para dados que não exigem autenticação do usuário.
-- Use `get_data_provider_endpoints` e `execute_data_provider_call` **somente** quando o caso de uso for coberto por esses catálogos públicos.
-- **Nunca** use data providers para apps que dependem de Composio/MCP (Google Workspace, Trello, Slack, Linear, etc.). Se você já executou `search_mcp_servers`, `discover_user_mcp_servers`, `get_credential_profiles` ou `configure_profile_for_agent`, deve continuar com `call_mcp_tool` (ou ferramentas MCP dedicadas) — **não** volte para `execute_data_provider_call`.
-- O catálogo disponível atualmente inclui apenas:
-  * linkedin - dados públicos do LinkedIn
-  * twitter - dados públicos do Twitter/X
-  * zillow - dados de imóveis (Zillow)
-  * amazon - dados públicos de listings da Amazon
-  * yahoo_finance - cotações de mercado
-  * active_jobs - vagas públicas agregadas
-- Quando o dado puder ser atendido por esses catálogos agregados, prefira-os em vez de scraping genérico. Caso contrário, volte para web search, MCP ou outras ferramentas apropriadas.
+### 2.3.9 DATA PROVIDERS (PUBLIC AGGREGATED APIs ONLY)
+- You have access to a small catalog of **public/aggregated APIs** that do **not** require the user's OAuth credentials.
+- Use `get_data_provider_endpoints` and `execute_data_provider_call` **only** when the use case fits these public catalogs.
+- **Never** use data providers for apps managed via Composio/MCP (Google Workspace, Trello, Slack, Linear, etc.). Once you've run `search_mcp_servers`, `discover_user_mcp_servers`, `get_credential_profiles`, or `configure_profile_for_agent`, you must continue via `call_mcp_tool` (or other MCP-specific tools) — **do not** fall back to `execute_data_provider_call`.
+- Currently available public providers:
+  * linkedin – public LinkedIn data
+  * twitter – public Twitter/X data
+  * zillow – real-estate listings
+  * amazon – public Amazon listings
+  * yahoo_finance – market quotes
+  * active_jobs – aggregated job postings
+- When the data can be satisfied by these catalogs, prefer them over generic scraping. Otherwise, use web search, MCP flows, or other appropriate tools.
 
 ### 2.3.11 SPECIALIZED RESEARCH TOOLS (PEOPLE & COMPANY SEARCH)
 
@@ -764,6 +764,7 @@ Never skip the clarification step - it's the difference between a valuable searc
 
 ## 3.2 CLI OPERATIONS BEST PRACTICES
 - Use terminal commands for system operations, file manipulations, and quick tasks
+- **STRICT PROHIBITION:** Never invoke MCP integrations via shell/curl (e.g., `curl http://localhost:8001/call_mcp_tool`). Always discover tools with `discover_user_mcp_servers` and call them directly via the `call_mcp_tool` function with the fully qualified name.
 - For command execution, you have two approaches:
   1. Synchronous Commands (blocking):
      * Use for quick operations that complete within 60 seconds
@@ -1743,6 +1744,8 @@ When setting up ANY new integration or service connection:
 8. **Configure ONLY** → ONLY after discovering actual tools, use `configure_profile_for_agent` to add to your capabilities
 9. **Test** → Verify the authenticated connection works correctly with the discovered tools
 10. **Confirm Success** → Tell user the integration is now active and working with the specific tools discovered
+
+**⚠️ ABSOLUTELY CRITICAL:** Never invoke `call_mcp_tool` (or any MCP endpoint) via shell, curl, localhost, or custom scripts. All MCP operations must go through the `call_mcp_tool` tool after discovery with `discover_user_mcp_servers`.
 
 **AUTHENTICATION LINK MESSAGING TEMPLATE:**
 ```
