@@ -165,12 +165,38 @@ class MCPSearchTool(AgentBuilderBaseTool):
             
             profile = None
             for p in profiles:
-                if p.profile_id == profile_id:
+                identifiers = {
+                    p.profile_id,
+                    p.profile_name,
+                    getattr(p, "display_name", None),
+                }
+                if profile_id in identifiers:
                     profile = p
                     break
+
+            if not profile:
+                lowered = profile_id.lower()
+                for p in profiles:
+                    identifiers = {
+                        str(p.profile_id).lower(),
+                        (p.profile_name or "").lower(),
+                        (getattr(p, "display_name", "") or "").lower(),
+                    }
+                    if lowered in identifiers:
+                        profile = p
+                        break
             
             if not profile:
-                return self.fail_response(f"Composio profile {profile_id} not found")
+                available_profiles = ", ".join(p.profile_name for p in profiles if p.profile_name)
+                hint = ""
+                if available_profiles:
+                    hint = f" Available profiles: {available_profiles}."
+                return self.fail_response(
+                    f"Composio profile '{profile_id}' not found.{hint} "
+                    "Use `get_credential_profiles` to list valid profile IDs/names."
+                )
+
+            profile_id = profile.profile_id
             
             if not profile.is_connected:
                 return self.fail_response("Profile is not connected yet. Please connect the profile first.")

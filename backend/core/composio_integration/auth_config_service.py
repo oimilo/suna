@@ -4,6 +4,7 @@ from core.utils.logger import logger
 from pydantic import BaseModel
 
 from .client import ComposioClient
+from .toolkit_service import ToolkitService
 
 
 class AuthConfig(BaseModel):
@@ -17,6 +18,7 @@ class AuthConfig(BaseModel):
 class AuthConfigService:
     def __init__(self, api_key: Optional[str] = None):
         self.client = ComposioClient.get_client(api_key)
+        self.toolkit_service = ToolkitService(api_key)
     
     def _convert_field_value(self, value: str, field_type: str) -> Union[str, bool, float]:
         if field_type == 'boolean':
@@ -44,52 +46,123 @@ class AuthConfigService:
             logger.debug(f"Initiation fields: {initiation_fields}")
             logger.debug(f"Custom auth config provided: {bool(custom_auth_config)}")
             logger.debug(f"Use custom auth: {use_custom_auth}")
+
+            detailed_toolkit = await self.toolkit_service.get_detailed_toolkit_info(toolkit_slug)
+            available_schemes = []
+            if detailed_toolkit and detailed_toolkit.auth_schemes:
+                available_schemes = [scheme.upper() for scheme in detailed_toolkit.auth_schemes if scheme]
+
+            provided_scheme = None
+            if custom_auth_config:
+                provided_scheme = custom_auth_config.get("auth_scheme") or custom_auth_config.get("authScheme")
+            if not provided_scheme and initiation_fields:
+                provided_scheme = initiation_fields.get("auth_scheme") or initiation_fields.get("authScheme")
+            if provided_scheme:
+                provided_scheme = str(provided_scheme).upper()
+
+            preferred_scheme = provided_scheme
+            if not preferred_scheme:
+                if "OAUTH2" in available_schemes:
+                    preferred_scheme = "OAUTH2"
+                elif available_schemes:
+                    preferred_scheme = available_schemes[0]
+                else:
+                    preferred_scheme = "OAUTH2"
+
+            existing_configs = await self.list_auth_configs(toolkit_slug)
+            matching_existing = next(
+                (
+                    cfg for cfg in existing_configs
+                    if (cfg.auth_scheme or "").upper() == preferred_scheme
+                ),
+                None,
+            )
+            if not matching_existing and existing_configs:
+                # fall back to any existing when scheme didn't match
+                matching_existing = existing_configs[0]
+
+            if matching_existing and not use_custom_auth:
+                logger.debug(
+                    "Reusing existing auth config %s for toolkit %s (scheme=%s)",
+                    matching_existing.id,
+                    toolkit_slug,
+                    matching_existing.auth_scheme,
+                )
+                return matching_existing
             
             # If custom auth config is provided, use it for credentials
-            if use_custom_auth and custom_auth_config:
-                logger.debug("Creating custom auth config with user-provided credentials")
-                
-                # Build credentials from custom auth config fields
-                credentials = {}
-                for field_name, field_value in custom_auth_config.items():
-                    if field_value:
-                        credentials[field_name] = str(field_value)
-                
-                logger.debug(f"Using custom credentials (keys): {list(credentials.keys())}")
-                
-                response = self.client.auth_configs.create(
-                    toolkit={
-                        "slug": toolkit_slug
-                    },
-                    auth_config={
-                        "type": "use_custom_auth",
-                        "credentials": credentials,
-                        "authScheme": "OAUTH2"
-                    }
-                )
-            else:
-                # Standard Composio-managed auth
-                credentials = {"region": "ind"}
-                
+            should_use_custom_auth = (
+                use_custom_auth
+                or (detailed_toolkit and not detailed_toolkit.supports_managed_auth)
+                or preferred_scheme != "OAUTH2"
+            )
+
+            def _merged_credentials() -> Dict[str, Any]:
+                merged: Dict[str, Any] = {}
                 if initiation_fields:
-                    for field_name, field_value in initiation_fields.items():
-                        if field_value:
-                            if field_name == "suffix.one":
-                                credentials["extension"] = str(field_value)
-                            else:
-                                credentials[field_name] = str(field_value)
-                
-                logger.debug(f"Using composio-managed credentials: {credentials}")
-                
-                response = self.client.auth_configs.create(
-                    toolkit={
-                        "slug": toolkit_slug
-                    },
-                    auth_config={
-                        "type": "use_composio_managed_auth",
-                        "credentials": credentials
-                    }
-                )
+                    merged.update({k: v for k, v in initiation_fields.items() if v not in (None, "")})
+                if custom_auth_config:
+                    merged.update({k: v for k, v in custom_auth_config.items() if v not in (None, "")})
+                for noise_key in ("auth_scheme", "authScheme", "profile_name", "profileId", "profile_id", "display_name"):
+                    merged.pop(noise_key, None)
+                return merged
+
+            if should_use_custom_auth:
+                logger.debug("Creating custom auth config (scheme=%s)", preferred_scheme)
+                credentials = _merged_credentials()
+
+                required_fields: List[str] = []
+                if detailed_toolkit and detailed_toolkit.auth_config_details:
+                    for detail in detailed_toolkit.auth_config_details:
+                        if not detail.fields:
+                            continue
+                        for field_group, requirement_map in detail.fields.items():
+                            if preferred_scheme and field_group and field_group.upper() not in {preferred_scheme, f"{preferred_scheme}_AUTH"}:
+                                continue
+                            for requirement, fields in requirement_map.items():
+                                for field in fields:
+                                    field_name = field.name or field.displayName
+                                    if not field_name:
+                                        continue
+                                    if requirement == "required" or field.required:
+                                        required_fields.append(field_name)
+                missing_fields = [
+                    field for field in required_fields
+                    if not credentials.get(field)
+                ]
+                if missing_fields:
+                    raise ValueError(
+                        f"Missing required credential fields for {toolkit_slug}: {', '.join(missing_fields)}"
+                    )
+
+                auth_config_payload = {
+                    "type": "use_custom_auth",
+                    "authScheme": preferred_scheme,
+                    "credentials": credentials,
+                }
+            else:
+                credentials = _merged_credentials()
+                logger.debug("Creating managed auth config for toolkit %s", toolkit_slug)
+                auth_config_payload = {
+                    "type": "use_composio_managed_auth",
+                }
+                if preferred_scheme:
+                    auth_config_payload["authScheme"] = preferred_scheme
+                if credentials:
+                    auth_config_payload["credentials"] = credentials
+            
+            auth_config_payload["name"] = (
+                (initiation_fields or {}).get("auth_config_name")
+                or (custom_auth_config or {}).get("name")
+                or f"{toolkit_slug}-auth"
+            )
+
+            response = self.client.auth_configs.create(
+                toolkit={
+                    "slug": toolkit_slug
+                },
+                auth_config=auth_config_payload
+            )
             
             auth_config_obj = response.auth_config
             
