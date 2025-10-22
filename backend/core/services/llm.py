@@ -14,6 +14,7 @@ from litellm.files.main import ModelResponse
 from core.utils.logger import logger
 from core.utils.config import config
 from core.agentpress.error_processor import ErrorProcessor
+from core.ai_models.ai_models import ModelCapability
 
 # Configure LiteLLM
 # os.environ['LITELLM_LOG'] = 'DEBUG'
@@ -250,6 +251,71 @@ async def make_llm_api_call(
         return response
         
     except Exception as e:
+        error_message = str(e)
+
+        if "image input" in error_message.lower():
+            current_model = model_manager.get_model(resolved_model_name)
+            needs_vision_fallback = (not current_model) or (not current_model.supports_vision)
+
+            if needs_vision_fallback:
+                preferred_ids = [
+                    "openai/gpt-4o-mini",
+                    "openai/gpt-4o",
+                    "gemini/gemini-2.5-flash-lite",
+                    "openrouter/google/gemini-2.5-flash-lite",
+                ]
+
+                fallback_model = None
+                for candidate_id in preferred_ids:
+                    candidate = model_manager.get_model(candidate_id)
+                    if candidate and candidate.supports_vision and candidate.id != resolved_model_name:
+                        fallback_model = candidate
+                        break
+
+                if (not fallback_model):
+                    fallback_model = model_manager.select_best_model(
+                        tier="free",
+                        required_capabilities=[ModelCapability.VISION],
+                        prefer_cheaper=True
+                    )
+
+                if (not fallback_model) or fallback_model.id == resolved_model_name:
+                    fallback_model = model_manager.select_best_model(
+                        tier="paid",
+                        required_capabilities=[ModelCapability.VISION],
+                        prefer_cheaper=True
+                    )
+
+                if fallback_model and fallback_model.id != resolved_model_name:
+                    logger.warning(
+                        f"🔄 Vision fallback: model '{resolved_model_name}' rejected image input. "
+                        f"Retrying with '{fallback_model.id}'."
+                    )
+                    try:
+                        resolved_model_name = fallback_model.id
+                        params = model_manager.get_litellm_params(resolved_model_name, **override_params)
+
+                        if model_id:
+                            params["model_id"] = model_id
+
+                        if stream:
+                            params["stream_options"] = {"include_usage": True}
+
+                        _configure_openai_compatible(params, resolved_model_name, api_key, api_base)
+                        _add_tools_config(params, tools, tool_choice)
+
+                        response = await provider_router.acompletion(**params)
+
+                        if hasattr(response, '__aiter__') and stream:
+                            return _wrap_streaming_response(response)
+
+                        return response
+                    except Exception as fallback_error:
+                        logger.error(
+                            f"Vision fallback model '{fallback_model.id}' failed: {fallback_error}"
+                        )
+                        e = fallback_error
+
         # Use ErrorProcessor to handle the error consistently
         processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
         ErrorProcessor.log_error(processed_error)
@@ -284,4 +350,3 @@ if __name__ == "__main__":
             "anthropic-beta": "context-1m-2025-08-07"  # 👈 Enable 1M context
         }
     )
-
