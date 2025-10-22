@@ -48,9 +48,23 @@ class AuthConfigService:
             logger.debug(f"Use custom auth: {use_custom_auth}")
 
             detailed_toolkit = await self.toolkit_service.get_detailed_toolkit_info(toolkit_slug)
-            available_schemes = []
-            if detailed_toolkit and detailed_toolkit.auth_schemes:
-                available_schemes = [scheme.upper() for scheme in detailed_toolkit.auth_schemes if scheme]
+
+            available_schemes: List[str] = []
+            available_managed_schemes: List[str] = []
+            if detailed_toolkit:
+                if detailed_toolkit.auth_schemes:
+                    available_schemes = [scheme.upper() for scheme in detailed_toolkit.auth_schemes if scheme]
+                if detailed_toolkit.managed_auth_schemes:
+                    available_managed_schemes = [
+                        scheme.upper() for scheme in detailed_toolkit.managed_auth_schemes if scheme
+                    ]
+            supports_managed_auth = bool(
+                detailed_toolkit
+                and (
+                    detailed_toolkit.supports_managed_auth
+                    or available_managed_schemes
+                )
+            )
 
             provided_scheme = None
             if custom_auth_config:
@@ -62,12 +76,28 @@ class AuthConfigService:
 
             preferred_scheme = provided_scheme
             if not preferred_scheme:
-                if "OAUTH2" in available_schemes:
+                if "OAUTH2" in available_managed_schemes or "OAUTH2" in available_schemes:
                     preferred_scheme = "OAUTH2"
+                elif available_managed_schemes:
+                    preferred_scheme = available_managed_schemes[0]
                 elif available_schemes:
                     preferred_scheme = available_schemes[0]
                 else:
                     preferred_scheme = "OAUTH2"
+
+            if (
+                supports_managed_auth
+                and preferred_scheme
+                and available_managed_schemes
+                and preferred_scheme not in available_managed_schemes
+            ):
+                logger.debug(
+                    "Preferred scheme %s not managed for %s. Falling back to %s",
+                    preferred_scheme,
+                    toolkit_slug,
+                    available_managed_schemes[0],
+                )
+                preferred_scheme = available_managed_schemes[0]
 
             existing_configs = await self.list_auth_configs(toolkit_slug)
             matching_existing = next(
@@ -93,15 +123,14 @@ class AuthConfigService:
             # If custom auth config is provided, use it for credentials
             should_use_custom_auth = (
                 use_custom_auth
-                or (detailed_toolkit and not detailed_toolkit.supports_managed_auth)
-                or preferred_scheme != "OAUTH2"
+                or not supports_managed_auth
             )
 
-            def _merged_credentials() -> Dict[str, Any]:
+            def _merged_credentials(include_custom: bool) -> Dict[str, Any]:
                 merged: Dict[str, Any] = {}
                 if initiation_fields:
                     merged.update({k: v for k, v in initiation_fields.items() if v not in (None, "")})
-                if custom_auth_config:
+                if include_custom and custom_auth_config:
                     merged.update({k: v for k, v in custom_auth_config.items() if v not in (None, "")})
                 for noise_key in ("auth_scheme", "authScheme", "profile_name", "profileId", "profile_id", "display_name"):
                     merged.pop(noise_key, None)
@@ -109,7 +138,7 @@ class AuthConfigService:
 
             if should_use_custom_auth:
                 logger.debug("Creating custom auth config (scheme=%s)", preferred_scheme)
-                credentials = _merged_credentials()
+                credentials = _merged_credentials(include_custom=True)
 
                 required_fields: List[str] = []
                 if detailed_toolkit and detailed_toolkit.auth_config_details:
@@ -141,7 +170,7 @@ class AuthConfigService:
                     "credentials": credentials,
                 }
             else:
-                credentials = _merged_credentials()
+                credentials = _merged_credentials(include_custom=False)
                 logger.debug("Creating managed auth config for toolkit %s", toolkit_slug)
                 auth_config_payload = {
                     "type": "use_composio_managed_auth",

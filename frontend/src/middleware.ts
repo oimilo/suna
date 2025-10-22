@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/legal',
+  '/templates',
   '/api/auth',
 ]
 

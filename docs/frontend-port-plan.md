@@ -27,11 +27,15 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - Integrated the Composio registry and tools manager into agent configuration (`frontend/src/components/agents/mcp/mcp-configuration-new.tsx`) including MCP list updates and agent MCP mutation hook.
 - Ported the credential/connections manager (`/settings/credentials`) with bulk actions, MCP URL viewer, and registry shortcut.
 - Tool selector now tolerates missing `/secure-mcp/composio-profiles/save-tools` endpoint (logs + soft-fall back) so agents still get their tools via the agent update path.
+- Backend auth flow now defaults to Composio-managed redirects (no API keys exposed) so connectors like Trello surface the proper login link.
 - Remaining:
   - Re-enable tool save endpoint when backend supports `/secure-mcp/composio-profiles/save-tools`.
 
 ### 3. Knowledge Base & Templates ☐
 - Ported knowledge base manager page (`/knowledge`) with folders/files UI, including new `knowledge-base/*` components, Supabase-driven hooks, and sidebar navigation.
+- `/agents/config` now reuses the unified knowledge base manager (tree view, folder/file assignments) so agent configuration matches upstream UX.
+- Agent configuration flows now use the upstream modal (`AgentConfigurationDialog`) with icon editor, granular tool configuration, and model selector.
+- Added public template share route (`/templates/[shareId]`) with OG image endpoint so marketplace links render for unauthenticated users.
 - TODO: template catalog parity review (marketplace tab still disabled upstream); confirm backend endpoints for publishing/cloning templates.
 
 ### 4. Subscription & Billing Flows ☐
