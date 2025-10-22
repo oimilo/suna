@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Settings, X, Key } from 'lucide-react';
 import { MCPConfiguration } from './types';
 import { useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
-import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
+import { useComposioToolkitDetails } from '@/hooks/react-query/composio/use-composio';
 
 interface ConfiguredMcpListProps {
   configuredMCPs: MCPConfiguration[];
@@ -14,26 +14,38 @@ interface ConfiguredMcpListProps {
 
 const extractAppSlug = (mcp: MCPConfiguration): string | null => {
   if (mcp.customType === 'composio' || mcp.isComposio) {
-    if (mcp.toolkitSlug) return mcp.toolkitSlug;
-    const slug =
-      mcp.config?.toolkit_slug ||
-      mcp.config?.toolkitSlug ||
-      mcp.mcp_qualified_name?.replace('composio.', '') ||
-      mcp.qualifiedName?.replace('composio.', '');
-    if (slug) return slug;
+    const explicitSlug =
+      mcp.toolkitSlug ||
+      (mcp.config?.toolkit_slug as string | undefined) ||
+      (mcp.config?.toolkitSlug as string | undefined);
+    if (explicitSlug) {
+      return explicitSlug;
+    }
+
+    const qualified =
+      mcp.mcp_qualified_name ||
+      mcp.qualifiedName ||
+      (mcp.config?.mcp_qualified_name as string | undefined) ||
+      (mcp.config?.qualifiedName as string | undefined);
+
+    if (qualified?.startsWith('composio.')) {
+      return qualified.slice('composio.'.length);
+    }
   }
   return null;
 };
 
 const MCPLogo: React.FC<{ mcp: MCPConfiguration }> = ({ mcp }) => {
   const slug = extractAppSlug(mcp);
-  const { data: iconData } = useComposioToolkitIcon(slug ?? '', { enabled: !!slug });
+  const { data: toolkitDetails } = useComposioToolkitDetails(slug ?? '', {
+    enabled: !!slug,
+  });
 
   const toolkitLogo =
     mcp.config?.toolkit_logo ||
     mcp.config?.app_logo ||
     mcp.config?.logo ||
-    iconData?.icon_url;
+    toolkitDetails?.toolkit?.logo;
 
   const firstLetter = mcp.name.charAt(0).toUpperCase();
 
