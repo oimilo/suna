@@ -147,6 +147,39 @@ export function KnowledgeBaseManager({
     });
 
     const { folders, recentFiles, loading: foldersLoading, refetch: refetchFolders } = useKnowledgeFolders();
+    const defaultFolderEnsuredRef = React.useRef(false);
+
+    const createDefaultFolder = React.useCallback(async () => {
+        if (defaultFolderEnsuredRef.current) return;
+
+        try {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session?.access_token) {
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/knowledge-base/folders`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: 'General' })
+            });
+
+            if (response.ok) {
+                defaultFolderEnsuredRef.current = true;
+                await refetchFolders();
+            } else {
+                defaultFolderEnsuredRef.current = true;
+            }
+        } catch (error) {
+            console.error('Failed to create default folder:', error);
+            defaultFolderEnsuredRef.current = true;
+        }
+    }, [refetchFolders]);
 
     // DND Sensors
     const sensors = useSensors(
@@ -287,6 +320,12 @@ export function KnowledgeBaseManager({
         fetchFolderEntries,
         loadAssignments,
     ]);
+
+    React.useEffect(() => {
+        if (!foldersLoading && folders.length === 0) {
+            createDefaultFolder();
+        }
+    }, [foldersLoading, folders.length, createDefaultFolder]);
 
     // File handling functions
     const handleFileSelect = (item: TreeItem) => {

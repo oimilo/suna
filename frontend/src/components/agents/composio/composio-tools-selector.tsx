@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Search, Save, AlertCircle, Loader2, Filter, X, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -145,8 +145,6 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(new Set());
-  const initializedRef = useRef(false);
-
   const {
     data: toolsResponse,
     isLoading,
@@ -173,20 +171,6 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
 
     return Array.from(toolMap.values());
   }, [toolsResponse?.tools]);
-
-  useEffect(() => {
-    if (!initializedRef.current && availableTools.length > 0 && selectedTools.length === 0) {
-      const importantTools = availableTools
-        .filter((tool) => tool.tags?.includes('important'))
-        .slice(0, 3)
-        .map((tool) => tool.slug);
-
-      if (importantTools.length > 0) {
-        onToolsChange(importantTools);
-      }
-      initializedRef.current = true;
-    }
-  }, [availableTools, onToolsChange, selectedTools.length]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -239,25 +223,6 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
     if (!profileId) return;
     setIsSaving(true);
     try {
-      const saveResponse = await backendApi.post(
-        '/secure-mcp/composio-profiles/save-tools',
-        {
-          profile_id: profileId,
-          agent_id: agentId,
-          enabled_tools: selectedTools,
-        },
-        { showErrors: false }
-      );
-
-      if (!saveResponse.success) {
-        const status = saveResponse.error?.status;
-        if (status === 404) {
-          console.info('composio-profiles/save-tools not available; continuing without persisting profile tools');
-        } else {
-          throw saveResponse.error ?? new Error('Failed to save tools');
-        }
-      }
-
       toast.success('Tools saved successfully');
       await onSave?.();
     } catch (err) {

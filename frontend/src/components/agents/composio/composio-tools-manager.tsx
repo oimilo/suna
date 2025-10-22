@@ -37,8 +37,9 @@ export const ComposioToolsManager: React.FC<ComposioToolsManagerProps> = ({
   const { data: profiles } = useComposioProfiles();
 
   const currentProfile = profileInfo || profiles?.find((p) => p.profile_id === profileId);
-  const { data: iconData } = useComposioToolkitIcon(currentProfile?.toolkit_slug || '', {
-    enabled: !!currentProfile?.toolkit_slug,
+  const resolvedToolkitSlug = currentProfile?.toolkit_slug || profileInfo?.toolkit_slug;
+  const { data: iconData } = useComposioToolkitIcon(resolvedToolkitSlug || '', {
+    enabled: !!resolvedToolkitSlug,
   });
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export const ComposioToolsManager: React.FC<ComposioToolsManagerProps> = ({
           profileId={currentProfile.profile_id}
           agentId={agentId}
           toolkitName={currentProfile.toolkit_name}
-          toolkitSlug={currentProfile.toolkit_slug}
+          toolkitSlug={resolvedToolkitSlug || ''}
           selectedTools={selectedTools}
           onToolsChange={setSelectedTools}
           onSave={handleSave}

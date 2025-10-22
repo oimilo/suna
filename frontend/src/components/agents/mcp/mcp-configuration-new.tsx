@@ -31,6 +31,24 @@ const resolveMcpType = (mcp: MCPConfigurationType) => {
   return undefined;
 };
 
+const resolveToolkitSlug = (mcp: MCPConfigurationType): string | undefined => {
+  if (mcp.toolkitSlug) return mcp.toolkitSlug;
+  if (mcp.config?.toolkit_slug) return mcp.config.toolkit_slug;
+  if (mcp.config?.toolkitSlug) return mcp.config.toolkitSlug;
+
+  const qualified =
+    mcp.mcp_qualified_name ||
+    mcp.qualifiedName ||
+    mcp.config?.mcp_qualified_name ||
+    mcp.config?.qualifiedName;
+
+  if (qualified?.startsWith('composio.')) {
+    return qualified.slice('composio.'.length);
+  }
+
+  return undefined;
+};
+
 export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   configuredMCPs,
   onConfigurationChange,
@@ -213,10 +231,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
                       selectedMCPForTools.config.profile_name || selectedMCPForTools.name || 'Composio Profile',
                     toolkit_name:
                       selectedMCPForTools.config.toolkit_name || selectedMCPForTools.name || 'Toolkit',
-                    toolkit_slug:
-                      selectedMCPForTools.toolkitSlug ||
-                      selectedMCPForTools.config.toolkit_slug ||
-                      selectedMCPForTools.config.profile_id,
+                    toolkit_slug: resolveToolkitSlug(selectedMCPForTools),
                   }
                 : undefined
             }
