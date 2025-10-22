@@ -142,7 +142,6 @@ const MarketplaceMetadata: React.FC<{ data: MarketplaceData }> = ({ data }) => {
     const name = mcp.display_name || mcp.qualified_name || '';
     // Remove prefixos e formata
     return name
-      .replace('pipedream_', '')
       .replace('mcp_', '')
       .split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -192,7 +191,6 @@ const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => {
     integrations = data.mcp_requirements.map(mcp => {
       const name = mcp.display_name || mcp.qualified_name || '';
       return name
-        .replace('pipedream_', '')
         .replace('mcp_', '')
         .split('_')
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -205,7 +203,6 @@ const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => {
     integrations = data.configured_mcps.map(mcp => {
       const name = mcp.name || '';
       return name
-        .replace('pipedream_', '')
         .replace('mcp_', '')
         .split('_')
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -213,7 +210,7 @@ const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => {
     });
   }
   
-  // 3. Detecta integrações das ferramentas Pipedream (agentpress_tools)
+  // 3. Detecta integrações derivadas das ferramentas legadas do agentpress
   else if (data.agentpress_tools && Object.keys(data.agentpress_tools).length > 0) {
     const toolKeys = Object.keys(data.agentpress_tools);
     const integrationSet = new Set<string>();
@@ -249,7 +246,6 @@ const AgentMetadata: React.FC<{ data: AgentData }> = ({ data }) => {
     integrations = data.custom_mcps.map(mcp => {
       const name = mcp.name || '';
       return name
-        .replace('pipedream_', '')
         .replace('mcp_', '')
         .split('_')
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))

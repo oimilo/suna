@@ -11,6 +11,26 @@ import { ComposioRegistry } from '../composio/composio-registry';
 import { ComposioToolsManager } from '../composio/composio-tools-manager';
 import { useQueryClient } from '@tanstack/react-query';
 
+const resolveMcpType = (mcp: MCPConfigurationType) => {
+  if (mcp.customType) return mcp.customType;
+  if (mcp.isComposio) return 'composio';
+
+  const qualified =
+    mcp.mcp_qualified_name ||
+    mcp.qualifiedName ||
+    mcp.config?.mcp_qualified_name ||
+    mcp.config?.qualifiedName;
+
+  if (qualified?.startsWith('composio.')) return 'composio';
+  if (mcp.config?.type === 'composio') return 'composio';
+
+  if (mcp.config?.type === 'http' || mcp.config?.type === 'sse') {
+    return mcp.config.type;
+  }
+
+  return undefined;
+};
+
 export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   configuredMCPs,
   onConfigurationChange,
@@ -24,6 +44,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   const [showComposioToolsManager, setShowComposioToolsManager] = useState(false);
   const [showCustomToolsManager, setShowCustomToolsManager] = useState(false);
   const [selectedMCPForTools, setSelectedMCPForTools] = useState<MCPConfigurationType | null>(null);
+  const [selectedMCPIndex, setSelectedMCPIndex] = useState<number | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(agentId);
   const queryClient = useQueryClient();
 
@@ -44,11 +65,20 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   };
 
   const handleConfigureTools = (index: number) => {
-    const mcp = configuredMCPs[index];
+    const originalMcp = configuredMCPs[index];
+    const detectedType = resolveMcpType(originalMcp);
+    const mcp =
+      detectedType && detectedType !== originalMcp.customType
+        ? { ...originalMcp, customType: detectedType as MCPConfigurationType['customType'] }
+        : originalMcp;
+
     setSelectedMCPForTools(mcp);
-    if (mcp.customType === 'composio') {
+
+    if (detectedType === 'composio') {
       if (!selectedAgentId) {
         toast.error('Selecione um agente para gerenciar ferramentas Composio.');
+        setSelectedMCPForTools(null);
+        setSelectedMCPIndex(null);
         return;
       }
       const profileId = mcp.selectedProfileId || mcp.config?.profile_id;
@@ -56,12 +86,15 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
         setShowComposioToolsManager(true);
       } else {
         toast.error('Não encontramos o profile conectado para esse MCP Composio.');
+        setSelectedMCPForTools(null);
+        setSelectedMCPIndex(null);
       }
-    } else if (mcp.customType && mcp.customType !== 'pipedream') {
+    } else if (detectedType) {
       setShowCustomToolsManager(true);
     } else {
-      // Pipedream removido: não abrir mais gerenciador específico
-      toast.warning('Integrações Pipedream foram descontinuadas. Use MCP personalizado ou Composio.');
+      toast.info('Esta integração não possui configurações de ferramentas editáveis.');
+      setSelectedMCPForTools(null);
+      setSelectedMCPIndex(null);
     }
   };
 
@@ -159,7 +192,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       <CustomMCPDialog open={showCustomDialog} onOpenChange={setShowCustomDialog} onSave={handleSaveCustomMCP} />
 
       {selectedMCPForTools &&
-        selectedMCPForTools.customType === 'composio' &&
+        resolveMcpType(selectedMCPForTools) === 'composio' &&
         (selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id) && (
           <ComposioToolsManager
             agentId={selectedAgentId || ''}
@@ -168,6 +201,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               setShowComposioToolsManager(open);
               if (!open) {
                 setSelectedMCPForTools(null);
+                setSelectedMCPIndex(null);
               }
             }}
             profileId={selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id}
@@ -193,20 +227,22 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               }
               setShowComposioToolsManager(false);
               setSelectedMCPForTools(null);
+              setSelectedMCPIndex(null);
             }}
           />
         )}
 
       {selectedMCPForTools &&
-        selectedMCPForTools.customType &&
-        selectedMCPForTools.customType !== 'composio' &&
-        selectedMCPForTools.customType !== 'pipedream' && (
+        (() => {
+          const type = resolveMcpType(selectedMCPForTools);
+          return type && type !== 'composio';
+        })() && (
           <ToolsManager
             mode="custom"
-            agentId={selectedAgentId}
+            agentId={selectedAgentId || ''}
             mcpConfig={{
               ...selectedMCPForTools.config,
-              type: selectedMCPForTools.customType,
+              type: resolveMcpType(selectedMCPForTools),
             }}
             mcpName={selectedMCPForTools.name}
             open={showCustomToolsManager}
@@ -214,16 +250,18 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               setShowCustomToolsManager(open);
               if (!open) {
                 setSelectedMCPForTools(null);
+                setSelectedMCPIndex(null);
               }
             }}
             onToolsUpdate={(enabledTools) => {
-              if (!selectedMCPForTools) return;
-              const updatedMCPs = configuredMCPs.map((mcp) =>
-                mcp === selectedMCPForTools ? { ...mcp, enabledTools } : mcp,
+              if (selectedMCPIndex === null) return;
+              const updatedMCPs = configuredMCPs.map((mcp, idx) =>
+                idx === selectedMCPIndex ? { ...mcp, enabledTools } : mcp,
               );
               onConfigurationChange(updatedMCPs);
               setShowCustomToolsManager(false);
               setSelectedMCPForTools(null);
+              setSelectedMCPIndex(null);
             }}
             versionData={versionData}
             saveMode={saveMode}

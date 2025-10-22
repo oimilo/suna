@@ -46,6 +46,8 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - ✅ avatars de agentes passaram a usar o componente upstream com ícones dinâmicos/kortix logo, respeitando cores salvas e cache local dos agentes.
 - ✅ uploads de arquivos no chat normalizam caminhos para `/workspace/uploads/*`, limpam pendências locais e evitam anexos duplicados com erro de preview.
 - ✅ fluxo de streaming do chat acompanha a lógica upstream (`userInitiatedRun` + `lastStreamStartedRef`), então a UI volta a atualizar respostas em tempo real sem precisar de refresh.
+- ✅ ferramentas de visão (`load_image`) agora criam/verificam o bucket público automaticamente e usam o bucket configurável em `SUPABASE_PUBLIC_IMAGE_BUCKET`, evitando o 404 “Bucket not found”.
+- ✅ aba de Integrations resgatou o fluxo completo das integrações Composio/custom (logos, gerenciamento de ferramentas) e removeu o alerta falso de Pipedream legado; código/fluxos de Pipedream foram totalmente eliminados.
 
 ### 4. Subscription & Billing Flows ☐
 - TODO: port subscription pages/hooks and reconcile UI with billing integration checks.

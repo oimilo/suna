@@ -20,8 +20,6 @@ import { parseToolResult } from '@/components/thread/tool-views/tool-result-pars
 import { BRANDING } from '@/lib/branding';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
-// import { PipedreamConnectButton } from './pipedream-connect-button';
-// import { PipedreamUrlDetector } from './pipedream-url-detector';
 import styles from '@/styles/toolcalls.module.css';
 
 const HIDE_STREAMING_XML_TAGS = new Set([
