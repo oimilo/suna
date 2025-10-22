@@ -158,9 +158,9 @@ export function KnowledgeBaseManager({
 
     // Build tree structure and auto-expand all folders for assignment mode
     React.useEffect(() => {
-        const buildTree = () => {
-            const tree: TreeItem[] = folders.map(folder => {
-                const existingFolder = treeData.find(item => item.id === folder.folder_id);
+        setTreeData(previousTree =>
+            folders.map(folder => {
+                const existingFolder = previousTree.find(item => item.id === folder.folder_id);
                 // Auto-expand all folders in assignment mode, preserve state otherwise
                 const isExpanded = enableAssignments ? true : (existingFolder?.expanded || false);
 
@@ -178,32 +178,40 @@ export function KnowledgeBaseManager({
                     })) || [],
                     expanded: isExpanded,
                 };
-            });
-            setTreeData(tree);
-        };
-
-        buildTree();
+            })
+        );
     }, [folders, folderEntries, enableAssignments]);
 
-    // Load assignments and auto-fetch all folder entries for assignment mode
-    React.useEffect(() => {
-        if (enableAssignments && agentId) {
-            console.log('Loading assignments immediately for agent:', agentId);
-            loadAssignments();
-            
-            // Auto-fetch all folder entries in assignment mode
-            if (!foldersLoading && folders.length > 0) {
-                console.log('Auto-fetching all folder entries for assignment mode');
-                folders.forEach(folder => {
-                    if (!folderEntries[folder.folder_id]) {
-                        fetchFolderEntries(folder.folder_id);
-                    }
-                });
-            }
-        }
-    }, [enableAssignments, agentId, foldersLoading, folders]);
+    const fetchFolderEntries = React.useCallback(async (folderId: string) => {
+        setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
 
-    const loadAssignments = async () => {
+        try {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session?.access_token) {
+                throw new Error('No session found');
+            }
+
+            const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setFolderEntries(prev => ({ ...prev, [folderId]: data }));
+            }
+        } catch (error) {
+            console.error('Failed to fetch entries:', error);
+        } finally {
+            setLoadingFolders(prev => ({ ...prev, [folderId]: false }));
+        }
+    }, []);
+
+    const loadAssignments = React.useCallback(async () => {
         if (!agentId) return;
         
         console.log('🔄 Starting to load assignments for agent:', agentId);
@@ -252,7 +260,33 @@ export function KnowledgeBaseManager({
             setAssignmentsLoading(false);
             console.log('✅ Assignment loading complete');
         }
-    };
+    }, [agentId]);
+
+    // Load assignments and auto-fetch all folder entries for assignment mode
+    React.useEffect(() => {
+        if (enableAssignments && agentId) {
+            console.log('Loading assignments immediately for agent:', agentId);
+            loadAssignments();
+            
+            // Auto-fetch all folder entries in assignment mode
+            if (!foldersLoading && folders.length > 0) {
+                console.log('Auto-fetching all folder entries for assignment mode');
+                folders.forEach(folder => {
+                    if (!folderEntries[folder.folder_id]) {
+                        fetchFolderEntries(folder.folder_id);
+                    }
+                });
+            }
+        }
+    }, [
+        enableAssignments,
+        agentId,
+        foldersLoading,
+        folders,
+        folderEntries,
+        fetchFolderEntries,
+        loadAssignments,
+    ]);
 
     // File handling functions
     const handleFileSelect = (item: TreeItem) => {
@@ -263,35 +297,6 @@ export function KnowledgeBaseManager({
             });
         } else {
             setSelectedItem(item);
-        }
-    };
-
-    const fetchFolderEntries = async (folderId: string) => {
-        setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
-
-        try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
-            }
-
-            const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setFolderEntries(prev => ({ ...prev, [folderId]: data }));
-            }
-        } catch (error) {
-            console.error('Failed to fetch entries:', error);
-        } finally {
-            setLoadingFolders(prev => ({ ...prev, [folderId]: false }));
         }
     };
 

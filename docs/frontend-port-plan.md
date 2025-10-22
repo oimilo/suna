@@ -37,6 +37,10 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - Agent configuration flows now use the upstream modal (`AgentConfigurationDialog`) with icon editor, granular tool configuration, and model selector.
 - Added public template share route (`/templates/[shareId]`) with OG image endpoint so marketplace links render for unauthenticated users.
 - TODO: template catalog parity review (marketplace tab still disabled upstream); confirm backend endpoints for publishing/cloning templates.
+- ✅ grade/listas/sidebar agora disparam o novo `AgentConfigurationDialog` em vez de redirecionar para `/agents/config`; falta revisar traduções/branding do modal e unificar mensagens.
+- ✅ resolvemos warnings de dependência no `knowledge-base-manager`, com `useEffect` e `useCallback` alinhados ao comportamento upstream (build atual só reclama dos `<img>` legados em templates).
+- ✅ grid de agentes agora usa o `UnifiedAgentCard`, mantendo o menu contextual e confirmando exclusão via `AlertDialog` local.
+- ✅ portamos o `UnifiedAgentCard` e atualizamos os grids de marketplace/templates para usarem o mesmo componente do upstream (incluindo badges e estados de ação); seguir avaliando a grid de agentes quando migrarmos o modal de ações completo.
 
 ### 4. Subscription & Billing Flows ☐
 - TODO: port subscription pages/hooks and reconcile UI with billing integration checks.

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useScroll } from 'framer-motion';
@@ -134,15 +135,17 @@ const IntegrationIcon: React.FC<{
 
   if (logoUrl) {
     return (
-      <img
+      <Image
         src={logoUrl}
         alt={displayName}
-        className="rounded"
-        style={{ width: size, height: size }}
+        width={size}
+        height={size}
+        className="rounded object-cover"
         onError={() => {
           setLogoUrl(null);
           setHasError(true);
         }}
+        unoptimized
       />
     );
   }
@@ -162,6 +165,7 @@ const IntegrationIcon: React.FC<{
 };
 
 export default function TemplateSharePage() {
+  const EMPTY_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
   const params = useParams();
   const templateId = params.shareId as string;
   const router = useRouter();
@@ -374,10 +378,13 @@ export default function TemplateSharePage() {
             <div className="flex h-14 items-center">
               <div className="flex items-center">
                 <Link href="/" className="flex items-center">
-                  <img
+                  <Image
                     src={resolvedTheme === 'dark' ? '/kortix-logo-white.svg' : '/kortix-logo.svg'}
                     alt="Kortix"
-                    className="h-6 opacity-70"
+                    width={120}
+                    height={24}
+                    className="h-6 w-auto opacity-70"
+                    priority
                   />
                 </Link>
               </div>
@@ -437,13 +444,15 @@ export default function TemplateSharePage() {
                       size={120}
                     />
                   </div>
-                  <img
+                  <Image
                     ref={imageRef}
-                    src={''}
+                    src={template.metadata?.preview_image_url || EMPTY_IMAGE_PLACEHOLDER}
                     alt={template.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     crossOrigin="anonymous"
-                    onLoad={() => setImageLoaded(true)}
+                    onLoadingComplete={() => setImageLoaded(true)}
+                    unoptimized={!!template.metadata?.preview_image_url}
                   />
                 </div>
               </div>

@@ -63,6 +63,7 @@ interface AgentSelectorProps {
   toolCallIndex?: number;
   showToolPreview?: boolean;
   onExpandToolPreview?: () => void;
+  onOpenAgentConfig?: (tab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers') => void;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = ({
@@ -74,7 +75,8 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   toolCalls = [],
   toolCallIndex = 0,
   showToolPreview = false,
-  onExpandToolPreview
+  onExpandToolPreview,
+  onOpenAgentConfig,
 }) => {
   const { t } = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
@@ -180,6 +182,11 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   const handleAgentSettings = (agentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen(false);
+    if (onOpenAgentConfig) {
+      onAgentSelect?.(agentId);
+      requestAnimationFrame(() => onOpenAgentConfig('integrations'));
+      return;
+    }
     router.push(`/agents/config/${agentId}`);
   };
 
@@ -218,12 +225,20 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     setIsOpen(false);
     
     createNewAgentMutation.mutate(undefined, {
+      onSuccess: (newAgent) => {
+        onAgentSelect?.(newAgent.agent_id);
+        if (onOpenAgentConfig) {
+          requestAnimationFrame(() => onOpenAgentConfig('instructions'));
+        } else {
+          router.push(`/agents/config/${newAgent.agent_id}`);
+        }
+      },
       onSettled: () => {
         // Reset the debounce state after mutation completes (success or error)
         setTimeout(() => setIsCreatingAgent(false), 1000);
       }
     });
-  }, [isCreatingAgent, createNewAgentMutation]);
+  }, [isCreatingAgent, createNewAgentMutation, onAgentSelect, onOpenAgentConfig, router]);
 
   const renderAgentItem = (agent: any, index: number) => {
     const isSelected = agent.id === selectedAgentId;
