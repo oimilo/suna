@@ -17,6 +17,7 @@ from reportlab.graphics import renderPM
 import tempfile
 import requests
 from core.utils.config import config
+from core.utils.s3_upload_utils import ensure_bucket_exists
 
 # Add common image MIME types if mimetypes module is limited
 mimetypes.add_type("image/webp", ".webp")
@@ -397,14 +398,22 @@ Images remain in the sandbox and can be loaded again anytime. SVG files are auto
                 
                 # Upload to Supabase storage (public bucket for LLM access)
                 client = await self.db.client
-                storage_response = await client.storage.from_('image-uploads').upload(
+                bucket_name = config.SUPABASE_PUBLIC_IMAGE_BUCKET
+                await ensure_bucket_exists(
+                    client,
+                    bucket_name,
+                    public=True,
+                    allowed_mime_types=SUPPORTED_MIME_TYPES,
+                    file_size_limit=MAX_COMPRESSED_SIZE,
+                )
+                await client.storage.from_(bucket_name).upload(
                     storage_filename,
                     compressed_bytes,
                     {"content-type": compressed_mime_type}
                 )
                 
                 # Get public URL
-                public_url = await client.storage.from_('image-uploads').get_public_url(storage_filename)
+                public_url = await client.storage.from_(bucket_name).get_public_url(storage_filename)
                 
                 print(f"[LoadImage] Uploaded image to cloud storage: {public_url}")
                 

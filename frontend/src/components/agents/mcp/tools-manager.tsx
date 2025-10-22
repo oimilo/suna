@@ -3,24 +3,23 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { 
-  Loader2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
   Info,
   RefreshCw,
   Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePipedreamToolsData, useUpdatePipedreamToolsForAgent } from '@/hooks/react-query/agents/use-pipedream-tools';
 import { useCustomMCPToolsData } from '@/hooks/react-query/agents/use-custom-mcp-tools';
 
 interface BaseToolsManagerProps {
@@ -39,51 +38,31 @@ interface BaseToolsManagerProps {
   initialEnabledTools?: string[];
 }
 
-interface PipedreamToolsManagerProps extends BaseToolsManagerProps {
-  mode: 'pipedream';
-  profileId: string;
-  appName: string;
-  profileName?: string;
-}
-
 interface CustomToolsManagerProps extends BaseToolsManagerProps {
   mode: 'custom';
   mcpConfig: any;
   mcpName: string;
 }
 
-type ToolsManagerProps = PipedreamToolsManagerProps | CustomToolsManagerProps;
+type ToolsManagerProps = CustomToolsManagerProps;
 
 export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
   const { agentId, open, onOpenChange, onToolsUpdate, mode, versionData, saveMode = 'direct', versionId, initialEnabledTools } = props;
-  const updatePipedreamTools = useUpdatePipedreamToolsForAgent();
-  
-  const pipedreamResult = usePipedreamToolsData(
-    mode === 'pipedream' ? agentId : '',
-    mode === 'pipedream' ? (props as PipedreamToolsManagerProps).profileId : '',
-    versionId
-  );
-  
+
   const customResult = useCustomMCPToolsData(
-    mode === 'custom' ? agentId : '',
-    mode === 'custom' ? (props as CustomToolsManagerProps).mcpConfig : undefined
+    agentId,
+    (props as CustomToolsManagerProps).mcpConfig
   );
 
-  const result = mode === 'pipedream' ? pipedreamResult : customResult;
+  const result = customResult;
   const { data, isLoading, error, updateMutation, isUpdating, refetch } = result;
-  
+
   const [localTools, setLocalTools] = useState<Record<string, boolean>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   const handleUpdateTools = async (enabledTools: string[]) => {
-    if (mode === 'pipedream') {
-      const { agentId, profileId } = props as PipedreamToolsManagerProps;
-      console.log('resp', agentId, profileId, enabledTools);
-      return updatePipedreamTools.mutateAsync({ agentId, profileId, enabledTools });
-    } else {
-      const customMutation = updateMutation as any;
-      return customMutation.mutateAsync(enabledTools);
-    }
+    const customMutation = updateMutation as any;
+    return customMutation.mutateAsync(enabledTools);
   };
 
   React.useEffect(() => {
@@ -114,7 +93,7 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
 
   const totalCount = data?.tools?.length || 0;
   
-  const displayName = mode === 'pipedream' ? (props as PipedreamToolsManagerProps).appName : (props as CustomToolsManagerProps).mcpName;
+  const displayName = (props as CustomToolsManagerProps).mcpName;
 
   const handleToolToggle = (toolName: string) => {
     setLocalTools(prev => {
@@ -330,9 +309,7 @@ export const ToolsManager: React.FC<ToolsManagerProps> = (props) => {
               {!data?.has_mcp_config && data?.tools?.length > 0 && saveMode === 'direct' && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
                   <Info className="h-3 w-3" />
-                  <span>
-                    Isso irá {mode === 'pipedream' ? 'criar uma nova' : 'atualizar a'} configuração MCP do seu agente
-                  </span>
+                  <span>Isso irá atualizar a configuração MCP do seu agente</span>
                 </div>
               )}
             </div>

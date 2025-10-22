@@ -276,6 +276,8 @@ class Configuration:
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str
+    SUPABASE_PUBLIC_IMAGE_BUCKET: str = "image-uploads"
+    SUPABASE_AGENT_PROFILE_BUCKET: str = "agent-profile-images"
     
     # Redis configuration
     REDIS_HOST: str

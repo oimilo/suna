@@ -313,7 +313,7 @@ export default function AgentsPage() {
       }
 
       const customRequirements = item.mcp_requirements?.filter(req => 
-        req.custom_type && req.custom_type !== 'pipedream'
+        req.custom_type
       ) || [];
       const missingCustomConfigs = customRequirements.filter(req => 
         !customMcpConfigs || !customMcpConfigs[req.qualified_name] || 
@@ -323,20 +323,6 @@ export default function AgentsPage() {
       if (missingCustomConfigs.length > 0) {
         const missingNames = missingCustomConfigs.map(req => req.display_name).join(', ');
         toast.error(`Por favor, forneça toda a configuração necessária para: ${missingNames}`);
-        return;
-      }
-
-      const pipedreamRequirements = item.mcp_requirements?.filter(req => 
-        req.custom_type === 'pipedream'
-      ) || [];
-      const missingPipedreamConfigs = pipedreamRequirements.filter(req => 
-        !customMcpConfigs || !customMcpConfigs[req.qualified_name] || 
-        !customMcpConfigs[req.qualified_name].profile_id
-      );
-      
-      if (missingPipedreamConfigs.length > 0) {
-        const missingNames = missingPipedreamConfigs.map(req => req.display_name).join(', ');
-        toast.error(`Por favor, selecione perfis do Pipedream para: ${missingNames}`);
         return;
       }
 

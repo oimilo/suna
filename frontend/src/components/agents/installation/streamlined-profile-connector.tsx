@@ -39,14 +39,8 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
   const createProfileMutation = useCreateCredentialProfile();
   const { data: serverDetails } = useMCPServerDetails(step.qualified_name);
   
-  const isPipedreamStep = false;
-  
-  // Removed Pipedream connector and hooks to align with Suna
-  const pipedreamProfiles = undefined as unknown as any[] | undefined;
   const configProperties = useMemo(() => serverDetails?.connections?.[0]?.configSchema?.properties ?? {}, [serverDetails]);
   const requiredFields = useMemo(() => serverDetails?.connections?.[0]?.configSchema?.required ?? [], [serverDetails]);
-  
-  const hasConnectedPipedreamProfile = false;
 
   useEffect(() => {
     setProfileStep('select');
@@ -56,22 +50,6 @@ export const ProfileConnector: React.FC<ProfileConnectorProps> = ({
     // no-op
   }, [step.qualified_name]);
 
-  const mockPipedreamApp = useMemo(() => ({
-    id: step.qualified_name,
-    name_slug: step.app_slug || step.qualified_name,
-    name: step.service_name,
-    description: `Connect your ${step.service_name} account to use its tools`,
-    img_src: '',
-    custom_fields_json: "[]",
-    categories: [],
-    featured_weight: 0,
-    auth_type: "keys" as const,
-    connect: {
-      allowed_domains: null,
-      base_proxy_target_url: "",
-      proxy_enabled: false
-    }
-  }), [step.app_slug, step.qualified_name, step.service_name]);
 
   const handleCreateProfile = useCallback(async () => {
     if (!newProfileName.trim()) {

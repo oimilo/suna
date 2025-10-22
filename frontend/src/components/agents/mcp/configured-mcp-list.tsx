@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Settings, X, Key } from 'lucide-react';
 import { MCPConfiguration } from './types';
 import { useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
+import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 
 interface ConfiguredMcpListProps {
   configuredMCPs: MCPConfiguration[];
@@ -11,11 +12,48 @@ interface ConfiguredMcpListProps {
   onConfigureTools?: (index: number) => void;
 }
 
+const extractAppSlug = (mcp: MCPConfiguration): string | null => {
+  if (mcp.customType === 'composio' || mcp.isComposio) {
+    if (mcp.toolkitSlug) return mcp.toolkitSlug;
+    const slug =
+      mcp.config?.toolkit_slug ||
+      mcp.config?.toolkitSlug ||
+      mcp.mcp_qualified_name?.replace('composio.', '') ||
+      mcp.qualifiedName?.replace('composio.', '');
+    if (slug) return slug;
+  }
+  return null;
+};
+
 const MCPLogo: React.FC<{ mcp: MCPConfiguration }> = ({ mcp }) => {
+  const slug = extractAppSlug(mcp);
+  const { data: iconData } = useComposioToolkitIcon(slug ?? '', { enabled: !!slug });
+
+  const toolkitLogo =
+    mcp.config?.toolkit_logo ||
+    mcp.config?.app_logo ||
+    mcp.config?.logo ||
+    iconData?.icon_url;
+
   const firstLetter = mcp.name.charAt(0).toUpperCase();
+
   return (
     <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 overflow-hidden rounded-md bg-muted text-xs font-semibold text-muted-foreground">
-      {firstLetter}
+      {toolkitLogo ? (
+        <img
+          src={toolkitLogo}
+          alt={mcp.name}
+          className="w-full h-full object-cover"
+          onError={(event) => {
+            const target = event.target as HTMLImageElement;
+            target.style.display = 'none';
+            target.nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      ) : null}
+      <div className={toolkitLogo ? 'hidden' : 'flex w-full h-full items-center justify-center'}>
+        {firstLetter}
+      </div>
     </div>
   );
 };

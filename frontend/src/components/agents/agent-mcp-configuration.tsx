@@ -37,9 +37,21 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
     }))
   ];
 
+  const sanitizedMCPs = allMCPs.filter(mcp => {
+    const type = mcp.customType || mcp.config?.type;
+    const qualified = mcp.qualifiedName || mcp.mcp_qualified_name || '';
+    return type !== 'pipedream' && !qualified.includes('pipedream');
+  });
+
   const handleConfigurationChange = (mcps: any[]) => {
-    const configured = mcps.filter(mcp => !mcp.isCustom);
-    const custom = mcps
+    const filteredMCPs = mcps.filter(mcp => {
+      const type = mcp.customType || mcp.config?.type;
+      const qualified = mcp.qualifiedName || mcp.mcp_qualified_name || '';
+      return type !== 'pipedream' && !qualified.includes('pipedream');
+    });
+
+    const configured = filteredMCPs.filter(mcp => !mcp.isCustom);
+    const custom = filteredMCPs
       .filter(mcp => mcp.isCustom)
       .map(mcp => ({
         name: mcp.name,
@@ -57,7 +69,7 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
 
   return (
     <MCPConfigurationNew
-      configuredMCPs={allMCPs}
+      configuredMCPs={sanitizedMCPs}
       onConfigurationChange={handleConfigurationChange}
       agentId={agentId}
       versionData={versionData}
