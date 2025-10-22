@@ -183,7 +183,10 @@ class ModelRegistry:
             id="gemini/gemini-2.5-pro",
             name="Gemini 2.5 Pro",
             provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
+            aliases=[
+                "gemini-2.5-pro",
+                "Gemini 2.5 Pro"
+            ],
             context_window=2_000_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -198,6 +201,61 @@ class ModelRegistry:
             tier_availability=["paid"],
             priority=95,
             enabled=True
+        ))
+
+        self.register(Model(
+            id="gemini/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash Lite",
+            provider=ModelProvider.GOOGLE,
+            aliases=[
+                "gemini-2.5-flash-lite",
+                "Gemini 2.5 Flash Lite",
+                "google/gemini-2.5-flash-lite"
+            ],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.075,
+                output_cost_per_million_tokens=0.30
+            ),
+            tier_availability=["paid"],
+            priority=94,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openrouter/google/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash Lite (OpenRouter)",
+            provider=ModelProvider.OPENROUTER,
+            aliases=[
+                "google/gemini-2.5-flash-lite-openrouter",
+                "gemini-2.5-flash-lite-openrouter"
+            ],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.09,
+                output_cost_per_million_tokens=0.36
+            ),
+            tier_availability=["paid"],
+            priority=93,
+            enabled=True,
+            config=ModelConfig(
+                extra_headers={
+                    "HTTP-Referer": config.OR_SITE_URL if hasattr(config, 'OR_SITE_URL') and config.OR_SITE_URL else "",
+                    "X-Title": config.OR_APP_NAME if hasattr(config, 'OR_APP_NAME') and config.OR_APP_NAME else ""
+                }
+            )
         ))
         
         
