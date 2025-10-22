@@ -39,7 +39,7 @@ const handleLocalFiles = (
 
     return {
       name: normalizedName,
-      path: `/workspace/${normalizedName}`,
+      path: `/workspace/uploads/${normalizedName}`,
       size: file.size,
       type: file.type || 'application/octet-stream',
       localUrl: URL.createObjectURL(file)
@@ -60,6 +60,7 @@ const uploadFiles = async (
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>,
   messages: any[] = [], // Add messages parameter to check for existing files
   queryClient?: any, // Add queryClient parameter for cache invalidation
+  setPendingFiles?: React.Dispatch<React.SetStateAction<File[]>>, // Allow clearing pending files after upload
 ) => {
   try {
     setIsUploading(true);
@@ -74,7 +75,8 @@ const uploadFiles = async (
 
       // Normalize filename to NFC
       const normalizedName = normalizeFilenameToNFC(file.name);
-      const uploadPath = `/workspace/${normalizedName}`;
+      // Always target /workspace/uploads on the sandbox
+      const uploadPath = `/workspace/uploads/${normalizedName}`;
 
       // Check if this filename already exists in chat messages
       const isFileInChat = messages.some(message => {
@@ -152,6 +154,10 @@ const uploadFiles = async (
     }
 
     setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
+
+    if (setPendingFiles) {
+      setPendingFiles([]);
+    }
   } catch (error) {
     console.error('File upload failed:', error);
     toast.error(
@@ -177,7 +183,7 @@ const handleFiles = async (
 ) => {
   if (sandboxId) {
     // If we have a sandboxId, upload files directly
-    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient);
+    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient, setPendingFiles);
   } else {
     // Otherwise, store files locally
     handleLocalFiles(files, setPendingFiles, setUploadedFiles);

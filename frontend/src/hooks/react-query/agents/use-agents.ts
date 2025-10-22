@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { agentKeys } from './keys';
 import { Agent, AgentUpdateRequest, AgentsParams, createAgent, deleteAgent, getAgent, getAgents, getThreadAgent, updateAgent, AgentBuilderChatRequest, AgentBuilderStreamData, startAgentBuilderChat, getAgentBuilderChatHistory } from './utils';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { generateRandomAvatar } from '@/lib/utils/_avatar-generator';
 import { DEFAULT_AGENTPRESS_TOOLS } from '@/components/agents/tools';
 
@@ -206,3 +206,66 @@ export const useAgentBuilderChatHistory = (agentId: string) =>
       retry: 1,
     }
   )();
+
+export const useAgentFromCache = (agentId: string | undefined): Agent | undefined => {
+  const queryClient = useQueryClient();
+
+  return useMemo(() => {
+    if (!agentId) return undefined;
+
+    const cachedAgent = queryClient.getQueryData<Agent>(agentKeys.detail(agentId));
+    if (cachedAgent) return cachedAgent;
+
+    const allAgentLists = queryClient.getQueriesData<{ agents: Agent[] }>({
+      queryKey: agentKeys.lists(),
+    });
+
+    for (const [, data] of allAgentLists) {
+      if (data?.agents) {
+        const found = data.agents.find((agent) => agent.agent_id === agentId);
+        if (found) return found;
+      }
+    }
+
+    return undefined;
+  }, [agentId, queryClient]);
+};
+
+export const useAgentsFromCache = (agentIds: string[]): Map<string, Agent> => {
+  const queryClient = useQueryClient();
+
+  return useMemo(() => {
+    const agentsMap = new Map<string, Agent>();
+
+    if (!agentIds || agentIds.length === 0) return agentsMap;
+
+    const allAgentLists = queryClient.getQueriesData<{ agents: Agent[] }>({
+      queryKey: agentKeys.lists(),
+    });
+
+    const allCachedAgents = new Map<string, Agent>();
+    for (const [, data] of allAgentLists) {
+      if (data?.agents) {
+        data.agents.forEach((agent) => {
+          allCachedAgents.set(agent.agent_id, agent);
+        });
+      }
+    }
+
+    for (const agentId of agentIds) {
+      const cachedAgent = queryClient.getQueryData<Agent>(agentKeys.detail(agentId));
+      if (cachedAgent) {
+        allCachedAgents.set(agentId, cachedAgent);
+      }
+    }
+
+    for (const agentId of agentIds) {
+      const agent = allCachedAgents.get(agentId);
+      if (agent) {
+        agentsMap.set(agentId, agent);
+      }
+    }
+
+    return agentsMap;
+  }, [agentIds, queryClient]);
+};

@@ -37,6 +37,9 @@ export type Agent = {
   updated_at: string;
   avatar?: string;
   avatar_color?: string;
+  icon_name?: string | null;
+  icon_color?: string | null;
+  icon_background?: string | null;
   current_version_id?: string | null;
   version_count?: number;
   current_version?: AgentVersion | null;
@@ -135,6 +138,9 @@ export type AgentVersion = {
   updated_at: string;
   created_by?: string;
   change_description?: string;
+  icon_name?: string | null;
+  icon_color?: string | null;
+  icon_background?: string | null;
 };
 
 export type AgentUpdateRequest = {

@@ -53,17 +53,31 @@ export const GranularToolConfiguration = ({
 
   const isToolGroupEnabled = (toolName: string): boolean => {
     const toolConfig = tools[toolName];
-    if (toolConfig === undefined) return false;
+    const toolGroup = getToolGroup(toolName, toolsData);
+
+    if (toolConfig === undefined) {
+      return toolGroup?.enabled ?? false;
+    }
+
     if (typeof toolConfig === 'boolean') return toolConfig;
     if (typeof toolConfig === 'object' && toolConfig !== null) {
       return toolConfig.enabled ?? true;
     }
-    return false;
+
+    return toolGroup?.enabled ?? false;
   };
 
   const isMethodEnabled = (toolName: string, methodName: string): boolean => {
     const toolConfig = tools[toolName];
+    const toolGroup = getToolGroup(toolName, toolsData);
+
+    if (!toolGroup) return false;
     if (!isToolGroupEnabled(toolName)) return false;
+
+    if (toolConfig === undefined) {
+      const defaultMethod = toolGroup.methods.find(m => m.name === methodName);
+      return defaultMethod?.enabled ?? true;
+    }
     
     if (typeof toolConfig === 'boolean') return toolConfig;
     if (typeof toolConfig === 'object' && toolConfig !== null) {
@@ -75,17 +89,13 @@ export const GranularToolConfiguration = ({
         return methodConfig.enabled ?? true;
       }
       
-      // Default to method's default enabled state from tool group
-      const toolGroup = getToolGroup(toolName, toolsData);
-      const method = toolGroup?.methods.find(m => m.name === methodName);
-      return method?.enabled ?? true;
+      const defaultMethod = toolGroup.methods.find(m => m.name === methodName);
+      return defaultMethod?.enabled ?? true;
     }
     return false;
   };
 
   const handleToolGroupToggle = (toolName: string, enabled: boolean) => {
-    const toolGroup = getToolGroup(toolName, toolsData);
-    
     if (disabled && isSunaAgent) {
       toast.error("Tools cannot be modified", {
         description: "Suna's default tools are managed centrally and cannot be changed.",
