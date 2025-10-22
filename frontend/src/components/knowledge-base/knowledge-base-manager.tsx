@@ -152,6 +152,15 @@ export function KnowledgeBaseManager({
     const createDefaultFolder = React.useCallback(async () => {
         if (defaultFolderEnsuredRef.current) return;
 
+        const hasGeneralFolder = folders.some(
+            folder => folder.name.toLowerCase() === 'general'
+        );
+
+        if (hasGeneralFolder) {
+            defaultFolderEnsuredRef.current = true;
+            return;
+        }
+
         try {
             const supabase = createClient();
             const { data: { session } } = await supabase.auth.getSession();
@@ -159,6 +168,9 @@ export function KnowledgeBaseManager({
             if (!session?.access_token) {
                 return;
             }
+
+            // Guard against React strict mode double-invocation triggering duplicate creations
+            defaultFolderEnsuredRef.current = true;
 
             const response = await fetch(`${API_URL}/knowledge-base/folders`, {
                 method: 'POST',
@@ -170,16 +182,16 @@ export function KnowledgeBaseManager({
             });
 
             if (response.ok) {
-                defaultFolderEnsuredRef.current = true;
                 await refetchFolders();
             } else {
-                defaultFolderEnsuredRef.current = true;
+                // Allow a retry in case the folder still doesn't exist after this request
+                defaultFolderEnsuredRef.current = false;
             }
         } catch (error) {
             console.error('Failed to create default folder:', error);
-            defaultFolderEnsuredRef.current = true;
+            defaultFolderEnsuredRef.current = false;
         }
-    }, [refetchFolders]);
+    }, [folders, refetchFolders]);
 
     // DND Sensors
     const sensors = useSensors(
