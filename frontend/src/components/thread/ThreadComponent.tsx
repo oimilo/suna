@@ -73,6 +73,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   const [initialPanelOpenAttempted, setInitialPanelOpenAttempted] =
     useState(false);
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
+  const [userInitiatedRun, setUserInitiatedRun] = useState(false);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [hasMainFileDetected, setHasMainFileDetected] = useState(false);
 
@@ -80,6 +81,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const initialLayoutAppliedRef = useRef(false);
+  const lastStreamStartedRef = useRef<string | null>(null);
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } =
@@ -458,6 +460,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         }
 
         const agentResult = results[1].value;
+        setUserInitiatedRun(true);
         setAgentRunId(agentResult.agent_run_id);
 
         messagesQuery.refetch();
@@ -576,13 +579,26 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   ]);
 
   useEffect(() => {
+    if (agentRunId && lastStreamStartedRef.current === agentRunId) {
+      return;
+    }
+
+    if (agentRunId && agentRunId !== currentHookRunId && userInitiatedRun) {
+      startStreaming(agentRunId);
+      lastStreamStartedRef.current = agentRunId;
+      setUserInitiatedRun(false);
+      return;
+    }
+
     if (
       agentRunId &&
       agentRunId !== currentHookRunId &&
       initialLoadCompleted &&
+      !userInitiatedRun &&
       agentStatus === 'running'
     ) {
       startStreaming(agentRunId);
+      lastStreamStartedRef.current = agentRunId;
     }
   }, [
     agentRunId,
@@ -590,6 +606,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     currentHookRunId,
     initialLoadCompleted,
     agentStatus,
+    userInitiatedRun,
   ]);
 
   useEffect(() => {

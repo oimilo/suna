@@ -41,6 +41,11 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - ✅ resolvemos warnings de dependência no `knowledge-base-manager`, com `useEffect` e `useCallback` alinhados ao comportamento upstream (build atual só reclama dos `<img>` legados em templates).
 - ✅ grid de agentes agora usa o `UnifiedAgentCard`, mantendo o menu contextual e confirmando exclusão via `AlertDialog` local.
 - ✅ portamos o `UnifiedAgentCard` e atualizamos os grids de marketplace/templates para usarem o mesmo componente do upstream (incluindo badges e estados de ação); seguir avaliando a grid de agentes quando migrarmos o modal de ações completo.
+- ✅ modal de upload da base de conhecimento volta a pré-selecionar a primeira pasta disponível, reseta estado ao fechar e libera o CTA de upload sem passos extras.
+- ✅ granular tool configuration agora lê os defaults do backend quando o agente não tem configuração explícita, deixando todos os core tools habilitados por padrão.
+- ✅ avatars de agentes passaram a usar o componente upstream com ícones dinâmicos/kortix logo, respeitando cores salvas e cache local dos agentes.
+- ✅ uploads de arquivos no chat normalizam caminhos para `/workspace/uploads/*`, limpam pendências locais e evitam anexos duplicados com erro de preview.
+- ✅ fluxo de streaming do chat acompanha a lógica upstream (`userInitiatedRun` + `lastStreamStartedRef`), então a UI volta a atualizar respostas em tempo real sem precisar de refresh.
 
 ### 4. Subscription & Billing Flows ☐
 - TODO: port subscription pages/hooks and reconcile UI with billing integration checks.
@@ -61,8 +66,8 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
   - Composio authentication test flow.
   - Knowledge base upload + search.
   - Subscription upgrade path.
-- Regression: ensure existing sidebar and dashboard widgets still render; run `pnpm lint` and `pnpm test` in `frontend`.
-- ✅ `pnpm build` (frontend) after Composio integration refresh.
+- Regression: ensure existing sidebar and dashboard widgets still render; rodar `npm run lint` e `npm run test` no `frontend`.
+- ✅ `npm run build` (frontend) pós-ajustes do configurador/knowledge base.
 
 ## Rollout Considerations
 - Stagger releases per workstream behind feature flags if necessary.
