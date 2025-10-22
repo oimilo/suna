@@ -178,7 +178,57 @@ class ModelRegistry:
             priority=96,
             enabled=True
         ))
-        
+
+        self.register(Model(
+            id="openai/gpt-4o-mini",
+            name="GPT-4o Mini",
+            provider=ModelProvider.OPENAI,
+            aliases=[
+                "gpt-4o-mini",
+                "GPT-4o Mini",
+                "o-mini"
+            ],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.15,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=97,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openai/gpt-4o",
+            name="GPT-4o",
+            provider=ModelProvider.OPENAI,
+            aliases=[
+                "gpt-4o",
+                "GPT-4o",
+                "o"
+            ],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.75,
+                output_cost_per_million_tokens=3.00
+            ),
+            tier_availability=["paid"],
+            priority=98,
+            enabled=True
+        ))
+
         self.register(Model(
             id="gemini/gemini-2.5-pro",
             name="Gemini 2.5 Pro",
@@ -223,7 +273,7 @@ class ModelRegistry:
                 input_cost_per_million_tokens=0.075,
                 output_cost_per_million_tokens=0.30
             ),
-            tier_availability=["paid"],
+            tier_availability=["free", "paid"],
             priority=94,
             enabled=True
         ))
@@ -247,7 +297,7 @@ class ModelRegistry:
                 input_cost_per_million_tokens=0.09,
                 output_cost_per_million_tokens=0.36
             ),
-            tier_availability=["paid"],
+            tier_availability=["free", "paid"],
             priority=93,
             enabled=True,
             config=ModelConfig(
