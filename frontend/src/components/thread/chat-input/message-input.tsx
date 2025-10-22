@@ -202,6 +202,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 toolCallIndex={toolCallIndex}
                 showToolPreview={showToolPreview}
                 onExpandToolPreview={onExpandToolPreview}
+                onOpenAgentConfig={(tab) => onOpenAgentConfig?.(tab)}
               />
             )}
             <ModelSelector

@@ -228,7 +228,6 @@ export function DashboardContent() {
               selectedAgentId={selectedAgentId}
               onAgentSelect={setSelectedAgentId}
               enableAdvancedConfig={true}
-              onConfigureAgent={(agentId) => router.push(`/agents/config/${agentId}`)}
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
               autoFocus={false}

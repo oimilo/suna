@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { agentKeys } from './keys';
 import { Agent, AgentUpdateRequest, AgentsParams, createAgent, deleteAgent, getAgent, getAgents, getThreadAgent, updateAgent, AgentBuilderChatRequest, AgentBuilderStreamData, startAgentBuilderChat, getAgentBuilderChatHistory } from './utils';
 import { useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { generateRandomAvatar } from '@/lib/utils/_avatar-generator';
 import { DEFAULT_AGENTPRESS_TOOLS } from '@/components/agents/tools';
 
@@ -47,7 +46,6 @@ export const useCreateAgent = () => {
 };
 
 export const useCreateNewAgent = () => {
-  const router = useRouter();
   const createAgentMutation = useCreateAgent();
   
   return createMutationHook(
@@ -74,9 +72,6 @@ export const useCreateNewAgent = () => {
       return newAgent;
     },
     {
-      onSuccess: (newAgent) => {
-        router.push(`/agents/config/${newAgent.agent_id}`);
-      },
       onError: (error) => {
         console.error('Error creating agent:', error);
         toast.error('Failed to create agent. Please try again.');

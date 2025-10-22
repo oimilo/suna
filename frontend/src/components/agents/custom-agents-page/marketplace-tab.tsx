@@ -5,7 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { SearchBar } from './search-bar';
 import { MarketplaceSectionHeader } from './marketplace-section-header';
-import { AgentCard } from './agent-card';
+import {
+  UnifiedAgentCard,
+  BaseAgentData,
+} from '@/components/ui/unified-agent-card';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 import { BRANDING } from '@/lib/branding';
 import { usePtTranslations } from '@/hooks/use-pt-translations';
@@ -76,7 +79,7 @@ export const MarketplaceTab = ({
       </div>
 
       <div className="flex-1">
-        {marketplaceLoading ? (
+            {marketplaceLoading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="bg-card rounded-2xl overflow-hidden shadow-sm">
@@ -111,51 +114,108 @@ export const MarketplaceTab = ({
                       subtitle={t('marketplace.officialAgents')}
                     />
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                      {kortixTeamItems.map((item) => (
-                        <AgentCard
-                          key={item.id}
-                          mode="marketplace"
-                          data={item}
-                          styling={getItemStyling(item)}
-                          isActioning={installingItemId === item.id}
-                          onPrimaryAction={onInstallClick}
-                          onClick={() => onInstallClick(item)}
-                        />
-                      ))}
+                      {kortixTeamItems.map((item) => {
+                        const styling = getItemStyling(item);
+                        const baseData: BaseAgentData = {
+                          id: item.id,
+                          name: item.name,
+                          description: item.description,
+                          tags: item.tags,
+                          created_at: item.created_at,
+                          icon_background: styling.color,
+                          creator_name: item.creator_name,
+                          is_kortix_team: item.is_kortix_team,
+                          download_count: item.download_count,
+                          marketplace_published_at: item.marketplace_published_at,
+                          template_id: item.template_id,
+                          mcp_requirements: item.mcp_requirements,
+                        };
+
+                        return (
+                          <UnifiedAgentCard
+                            key={item.id}
+                            variant="marketplace"
+                            data={baseData}
+                            state={{ isActioning: installingItemId === item.id }}
+                            actions={{
+                              onPrimaryAction: (data, e) => onInstallClick(item, e),
+                              onClick: () => onInstallClick(item),
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 )}
                 {communityItems.length > 0 && (
                   <div className="space-y-6">
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                      {communityItems.map((item) => (
-                        <AgentCard
-                          key={item.id}
-                          mode="marketplace"
-                          data={item}
-                          styling={getItemStyling(item)}
-                          isActioning={installingItemId === item.id}
-                          onPrimaryAction={onInstallClick}
-                          onClick={() => onInstallClick(item)}
-                        />
-                      ))}
+                      {communityItems.map((item) => {
+                        const styling = getItemStyling(item);
+                        const baseData: BaseAgentData = {
+                          id: item.id,
+                          name: item.name,
+                          description: item.description,
+                          tags: item.tags,
+                          created_at: item.created_at,
+                          icon_background: styling.color,
+                          creator_name: item.creator_name,
+                          is_kortix_team: item.is_kortix_team,
+                          download_count: item.download_count,
+                          marketplace_published_at: item.marketplace_published_at,
+                          template_id: item.template_id,
+                          mcp_requirements: item.mcp_requirements,
+                        };
+
+                        return (
+                          <UnifiedAgentCard
+                            key={item.id}
+                            variant="marketplace"
+                            data={baseData}
+                            state={{ isActioning: installingItemId === item.id }}
+                            actions={{
+                              onPrimaryAction: (data, e) => onInstallClick(item, e),
+                              onClick: () => onInstallClick(item),
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </>
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {allMarketplaceItems.map((item) => (
-                  <AgentCard
-                    key={item.id}
-                    mode="marketplace"
-                    data={item}
-                    styling={getItemStyling(item)}
-                    isActioning={installingItemId === item.id}
-                    onPrimaryAction={onInstallClick}
-                    onClick={() => onInstallClick(item)}
-                  />
-                ))}
+                {allMarketplaceItems.map((item) => {
+                  const styling = getItemStyling(item);
+                  const baseData: BaseAgentData = {
+                    id: item.id,
+                    name: item.name,
+                    description: item.description,
+                    tags: item.tags,
+                    created_at: item.created_at,
+                    icon_background: styling.color,
+                    creator_name: item.creator_name,
+                    is_kortix_team: item.is_kortix_team,
+                    download_count: item.download_count,
+                    marketplace_published_at: item.marketplace_published_at,
+                    template_id: item.template_id,
+                    mcp_requirements: item.mcp_requirements,
+                  };
+
+                  return (
+                    <UnifiedAgentCard
+                      key={item.id}
+                      variant="marketplace"
+                      data={baseData}
+                      state={{ isActioning: installingItemId === item.id }}
+                      actions={{
+                        onPrimaryAction: (data, e) => onInstallClick(item, e),
+                        onClick: () => onInstallClick(item),
+                      }}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

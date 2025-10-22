@@ -14,6 +14,7 @@ import type { MarketplaceTemplate } from '@/components/agents/installation/types
 import { getAgentAvatar } from '../../../lib/utils/get-agent-style';
 import { AgentsParams } from '@/hooks/react-query/agents/utils';
 
+import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { TabsNavigation } from '@/components/agents/custom-agents-page/tabs-navigation';
 import { MyAgentsTab } from '@/components/agents/custom-agents-page/my-agents-tab';
 import { MarketplaceTab } from '@/components/agents/custom-agents-page/marketplace-tab';
@@ -51,11 +52,19 @@ export default function AgentsPage() {
     }
   }, [flagLoading, customAgentsEnabled, router]);
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const searchParams = useSearchParams();
   const pathname = usePathname();
+
+  const [agentConfigDialog, setAgentConfigDialog] = useState<{
+    open: boolean;
+    agentId: string | null;
+    initialTab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+  }>({
+    open: false,
+    agentId: null,
+    initialTab: 'instructions',
+  });
   
   const [agentsPage, setAgentsPage] = useState(1);
   const [agentsSearchQuery, setAgentsSearchQuery] = useState('');
@@ -246,8 +255,11 @@ export default function AgentsPage() {
   };
 
   const handleEditAgent = (agentId: string) => {
-    setEditingAgentId(agentId);
-    setEditDialogOpen(true);
+    setAgentConfigDialog({
+      open: true,
+      agentId,
+      initialTab: 'instructions',
+    });
   };
 
   const handleCreateNewAgent = useCallback(() => {
@@ -559,6 +571,27 @@ export default function AgentsPage() {
           onInstall={handleInstall}
           isInstalling={installingItemId === selectedItem?.id}
         />
+
+        {agentConfigDialog.agentId && (
+          <AgentConfigurationDialog
+            open={agentConfigDialog.open}
+            onOpenChange={(open) =>
+              setAgentConfigDialog((prev) => ({
+                open,
+                agentId: open ? prev.agentId : null,
+                initialTab: open ? prev.initialTab : 'instructions',
+              }))
+            }
+            agentId={agentConfigDialog.agentId}
+            initialTab={agentConfigDialog.initialTab}
+            onAgentChange={(newAgentId) =>
+              setAgentConfigDialog((prev) => ({
+                ...prev,
+                agentId: newAgentId,
+              }))
+            }
+          />
+        )}
       </div>
     </div>
   );
