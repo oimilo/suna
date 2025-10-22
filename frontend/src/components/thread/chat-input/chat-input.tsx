@@ -21,7 +21,7 @@ import { ChatSnack } from './chat-snack';
 import { Brain, Zap, Database } from 'lucide-react';
 import { FaGoogle, FaDiscord } from 'react-icons/fa';
 import { SiNotion } from 'react-icons/si';
-import { AgentConfigModal } from '@/components/agents/agent-config-modal';
+import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSubscriptionWithStreaming } from '@/hooks/react-query/subscriptions/use-subscriptions';
 import { isLocalMode } from '@/lib/config';
@@ -130,9 +130,12 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
-    const [configModalOpen, setConfigModalOpen] = useState(false);
-    const [configModalTab, setConfigModalTab] = useState('integrations');
-    // Removed Pipedream registry dialog; we open AgentConfigModal instead
+    type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+    const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: AgentConfigTab }>({
+      open: false,
+      tab: 'integrations',
+    });
+    // Removed Pipedream registry dialog; we open AgentConfigurationDialog instead
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
     const [billingModalOpen, setBillingModalOpen] = useState(false);
@@ -473,9 +476,9 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   showToolPreview={showToolPreview}
                   onExpandToolPreview={onExpandToolPreview}
                   onOpenIntegrations={() => {
-                    setConfigModalTab('integrations');
-                    setConfigModalOpen(true);
+                    setAgentConfigDialog({ open: true, tab: 'integrations' });
                   }}
+                  onOpenAgentConfig={(tab) => setAgentConfigDialog({ open: true, tab })}
                 />
               </div>
 
@@ -485,8 +488,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none">
                     <button
                       onClick={() => {
-                        setConfigModalTab('integrations');
-                        setConfigModalOpen(true);
+                        setAgentConfigDialog({ open: true, tab: 'integrations' });
                       }}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
@@ -507,7 +509,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                     <div className="w-px h-4 bg-border/60" />
                     
                     <button
-                      onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=instructions`)}
+                      onClick={() => setAgentConfigDialog({ open: true, tab: 'instructions' })}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Brain className="h-3.5 w-3.5 flex-shrink-0" />
@@ -517,7 +519,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                     <div className="w-px h-4 bg-border/60" />
                     
                     <button
-                      onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=knowledge`)}
+                      onClick={() => setAgentConfigDialog({ open: true, tab: 'knowledge' })}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Database className="h-3.5 w-3.5 flex-shrink-0" />
@@ -527,7 +529,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                     <div className="w-px h-4 bg-border/60" />
                     
                     <button
-                      onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=triggers`)}
+                      onClick={() => setAgentConfigDialog({ open: true, tab: 'triggers' })}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-all duration-200 px-2.5 py-1.5 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 flex-shrink-0"
                     >
                       <Zap className="h-3.5 w-3.5 flex-shrink-0" />
@@ -543,13 +545,15 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             )}
             </div>
           </div>
-          <AgentConfigModal
-            isOpen={configModalOpen}
-            onOpenChange={setConfigModalOpen}
-            selectedAgentId={selectedAgentId}
-            onAgentSelect={onAgentSelect}
-            initialTab={configModalTab}
-          />
+          {selectedAgentId && (
+            <AgentConfigurationDialog
+              open={agentConfigDialog.open}
+              onOpenChange={(open) => setAgentConfigDialog((prev) => ({ ...prev, open }))}
+              agentId={selectedAgentId}
+              initialTab={agentConfigDialog.tab}
+              onAgentChange={onAgentSelect}
+            />
+          )}
           {null}
           <BillingModal
             open={billingModalOpen}

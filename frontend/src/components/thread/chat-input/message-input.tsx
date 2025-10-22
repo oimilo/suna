@@ -24,8 +24,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useRouter } from 'next/navigation';
+} from '@/components/ui/dropdown-menu';
+
+type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
 
 interface MessageInputProps {
   value: string;
@@ -71,6 +72,7 @@ interface MessageInputProps {
   onExpandToolPreview?: () => void;
   // Projects page quick-config
   onOpenIntegrations?: () => void;
+  onOpenAgentConfig?: (tab: AgentConfigTab) => void;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -118,10 +120,10 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       showToolPreview,
       onExpandToolPreview,
       onOpenIntegrations,
+      onOpenAgentConfig,
     },
     ref,
   ) => {
-    const router = useRouter();
     const [billingModalOpen, setBillingModalOpen] = useState(false);
     const { enabled: customAgentsEnabled, loading: flagsLoading } = useFeatureFlag('custom_agents');
 
@@ -288,21 +290,21 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                     Integrações
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=instructions`)}
+                    onClick={() => onOpenAgentConfig?.('instructions')}
                     className="flex items-center gap-2"
                   >
                     <Brain className="h-4 w-4" />
                     Instruções
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=knowledge`)}
+                    onClick={() => onOpenAgentConfig?.('knowledge')}
                     className="flex items-center gap-2"
                   >
                     <Database className="h-4 w-4" />
                     Conhecimento
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push(`/agents/config/${selectedAgentId}?tab=configuration&accordion=triggers`)}
+                    onClick={() => onOpenAgentConfig?.('triggers')}
                     className="flex items-center gap-2"
                   >
                     <Zap className="h-4 w-4" />

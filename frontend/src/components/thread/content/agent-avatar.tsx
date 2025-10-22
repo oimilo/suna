@@ -9,6 +9,7 @@ interface AgentAvatarProps {
   agentName?: string | null;
   size?: number;
   className?: string;
+  isSunaDefault?: boolean;
 }
 
 export const AgentAvatar: React.FC<AgentAvatarProps> = ({
@@ -18,6 +19,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   agentName,
   size = 32,
   className = '',
+  isSunaDefault = false,
 }) => {
   const displayLetter = (agentName || iconName || 'A').trim().charAt(0).toUpperCase();
 
