@@ -22,11 +22,28 @@ import asyncio
 import argparse
 import sys
 import json
+import os
 from pathlib import Path
 
-# Add the backend directory to the path so we can import modules
-backend_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(backend_dir))
+# Load environment variables from backend/.env.local before importing backend modules
+repo_root = Path(__file__).resolve().parents[4]
+env_file = repo_root / "backend" / ".env.local"
+if env_file.exists():
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip()
+        # remove surrounding quotes if present
+        if value and (value[0] == value[-1] == '"' or value[0] == value[-1] == "'"):
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+# Ensure backend packages are importable
+sys.path.append(str(repo_root))
+sys.path.append(str(repo_root / "backend"))
 
 from core.utils.suna_default_agent_service import SunaDefaultAgentService
 from core.services.supabase import DBConnection
@@ -36,6 +53,7 @@ from core.utils.logger import logger
 class SunaAgentManager:
     def __init__(self):
         self.service = SunaDefaultAgentService()
+        self.db = self.service._db  # reuse underlying connection
     
     async def install_all_users(self):
         """Install Suna agent for all users who don't have it"""
@@ -79,14 +97,45 @@ class SunaAgentManager:
     async def replace_user_agent(self, account_id):
         """Replace Suna agent for specific user (in case of corruption)"""
         print(f"🔄 Replacing Suna agent for user {account_id}...")
-        
+
         # Install/replace the agent with latest config
         agent_id = await self.service.install_suna_agent_for_user(account_id, replace_existing=True)
-        
+
         if agent_id:
             print(f"✅ Successfully replaced Suna agent {agent_id} for user {account_id}")
         else:
             print(f"❌ Failed to replace Suna agent for user {account_id}")
+
+    async def replace_all_users(self):
+        """Replace the default Suna agent for every user that currently has one."""
+        print("🔄 Replacing Suna default agent for all users...")
+
+        client = await self.db.client
+        result = await client.table('agents').select('account_id').eq('metadata->>is_suna_default', 'true').execute()
+        account_ids = [row['account_id'] for row in result.data or []]
+
+        if not account_ids:
+            print("ℹ️  No users with the default Suna agent found.")
+            return
+
+        success = 0
+        failures = []
+
+        for account_id in account_ids:
+            try:
+                agent_id = await self.service.install_suna_agent_for_user(account_id, replace_existing=True)
+                if agent_id:
+                    success += 1
+                else:
+                    failures.append((account_id, "install_suna_agent_for_user returned None"))
+            except Exception as exc:
+                failures.append((account_id, str(exc)))
+
+        print(f"✅ Replaced Suna agent for {success} users")
+        if failures:
+            print(f"❌ Failed to replace for {len(failures)} users:")
+            for account_id, error in failures:
+                print(f"   - {account_id}: {error}")
     
     async def show_stats(self):
         """Show Suna agent statistics"""
@@ -126,7 +175,9 @@ async def main():
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Main commands
-    subparsers.add_parser('install-all', help='Install Suna agent for all users who don\'t have it')
+    # Temporarily disable multi-user commands due to network limitations
+    # subparsers.add_parser('install-all', help='Install Suna agent for all users who don\'t have it')
+    # subparsers.add_parser('replace-all', help='Replace Suna agent for all users that already have it')
     subparsers.add_parser('stats', help='Show Suna agent statistics')
     subparsers.add_parser('config-info', help='Show information about Suna configuration')
     
@@ -146,9 +197,7 @@ async def main():
     manager = SunaAgentManager()
     
     try:
-        if args.command == 'install-all':
-            await manager.install_all_users()
-        elif args.command == 'stats':
+        if args.command == 'stats':
             await manager.show_stats()
         elif args.command == 'config-info':
             await manager.update_config_info()
