@@ -187,6 +187,17 @@ class CustomMCPHandler:
             logger.error(f"Failed to resolve profile {profile_id}: {str(e)}")
             return None
     
+    def _register_tool_alias(self, alias_name: str, base_tool_key: str, base_entry: Dict[str, Any]):
+        if not alias_name:
+            return
+        if alias_name in self.custom_tools:
+            return
+        alias_entry = base_entry.copy()
+        alias_entry['name'] = alias_name
+        alias_entry['alias_for'] = base_tool_key
+        self.custom_tools[alias_name] = alias_entry
+        logger.debug(f"Registered alias '{alias_name}' for custom MCP tool '{base_tool_key}'")
+    
     def _register_custom_tools(self, tools, server_name: str, enabled_tools: List[str], custom_type: str, server_config: Dict[str, Any]):
         tools_registered = 0
         
@@ -209,6 +220,7 @@ class CustomMCPHandler:
                     'custom_type': custom_type,
                     'custom_config': server_config
                 }
+                self._register_tool_alias(tool_name_from_server, tool_name, self.custom_tools[tool_name])
                 tools_registered += 1
                 # logger.debug(f"Registered custom tool: {tool_name}")
         
@@ -228,14 +240,23 @@ class CustomMCPHandler:
                 tool_name = f"custom_{server_name.replace(' ', '_').lower()}_{tool_name_from_server}"
                 self.custom_tools[tool_name] = {
                     'name': tool_name,
-                    'description': tool_info['description'],
-                    'parameters': tool_info['input_schema'],
+                    'description': tool_info.get('description', ''),
+                    'parameters': (
+                        tool_info.get('input_schema')
+                        or tool_info.get('inputSchema')
+                        or tool_info.get('parameters', {
+                            'type': 'object',
+                            'properties': {},
+                            'required': []
+                        })
+                    ),
                     'server': server_name,
                     'original_name': tool_name_from_server,
                     'is_custom': True,
                     'custom_type': custom_type,
                     'custom_config': server_config
                 }
+                self._register_tool_alias(tool_name_from_server, tool_name, self.custom_tools[tool_name])
                 tools_registered += 1
                 logger.debug(f"Registered custom tool: {tool_name}")
         
