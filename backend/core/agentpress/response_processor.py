@@ -1438,6 +1438,41 @@ class ResponseProcessor:
         return parsed_data
 
     # Tool execution methods
+    def _normalize_tool_identifier(self, name: str) -> str:
+        normalized = str(name or "").strip().lower()
+        for char in ("-", " ", ".", "/", ":"):
+            normalized = normalized.replace(char, "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return normalized
+
+    def _resolve_tool_alias(self, requested_name: str, available_functions: Dict[str, Callable]) -> Optional[str]:
+        normalized_requested = self._normalize_tool_identifier(requested_name)
+        if not normalized_requested:
+            return None
+
+        suffix_matches: List[Tuple[int, str]] = []
+
+        for candidate_name in available_functions.keys():
+            normalized_candidate = self._normalize_tool_identifier(candidate_name)
+            if not normalized_candidate:
+                continue
+
+            if normalized_candidate == normalized_requested:
+                return candidate_name
+
+            if normalized_requested.endswith(normalized_candidate):
+                idx = normalized_requested.rfind(normalized_candidate)
+                if idx > 0 and normalized_requested[idx - 1] not in ("_",):
+                    continue
+                suffix_matches.append((len(normalized_candidate), candidate_name))
+
+        if suffix_matches:
+            suffix_matches.sort(reverse=True)
+            return suffix_matches[0][1]
+
+        return None
+
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:
         """Execute a single tool call and return the result."""
         span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
@@ -1458,6 +1493,16 @@ class ResponseProcessor:
 
             # Look up the function by name
             tool_fn = available_functions.get(function_name)
+            if not tool_fn:
+                resolved_name = self._resolve_tool_alias(function_name, available_functions)
+                if resolved_name:
+                    resolved_fn = available_functions.get(resolved_name)
+                    if resolved_fn:
+                        logger.debug(f"🔄 Resolved tool alias '{function_name}' to registered function '{resolved_name}'")
+                        tool_call["function_name"] = resolved_name
+                        function_name = resolved_name
+                        tool_fn = resolved_fn
+
             if not tool_fn:
                 logger.error(f"❌ Tool function '{function_name}' not found in registry")
                 # logger.error(f"❌ Available functions: {list(available_functions.keys())}")

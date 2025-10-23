@@ -9,6 +9,7 @@
   - `backend/core/tools/utils/mcp_tool_executor.py`
   - `backend/core/mcp_module/mcp_service.py`
   - `backend/core/tools/agent_builder_tools/mcp_search_tool.py`
+- Gap identificado em 2025-10-23: `dynamic_tool_builder._parse_tool_name` mantém o nome completo (`trello_get_*`) em vez de recortar o prefixo como o Suna; ajustar para restaurar `method_name = boards_by_id_board` e expor o OpenAPI com esses aliases.
 - Conferir que o wrapper registra aliases normalizados, trata `ToolExecutionResult`, e efetua fallback HTTP↔SSE.
 - Revisar geração de logs após merge e validar que o `tool_registry` contém o alias completo (`TRELLO_GET_MEMBERS_BY_ID_MEMBER`).
 
@@ -29,6 +30,7 @@
 - Status: frontend converte para `tool.name` e backend (`configure_profile_for_agent`) agora normaliza/deduplica antes de persistir; resta aplicar backfill para dados antigos.
 - Preparar/rodar o backfill (`python3 backend/scripts/backfill_composio_enabled_tools.py`) para corrigir `enabled_tools` já persistidos com variantes incompatíveis (ex.: `TRELLO_GET_*`).
 - Somente após esses passos repetir os testes funcionais abaixo.
+- Adicionada em 2025-10-23 fallback no `response_processor` para resolver `function_name` por normalização/sufixo, aceitando chamadas como `TRELLO_GET_*` e mapeando para o método registrado (`boards_by_id_board`).
 
 ## 5. Testes Funcionais (pós-correção)
 - Fluxo manual:
