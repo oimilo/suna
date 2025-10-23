@@ -13,6 +13,8 @@ export interface CredentialProfile {
   last_used_at: string | null;
   created_at: string;
   updated_at: string;
+  toolkit_slug?: string | null;
+  toolkit_name?: string | null;
 }
 
 export interface CreateCredentialProfileRequest {

@@ -64,6 +64,8 @@ class CredentialProfileResponse(BaseModel):
     config_keys: List[str]
     is_active: bool
     is_default: bool
+    toolkit_slug: Optional[str] = None
+    toolkit_name: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -227,6 +229,8 @@ async def store_credential_profile(
             config_keys=extract_config_keys(profile.config),
             is_active=profile.is_active,
             is_default=profile.is_default,
+            toolkit_slug=profile.config.get('toolkit_slug'),
+            toolkit_name=profile.config.get('toolkit_name'),
             created_at=profile.created_at.isoformat() if profile.created_at else None,
             updated_at=profile.updated_at.isoformat() if profile.updated_at else None
         )
@@ -255,6 +259,8 @@ async def get_user_credential_profiles(
                 config_keys=extract_config_keys(profile.config),
                 is_active=profile.is_active,
                 is_default=profile.is_default,
+                toolkit_slug=profile.config.get('toolkit_slug'),
+                toolkit_name=profile.config.get('toolkit_name'),
                 created_at=profile.created_at.isoformat() if profile.created_at else None,
                 updated_at=profile.updated_at.isoformat() if profile.updated_at else None
             )
@@ -286,6 +292,8 @@ async def get_credential_profiles_for_mcp(
                 config_keys=extract_config_keys(profile.config),
                 is_active=profile.is_active,
                 is_default=profile.is_default,
+                toolkit_slug=profile.config.get('toolkit_slug'),
+                toolkit_name=profile.config.get('toolkit_name'),
                 created_at=profile.created_at.isoformat() if profile.created_at else None,
                 updated_at=profile.updated_at.isoformat() if profile.updated_at else None
             )
@@ -317,6 +325,8 @@ async def get_credential_profile(
             config_keys=extract_config_keys(profile.config),
             is_active=profile.is_active,
             is_default=profile.is_default,
+            toolkit_slug=profile.config.get('toolkit_slug'),
+            toolkit_name=profile.config.get('toolkit_name'),
             created_at=profile.created_at.isoformat() if profile.created_at else None,
             updated_at=profile.updated_at.isoformat() if profile.updated_at else None
         )

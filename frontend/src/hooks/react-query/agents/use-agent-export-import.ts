@@ -6,13 +6,14 @@ export function useExportAgent() {
   return useMutation({
     mutationFn: async (agentId: string) => {
       if (!agentId) throw new Error('agentId is required');
-      const res = await backendApi.get<Blob>(`/agents/${agentId}/export`);
+      const res = await backendApi.get<Record<string, any>>(`/agents/${agentId}/export`);
       if (!res.success || !res.data) {
         throw new Error(res.error?.message || 'Failed to export agent');
       }
 
-      // Create a download link for the exported agent
-      const blob = res.data as unknown as Blob;
+      // Convert JSON response into downloadable file
+      const jsonContent = JSON.stringify(res.data, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -32,5 +33,4 @@ export function useExportAgent() {
     },
   });
 }
-
 

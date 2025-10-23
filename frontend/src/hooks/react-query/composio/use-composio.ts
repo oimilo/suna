@@ -31,7 +31,7 @@ export const useComposioCategories = () => {
   });
 };
 
-export const useComposioToolkits = (search?: string, category?: string) => {
+export const useComposioToolkits = (search?: string, category?: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: composioKeys.toolkits(search, category),
     queryFn: async (): Promise<ComposioToolkitsResponse> => {
@@ -40,6 +40,7 @@ export const useComposioToolkits = (search?: string, category?: string) => {
     },
     staleTime: 5 * 60 * 1000,
     retry: 2,
+    enabled: options?.enabled ?? true,
   });
 };
 

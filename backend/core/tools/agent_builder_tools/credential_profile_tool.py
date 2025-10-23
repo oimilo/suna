@@ -242,6 +242,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             new_mcp_config = {
                 'name': profile.toolkit_name,
                 'type': 'composio',
+                'qualifiedName': profile.mcp_qualified_name,
                 'config': {
                     'profile_id': profile_id,
                     'toolkit_slug': profile.toolkit_slug,

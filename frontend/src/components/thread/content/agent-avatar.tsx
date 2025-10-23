@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { DynamicIcon } from 'lucide-react/dynamic';
+import { icons } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KortixLogo } from '@/components/sidebar/brand-logo';
 import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
@@ -65,7 +66,24 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
     );
   }
 
-  if (iconName) {
+  const resolveIconName = (name?: string | null): string | null => {
+    if (!name) return null;
+    if ((icons as Record<string, unknown>)[name]) return name;
+    const camelCase = name
+      .split('-')
+      .map((part, index) =>
+        index === 0 ? part.charAt(0).toLowerCase() + part.slice(1) : part.charAt(0).toUpperCase() + part.slice(1)
+      )
+      .join('');
+    const pascalCase = camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
+    if ((icons as Record<string, unknown>)[pascalCase]) return name;
+    if ((icons as Record<string, unknown>)[camelCase]) return name;
+    return null;
+  };
+
+  const safeIconName = resolveIconName(iconName);
+
+  if (safeIconName) {
     return (
       <div
         className={cn('flex items-center justify-center transition-all border', className)}
@@ -78,7 +96,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         title={agentName}
         aria-label={agentName}
       >
-        <DynamicIcon name={iconName as any} size={size * 0.5} color={iconColor} />
+        <DynamicIcon name={safeIconName as any} size={size * 0.5} color={iconColor} />
       </div>
     );
   }

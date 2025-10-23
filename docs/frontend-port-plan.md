@@ -31,6 +31,18 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - Remaining:
   - Re-enable tool save endpoint when backend supports `/secure-mcp/composio-profiles/save-tools`.
 
+#### Phase 2.1 – Composio Credential Alignment (new)
+- Backend parity work:
+  - Normalize slugs when we read/write Composio profiles (`backend/core/composio_integration/composio_profile_service.py`) and when versions are created (`backend/core/versioning/version_service.py`) so anything persisted by the agent builder matches o formato upstream (`composio.<slug>` com hífens).
+  - Revisitar `CredentialProfileTool.configure_profile_for_agent` para reaproveitar o slug canônico (converter underscore → hífen quando necessário) e garantir que `mcp_qualified_name` acompanhe todas as fusões de `custom_mcps`.
+  - Planejar uma migração/backfill no Supabase para remover prefixos legados `custom_composio_*` e preencher `toolkit_slug` ausentes em `user_mcp_credential_profiles`, mantendo a cifra via `ComposioProfileService`.
+- Frontend follow-up:
+  - Ajustar `ConfiguredMcpList` e `MCPConfigurationNew` para ler o slug via `toolkit_slug`, `config.mcp_qualified_name` ou chaves legadas e alimentar `useComposioToolkitIcon`, garantindo que credenciais criadas pelo agente exibam os ícones corretos.
+  - Trocar as keys da lista de MCPs para usar `profile_id` (ou `mcp.config.profile_id`) e evitar warnings de duplicidade quando o agent builder cria múltiplas entradas com o mesmo qualified name.
+- QA & verificação:
+  - Exercitar fluxos Trello/Auth1 via agent builder após o ajuste de slug e confirmar que o link de autenticação espelha o comportamento do Suna original.
+  - Rodar smoke em `/agents` (modal + logos), `/settings/credentials` e nas ferramentas de descoberta do chat depois da limpeza de dados.
+
 ### 3. Knowledge Base & Templates ☐
 - Ported knowledge base manager page (`/knowledge`) with folders/files UI, including new `knowledge-base/*` components, Supabase-driven hooks, and sidebar navigation.
 - `/agents/config` now reuses the unified knowledge base manager (tree view, folder/file assignments) so agent configuration matches upstream UX.
