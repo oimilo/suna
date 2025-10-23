@@ -336,6 +336,7 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
   const [customAuthConfigErrors, setCustomAuthConfigErrors] = useState<Record<string, string>>({});
 
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [toolNameMap, setToolNameMap] = useState<Record<string, string>>({});
 
   const { mutate: createProfile, isPending: isCreating } = useCreateComposioProfile();
   const { data: profiles, isLoading: isLoadingProfiles } = useComposioProfiles();
@@ -358,6 +359,10 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
   const existingProfiles = profiles?.filter(p =>
     p.toolkit_slug === app.slug && p.is_connected
   ) || [];
+
+  useEffect(() => {
+    setToolNameMap({});
+  }, [selectedProfile?.profile_id]);
 
 
 
@@ -469,14 +474,15 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
     if (!selectedProfile || !agentId) return;
 
     const mcpConfigResponse = await composioApi.getMcpConfigForProfile(selectedProfile.profile_id);
+    const canonicalEnabledTools = selectedTools.map((slug) => toolNameMap[slug] || slug);
     const response = await backendApi.put(`/agents/${agentId}/custom-mcp-tools`, {
       custom_mcps: [{
         ...mcpConfigResponse.mcp_config,
-        enabledTools: selectedTools
+        enabledTools: canonicalEnabledTools
       }]
     });
     if (response.data.success) {
-      toast.success(`Added ${selectedTools.length} ${selectedProfile.toolkit_name} tools to your agent!`);
+      toast.success(`Added ${canonicalEnabledTools.length} ${selectedProfile.toolkit_name} tools to your agent!`);
       onComplete(selectedProfile.profile_id, app.name, app.slug);
       onOpenChange(false);
     }
@@ -668,9 +674,9 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[90vh] overflow-hidden gap-0 flex flex-col",
+          "overflow-hidden gap-0",
           currentStep === Step.ToolsSelection
-            ? "max-w-2xl p-0"
+            ? "max-w-2xl h-[85vh] p-0 flex flex-col"
             : currentStep === Step.ProfileSelect
               ? "max-w-2xl p-0"
               : "max-w-lg p-0"
@@ -701,7 +707,7 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
             </DialogHeader>
             <div
               className={cn(
-                "flex-1 overflow-y-auto",
+                "flex-1 overflow-hidden",
                 currentStep === Step.ProfileSelect ? "px-0 pb-0 pt-0" : "px-8 pb-8 pt-6"
               )}
             >
@@ -1375,6 +1381,13 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
                       toolkitSlug={selectedProfile.toolkit_slug || app.slug}
                       selectedTools={selectedTools}
                       onToolsChange={setSelectedTools}
+                      onToolMetadata={(tools) => {
+                        const map: Record<string, string> = {};
+                        tools.forEach((tool) => {
+                          map[tool.slug] = tool.name;
+                        });
+                        setToolNameMap(map);
+                      }}
                       onSave={handleSaveTools}
                       showSaveButton={false}
                       className="flex-1 min-h-0"

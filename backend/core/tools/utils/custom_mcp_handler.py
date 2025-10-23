@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
@@ -13,39 +13,6 @@ class CustomMCPHandler:
     def __init__(self, connection_manager: MCPConnectionManager):
         self.connection_manager = connection_manager
         self.custom_tools = {}
-    
-    @staticmethod
-    def _normalize_tool_name(name: Any) -> str:
-        if not name:
-            return ""
-        normalized = str(name).strip().lower()
-        for char in ("-", " ", ".", "/", ":"):
-            normalized = normalized.replace(char, "_")
-        while "__" in normalized:
-            normalized = normalized.replace("__", "_")
-        return normalized
-    
-    @classmethod
-    def _match_enabled_tool(cls, tool_name: str, enabled_tools: List[str]) -> tuple[bool, Optional[str]]:
-        if not enabled_tools:
-            return True, None
-
-        normalized_tool = cls._normalize_tool_name(tool_name)
-
-        for candidate in enabled_tools:
-            if not candidate:
-                continue
-
-            if candidate in ("*", "all"):
-                return True, None
-
-            if candidate == tool_name:
-                return True, candidate
-
-            if cls._normalize_tool_name(candidate) == normalized_tool:
-                return True, candidate
-
-        return False, None
     
     async def initialize_custom_mcps(self, custom_configs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         initialization_tasks = []
@@ -193,35 +160,12 @@ class CustomMCPHandler:
             logger.error(f"Failed to resolve profile {profile_id}: {str(e)}")
             return None
     
-    def _register_tool_alias(self, alias_name: str, base_tool_key: str, base_entry: Dict[str, Any]):
-        if not alias_name:
-            return
-        if alias_name in self.custom_tools:
-            return
-        alias_entry = base_entry.copy()
-        alias_entry['name'] = alias_name
-        alias_entry['alias_for'] = base_tool_key
-        self.custom_tools[alias_name] = alias_entry
-        logger.debug(f"Registered alias '{alias_name}' for custom MCP tool '{base_tool_key}'")
-    
     def _register_custom_tools(self, tools, server_name: str, enabled_tools: List[str], custom_type: str, server_config: Dict[str, Any]):
         tools_registered = 0
         
         for tool in tools:
             tool_name_from_server = tool.name
-            is_enabled, matched_alias = self._match_enabled_tool(tool_name_from_server, enabled_tools)
-            if is_enabled:
-                if matched_alias and matched_alias != tool_name_from_server:
-                    logger.debug(
-                        "Normalized custom MCP tool name '%s' matched configured list %s",
-                        tool_name_from_server,
-                        enabled_tools,
-                    )
-                elif enabled_tools and tool_name_from_server not in enabled_tools:
-                    logger.debug(
-                        f"Normalized custom MCP tool name '{tool_name_from_server}' matched "
-                        f"configured list {enabled_tools}"
-                    )
+            if not enabled_tools or tool_name_from_server in enabled_tools:
                 tool_name = f"custom_{server_name.replace(' ', '_').lower()}_{tool_name_from_server}"
                 self.custom_tools[tool_name] = {
                     'name': tool_name,
@@ -233,9 +177,6 @@ class CustomMCPHandler:
                     'custom_type': custom_type,
                     'custom_config': server_config
                 }
-                self._register_tool_alias(tool_name_from_server, tool_name, self.custom_tools[tool_name])
-                if matched_alias and matched_alias != tool_name_from_server:
-                    self._register_tool_alias(matched_alias, tool_name, self.custom_tools[tool_name])
                 tools_registered += 1
                 # logger.debug(f"Registered custom tool: {tool_name}")
         
@@ -246,41 +187,18 @@ class CustomMCPHandler:
         
         for tool_info in tools_info:
             tool_name_from_server = tool_info['name']
-            is_enabled, matched_alias = self._match_enabled_tool(tool_name_from_server, enabled_tools)
-            if is_enabled:
-                if matched_alias and matched_alias != tool_name_from_server:
-                    logger.debug(
-                        "Normalized custom MCP tool name '%s' matched configured list %s",
-                        tool_name_from_server,
-                        enabled_tools,
-                    )
-                elif enabled_tools and tool_name_from_server not in enabled_tools:
-                    logger.debug(
-                        f"Normalized custom MCP tool name '{tool_name_from_server}' matched "
-                        f"configured list {enabled_tools}"
-                    )
+            if not enabled_tools or tool_name_from_server in enabled_tools:
                 tool_name = f"custom_{server_name.replace(' ', '_').lower()}_{tool_name_from_server}"
                 self.custom_tools[tool_name] = {
                     'name': tool_name,
-                    'description': tool_info.get('description', ''),
-                    'parameters': (
-                        tool_info.get('input_schema')
-                        or tool_info.get('inputSchema')
-                        or tool_info.get('parameters', {
-                            'type': 'object',
-                            'properties': {},
-                            'required': []
-                        })
-                    ),
+                    'description': tool_info['description'],
+                    'parameters': tool_info['input_schema'],
                     'server': server_name,
                     'original_name': tool_name_from_server,
                     'is_custom': True,
                     'custom_type': custom_type,
                     'custom_config': server_config
                 }
-                self._register_tool_alias(tool_name_from_server, tool_name, self.custom_tools[tool_name])
-                if matched_alias and matched_alias != tool_name_from_server:
-                    self._register_tool_alias(matched_alias, tool_name, self.custom_tools[tool_name])
                 tools_registered += 1
                 logger.debug(f"Registered custom tool: {tool_name}")
         

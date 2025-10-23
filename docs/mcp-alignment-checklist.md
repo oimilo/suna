@@ -22,15 +22,22 @@
 - Garantir que `enabledTools` contenha os aliases corretos e que `mcp_qualified_name` siga o formato `composio.<slug>`.
 - Limpar entradas órfãs nas configurações de agentes para evitar falhas nos registros dinâmicos.
 - Status 2025-10-23: execução concluída em ambiente com Supabase configurado — `custom_composio_*` zerados e perfis normalizados para `composio.<slug>`; entradas `pipedream:*` permanecem por design.
+- Próximo passo: executar `python3 backend/scripts/backfill_composio_enabled_tools.py` (staging → produção) para alinhar `enabled_tools` existentes com os nomes exatos devolvidos por `discover_user_mcp_servers`.
 
-## 4. Testes Funcionais
-- Fluxo manual pós-deploy:
+## 4. Ajustes em Andamento
+- Normalizar `enabled_tools` no fluxo de configuração (backend/UI) para salvar exatamente os nomes descobertos (`tool.name`).
+- Status: frontend converte para `tool.name` e backend (`configure_profile_for_agent`) agora normaliza/deduplica antes de persistir; resta aplicar backfill para dados antigos.
+- Preparar/rodar o backfill (`python3 backend/scripts/backfill_composio_enabled_tools.py`) para corrigir `enabled_tools` já persistidos com variantes incompatíveis (ex.: `TRELLO_GET_*`).
+- Somente após esses passos repetir os testes funcionais abaixo.
+
+## 5. Testes Funcionais (pós-correção)
+- Fluxo manual:
   1. `discover_user_mcp_servers` com perfil Trello autenticado.
-  2. `configure_profile_for_agent` habilitando ferramentas Trello.
-  3. Executar `trello_get_members_by_id_member` e verificar resposta.
+  2. `configure_profile_for_agent` (com normalização ativa) habilitando ferramentas Trello.
+  3. Executar `trello_get_boards`, `trello_get_members_by_id_member` e confirmar resposta.
 - Observar logs; não deve aparecer `Tool function ... not found`.
-- Validar que chamadas subsequentes a outras ferramentas do toolkit (boards/cards) também aparecem no registry e executam.
-- Status: aguardando ambiente conectado ao Supabase/Composio para executar; não é possível em ambiente local sem credenciais.
+- Validar que outras ferramentas (boards/cards) registram e executam.
+- Status: aguarda conclusão dos ajustes acima e ambiente conectado ao Supabase/Composio.
 
 ## 5. Observabilidade e Regressão
 - Configurar alerta para logs com `Tool function` ausente ou falhas de normalização.
