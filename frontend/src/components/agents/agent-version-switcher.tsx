@@ -123,7 +123,7 @@ export function AgentVersionSwitcher({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
             <GitBranch className="h-4 w-4" />
@@ -140,7 +140,7 @@ export function AgentVersionSwitcher({
             <ChevronDown className="h-4 w-4 ml-1" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-80">
+        <DropdownMenuContent align="start" className="w-80 z-[100]">
           <DropdownMenuLabel>Version History</DropdownMenuLabel>
           <DropdownMenuSeparator />
           

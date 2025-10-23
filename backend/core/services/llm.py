@@ -8,6 +8,7 @@ using LiteLLM with simplified error handling and clean parameter management.
 from typing import Union, Dict, Any, Optional, AsyncGenerator, List
 import os
 import asyncio
+from collections import deque
 import litellm
 from litellm.router import Router
 from litellm.files.main import ModelResponse
@@ -163,6 +164,28 @@ def _add_tools_config(params: Dict[str, Any], tools: Optional[List[Dict[str, Any
     # logger.debug(f"Added {len(tools)} tools to API parameters")
 
 
+def _has_image_content(messages: List[Dict[str, Any]]) -> bool:
+    """Detect if any message contains image content requiring a vision-capable model."""
+    for message in messages or []:
+        content = message.get("content")
+        if isinstance(content, list):
+            for item in content:
+                if not isinstance(item, dict):
+                    continue
+                item_type = item.get("type")
+                if item_type in {"image_url", "input_image", "image"}:
+                    return True
+                if item.get("image_url"):
+                    return True
+        elif isinstance(content, dict):
+            item_type = content.get("type")
+            if item_type in {"image_url", "input_image", "image"}:
+                return True
+            if content.get("image_url"):
+                return True
+    return False
+
+
 async def make_llm_api_call(
     messages: List[Dict[str, Any]],
     model_name: str,
@@ -184,7 +207,8 @@ async def make_llm_api_call(
     
     # Prepare parameters using centralized model configuration
     from core.ai_models import model_manager
-    resolved_model_name = model_manager.resolve_model_id(model_name)
+    resolved_model_name = model_manager.resolve_model_id(model_name) or model_name
+    original_model_name = resolved_model_name
     # logger.debug(f"Model resolution: '{model_name}' -> '{resolved_model_name}'")
     
     # Only pass headers/extra_headers if they are not None to avoid overriding model config
@@ -204,51 +228,118 @@ async def make_llm_api_call(
     if extra_headers is not None:
         override_params["extra_headers"] = extra_headers
     
-    params = model_manager.get_litellm_params(resolved_model_name, **override_params)
-    
-    # logger.debug(f"Parameters from model_manager.get_litellm_params: {params}")
-    
-    if model_id:
-        params["model_id"] = model_id
-    
-    if stream:
-        params["stream_options"] = {"include_usage": True}
-    
-    # Apply additional configurations that aren't in the model config yet
-    _configure_openai_compatible(params, model_name, api_key, api_base)
-    _add_tools_config(params, tools, tool_choice)
-    
     try:
-        # Log the complete parameters being sent to LiteLLM
-        # logger.debug(f"Calling LiteLLM acompletion for {resolved_model_name}")
-        # logger.debug(f"Complete LiteLLM parameters: {params}")
-        
-        # # Save parameters to txt file for debugging
-        # import json
-        # import os
-        # from datetime import datetime
-        
-        # debug_dir = "debug_logs"
-        # os.makedirs(debug_dir, exist_ok=True)
-        
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        # filename = f"{debug_dir}/llm_params_{timestamp}.txt"
-        
-        # with open(filename, 'w') as f:
-        #     f.write(f"Timestamp: {datetime.now().isoformat()}\n")
-        #     f.write(f"Model Name: {model_name}\n")
-        #     f.write(f"Resolved Model Name: {resolved_model_name}\n")
-        #     f.write(f"Parameters:\n{json.dumps(params, indent=2, default=str)}\n")
-        
-        # logger.debug(f"LiteLLM parameters saved to: {filename}")
-        
-        response = await provider_router.acompletion(**params)
-        
-        # For streaming responses, we need to handle errors that occur during iteration
-        if hasattr(response, '__aiter__') and stream:
-            return _wrap_streaming_response(response)
-        
-        return response
+        preferred_vision_model_id = "openai/gpt-4o-mini"
+        contains_images = _has_image_content(messages)
+
+        model_queue = deque()
+        attempted_models = set()
+
+        def enqueue(target_model: Optional[str], *, front: bool = False):
+            if not target_model:
+                return
+            canonical = model_manager.resolve_model_id(target_model) or target_model
+            if canonical in attempted_models:
+                return
+            if canonical in model_queue:
+                return
+            if front:
+                model_queue.appendleft(canonical)
+            else:
+                model_queue.append(canonical)
+
+        preferred_model_canonical = model_manager.resolve_model_id(preferred_vision_model_id) or preferred_vision_model_id
+
+        preferred_candidates_raw = [
+            preferred_vision_model_id,
+            "openai/gpt-4o",
+            "gemini/gemini-2.5-flash-lite",
+            "openrouter/google/gemini-2.5-flash-lite",
+        ]
+
+        preferred_candidates: List[str] = []
+        for candidate in preferred_candidates_raw:
+            canonical = model_manager.resolve_model_id(candidate) or candidate
+            model_entry = model_manager.get_model(canonical)
+            if model_entry and model_entry.supports_vision:
+                preferred_candidates.append(canonical)
+
+        forced_preferred = False
+        if contains_images and config.OPENAI_API_KEY and model_manager.get_model(preferred_model_canonical):
+            if preferred_model_canonical != original_model_name:
+                enqueue(preferred_model_canonical, front=True)
+                forced_preferred = True
+        enqueue(original_model_name)
+
+        if not model_queue:
+            enqueue(resolved_model_name)
+
+        last_exception: Optional[Exception] = None
+
+        while model_queue:
+            current_model = model_queue.popleft()
+            attempted_models.add(current_model)
+
+            try:
+                params = model_manager.get_litellm_params(current_model, **override_params)
+
+                if model_id:
+                    params["model_id"] = model_id
+
+                if stream:
+                    params["stream_options"] = {"include_usage": True}
+
+                _configure_openai_compatible(params, current_model, api_key, api_base)
+                _add_tools_config(params, tools, tool_choice)
+
+                response = await provider_router.acompletion(**params)
+
+                if hasattr(response, '__aiter__') and stream:
+                    return _wrap_streaming_response(response)
+
+                return response
+
+            except Exception as e:
+                last_exception = e
+                error_message = str(e)
+
+                if forced_preferred and current_model == (model_manager.resolve_model_id(preferred_vision_model_id) or preferred_vision_model_id):
+                    logger.warning(
+                        f"Vision preference '{current_model}' failed ({error_message}). "
+                        "Falling back to user-selected model."
+                    )
+                    forced_preferred = False
+                    if original_model_name not in attempted_models:
+                        enqueue(original_model_name, front=True)
+                        continue
+
+                if contains_images and "image input" in error_message.lower():
+                    for candidate in preferred_candidates:
+                        enqueue(candidate)
+
+                    fallback_model = model_manager.select_best_model(
+                        tier="free",
+                        required_capabilities=[ModelCapability.VISION],
+                        prefer_cheaper=True
+                    )
+                    if fallback_model and fallback_model.id not in attempted_models:
+                        enqueue(fallback_model.id)
+
+                    fallback_model_paid = model_manager.select_best_model(
+                        tier="paid",
+                        required_capabilities=[ModelCapability.VISION],
+                        prefer_cheaper=True
+                    )
+                    if fallback_model_paid and fallback_model_paid.id not in attempted_models:
+                        enqueue(fallback_model_paid.id)
+
+                if model_queue:
+                    continue
+
+                raise e
+
+        if last_exception:
+            raise last_exception
         
     except Exception as e:
         error_message = str(e)

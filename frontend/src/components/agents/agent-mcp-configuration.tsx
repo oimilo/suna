@@ -14,6 +14,7 @@ interface AgentMCPConfigurationProps {
   };
   saveMode?: 'direct' | 'callback';
   versionId?: string;
+  isLoading?: boolean;
 }
 
 export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
@@ -23,58 +24,92 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
   agentId,
   versionData,
   saveMode = 'direct',
-  versionId
+  versionId,
+  isLoading = false,
 }) => {
   const allMCPs = [
     ...(configuredMCPs || []),
-    ...(customMCPs || []).map(customMcp => ({
-      name: customMcp.name,
-      qualifiedName: `custom_${customMcp.type || customMcp.customType}_${customMcp.name.replace(' ', '_').toLowerCase()}`,
-      config: customMcp.config,
-      enabledTools: customMcp.enabledTools,
-      isCustom: true,
-      customType: customMcp.type || customMcp.customType
-    }))
+    ...(customMCPs || []).map((customMcp) => {
+      if (customMcp.type === 'composio' || customMcp.customType === 'composio') {
+        return {
+          name: customMcp.name,
+          qualifiedName:
+            customMcp.mcp_qualified_name ||
+            customMcp.config?.mcp_qualified_name ||
+            customMcp.qualifiedName ||
+            `composio.${
+              customMcp.toolkit_slug ||
+              customMcp.config?.toolkit_slug ||
+              customMcp.name.toLowerCase()
+            }`,
+          mcp_qualified_name:
+            customMcp.mcp_qualified_name || customMcp.config?.mcp_qualified_name,
+          config: customMcp.config,
+          enabledTools: customMcp.enabledTools,
+          isCustom: true,
+          customType: 'composio',
+          isComposio: true,
+          toolkitSlug: customMcp.toolkit_slug || customMcp.config?.toolkit_slug,
+          toolkit_slug: customMcp.toolkit_slug || customMcp.config?.toolkit_slug,
+        };
+      }
+
+      const displayType = customMcp.type === 'sse' ? 'http' : customMcp.type || customMcp.customType;
+
+      return {
+        name: customMcp.name,
+        qualifiedName:
+          customMcp.qualifiedName ||
+          `custom_${displayType}_${customMcp.name.replace(' ', '_').toLowerCase()}`,
+        config: customMcp.config,
+        enabledTools: customMcp.enabledTools,
+        isCustom: true,
+        customType: displayType,
+      };
+    }),
   ];
 
-  const sanitizedMCPs = allMCPs.filter(mcp => {
-    const type = mcp.customType || mcp.config?.type;
-    const qualified = mcp.qualifiedName || mcp.mcp_qualified_name || '';
-    return type !== 'pipedream' && !qualified.includes('pipedream');
-  });
-
   const handleConfigurationChange = (mcps: any[]) => {
-    const filteredMCPs = mcps.filter(mcp => {
-      const type = mcp.customType || mcp.config?.type;
-      const qualified = mcp.qualifiedName || mcp.mcp_qualified_name || '';
-      return type !== 'pipedream' && !qualified.includes('pipedream');
-    });
+    const configured = mcps.filter((mcp) => !mcp.isCustom);
+    const custom = mcps
+      .filter((mcp) => mcp.isCustom)
+      .map((mcp) => {
+        if (mcp.customType === 'composio' || mcp.isComposio) {
+          return {
+            name: mcp.name,
+            type: 'composio',
+            customType: 'composio',
+            config: mcp.config,
+            enabledTools: mcp.enabledTools,
+          };
+        }
 
-    const configured = filteredMCPs.filter(mcp => !mcp.isCustom);
-    const custom = filteredMCPs
-      .filter(mcp => mcp.isCustom)
-      .map(mcp => ({
-        name: mcp.name,
-        type: mcp.customType,
-        customType: mcp.customType,
-        config: mcp.config,
-        enabledTools: mcp.enabledTools
-      }));
+        const backendType = mcp.customType === 'http' ? 'sse' : mcp.customType;
+
+        return {
+          name: mcp.name,
+          type: backendType,
+          customType: mcp.customType,
+          config: mcp.config,
+          enabledTools: mcp.enabledTools,
+        };
+      });
 
     onMCPChange({
       configured_mcps: configured,
-      custom_mcps: custom
+      custom_mcps: custom,
     });
   };
 
   return (
     <MCPConfigurationNew
-      configuredMCPs={sanitizedMCPs}
+      configuredMCPs={allMCPs}
       onConfigurationChange={handleConfigurationChange}
       agentId={agentId}
       versionData={versionData}
       saveMode={saveMode}
       versionId={versionId}
+      isLoading={isLoading}
     />
   );
-}; 
+};
