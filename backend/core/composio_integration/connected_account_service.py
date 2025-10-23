@@ -142,7 +142,7 @@ class ConnectedAccountService:
         try:
             logger.debug(f"Fetching connected account: {connected_account_id}")
             
-            response = self.client.connected_accounts.get(connected_account_id)
+            response = self.client.connected_accounts.retrieve(connected_account_id)
             
             if not response:
                 return None

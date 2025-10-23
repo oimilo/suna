@@ -21,6 +21,11 @@ class MCPToolExecutor:
 
         try:
             if tool_name in self.custom_tools:
+                tool_info = self.custom_tools[tool_name]
+                alias_for = tool_info.get('alias_for')
+                if alias_for and alias_for in self.custom_tools:
+                    logger.debug(f"Resolving MCP tool alias '{tool_name}' to '{alias_for}'")
+                    tool_name = alias_for
                 return await self._execute_custom_tool(tool_name, arguments)
             else:
                 return await self._execute_standard_tool(tool_name, arguments)
