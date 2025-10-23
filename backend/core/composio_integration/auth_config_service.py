@@ -234,28 +234,34 @@ class AuthConfigService:
     async def list_auth_configs(self, toolkit_slug: Optional[str] = None) -> List[AuthConfig]:
         try:
             logger.debug(f"Listing auth configs for toolkit: {toolkit_slug}")
-            
-            if toolkit_slug:
-                response = self.client.auth_configs.list(toolkit=toolkit_slug)
-            else:
-                response = self.client.auth_configs.list()
-            
-            auth_configs = []
+
+            response = self.client.auth_configs.list()
+
+            auth_configs: List[AuthConfig] = []
             items = getattr(response, 'items', [])
-            
+
             for item in items:
-                auth_config = AuthConfig(
-                    id=item.id,
-                    auth_scheme=item.auth_scheme,
-                    is_composio_managed=getattr(item, 'is_composio_managed', True),
-                    restrict_to_following_tools=getattr(item, 'restrict_to_following_tools', []),
-                    toolkit_slug=getattr(item, 'toolkit_slug', toolkit_slug or '')
+                item_toolkit_slug = getattr(item, 'toolkit_slug', None)
+                if toolkit_slug and item_toolkit_slug and item_toolkit_slug != toolkit_slug:
+                    continue
+
+                auth_configs.append(
+                    AuthConfig(
+                        id=item.id,
+                        auth_scheme=item.auth_scheme,
+                        is_composio_managed=getattr(item, 'is_composio_managed', True),
+                        restrict_to_following_tools=getattr(item, 'restrict_to_following_tools', []),
+                        toolkit_slug=item_toolkit_slug or toolkit_slug or ''
+                    )
                 )
-                auth_configs.append(auth_config)
-            
-            logger.debug(f"Successfully listed {len(auth_configs)} auth configs")
+
+            logger.debug(
+                "Successfully listed %s auth configs (filtered=%s)",
+                len(auth_configs),
+                bool(toolkit_slug),
+            )
             return auth_configs
-            
+
         except Exception as e:
             logger.error(f"Failed to list auth configs: {e}", exc_info=True)
-            raise 
+            raise
