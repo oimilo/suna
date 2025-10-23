@@ -73,12 +73,13 @@ class DynamicToolBuilder:
             else:
                 clean_tool_name = tool_name
                 server_name = "unknown"
-        else:
-            parts = tool_name.split("_", 2)
-            clean_tool_name = parts[2] if len(parts) > 2 else tool_name
-            server_name = parts[1] if len(parts) > 1 else "unknown"
+            method_name = clean_tool_name.replace('-', '_')
+            return method_name, clean_tool_name, server_name
         
-        method_name = clean_tool_name.replace('-', '_')
+        # For non-custom tool names (typically aliases), preserve the original name
+        server_name = tool_name.split("_", 1)[0] if "_" in tool_name else "custom"
+        method_name = tool_name.replace('-', '_')
+        clean_tool_name = tool_name
         return method_name, clean_tool_name, server_name
     
     def _build_description(self, tool_info: Dict[str, Any], server_name: str) -> str:
