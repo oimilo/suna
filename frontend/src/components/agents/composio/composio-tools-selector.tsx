@@ -29,6 +29,7 @@ interface ComposioToolsSelectorProps {
   toolkitSlug: string;
   selectedTools: string[];
   onToolsChange: (tools: string[]) => void;
+  onToolMetadata?: (tools: ComposioTool[]) => void;
   onSave?: () => Promise<void>;
   onCancel?: () => void;
   showSaveButton?: boolean;
@@ -136,6 +137,7 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
   toolkitSlug,
   selectedTools,
   onToolsChange,
+  onToolMetadata,
   onSave,
   onCancel,
   showSaveButton = true,
@@ -171,6 +173,12 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
 
     return Array.from(toolMap.values());
   }, [toolsResponse?.tools]);
+
+  useEffect(() => {
+    if (availableTools.length > 0) {
+      onToolMetadata?.(availableTools);
+    }
+  }, [availableTools, onToolMetadata]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
