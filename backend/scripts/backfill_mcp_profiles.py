@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import binascii
 import json
 import os
+import string
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -43,35 +45,10 @@ def load_env() -> None:
 load_env()
 
 from core.services.supabase import DBConnection  # noqa: E402
+from cryptography.fernet import InvalidToken  # noqa: E402
+
 from core.credentials.credential_service import EncryptionService  # noqa: E402
 from core.utils.logger import logger  # noqa: E402
-
-
-def _normalize_urlsafe_token(value: str) -> Optional[str]:
-    stripped = value.strip()
-    if not stripped:
-        return None
-    if "-" not in stripped and "_" not in stripped:
-        return None
-    padding = "=" * ((4 - len(stripped) % 4) % 4)
-    try:
-        base64.urlsafe_b64decode(stripped + padding)
-        # Re-encode so the stored value matches the new expectation
-        return base64.b64encode(stripped.encode("utf-8")).decode("utf-8")
-    except Exception:
-        return None
-
-
-def _is_base64_encoded(value: str) -> bool:
-    if not value:
-        return False
-    stripped = value.strip()
-    padding = "=" * ((4 - len(stripped) % 4) % 4)
-    try:
-        base64.b64decode(stripped + padding, validate=True)
-        return True
-    except Exception:
-        return False
 
 
 def _parse_legacy_config(value: str) -> Optional[Dict[str, Any]]:
@@ -83,6 +60,44 @@ def _parse_legacy_config(value: str) -> Optional[Dict[str, Any]]:
             return parsed
     except json.JSONDecodeError:
         return None
+    return None
+
+
+BASE64_CHARS = set(string.ascii_letters + string.digits + '+/_-')
+
+
+def _decode_layers(value: str, max_layers: int = 4) -> Optional[bytes]:
+    current = value.strip()
+    if not current:
+        return None
+
+    for _ in range(max_layers):
+        padding = '=' * ((4 - len(current) % 4) % 4)
+        decoded: Optional[bytes] = None
+        for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+            try:
+                decoded = decoder(current + padding)
+                break
+            except binascii.Error:
+                decoded = None
+        if decoded is None:
+            return None
+
+        try:
+            candidate = decoded.decode('utf-8')
+        except UnicodeDecodeError:
+            return decoded
+
+        candidate_stripped = candidate.strip()
+        if not candidate_stripped:
+            return decoded
+
+        if set(candidate_stripped) <= BASE64_CHARS:
+            current = candidate_stripped
+            continue
+
+        return decoded
+
     return None
 
 
@@ -105,24 +120,27 @@ async def backfill_profiles() -> None:
         profile_id = row["profile_id"]
         encoded_config = row.get("encrypted_config") or ""
 
-        normalized_token = _normalize_urlsafe_token(encoded_config)
-        if normalized_token is not None:
-            await client.table("user_mcp_credential_profiles").update(
-                {
-                    "encrypted_config": normalized_token,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-            ).eq("profile_id", profile_id).execute()
-            updated += 1
-            logger.debug(
-                "Normalized urlsafe token for profile %s (%s)",
-                profile_id,
-                row.get("mcp_qualified_name"),
-            )
-            continue
-
-        if _is_base64_encoded(encoded_config):
-            continue
+        normalized_bytes = _decode_layers(encoded_config)
+        if normalized_bytes is not None:
+            try:
+                encryption.decrypt_config(normalized_bytes, row["config_hash"])
+                encoded_value = base64.b64encode(normalized_bytes).decode("utf-8")
+                if encoded_value != encoded_config:
+                    await client.table("user_mcp_credential_profiles").update(
+                        {
+                            "encrypted_config": encoded_value,
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ).eq("profile_id", profile_id).execute()
+                    updated += 1
+                    logger.debug(
+                        "Normalized token for profile %s (%s)",
+                        profile_id,
+                        row.get("mcp_qualified_name"),
+                    )
+                continue
+            except (InvalidToken, ValueError):
+                pass
 
         legacy_config = _parse_legacy_config(encoded_config)
         if legacy_config is None:
