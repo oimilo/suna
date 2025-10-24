@@ -234,6 +234,7 @@ class ResponseProcessor:
         auto_continue_count: int = 0,
         continuous_state: Optional[Dict[str, Any]] = None,
         generation = None,
+        estimated_total_tokens: Optional[int] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process a streaming LLM response, handling tool calls and execution.
         
@@ -858,7 +859,7 @@ class ResponseProcessor:
                         
                         # Only save if we have content
                         if llm_end_content:
-                            await self.add_message(
+                            llm_end_msg_obj = await self.add_message(
                                 thread_id=thread_id,
                                 type="llm_response_end",
                                 content=llm_end_content,
@@ -869,6 +870,8 @@ class ResponseProcessor:
                                 }
                             )
                             llm_response_end_saved = True
+                            if llm_end_msg_obj:
+                                yield format_for_yield(llm_end_msg_obj)
                         logger.info(f"✅ llm_response_end saved for call #{auto_continue_count + 1} (before termination)")
                     except Exception as e:
                         logger.error(f"Error saving llm_response_end (before termination): {str(e)}")
@@ -1034,12 +1037,22 @@ class ResponseProcessor:
                 
                 # Save and Yield the final thread_run_end status (only if not auto-continuing and finish_reason is not 'length')
                 try:
+                    usage = final_llm_response.usage if 'final_llm_response' in locals() and hasattr(final_llm_response, 'usage') else None
+
+                    if not usage and estimated_total_tokens:
+                        class EstimatedUsage:
+                            def __init__(self, total):
+                                self.total_tokens = total
+
+                        usage = EstimatedUsage(estimated_total_tokens)
+                        logger.info(f"⚡ Using fast check estimate: {estimated_total_tokens} tokens (stream stopped, no recalculation)")
+
                     end_content = {"status_type": "thread_run_end"}
-                    end_msg_obj = await self.add_message(
+
+                    await self.add_message(
                         thread_id=thread_id, type="status", content=end_content, 
                         is_llm_message=False, metadata={"thread_run_id": thread_run_id if 'thread_run_id' in locals() else None}
                     )
-                    if end_msg_obj: yield format_for_yield(end_msg_obj)
                 except Exception as final_e:
                     logger.error(f"Error in finally block: {str(final_e)}", exc_info=True)
                     self.trace.event(name="error_in_finally_block", level="ERROR", status_message=(f"Error in finally block: {str(final_e)}"))
@@ -1052,6 +1065,7 @@ class ResponseProcessor:
         llm_model: str,
         config: ProcessorConfig = ProcessorConfig(),
         generation = None,
+        estimated_total_tokens: Optional[int] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process a non-streaming LLM response, handling tool calls and execution.
         
