@@ -1,5 +1,4 @@
 import uuid
-import json
 import hashlib
 import base64
 from dataclasses import dataclass
@@ -236,7 +235,7 @@ class ProfileService:
         except Exception as e:
             logger.error(f"Failed to decrypt profile {data['profile_id']}: {e}")
             config = {}
-        
+
         return MCPCredentialProfile(
             profile_id=data['profile_id'],
             account_id=data['account_id'],
