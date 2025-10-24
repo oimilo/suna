@@ -6,6 +6,7 @@ from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
 from core.utils.core_tools_helper import ensure_core_tools_enabled
 from core.utils.config import config
+from core.utils.agent_config_builder import build_agent_config, normalize_mcp_entries
 
 @tool_metadata(
     display_name="Agent Builder",
@@ -135,9 +136,26 @@ class AgentCreationTool(Tool):
                         agentpress_tools[tool_name] = enabled
             
             agentpress_tools = ensure_core_tools_enabled(agentpress_tools)
-            
+
             if configured_mcps is None:
                 configured_mcps = []
+            configured_mcps = normalize_mcp_entries(configured_mcps)
+            custom_mcps: List[Dict[str, Any]] = []
+
+            from core.ai_models import model_manager
+            default_model = await model_manager.get_default_model_for_user(client, account_id)
+
+            agent_config, agent_metadata = build_agent_config(
+                system_prompt=system_prompt,
+                model=default_model,
+                agentpress_tools=agentpress_tools,
+                configured_mcps=configured_mcps,
+                custom_mcps=custom_mcps,
+                icon_name=icon_name,
+                icon_color=icon_color,
+                icon_background=icon_background,
+                is_default=is_default,
+            )
 
             if is_default:
                 await client.table('agents').update({"is_default": False}).eq("account_id", account_id).eq("is_default", True).execute()
@@ -148,6 +166,8 @@ class AgentCreationTool(Tool):
                 "icon_name": icon_name,
                 "icon_color": icon_color,
                 "icon_background": icon_background,
+                "config": agent_config,
+                "metadata": agent_metadata,
                 "is_default": is_default,
                 "version_count": 1
             }
@@ -162,26 +182,38 @@ class AgentCreationTool(Tool):
 
             try:
                 from core.versioning.version_service import get_version_service
-                from core.ai_models import model_manager
-                
+
                 version_service = await get_version_service()
-                
-                default_model = await model_manager.get_default_model_for_user(client, account_id)
-                
+
                 version = await version_service.create_version(
                     agent_id=agent_id,
                     user_id=account_id,
                     system_prompt=system_prompt,
                     model=default_model,
                     configured_mcps=configured_mcps,
-                    custom_mcps=[],
+                    custom_mcps=custom_mcps,
                     agentpress_tools=agentpress_tools,
                     version_name="v1",
                     change_description="Initial version"
                 )
+
+                synced_config, synced_metadata = build_agent_config(
+                    system_prompt=version.system_prompt,
+                    model=version.model,
+                    agentpress_tools=version.agentpress_tools,
+                    configured_mcps=version.configured_mcps,
+                    custom_mcps=version.custom_mcps,
+                    icon_name=icon_name,
+                    icon_color=icon_color,
+                    icon_background=icon_background,
+                    is_default=is_default,
+                    base_metadata=agent_metadata,
+                )
                 
                 await client.table('agents').update({
-                    "current_version_id": version.version_id
+                    "current_version_id": version.version_id,
+                    "config": synced_config,
+                    "metadata": synced_metadata
                 }).eq("agent_id", agent_id).execute()
 
                 success_message = f"✅ Successfully created agent '{name}'!\n\n"
@@ -631,10 +663,32 @@ class AgentCreationTool(Tool):
                 change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools"
             )
             
+            existing_metadata = agent_data.get('metadata') or {}
+
+            rebuilt_config, rebuilt_metadata = build_agent_config(
+                system_prompt=new_version.system_prompt,
+                model=new_version.model,
+                agentpress_tools=new_version.agentpress_tools,
+                configured_mcps=new_version.configured_mcps,
+                custom_mcps=new_version.custom_mcps,
+                icon_name=agent_data.get('icon_name'),
+                icon_color=agent_data.get('icon_color'),
+                icon_background=agent_data.get('icon_background'),
+                is_default=agent_data.get('is_default', False),
+                base_metadata=existing_metadata
+            )
+
+            new_version_count = (agent_data.get('version_count') or 0) + 1
+
             await client.table('agents').update({
                 'current_version_id': new_version.version_id,
-                'version_count': agent_data['version_count'] + 1
+                'version_count': new_version_count,
+                'config': rebuilt_config,
+                'metadata': rebuilt_metadata
             }).eq('agent_id', agent_id).execute()
+
+            agent_data['version_count'] = new_version_count
+            agent_data['metadata'] = rebuilt_metadata
             
             try:
                 from core.tools.mcp_tool_wrapper import MCPToolWrapper
@@ -1102,6 +1156,8 @@ class AgentCreationTool(Tool):
             
             current_config = version_result.data.get('config', {})
             
+            existing_metadata = agent_data.get('metadata') or {}
+
             updates = []
             agent_updates = {}
             
@@ -1131,13 +1187,18 @@ class AgentCreationTool(Tool):
                 agent_updates['is_default'] = is_default
                 updates.append(f"Default agent: {'Yes' if is_default else 'No'}")
             
-            if agent_updates:
-                await client.table('agents').update(agent_updates).eq('agent_id', agent_id).execute()
-            
             version_changes = False
             new_system_prompt = system_prompt if system_prompt is not None else current_config.get('system_prompt', '')
             new_model = model if model is not None else current_config.get('model')
-            new_agentpress_tools = agentpress_tools if agentpress_tools is not None else current_config.get('tools', {}).get('agentpress', {})
+            current_tools = current_config.get('tools', {})
+            current_version_count = agent_data.get('version_count') or 1
+            latest_version_id = current_version_id
+            new_version = None
+            
+            if agentpress_tools is not None:
+                new_agentpress_tools = ensure_core_tools_enabled(agentpress_tools)
+            else:
+                new_agentpress_tools = current_tools.get('agentpress', {})
             
             if system_prompt is not None:
                 updates.append("System prompt updated")
@@ -1146,71 +1207,105 @@ class AgentCreationTool(Tool):
             if model is not None:
                 updates.append(f"Model: {model}")
                 version_changes = True
-                
+            
             if agentpress_tools is not None:
                 updates.append("Tool configuration updated")
                 version_changes = True
+            
+            final_system_prompt = new_system_prompt
+            final_model = new_model
+            final_agentpress_tools = new_agentpress_tools
+            final_configured_mcps = current_tools.get('mcp', [])
+            final_custom_mcps = current_tools.get('custom_mcp', [])
             
             if version_changes:
                 from core.versioning.version_service import get_version_service
                 
                 version_service = await get_version_service()
                 
-                current_tools = current_config.get('tools', {})
-                configured_mcps = current_tools.get('mcp', [])
-                custom_mcps = current_tools.get('custom_mcp', [])
-                
                 new_version = await version_service.create_version(
                     agent_id=agent_id,
                     user_id=account_id,
                     system_prompt=new_system_prompt,
                     model=new_model,
-                    configured_mcps=configured_mcps,
-                    custom_mcps=custom_mcps,
+                    configured_mcps=current_tools.get('mcp', []),
+                    custom_mcps=current_tools.get('custom_mcp', []),
                     agentpress_tools=new_agentpress_tools,
                     change_description=change_description or f"Updated: {', '.join(updates)}"
                 )
                 
-                await client.table('agents').update({
-                    'current_version_id': new_version.version_id,
-                    'version_count': agent_data['version_count'] + 1
-                }).eq('agent_id', agent_id).execute()
-                
+                latest_version_id = new_version.version_id
+                current_version_count = (agent_data.get('version_count') or 1) + 1
+                final_system_prompt = new_version.system_prompt
+                final_model = new_version.model
+                final_agentpress_tools = new_version.agentpress_tools
+                final_configured_mcps = new_version.configured_mcps
+                final_custom_mcps = new_version.custom_mcps
+            
+            # Update local agent snapshot before rebuilding config
+            agent_data.update(agent_updates)
+            agent_data['version_count'] = current_version_count
+            agent_data['current_version_id'] = latest_version_id
+            
+            rebuilt_config, rebuilt_metadata = build_agent_config(
+                system_prompt=final_system_prompt,
+                model=final_model,
+                agentpress_tools=final_agentpress_tools,
+                configured_mcps=final_configured_mcps,
+                custom_mcps=final_custom_mcps,
+                icon_name=agent_data.get('icon_name'),
+                icon_color=agent_data.get('icon_color'),
+                icon_background=agent_data.get('icon_background'),
+                is_default=agent_data.get('is_default', False),
+                base_metadata=existing_metadata
+            )
+            
+            agent_data['metadata'] = rebuilt_metadata
+            agent_data['config'] = rebuilt_config
+            
+            agent_update_payload = {
+                **agent_updates,
+                'config': rebuilt_config,
+                'metadata': rebuilt_metadata,
+                'current_version_id': latest_version_id,
+                'version_count': current_version_count
+            }
+            
+            await client.table('agents').update(agent_update_payload).eq('agent_id', agent_id).execute()
+            
+            if version_changes:
                 try:
                     await self._sync_triggers_to_version_config(agent_id)
                 except Exception as e:
                     logger.warning(f"Failed to sync triggers to new version: {e}")
             
-            updated_agent_result = await client.table('agents').select('*').eq('agent_id', agent_id).execute()
-            updated_agent = updated_agent_result.data[0] if updated_agent_result.data else agent_data
-            
-            success_message = f"✅ Successfully updated agent '{updated_agent['name']}'!\n\n"
+            success_message = f"✅ Successfully updated agent '{agent_data['name']}'!\n\n"
             success_message += f"**Changes Made:**\n"
             for update in updates:
                 success_message += f"• {update}\n"
             
             if version_changes:
                 success_message += f"\n📝 **New Version Created**\n"
-                success_message += f"The agent now has version {updated_agent['version_count']} with your configuration changes.\n"
+                success_message += f"The agent now has version {agent_data['version_count']} with your configuration changes.\n"
             
             success_message += f"\n🔧 **Current Configuration:**\n"
-            success_message += f"• Name: {updated_agent['name']}\n"
-            success_message += f"• Description: {updated_agent.get('description', 'No description')}\n"
-            success_message += f"• Icon: {updated_agent['icon_name']} ({updated_agent['icon_color']} on {updated_agent['icon_background']})\n"
-            success_message += f"• Default Agent: {'Yes' if updated_agent['is_default'] else 'No'}\n"
+            success_message += f"• Name: {agent_data['name']}\n"
+            success_message += f"• Description: {agent_data.get('description', 'No description')}\n"
+            success_message += f"• Icon: {agent_data['icon_name']} ({agent_data['icon_color']} on {agent_data['icon_background']})\n"
+            success_message += f"• Default Agent: {'Yes' if agent_data.get('is_default') else 'No'}\n"
             if version_changes:
-                success_message += f"• Model: {new_model}\n"
-                success_message += f"• Tools Enabled: {len([k for k, v in new_agentpress_tools.items() if v])}\n"
+                success_message += f"• Model: {final_model}\n"
+                success_message += f"• Tools Enabled: {len([k for k, v in final_agentpress_tools.items() if (v if isinstance(v, bool) else v.get('enabled', False))])}\n"
             
             success_message += f"\nYour agent has been updated and is ready to use!"
 
             return self.success_response({
                 "message": success_message,
                 "agent_id": agent_id,
-                "agent_name": updated_agent['name'],
+                "agent_name": agent_data['name'],
                 "updates_made": updates,
                 "new_version_created": version_changes,
-                "version_count": updated_agent['version_count']
+                "version_count": agent_data['version_count']
             })
                 
         except Exception as e:

@@ -6,6 +6,7 @@ eliminating duplication across agent_crud, agent_service, and agent_runs.
 """
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+import json
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
 
@@ -307,7 +308,21 @@ class AgentLoader:
     
     def _row_to_agent_data(self, row: Dict[str, Any]) -> AgentData:
         """Convert database row to AgentData."""
-        metadata = row.get('metadata', {}) or {}
+        metadata_raw = row.get('metadata') or {}
+        metadata: Dict[str, Any]
+        if isinstance(metadata_raw, dict):
+            metadata = metadata_raw
+        elif isinstance(metadata_raw, str):
+            try:
+                metadata = json.loads(metadata_raw)
+                if not isinstance(metadata, dict):
+                    metadata = {}
+            except json.JSONDecodeError:
+                metadata = {}
+        else:
+            metadata = {}
+        
+        restrictions = metadata.get('restrictions') if isinstance(metadata.get('restrictions'), dict) else None
         
         return AgentData(
             agent_id=row['agent_id'],
@@ -326,6 +341,8 @@ class AgentLoader:
             version_count=row.get('version_count', 1),
             metadata=metadata,
             is_suna_default=metadata.get('is_suna_default', False),
+            centrally_managed=metadata.get('centrally_managed', False),
+            restrictions=restrictions,
             config_loaded=False
         )
     
@@ -376,40 +393,28 @@ class AgentLoader:
             
             version_dict = version.to_dict()
             
-            # Extract from new config format
-            if 'config' in version_dict and version_dict['config']:
-                config = version_dict['config']
-                tools = config.get('tools', {})
-                
-                agent.system_prompt = config.get('system_prompt', '')
-                agent.model = config.get('model')
-                agent.configured_mcps = tools.get('mcp', [])
-                agent.custom_mcps = tools.get('custom_mcp', [])
-                
-                from core.config_helper import _extract_agentpress_tools_for_run
-                agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
-                
-                agent.triggers = config.get('triggers', [])
-            else:
-                # Old format compatibility
-                agent.system_prompt = version_dict.get('system_prompt', '')
-                agent.model = version_dict.get('model')
-                agent.configured_mcps = version_dict.get('configured_mcps', [])
-                agent.custom_mcps = version_dict.get('custom_mcps', [])
-                
-                from core.config_helper import _extract_agentpress_tools_for_run
-                agent.agentpress_tools = _extract_agentpress_tools_for_run(
-                    version_dict.get('agentpress_tools', {})
-                )
-                
-                agent.triggers = []
+            config = version_dict.get('config') or {}
+            tools = config.get('tools', {}) if isinstance(config.get('tools'), dict) else {}
+            
+            agent.system_prompt = config.get('system_prompt', '')
+            agent.model = config.get('model')
+            agent.configured_mcps = tools.get('mcp', []) if isinstance(tools.get('mcp'), list) else []
+            agent.custom_mcps = tools.get('custom_mcp', []) if isinstance(tools.get('custom_mcp'), list) else []
+            
+            from core.config_helper import _extract_agentpress_tools_for_run
+            agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
+            
+            agent.triggers = config.get('triggers', []) if isinstance(config.get('triggers'), list) else []
             
             agent.version_name = version_dict.get('version_name', 'v1')
             agent.version_number = version_dict.get('version_number')
             agent.version_created_at = version_dict.get('created_at')
             agent.version_updated_at = version_dict.get('updated_at')
             agent.version_created_by = version_dict.get('created_by')
-            agent.restrictions = {}
+            if not agent.restrictions and isinstance(agent.metadata, dict):
+                agent.restrictions = agent.metadata.get('restrictions') if isinstance(
+                    agent.metadata.get('restrictions'), dict
+                ) else {}
             
         except Exception as e:
             logger.warning(f"Failed to load version for agent {agent.agent_id}: {e}")
@@ -426,7 +431,11 @@ class AgentLoader:
         agent.agentpress_tools = _extract_agentpress_tools_for_run(_get_default_agentpress_tools())
         agent.triggers = []
         agent.version_name = 'v1'
-        agent.restrictions = {}
+        if not agent.restrictions:
+            if isinstance(agent.metadata, dict) and isinstance(agent.metadata.get('restrictions'), dict):
+                agent.restrictions = agent.metadata['restrictions']
+            else:
+                agent.restrictions = {}
     
     async def _batch_load_configs(self, agents: list[AgentData]):
         """Batch load configurations for multiple agents."""
@@ -467,19 +476,22 @@ class AgentLoader:
     def _apply_version_config(self, agent: AgentData, version_row: Dict[str, Any]):
         """Apply version configuration to agent."""
         config = version_row.get('config') or {}
-        tools = config.get('tools', {})
+        tools = config.get('tools', {}) if isinstance(config.get('tools'), dict) else {}
         
         from core.config_helper import _extract_agentpress_tools_for_run
         
         agent.system_prompt = config.get('system_prompt', '')
         agent.model = config.get('model')
-        agent.configured_mcps = tools.get('mcp', [])
-        agent.custom_mcps = tools.get('custom_mcp', [])
+        agent.configured_mcps = tools.get('mcp', []) if isinstance(tools.get('mcp'), list) else []
+        agent.custom_mcps = tools.get('custom_mcp', []) if isinstance(tools.get('custom_mcp'), list) else []
         agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
-        agent.triggers = config.get('triggers', [])
+        agent.triggers = config.get('triggers', []) if isinstance(config.get('triggers'), list) else []
         agent.version_name = version_row.get('version_name', 'v1')
         agent.version_number = version_row.get('version_number')
-        agent.restrictions = {}
+        if not agent.restrictions and isinstance(agent.metadata, dict):
+            agent.restrictions = agent.metadata.get('restrictions') if isinstance(
+                agent.metadata.get('restrictions'), dict
+            ) else {}
 
 
 # Singleton instance
@@ -491,4 +503,3 @@ async def get_agent_loader() -> AgentLoader:
     if _loader is None:
         _loader = AgentLoader()
     return _loader
-

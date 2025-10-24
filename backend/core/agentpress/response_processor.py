@@ -150,6 +150,7 @@ class ResponseProcessor:
                 "fallback": True
             }
     
+    
     def _serialize_model_response(self, model_response) -> Dict[str, Any]:
         """Convert a LiteLLM ModelResponse object to a JSON-serializable dictionary.
         
@@ -491,39 +492,30 @@ class ResponseProcessor:
                 if finish_reason == "xml_tool_limit_reached":
                     logger.info("XML tool limit reached - draining remaining stream to capture usage data")
                     self.trace.event(name="xml_tool_limit_draining_stream", level="DEFAULT", status_message=(f"XML tool limit reached - draining remaining stream to capture usage data"))
-
-                    drain_timeout = 5.0
-                    drain_start_time = datetime.now(timezone.utc).timestamp()
-                    chunks_drained = 0
-                    max_drain_chunks = 100
-
+                    
+                    # Continue reading stream to capture the final usage chunk (critical for billing)
+                    # Don't process content/tools, just extract usage data
                     try:
                         async for remaining_chunk in llm_response:
                             chunk_count += 1
-                            chunks_drained += 1
-
-                            current_drain_time = datetime.now(timezone.utc).timestamp()
-                            last_chunk_time = current_drain_time
-
+                            # Update timing
+                            last_chunk_time = datetime.now(timezone.utc).timestamp()
+                            
+                            # Capture usage chunk if present
                             if hasattr(remaining_chunk, 'usage') and remaining_chunk.usage and final_llm_response is None:
                                 final_llm_response = remaining_chunk
                                 logger.info(f"✅ Captured usage data after tool limit: {remaining_chunk.usage}")
-                                break
-
+                                break  # Got what we needed, can stop now
+                            
+                            # Also check for finish_reason in case it wasn't set yet
                             if hasattr(remaining_chunk, 'choices') and remaining_chunk.choices:
                                 if hasattr(remaining_chunk.choices[0], 'finish_reason') and remaining_chunk.choices[0].finish_reason:
                                     if not finish_reason or finish_reason == "xml_tool_limit_reached":
                                         finish_reason = remaining_chunk.choices[0].finish_reason
-
-                            if (current_drain_time - drain_start_time) > drain_timeout:
-                                break
-
-                            if chunks_drained >= max_drain_chunks:
-                                break
-
                     except Exception as drain_error:
                         logger.warning(f"Error draining stream after tool limit: {drain_error}")
-
+                    
+                    logger.info(f"Stream drained. Final chunk count: {chunk_count}")
                     break
 
             logger.info(f"Stream complete. Total chunks: {chunk_count}")
@@ -803,6 +795,10 @@ class ResponseProcessor:
             # --- Final Finish Status ---
             if finish_reason and finish_reason != "xml_tool_limit_reached":
                 finish_content = {"status_type": "finish", "finish_reason": finish_reason}
+                # Add metadata to indicate tools were detected (for auto-continue detection)
+                # Check if tools were actually detected during this run
+                if xml_tool_call_count > 0 or len(complete_native_tool_calls) > 0:
+                    finish_content["tools_executed"] = True
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id, type="status", content=finish_content, 
                     is_llm_message=False, metadata={"thread_run_id": thread_run_id}
@@ -870,8 +866,8 @@ class ResponseProcessor:
                                 }
                             )
                             llm_response_end_saved = True
-                            if llm_end_msg_obj:
-                                yield format_for_yield(llm_end_msg_obj)
+                            # Yield to stream for real-time context usage updates
+                            if llm_end_msg_obj: yield format_for_yield(llm_end_msg_obj)
                         logger.info(f"✅ llm_response_end saved for call #{auto_continue_count + 1} (before termination)")
                     except Exception as e:
                         logger.error(f"Error saving llm_response_end (before termination): {str(e)}")
@@ -922,7 +918,7 @@ class ResponseProcessor:
                             logger.info(f"🔍 RESPONSE PROCESSOR COMPLETE USAGE (normal): {llm_end_content.get('usage', 'NO_USAGE')}")
                             logger.info(f"🔍 FINAL LLM END CONTENT: {llm_end_content}")
                             
-                            await self.add_message(
+                            llm_end_msg_obj = await self.add_message(
                                 thread_id=thread_id,
                                 type="llm_response_end",
                                 content=llm_end_content,
@@ -933,6 +929,8 @@ class ResponseProcessor:
                                 }
                             )
                             llm_response_end_saved = True
+                            # Yield to stream for real-time context usage updates
+                            if llm_end_msg_obj: yield format_for_yield(llm_end_msg_obj)
                         else:
                             logger.warning("⚠️ No complete LiteLLM response available, skipping llm_response_end")
                         logger.info(f"✅ llm_response_end saved for call #{auto_continue_count + 1} (normal completion)")
@@ -956,6 +954,9 @@ class ResponseProcessor:
             raise
 
         finally:
+            # IMPORTANT: Finally block runs even when stream is stopped (GeneratorExit)
+            # We MUST NOT yield here - just save to DB silently for billing/usage tracking
+            
             if not llm_response_end_saved and last_assistant_message_object:
                 try:
                     logger.info(f"💰 BULLETPROOF BILLING: Saving llm_response_end in finally block for call #{auto_continue_count + 1}")
@@ -994,7 +995,7 @@ class ResponseProcessor:
                     is_estimated = usage_info.get('estimated', False)
                     logger.info(f"💰 BILLING RECOVERY - Usage ({'ESTIMATED' if is_estimated else 'EXACT'}): {usage_info}")
                     
-                    await self.add_message(
+                    llm_end_msg_obj = await self.add_message(
                         thread_id=thread_id,
                         type="llm_response_end",
                         content=llm_end_content,
@@ -1005,7 +1006,9 @@ class ResponseProcessor:
                         }
                     )
                     llm_response_end_saved = True
-                    logger.info(f"✅ BILLING SUCCESS: Saved llm_response_end for call #{auto_continue_count + 1} ({'estimated' if is_estimated else 'exact'} usage)")
+                    # Don't yield in finally block - stream may be closed (GeneratorExit)
+                    # Frontend already stopped consuming, no point in yielding
+                    logger.info(f"✅ BILLING SUCCESS: Saved llm_response_end in finally for call #{auto_continue_count + 1} ({'estimated' if is_estimated else 'exact'} usage)")
                     
                 except Exception as billing_e:
                     logger.error(f"❌ CRITICAL BILLING FAILURE: Could not save llm_response_end: {str(billing_e)}", exc_info=True)
@@ -1037,22 +1040,27 @@ class ResponseProcessor:
                 
                 # Save and Yield the final thread_run_end status (only if not auto-continuing and finish_reason is not 'length')
                 try:
+                    # Store last_usage in metadata for fast path optimization
                     usage = final_llm_response.usage if 'final_llm_response' in locals() and hasattr(final_llm_response, 'usage') else None
-
+                    
+                    # If no exact usage (stream stopped early), use pre-calculated estimated_total from fast check
                     if not usage and estimated_total_tokens:
+                        # Reuse the estimated_total we already calculated in thread_manager (no DB calls!)
                         class EstimatedUsage:
                             def __init__(self, total):
                                 self.total_tokens = total
-
+                        
                         usage = EstimatedUsage(estimated_total_tokens)
                         logger.info(f"⚡ Using fast check estimate: {estimated_total_tokens} tokens (stream stopped, no recalculation)")
-
+                    
                     end_content = {"status_type": "thread_run_end"}
-
-                    await self.add_message(
+                    
+                    end_msg_obj = await self.add_message(
                         thread_id=thread_id, type="status", content=end_content, 
                         is_llm_message=False, metadata={"thread_run_id": thread_run_id if 'thread_run_id' in locals() else None}
                     )
+                    # Don't yield in finally block - stream may be closed (GeneratorExit)
+                    logger.debug("Saved thread_run_end in finally (not yielding to avoid GeneratorExit)")
                 except Exception as final_e:
                     logger.error(f"Error in finally block: {str(final_e)}", exc_info=True)
                     self.trace.event(name="error_in_finally_block", level="ERROR", status_message=(f"Error in finally block: {str(final_e)}"))
@@ -1276,7 +1284,10 @@ class ResponseProcessor:
                     logger.error(f"Error setting non-streaming generation output: {str(gen_e)}", exc_info=True)
             
             # Save and Yield the final thread_run_end status
+            usage = llm_response.usage if hasattr(llm_response, 'usage') else None
+            
             end_content = {"status_type": "thread_run_end"}
+            
             end_msg_obj = await self.add_message(
                 thread_id=thread_id, type="status", content=end_content, 
                 is_llm_message=False, metadata={"thread_run_id": thread_run_id if 'thread_run_id' in locals() else None}
@@ -1452,41 +1463,6 @@ class ResponseProcessor:
         return parsed_data
 
     # Tool execution methods
-    def _normalize_tool_identifier(self, name: str) -> str:
-        normalized = str(name or "").strip().lower()
-        for char in ("-", " ", ".", "/", ":"):
-            normalized = normalized.replace(char, "_")
-        while "__" in normalized:
-            normalized = normalized.replace("__", "_")
-        return normalized
-
-    def _resolve_tool_alias(self, requested_name: str, available_functions: Dict[str, Callable]) -> Optional[str]:
-        normalized_requested = self._normalize_tool_identifier(requested_name)
-        if not normalized_requested:
-            return None
-
-        suffix_matches: List[Tuple[int, str]] = []
-
-        for candidate_name in available_functions.keys():
-            normalized_candidate = self._normalize_tool_identifier(candidate_name)
-            if not normalized_candidate:
-                continue
-
-            if normalized_candidate == normalized_requested:
-                return candidate_name
-
-            if normalized_requested.endswith(normalized_candidate):
-                idx = normalized_requested.rfind(normalized_candidate)
-                if idx > 0 and normalized_requested[idx - 1] not in ("_",):
-                    continue
-                suffix_matches.append((len(normalized_candidate), candidate_name))
-
-        if suffix_matches:
-            suffix_matches.sort(reverse=True)
-            return suffix_matches[0][1]
-
-        return None
-
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:
         """Execute a single tool call and return the result."""
         span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
@@ -1507,16 +1483,6 @@ class ResponseProcessor:
 
             # Look up the function by name
             tool_fn = available_functions.get(function_name)
-            if not tool_fn:
-                resolved_name = self._resolve_tool_alias(function_name, available_functions)
-                if resolved_name:
-                    resolved_fn = available_functions.get(resolved_name)
-                    if resolved_fn:
-                        logger.debug(f"🔄 Resolved tool alias '{function_name}' to registered function '{resolved_name}'")
-                        tool_call["function_name"] = resolved_name
-                        function_name = resolved_name
-                        tool_fn = resolved_fn
-
             if not tool_fn:
                 logger.error(f"❌ Tool function '{function_name}' not found in registry")
                 # logger.error(f"❌ Available functions: {list(available_functions.keys())}")
