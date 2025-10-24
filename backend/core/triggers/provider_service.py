@@ -53,10 +53,21 @@ class ScheduleProvider(TriggerProvider):
     async def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         if 'cron_expression' not in config:
             raise ValueError("cron_expression is required for scheduled triggers")
-        
-        if 'agent_prompt' not in config:
-            raise ValueError("agent_prompt is required for agent execution")
-        
+
+        execution_type = str(config.get('execution_type', 'agent') or 'agent')
+        if execution_type not in ('agent', 'workflow'):
+            raise ValueError("execution_type must be 'agent' or 'workflow'")
+
+        if execution_type == 'agent':
+            if not config.get('agent_prompt'):
+                raise ValueError("agent_prompt is required for agent execution")
+            config['workflow_id'] = None
+        else:
+            workflow_id = config.get('workflow_id')
+            if not workflow_id:
+                raise ValueError("workflow_id is required when execution_type is 'workflow'")
+            config.setdefault('agent_prompt', None)
+
         user_timezone = config.get('timezone', 'UTC')
         if user_timezone != 'UTC':
             try:
@@ -84,6 +95,8 @@ class ScheduleProvider(TriggerProvider):
                 "trigger_id": trigger.trigger_id,
                 "agent_id": trigger.agent_id,
                 "agent_prompt": trigger.config.get('agent_prompt'),
+                "workflow_id": trigger.config.get('workflow_id'),
+                "execution_type": trigger.config.get('execution_type', 'agent'),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
@@ -163,12 +176,24 @@ class ScheduleProvider(TriggerProvider):
                 'trigger_id': event.trigger_id,
                 'agent_id': event.agent_id
             }
-            
-            agent_prompt = raw_data.get('agent_prompt')
-            
+
+            execution_type = str(raw_data.get('execution_type') or trigger.config.get('execution_type', 'agent') or 'agent')
+            if execution_type == 'workflow':
+                workflow_id = raw_data.get('workflow_id') or trigger.config.get('workflow_id')
+                if not workflow_id:
+                    raise ValueError("workflow_id is required for workflow execution")
+                return TriggerResult(
+                    success=True,
+                    should_execute_workflow=True,
+                    workflow_id=workflow_id,
+                    execution_variables=execution_variables
+                )
+
+            agent_prompt = raw_data.get('agent_prompt') or trigger.config.get('agent_prompt')
+
             if not agent_prompt:
                 raise ValueError("agent_prompt is required for agent execution")
-            
+
             return TriggerResult(
                 success=True,
                 should_execute_agent=True,

@@ -13,6 +13,11 @@ from .provider_service import (
 from .execution_service import (
     get_execution_service
 )
+from .workflow_service import (
+    get_workflow_service,
+    WorkflowAccessError,
+    WorkflowNotFoundError,
+)
 
 __all__ = [
     # Domain objects
@@ -25,5 +30,8 @@ __all__ = [
     # Service factories
     'get_trigger_service',
     'get_provider_service',
-    'get_execution_service'
-] 
+    'get_execution_service',
+    'get_workflow_service',
+    'WorkflowAccessError',
+    'WorkflowNotFoundError',
+]

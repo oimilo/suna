@@ -18,6 +18,7 @@ from core.billing.billing_integration import billing_integration
 from .trigger_service import get_trigger_service, TriggerType
 from .provider_service import get_provider_service
 from .execution_service import get_execution_service
+from .workflow_service import get_workflow_service
 
 
 from .utils import get_next_run_time, get_human_readable_schedule
@@ -542,7 +543,7 @@ async def trigger_webhook(
         # Process trigger event
         trigger_service = get_trigger_service(db)
         result = await trigger_service.process_trigger_event(trigger_id, raw_data)
-        
+
         if not result.success:
             return JSONResponse(
                 status_code=400,
@@ -550,9 +551,10 @@ async def trigger_webhook(
             )
         
         # Execute if needed
-        if result.should_execute_agent:
-            trigger = await trigger_service.get_trigger(trigger_id)
-            if trigger:
+        trigger = await trigger_service.get_trigger(trigger_id)
+
+        if result.should_execute_agent and trigger:
+            try:
                 logger.debug(f"Executing agent {trigger.agent_id} for trigger {trigger_id}")
                 
                 from .trigger_service import TriggerEvent
@@ -560,7 +562,8 @@ async def trigger_webhook(
                     trigger_id=trigger_id,
                     agent_id=trigger.agent_id,
                     trigger_type=trigger.trigger_type,
-                    raw_data=raw_data
+                    raw_data=raw_data,
+                    workflow_id=trigger.workflow_id,
                 )
                 
                 execution_service = get_execution_service(db)
@@ -578,18 +581,60 @@ async def trigger_webhook(
                     "execution": execution_result,
                     "trigger_result": {
                         "should_execute_agent": result.should_execute_agent,
-                        "agent_prompt": result.agent_prompt
+                        "should_execute_workflow": result.should_execute_workflow,
+                        "agent_prompt": result.agent_prompt,
+                        "workflow_id": result.workflow_id,
                     }
                 })
-            else:
-                logger.warning(f"Trigger {trigger_id} not found for execution")
+            except Exception as exc:
+                logger.error(f"Failed to execute agent for trigger {trigger_id}: {exc}")
+                return JSONResponse(
+                    status_code=500,
+                    content={"success": False, "error": "Agent execution failed"}
+                )
+
+        if result.should_execute_workflow and trigger:
+            try:
+                workflow_service = get_workflow_service(db)
+                client = await db.client
+                agent_row = await client.table('agents').select('account_id').eq('agent_id', trigger.agent_id).single().execute()
+                account_id = agent_row.data.get('account_id') if agent_row.data else None
+                if not account_id:
+                    raise RuntimeError("Agent account not found")
+
+                execution, _ = await workflow_service.record_execution(
+                    agent_id=trigger.agent_id,
+                    user_id=str(account_id),
+                    workflow_id=result.workflow_id or trigger.workflow_id or "",
+                    triggered_by="trigger",
+                    input_data=result.execution_variables,
+                )
+
+                return JSONResponse(content={
+                    "success": True,
+                    "message": "Trigger processed and workflow execution recorded",
+                    "trigger_result": {
+                        "should_execute_agent": result.should_execute_agent,
+                        "should_execute_workflow": result.should_execute_workflow,
+                        "workflow_id": execution.workflow_id,
+                    },
+                    "execution": execution.as_dict(),
+                })
+            except Exception as exc:
+                logger.error(f"Failed to record workflow execution for trigger {trigger_id}: {exc}")
+                return JSONResponse(
+                    status_code=500,
+                    content={"success": False, "error": "Workflow execution failed"}
+                )
         
         logger.debug(f"Webhook processed but no execution needed")
         return JSONResponse(content={
             "success": True,
             "message": "Trigger processed successfully (no execution needed)",
             "trigger_result": {
-                "should_execute_agent": result.should_execute_agent
+                "should_execute_agent": result.should_execute_agent,
+                "should_execute_workflow": result.should_execute_workflow,
+                "workflow_id": result.workflow_id,
             }
         })
         
@@ -599,5 +644,3 @@ async def trigger_webhook(
             status_code=500,
             content={"success": False, "error": "Internal server error"}
         )
-
-
