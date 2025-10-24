@@ -22,13 +22,16 @@ class TriggerEvent:
     raw_data: Dict[str, Any]
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     context: Dict[str, Any] = field(default_factory=dict)
+    workflow_id: Optional[str] = None
 
 
 @dataclass
 class TriggerResult:
     success: bool
     should_execute_agent: bool = False
+    should_execute_workflow: bool = False
     agent_prompt: Optional[str] = None
+    workflow_id: Optional[str] = None
     execution_variables: Dict[str, Any] = field(default_factory=dict)
     error_message: Optional[str] = None
 
@@ -45,6 +48,8 @@ class Trigger:
     config: Dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    execution_type: str = "agent"
+    workflow_id: Optional[str] = None
 
 
 class TriggerService:
@@ -68,6 +73,9 @@ class TriggerService:
         
         trigger_type = await provider_service.get_provider_trigger_type(provider_id)
         
+        execution_type = str(validated_config.get('execution_type', 'agent') or 'agent')
+        workflow_id = validated_config.get('workflow_id')
+
         trigger = Trigger(
             trigger_id=trigger_id,
             agent_id=agent_id,
@@ -78,7 +86,9 @@ class TriggerService:
             is_active=True,
             config=validated_config,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            execution_type=execution_type,
+            workflow_id=workflow_id,
         )
         
         # Skip setup_trigger for Composio since triggers are already enabled when created
@@ -126,7 +136,9 @@ class TriggerService:
             from .provider_service import get_provider_service
             provider_service = get_provider_service(self._db)
             config = await provider_service.validate_trigger_config(trigger.provider_id, config)
-        
+            trigger.execution_type = str(config.get('execution_type', trigger.execution_type) or 'agent')
+            trigger.workflow_id = config.get('workflow_id')
+
         if name is not None:
             trigger.name = name
         if description is not None:
@@ -209,7 +221,8 @@ class TriggerService:
             trigger_id=trigger_id,
             agent_id=trigger.agent_id,
             trigger_type=trigger.trigger_type,
-            raw_data=raw_data
+            raw_data=raw_data,
+            workflow_id=trigger.workflow_id,
         )
         
         from .provider_service import get_provider_service
@@ -236,6 +249,8 @@ class TriggerService:
             'description': trigger.description,
             'is_active': trigger.is_active,
             'config': config_with_provider,
+            'execution_type': trigger.execution_type,
+            'workflow_id': trigger.workflow_id,
             'created_at': trigger.created_at.isoformat(),
             'updated_at': trigger.updated_at.isoformat()
         }).execute()
@@ -251,6 +266,8 @@ class TriggerService:
             'description': trigger.description,
             'is_active': trigger.is_active,
             'config': config_with_provider,
+            'execution_type': trigger.execution_type,
+            'workflow_id': trigger.workflow_id,
             'updated_at': trigger.updated_at.isoformat()
         }).eq('trigger_id', trigger.trigger_id).execute()
     
@@ -268,7 +285,7 @@ class TriggerService:
                 provider_id = data['trigger_type']
         
         clean_config = {k: v for k, v in config_data.items() if k != 'provider_id'}
-        
+
         return Trigger(
             trigger_id=data['trigger_id'],
             agent_id=data['agent_id'],
@@ -279,7 +296,9 @@ class TriggerService:
             is_active=data.get('is_active', True),
             config=clean_config,
             created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
-            updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+            updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00')),
+            execution_type=data.get('execution_type', 'agent') or 'agent',
+            workflow_id=data.get('workflow_id')
         )
     
     async def _log_trigger_event(self, event: TriggerEvent, result: TriggerResult) -> None:

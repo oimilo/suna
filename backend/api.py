@@ -31,6 +31,7 @@ from core.services import transcription as transcription_api
 import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
+from core.triggers import workflow_api as workflows_api
 from core.services import api_keys_api
 
 
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
         # asyncio.create_task(core_api.restore_running_agent_runs())
         
         triggers_api.initialize(db)
+        workflows_api.initialize(db)
         credentials_api.initialize(db)
         template_api.initialize(db)
         composio_api.initialize(db)
@@ -203,6 +205,7 @@ from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
 api_router.include_router(triggers_api.router)
+api_router.include_router(workflows_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
