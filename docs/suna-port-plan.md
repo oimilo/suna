@@ -115,6 +115,28 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
   - [ ] Reexecutar `stats` após rollout e validar agentes na UI (rename aplicado).
 - [ ] Documentar checklist pós-reinstalação (backfill de configs, smoke test de threads).
 
+### 3.5 Painel Administrativo (Admin Dashboard)
+- Backend
+  - [x] Confirmar que os módulos `backend/core/admin/admin_api.py` e `billing_admin_api.py` permanecem alinhados ao upstream (já portados) e expostos via `backend/api.py`.
+  - [x] Trazer `backend/core/admin/master_password_api.py`, parametrizando a senha mestre via `config.ADMIN_MASTER_PASSWORD` (fallback loga aviso) e adicionando o router em `backend/api.py`.
+  - [ ] Garantir que `KORTIX_ADMIN_API_KEY` esteja configurado (local/staging/prod) e documentar distribuição para time de operações.
+  - [x] Provisionar tabela `admin_users` (campos mínimos: `id`, `user_id`, `email`, `role`, `is_active`, timestamps) e manter coerência com `user_roles` (`admin`/`super_admin`).
+  - [ ] Revisar `verify_admin_api_key`/`verify_role` e ajustar se o fluxo de autenticação exigir múltiplos níveis (support/viewer).
+- Supabase
+  - [x] Validar se há migrações adicionais do Suna para `admin_users`, `admin_actions_log` ou políticas RLS; portar e aplicar quando necessário (`20251026093000_admin_users_table.sql` cobre tabela + policies `is_admin`/`get_admin_role`).
+  - [ ] Popular `admin_users` + `user_roles` com contas operacionais; definir processo de onboarding/offboarding e auditar `admin_actions_log`.
+- Frontend
+  - [ ] Copiar as rotas `frontend/src/app/(admin)/admin/**` e `/master-login` (componentes `AdminGuard`, `AdminSidebar`, páginas de usuários/billing/analytics/system/settings).
+    - ✅ `/admin/billing` + componentes `AdminUserTable/AdminUserDetailsDialog` e página `/master-login` portados do Suna (faltam analytics/system/settings).
+  - [x] Ajustar imports (`@/lib/api/admin`, `@/lib/supabase/admin`) e garantir build sem erros de TypeScript (`npm run lint` limpa; warnings herdados de `<img>` antigos permanecem).
+  - [ ] Decidir ponto de entrada na UI (link dedicado na sidebar ou instruções internas) e revisar `middleware.ts` para permitir `/master-login`/`/admin`.
+- Testes & Operação
+  - [ ] Exercitar fluxos-chave: login mestre, listagem de usuários, ajuste de créditos/refund, visualização de threads/atividade.
+    - ⚠️ Necessário configurar `ADMIN_MASTER_PASSWORD` + seed em `admin_users` antes de validar `/master-login`.
+    - Executar smoke manual: autenticar via `/master-login` → acessar `/admin/billing` → abrir modal → testar `credits/adjust` e `refund` (verificar efeitos no Supabase).
+  - [ ] Adicionar smoke tests simples (ex.: `admin/billing/credits/adjust` requer role, `AdminGuard` bloqueia usuários sem permissão).
+  - [ ] Documentar requisitos de segurança: armazenar `ADMIN_MASTER_PASSWORD`, `KORTIX_ADMIN_API_KEY`, e definir frequência de rotação.
+
 ## 4. Testes & Validação
 - [ ] Atualizar/Adicionar testes unitários para `AgentCreationTool`, `AgentService`, `ThreadManager`.
   - [x] Cobrir helper `_build_agent_config` para garantir estrutura mínima (`backend/core/tools/tests/test_agent_creation_tool.py`).
