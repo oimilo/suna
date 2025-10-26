@@ -124,6 +124,7 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
   - [ ] Revisar `verify_admin_api_key`/`verify_role` e ajustar se o fluxo de autenticação exigir múltiplos níveis (support/viewer).
 - Supabase
   - [x] Validar se há migrações adicionais do Suna para `admin_users`, `admin_actions_log` ou políticas RLS; portar e aplicar quando necessário (`20251026093000_admin_users_table.sql` cobre tabela + policies `is_admin`/`get_admin_role`).
+    - ✅ Função auxiliar `get_user_account_by_email` portada (`20250821051025_find_user_by_email.sql`) para destravar master login.
   - [ ] Popular `admin_users` + `user_roles` com contas operacionais; definir processo de onboarding/offboarding e auditar `admin_actions_log`.
 - Frontend
   - [ ] Copiar as rotas `frontend/src/app/(admin)/admin/**` e `/master-login` (componentes `AdminGuard`, `AdminSidebar`, páginas de usuários/billing/analytics/system/settings).

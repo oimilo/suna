@@ -29,4 +29,4 @@ GRANT EXECUTE ON FUNCTION public.get_user_account_by_email(text) TO authenticate
 
 COMMENT ON FUNCTION public.get_user_account_by_email(text) IS 'Gets user account by email address. Used by admin scripts to install Suna agents.';
 
-COMMIT; 
+COMMIT;
