@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional
 from core.utils.pagination import PaginationService, PaginationParams, PaginatedResponse
 from core.utils.logger import logger
 from .agent_loader import AgentLoader
-from core.utils.query_utils import batch_query_in
 
 
 class AgentFilters:
@@ -224,42 +223,59 @@ class AgentService:
         )
 
     async def _load_agent_versions_batch(self, agents: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        version_map = {}
-        version_ids = list({agent['current_version_id'] for agent in agents if agent.get('current_version_id')})
-        
-        if version_ids:
-            try:
-                versions_data = await batch_query_in(
-                    client=self.db,
-                    table_name='agent_versions',
-                    select_fields='version_id, agent_id, version_number, version_name, is_active, created_at, updated_at, created_by, config',
-                    in_field='version_id',
-                    in_values=version_ids
-                )
-                
-                for row in versions_data:
-                    config = row.get('config') or {}
-                    tools = config.get('tools') or {}
-                    version_dict = {
-                        'version_id': row['version_id'],
-                        'agent_id': row['agent_id'],
-                        'version_number': row['version_number'],
-                        'version_name': row['version_name'],
-                        'system_prompt': config.get('system_prompt', ''),
-                        'model': config.get('model'),
-                        'configured_mcps': tools.get('mcp', []),
-                        'custom_mcps': tools.get('custom_mcp', []),
-                        'agentpress_tools': tools.get('agentpress', {}),
-                        'is_active': row.get('is_active', False),
-                        'created_at': row.get('created_at'),
-                        'updated_at': row.get('updated_at') or row.get('created_at'),
-                        'created_by': row.get('created_by'),
-                        'config': config  # Include the full config for compatibility
-                    }
-                    version_map[row['agent_id']] = version_dict
-            except Exception as e:
-                logger.warning(f"Failed to batch load agent versions: {e}")
-        
+        """
+        Fetch current version metadata for the provided agents using the shared
+        VersionService (keeps behaviour aligned with Suna while reusing the
+        normalization already handled there).
+        """
+        version_map: Dict[str, Dict[str, Any]] = {}
+        version_ids = {agent.get("current_version_id") for agent in agents if agent.get("current_version_id")}
+
+        if not version_ids:
+            return version_map
+
+        try:
+            from core.versioning.version_service import get_version_service
+
+            version_service = await get_version_service()
+
+            for agent in agents:
+                version_id = agent.get("current_version_id")
+                if not version_id:
+                    continue
+
+                try:
+                    version = await version_service.get_version(
+                        agent_id=agent["agent_id"],
+                        version_id=version_id,
+                        user_id=agent.get("account_id") or "system",
+                    )
+                    if version:
+                        version_dict = version.to_dict()
+                        version_config = {
+                            "system_prompt": version.system_prompt,
+                            "model": version.model,
+                            "tools": {
+                                "mcp": version_dict.get("configured_mcps") or [],
+                                "custom_mcp": version_dict.get("custom_mcps") or [],
+                                "agentpress": version_dict.get("agentpress_tools") or {},
+                            },
+                        }
+                        if "triggers" in version_dict:
+                            version_config["triggers"] = version_dict["triggers"]
+
+                        version_dict["config"] = version_config
+                        version_map[agent["agent_id"]] = version_dict
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to load version %s for agent %s: %s",
+                        version_id,
+                        agent.get("agent_id"),
+                        exc,
+                    )
+        except Exception as exc:
+            logger.warning("Failed to batch load agent versions via VersionService: %s", exc)
+
         return version_map
 
     async def _passes_complex_filters(

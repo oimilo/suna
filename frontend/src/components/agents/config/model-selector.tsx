@@ -420,7 +420,7 @@ export function AgentModelSelector({
         </Tooltip>
         <DropdownMenuContent
           align={variant === 'menu-item' ? 'end' : 'start'}
-          className="w-76 p-0 overflow-hidden"
+          className="w-76 p-0 overflow-hidden z-[280]"
           sideOffset={variant === 'menu-item' ? 8 : 4}
         >
           <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full">

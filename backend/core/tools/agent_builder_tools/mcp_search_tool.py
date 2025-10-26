@@ -75,7 +75,7 @@ class MCPSearchTool(AgentBuilderBaseTool):
             
             if not formatted_toolkits:
                 return ToolResult(
-                    success=True,
+                    success=False,
                     output=json.dumps([], ensure_ascii=False)
                 )
             
@@ -158,66 +158,21 @@ class MCPSearchTool(AgentBuilderBaseTool):
             account_id = await self._get_current_account_id()
             from core.composio_integration.composio_profile_service import ComposioProfileService
             from core.mcp_module.mcp_service import mcp_service
-            from core.composio_integration.connected_account_service import ConnectedAccountService
             
             profile_service = ComposioProfileService(self.db)
             profiles = await profile_service.get_profiles(account_id)
             
             profile = None
             for p in profiles:
-                identifiers = {
-                    p.profile_id,
-                    p.profile_name,
-                    getattr(p, "display_name", None),
-                }
-                if profile_id in identifiers:
+                if p.profile_id == profile_id:
                     profile = p
                     break
 
             if not profile:
-                lowered = profile_id.lower()
-                for p in profiles:
-                    identifiers = {
-                        str(p.profile_id).lower(),
-                        (p.profile_name or "").lower(),
-                        (getattr(p, "display_name", "") or "").lower(),
-                    }
-                    if lowered in identifiers:
-                        profile = p
-                        break
-            
-            if not profile:
-                available_profiles = ", ".join(p.profile_name for p in profiles if p.profile_name)
-                hint = ""
-                if available_profiles:
-                    hint = f" Available profiles: {available_profiles}."
-                return self.fail_response(
-                    f"Composio profile '{profile_id}' not found.{hint} "
-                    "Use `get_credential_profiles` to list valid profile IDs/names."
-                )
-
-            profile_id = profile.profile_id
+                return self.fail_response(f"Composio profile {profile_id} not found")
             
             if not profile.is_connected:
                 return self.fail_response("Profile is not connected yet. Please connect the profile first.")
-
-            if profile.connected_account_id:
-                connected_account_service = ConnectedAccountService()
-                try:
-                    status_info = await connected_account_service.get_auth_status(profile.connected_account_id)
-                except Exception as status_error:
-                    logger.warning(
-                        f"Failed to fetch connection status for profile {profile_id} "
-                        f"(account {profile.connected_account_id}): {status_error}"
-                    )
-                    status_info = None
-
-                connection_status = (status_info or {}).get("status")
-                if connection_status and connection_status.upper() not in {"VERIFIED", "AUTHORIZED", "ENABLED", "CONNECTED", "ACTIVE"}:
-                    return self.fail_response(
-                        f"Profile authentication not complete yet (status: {connection_status}). "
-                        "Please finish the authentication flow in the Composio window and try again."
-                    )
 
             if not profile.mcp_url:
                 return self.fail_response("Profile has no MCP URL")
@@ -228,12 +183,7 @@ class MCPSearchTool(AgentBuilderBaseTool):
             )
             
             if not result.success:
-                error_message = result.message or "Failed to discover tools"
-                logger.error(
-                    f"discover_user_mcp_servers failed for profile {profile_id} "
-                    f"(toolkit={profile.toolkit_slug}, url={profile.mcp_url}): {error_message}"
-                )
-                return self.fail_response(f"Failed to discover tools: {error_message}")
+                return self.fail_response("Failed to discover tools")
             
             available_tools = result.tools or []
             
@@ -250,8 +200,5 @@ class MCPSearchTool(AgentBuilderBaseTool):
             })
             
         except Exception as e:
-            logger.error(
-                f"Error discovering MCP tools for profile {profile_id}: {str(e)}",
-                exc_info=True
-            )
-            return self.fail_response(f"Error discovering MCP tools: {str(e)}")
+            logger.error(f"Error discovering MCP tools: {str(e)}")
+            return self.fail_response("Error discovering MCP tools")
