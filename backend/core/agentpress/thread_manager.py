@@ -119,10 +119,30 @@ class ThreadManager:
 
     async def _handle_billing(self, thread_id: str, content: dict, saved_message: dict):
         try:
+            if isinstance(saved_message, str):
+                try:
+                    saved_message = json.loads(saved_message)
+                except json.JSONDecodeError:
+                    logger.warning("Billing handler received stringified saved_message; proceeding without message_id")
+                    saved_message = {}
+
+            if isinstance(content, str):
+                try:
+                    content = json.loads(content)
+                except json.JSONDecodeError:
+                    message_id = saved_message.get('message_id') if isinstance(saved_message, dict) else None
+                    logger.error(
+                        f"Error handling billing: unable to parse llm_response_end content for message {message_id}"
+                    )
+                    return
+
             llm_response_id = content.get("llm_response_id", "unknown")
             logger.info(f"💰 Processing billing for LLM response: {llm_response_id}")
             
             usage = content.get("usage", {})
+            if not isinstance(usage, dict):
+                logger.error(f"Error handling billing: usage payload not a dict for response {llm_response_id}")
+                return
             
             prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
             completion_tokens = int(usage.get("completion_tokens", 0) or 0)
@@ -158,10 +178,14 @@ class ThreadManager:
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
                     model=model or "unknown",
-                    message_id=saved_message['message_id'],
+                    message_id=saved_message.get('message_id'),
                     cache_read_tokens=cache_read_tokens,
                     cache_creation_tokens=cache_creation_tokens
                 )
+                
+                if not isinstance(deduct_result, dict):
+                    logger.error(f"Billing integration returned unexpected response type: {type(deduct_result)} for user {user_id}")
+                    return
                 
                 if deduct_result.get('success'):
                     logger.info(f"Successfully deducted ${deduct_result.get('cost', 0):.6f}")
