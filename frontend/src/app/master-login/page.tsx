@@ -57,7 +57,7 @@ export default function MasterLoginPage() {
             throw new Error(`Failed to set session: ${sessionError.message}`);
           }
 
-          router.push('/dashboard');
+          router.push('/admin');
         } else {
           window.location.href = data.action_link;
         }
@@ -72,7 +72,7 @@ export default function MasterLoginPage() {
           throw new Error(`Failed to set session: ${sessionError.message}`);
         }
 
-        router.push('/dashboard');
+        router.push('/admin');
       } else {
         throw new Error('No authentication method provided in response');
       }
