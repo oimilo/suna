@@ -439,28 +439,56 @@ class AgentLoader:
     
     async def _batch_load_configs(self, agents: list[AgentData]):
         """Batch load configurations for multiple agents."""
-        from core.utils.query_utils import batch_query_in
-        
-        # Get all version IDs
-        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default]
-        
+        version_ids = [
+            a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default
+        ]
+
         if not version_ids:
+            for agent in agents:
+                if agent.is_suna_default:
+                    self._load_suna_config(agent)
+                    agent.config_loaded = True
             return
-        
+
         try:
-            client = await self.db.client
-            versions_data = await batch_query_in(
-                client=client,
-                table_name='agent_versions',
-                select_fields='version_id, agent_id, version_number, version_name, config',
-                in_field='version_id',
-                in_values=version_ids
-            )
-            
-            # Create version map
-            version_map = {v['agent_id']: v for v in versions_data}
-            
-            # Apply configs
+            from core.versioning.version_service import get_version_service
+
+            version_service = await get_version_service()
+            version_map: Dict[str, Dict[str, Any]] = {}
+
+            for agent in agents:
+                if agent.current_version_id and not agent.is_suna_default:
+                    try:
+                        version = await version_service.get_version(
+                            agent_id=agent.agent_id,
+                            version_id=agent.current_version_id,
+                            user_id=agent.account_id,
+                        )
+                        if version:
+                            version_dict = version.to_dict()
+                            version_config = {
+                                "system_prompt": version.system_prompt,
+                                "model": version.model,
+                                "tools": {
+                                    "agentpress": version_dict.get("agentpress_tools") or {},
+                                    "mcp": version_dict.get("configured_mcps") or [],
+                                    "custom_mcp": version_dict.get("custom_mcps") or [],
+                                },
+                            }
+                            if "triggers" in version_dict:
+                                version_config["triggers"] = version_dict["triggers"]
+
+                            version_dict["config"] = version_config
+                            version_map[agent.agent_id] = version_dict
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to load version %s for agent %s: %s",
+                            agent.current_version_id,
+                            agent.agent_id,
+                            exc,
+                        )
+                        continue
+
             for agent in agents:
                 if agent.is_suna_default:
                     self._load_suna_config(agent)
@@ -468,10 +496,14 @@ class AgentLoader:
                 elif agent.agent_id in version_map:
                     self._apply_version_config(agent, version_map[agent.agent_id])
                     agent.config_loaded = True
-                # else: leave config_loaded = False
-                
-        except Exception as e:
-            logger.warning(f"Failed to batch load agent configs: {e}")
+
+        except Exception as exc:
+            logger.warning(f"Failed to batch load agent configs via VersionService: {exc}")
+            # Fallback: ensure Suna defaults still load
+            for agent in agents:
+                if agent.is_suna_default:
+                    self._load_suna_config(agent)
+                    agent.config_loaded = True
     
     def _apply_version_config(self, agent: AgentData, version_row: Dict[str, Any]):
         """Apply version configuration to agent."""

@@ -186,39 +186,12 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             
             profile = None
             for p in profiles:
-                identifiers = {
-                    p.profile_id,
-                    p.profile_name,
-                    getattr(p, "display_name", None),
-                }
-                if profile_id in identifiers:
+                if p.profile_id == profile_id:
                     profile = p
                     break
-
-            if not profile:
-                lowered = profile_id.lower()
-                for p in profiles:
-                    identifiers = {
-                        str(p.profile_id).lower(),
-                        (p.profile_name or "").lower(),
-                        (getattr(p, "display_name", "") or "").lower(),
-                    }
-                    if lowered in identifiers:
-                        profile = p
-                        break
-
-            if profile:
-                profile_id = profile.profile_id
             
             if not profile:
-                available_profiles = ", ".join(p.profile_name for p in profiles if p.profile_name)
-                hint = ""
-                if available_profiles:
-                    hint = f" Available profiles: {available_profiles}."
-                return self.fail_response(
-                    "Credential profile not found. "
-                    "Use `get_credential_profiles` to list available profile IDs." + hint
-                )
+                return self.fail_response("Credential profile not found")
             if not profile.is_connected:
                 return self.fail_response("Profile is not connected yet. Please connect the profile first.")
 
@@ -239,48 +212,15 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             current_tools = current_config.get('tools', {})
             current_custom_mcps = current_tools.get('custom_mcp', [])
             
-            normalized_tools = []
-            if enabled_tools:
-                try:
-                    from core.composio_integration.toolkit_service import ToolkitService
-                    toolkit_service = ToolkitService()
-                    tools_response = await toolkit_service.get_toolkit_tools(profile.toolkit_slug)
-                    slug_to_name = {}
-                    name_set = set()
-                    for tool in tools_response.items:
-                        slug_value = getattr(tool, 'slug', '')
-                        if slug_value:
-                            slug_to_name[slug_value] = tool.name
-                        name_set.add(tool.name)
-
-                    for tool in enabled_tools:
-                        canonical = slug_to_name.get(tool) or (tool if tool in name_set else None)
-                        if not canonical and tool:
-                            normalized_key = tool.replace('-', '_')
-                            canonical = slug_to_name.get(normalized_key) or (normalized_key if normalized_key in name_set else None)
-                        value = canonical or tool
-                        if value not in normalized_tools:
-                            normalized_tools.append(value)
-                except Exception as normalize_error:
-                    logger.warning(
-                        "Failed to normalize enabled tools for %s: %s",
-                        profile.toolkit_slug,
-                        normalize_error,
-                    )
-                    normalized_tools = list(enabled_tools)
-            else:
-                normalized_tools = []
-
             new_mcp_config = {
                 'name': profile.toolkit_name,
                 'type': 'composio',
-                'qualifiedName': profile.mcp_qualified_name,
                 'config': {
                     'profile_id': profile_id,
                     'toolkit_slug': profile.toolkit_slug,
                     'mcp_qualified_name': profile.mcp_qualified_name
                 },
-                'enabledTools': normalized_tools
+                'enabledTools': enabled_tools
             }
             
             updated_mcps = [mcp for mcp in current_custom_mcps 
@@ -300,7 +240,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                 custom_mcps=updated_mcps,
                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
-                change_description=f"Configured {display_name or profile.display_name} with {len(normalized_tools)} tools"
+                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools"
             )
 
             # Dynamically register the MCP tools in the current runtime
@@ -315,7 +255,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                         'toolkit_slug': profile.toolkit_slug,
                         'mcp_qualified_name': profile.mcp_qualified_name
                     },
-                    'enabledTools': normalized_tools,
+                    'enabledTools': enabled_tools,
                     'instructions': '',
                     'isCustom': True,
                     'customType': 'composio'
@@ -339,9 +279,9 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 logger.warning(f"Could not dynamically register MCP tools in current runtime: {str(e)}. Tools will be available on next agent run.")
 
             return self.success_response({
-                "message": f"Profile '{profile.profile_name}' configured with {len(normalized_tools)} tools and registered in current runtime",
-                "enabled_tools": normalized_tools,
-                "total_tools": len(normalized_tools),
+                "message": f"Profile '{profile.profile_name}' configured with {len(enabled_tools)} tools and registered in current runtime",
+                "enabled_tools": enabled_tools,
+                "total_tools": len(enabled_tools),
                 "runtime_registration": "success"
             })
             
