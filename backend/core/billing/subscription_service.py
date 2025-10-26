@@ -2,11 +2,13 @@ from fastapi import HTTPException
 from typing import Dict, Optional, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
+import time
 import stripe
 from core.services.supabase import DBConnection
 from core.utils.config import config
 from core.utils.logger import logger
 from core.utils.cache import Cache
+from core.utils.distributed_lock import DistributedLock
 from .config import (
     get_tier_by_price_id, 
     TIERS, 
@@ -18,6 +20,11 @@ from .config import (
     get_price_type
 )
 from .credit_manager import credit_manager
+from .idempotency import (
+    generate_checkout_idempotency_key,
+    generate_subscription_modify_idempotency_key
+)
+from .stripe_circuit_breaker import StripeAPIWrapper
 
 class SubscriptionService:
     def __init__(self):
@@ -69,7 +76,8 @@ class SubscriptionService:
                 detail="Unable to retrieve user email. Please ensure your account has a valid email address."
             )
         
-        customer = await stripe.Customer.create_async(
+        customer = await StripeAPIWrapper.safe_stripe_call(
+            stripe.Customer.create_async,
             email=email,
             metadata={'account_id': account_id}
         )
@@ -125,9 +133,8 @@ class SubscriptionService:
             stripe_subscription_id = credit_account.get('stripe_subscription_id')
             if stripe_subscription_id:
                 try:
-                    stripe_subscription = await stripe.Subscription.retrieve_async(
-                        stripe_subscription_id,
-                        expand=['items.data.price']
+                    stripe_subscription = await StripeAPIWrapper.retrieve_subscription(
+                        stripe_subscription_id
                     )
                     
                     if (stripe_subscription.get('items') and 
@@ -219,6 +226,12 @@ class SubscriptionService:
             trial_status = credit_account.data[0].get('trial_status')
             current_tier = credit_account.data[0].get('tier')
         
+        # Always use timestamp in idempotency key to allow retries with different parameters
+        import time
+        timestamp = int(time.time() * 1000)  # Millisecond precision
+        base_key = generate_checkout_idempotency_key(account_id, price_id, commitment_type)
+        idempotency_key = f"{base_key}_{timestamp}"
+        
         if trial_status == 'active' and existing_subscription_id:
             logger.info(f"[TRIAL CONVERSION] User {account_id} upgrading from trial to paid plan")
             
@@ -226,20 +239,20 @@ class SubscriptionService:
             tier_display_name = new_tier_info.display_name if new_tier_info else 'paid plan'
 
             try:
-                cancelled_trial = await stripe.Subscription.cancel_async(existing_subscription_id)
+                cancelled_trial = await StripeAPIWrapper.cancel_subscription(existing_subscription_id)
                 logger.info(f"[TRIAL CONVERSION] Cancelled trial subscription {existing_subscription_id}")
             except stripe.error.InvalidRequestError as e:
                 logger.warning(f"[TRIAL CONVERSION] Could not cancel trial subscription: {e}")
             except stripe.error.StripeError as e:
                 logger.error(f"[TRIAL CONVERSION] Failed to cancel trial subscription: {e}")
 
-            session = await stripe.checkout.Session.create_async(
+            session = await StripeAPIWrapper.create_checkout_session(
                 customer=customer_id,
                 payment_method_types=['card'],
                 line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                success_url=success_url,
-                cancel_url=cancel_url,
+                ui_mode='embedded',
+                return_url=success_url,
                 subscription_data={
                     'metadata': {
                         'account_id': account_id,
@@ -248,12 +261,24 @@ class SubscriptionService:
                         'previous_tier': current_tier or 'trial',
                         'commitment_type': commitment_type or 'none'
                     }
-                }
+                },
+                idempotency_key=idempotency_key
             )
             
             logger.info(f"[TRIAL CONVERSION] Created new checkout session for user {account_id}")
+            
+            # Generate frontend checkout wrapper URL for Apple compliance
+            import os
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            client_secret = getattr(session, 'client_secret', None)
+            checkout_param = f"client_secret={client_secret}" if client_secret else f"session_id={session.id}"
+            fe_checkout_url = f"{frontend_url}/checkout?{checkout_param}"
+            
             return {
-                'checkout_url': session.url, 
+                'checkout_url': session.url,  # Direct Stripe (fallback)
+                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'session_id': session.id,
+                'client_secret': client_secret,
                 'converting_from_trial': True,
                 'message': f'Converting from trial to {tier_display_name}. Your trial will end and the new plan will begin immediately upon payment.',
                 'tier_info': {
@@ -264,18 +289,21 @@ class SubscriptionService:
             }
 
         elif existing_subscription_id and trial_status != 'active':
-            subscription = await stripe.Subscription.retrieve_async(existing_subscription_id)
+            subscription = await StripeAPIWrapper.retrieve_subscription(existing_subscription_id)
             
             logger.info(f"Updating subscription {existing_subscription_id} to price {price_id}")
             
-            updated_subscription = await stripe.Subscription.modify_async(
+            modify_key = generate_subscription_modify_idempotency_key(existing_subscription_id, price_id)
+            
+            updated_subscription = await StripeAPIWrapper.modify_subscription(
                 existing_subscription_id,
                 items=[{
                     'id': subscription['items']['data'][0].id,
                     'price': price_id,
                 }],
                 proration_behavior='always_invoice',
-                payment_behavior='pending_if_incomplete'
+                payment_behavior='pending_if_incomplete',
+                idempotency_key=modify_key
             )
             
             logger.info(f"Stripe subscription updated, processing subscription change")
@@ -303,27 +331,42 @@ class SubscriptionService:
                 }
             }
         else:
-            session = await stripe.checkout.Session.create_async(
+            session = await StripeAPIWrapper.create_checkout_session(
                 customer=customer_id,
                 payment_method_types=['card'],
                 line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                success_url=success_url,
-                cancel_url=cancel_url,
+                ui_mode='embedded',
+                return_url=success_url,
                 subscription_data={
                     'metadata': {
                         'account_id': account_id,
                         'account_type': 'personal',
                         'commitment_type': commitment_type or 'none'
                     }
-                }
+                },
+                idempotency_key=idempotency_key
             )
-            return {'checkout_url': session.url}
+            
+            # Generate frontend checkout wrapper URL for Apple compliance
+            import os
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            client_secret = getattr(session, 'client_secret', None)
+            checkout_param = f"client_secret={client_secret}" if client_secret else f"session_id={session.id}"
+            fe_checkout_url = f"{frontend_url}/checkout?{checkout_param}"
+            
+            return {
+                'checkout_url': session.url,  # Direct Stripe (fallback)
+                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'session_id': session.id,
+                'client_secret': client_secret,
+            }
 
     async def create_portal_session(self, account_id: str, return_url: str) -> Dict:
         customer_id = await self.get_or_create_stripe_customer(account_id)
         
-        session = await stripe.billing_portal.Session.create_async(
+        session = await StripeAPIWrapper.safe_stripe_call(
+            stripe.billing_portal.Session.create_async,
             customer=customer_id,
             return_url=return_url
         )
@@ -344,7 +387,7 @@ class SubscriptionService:
         subscription_id = credit_result.data[0]['stripe_subscription_id']
         
         try:
-            subscription = await stripe.Subscription.retrieve_async(subscription_id)
+            subscription = await StripeAPIWrapper.retrieve_subscription(subscription_id)
             await self.handle_subscription_change(subscription)
             
             await Cache.invalidate(f"subscription_tier:{account_id}")
@@ -382,7 +425,7 @@ class SubscriptionService:
                 logger.info(f"Scheduling cancellation for commitment end date: {end_date.date()} for account {account_id}")
                 
                 try:
-                    subscription = await stripe.Subscription.modify_async(
+                    subscription = await StripeAPIWrapper.modify_subscription(
                         subscription_id,
                         cancel_at=int(end_date.timestamp()),
                         metadata={'cancellation_feedback': feedback, 'scheduled_commitment_cancel': 'true'} if feedback else {'scheduled_commitment_cancel': 'true'}
@@ -420,7 +463,7 @@ class SubscriptionService:
                     raise HTTPException(status_code=500, detail=f"Failed to schedule cancellation: {str(e)}")
         
         try:
-            subscription = await stripe.Subscription.modify_async(
+            subscription = await StripeAPIWrapper.modify_subscription(
                 subscription_id,
                 cancel_at_period_end=True,
                 metadata={'cancellation_feedback': feedback} if feedback else {}
@@ -461,7 +504,7 @@ class SubscriptionService:
         subscription_id = credit_result.data[0]['stripe_subscription_id']
         
         try:
-            subscription = await stripe.Subscription.modify_async(
+            subscription = await StripeAPIWrapper.modify_subscription(
                 subscription_id,
                 cancel_at_period_end=False
             )
@@ -477,9 +520,7 @@ class SubscriptionService:
             raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
 
     async def handle_subscription_change(self, subscription: Dict, previous_attributes: Dict = None):
-        logger.error(f"[HANDLE_SUBSCRIPTION_CHANGE] CALLED! Subscription: {subscription.get('id')}")
-        logger.error(f"[HANDLE_SUBSCRIPTION_CHANGE] Status: {subscription.get('status')}")
-        logger.error(f"[HANDLE_SUBSCRIPTION_CHANGE] Previous attributes: {previous_attributes}")
+        logger.info(f"[SUBSCRIPTION] Processing change for subscription {subscription.get('id')}, status: {subscription.get('status')}")
         
         db = DBConnection()
         client = await db.client
@@ -495,25 +536,49 @@ class SubscriptionService:
             
             account_id = customer_result.data[0]['account_id']
         
-        logger.error(f"[SUBSCRIPTION INFO] Account ID: {account_id}")
-        
         price_id = subscription['items']['data'][0]['price']['id'] if subscription.get('items') else None
-        
-        logger.error(f"[SUBSCRIPTION INFO] Price ID: {price_id}")
-        
         billing_anchor = datetime.fromtimestamp(subscription['current_period_start'], tz=timezone.utc)
-        logger.error(f"[SUBSCRIPTION INFO] Billing anchor: {billing_anchor}")
+        period_start = subscription.get('current_period_start')
+        logger.debug(f"[SUBSCRIPTION] Account: {account_id}, Price: {price_id}, Billing anchor: {billing_anchor}")
+        
+        guard_check = await client.rpc('check_renewal_already_processed', {
+            'p_account_id': account_id,
+            'p_period_start': period_start
+        }).execute()
+        
+        if guard_check.data and guard_check.data.get('already_processed'):
+            logger.info(
+                f"[SUBSCRIPTION GUARD] ⛔ Renewal already processed for {account_id} period {period_start} "
+                f"by {guard_check.data.get('processed_by')}. Will only update metadata, no credit grants."
+            )
+            await self._update_subscription_metadata_only(account_id, subscription, price_id, client)
+            return
 
         current_account = await client.from_('credit_accounts').select(
-            'tier, stripe_subscription_id, last_grant_date, billing_cycle_anchor, last_processed_invoice_id'
+            'tier, stripe_subscription_id, last_grant_date, billing_cycle_anchor, last_processed_invoice_id, trial_status'
         ).eq('account_id', account_id).execute()
 
         is_renewal = False
         is_upgrade = False
         
+        if current_account.data:
+            current_trial_status = current_account.data[0].get('trial_status')
+            current_subscription_status = subscription.get('status')
+            prev_subscription_status = previous_attributes.get('status') if previous_attributes else None
+            
+            if current_trial_status == 'active' and prev_subscription_status == 'trialing' and current_subscription_status == 'active':
+                logger.info(f"[TRIAL END] Subscription transitioned from trialing to active - marking trial as converted")
+                await client.from_('credit_accounts').update({
+                    'trial_status': 'converted'
+                }).eq('account_id', account_id).execute()
+                await client.from_('trial_history').update({
+                    'ended_at': datetime.now(timezone.utc).isoformat(),
+                    'converted_to_paid': True
+                }).eq('account_id', account_id).is_('ended_at', 'null').execute()
+        
         if subscription.get('id'):
             try:
-                invoices = stripe.Invoice.list(
+                invoices = await StripeAPIWrapper.list_invoices(
                     subscription=subscription['id'],
                     limit=5
                 )
@@ -653,18 +718,24 @@ class SubscriptionService:
                 return
         
         next_grant_date = datetime.fromtimestamp(subscription['current_period_end'], tz=timezone.utc)
-        logger.error(f"[ACCOUNT CHECK] Current account data: {current_account.data}")
+        logger.debug(f"[SUBSCRIPTION] Current account data exists: {bool(current_account.data)}")
         
         if current_account.data:
             existing_data = current_account.data[0]
             current_tier_name = existing_data.get('tier')
-            logger.error(f"[ACCOUNT CHECK] Existing tier: {current_tier_name}")
+            logger.debug(f"[SUBSCRIPTION] Existing tier: {current_tier_name}")
             old_subscription_id = existing_data.get('stripe_subscription_id')
             last_grant_date = existing_data.get('last_grant_date')
             existing_anchor = existing_data.get('billing_cycle_anchor')
+            current_trial_status = existing_data.get('trial_status')
 
             last_processed_invoice = existing_data.get('last_processed_invoice_id')
             last_renewal_period_start = existing_data.get('last_renewal_period_start')
+            
+            if current_trial_status == 'cancelled' and subscription.status == 'active' and not old_subscription_id:
+                logger.info(f"[SUBSCRIPTION] User {account_id} with cancelled trial is subscribing - treating as new subscription")
+                await self._grant_initial_subscription_credits(account_id, new_tier, billing_anchor, subscription, client)
+                return
             
             # Check if invoice webhook already handled this period
             if last_renewal_period_start and last_renewal_period_start == subscription.get('current_period_start'):
@@ -713,13 +784,10 @@ class SubscriptionService:
                 'credits': 0
             }
             
-            logger.error(f"[TIER DEBUG] Current: {current_tier['name']} ({current_tier['credits']}), New: {new_tier['name']} ({new_tier['credits']})")
-            logger.error(f"[TIER DEBUG] Subscription ID: {subscription['id']}, Account: {account_id}")
+            logger.debug(f"[SUBSCRIPTION] Tier comparison - Current: {current_tier['name']} ({current_tier['credits']}), New: {new_tier['name']} ({new_tier['credits']})")
             
             if current_tier['name'] == new_tier['name'] and current_tier['name'] not in ['free', 'none']:
-                logger.error(f"[CREDIT BLOCK!!!] SAME TIER DETECTED: {new_tier['name']}")
-                logger.error(f"[CREDIT BLOCK!!!] This is 100% a RENEWAL, not an upgrade")
-                logger.error(f"[CREDIT BLOCK!!!] BLOCKING all credit operations")
+                logger.info(f"[SUBSCRIPTION] Same tier detected ({new_tier['name']}) - identified as renewal, blocking duplicate credits")
                 
                 await client.from_('credit_accounts').update({
                     'tier': new_tier['name'],
@@ -748,56 +816,67 @@ class SubscriptionService:
                 'next_credit_grant': next_grant_date.isoformat()
             }).eq('account_id', account_id).execute()
         else:
-            logger.error(f"[CRITICAL WARNING] No existing credit account found for {account_id}")
-            logger.error(f"[CRITICAL WARNING] This should NOT happen for renewals!")
-            logger.error(f"[CRITICAL WARNING] Creating initial subscription - but this might be wrong!")
+            logger.warning(f"[SUBSCRIPTION] No existing credit account found for {account_id} - creating initial subscription (may indicate new user or data issue)")
             await self._grant_initial_subscription_credits(account_id, new_tier, billing_anchor, subscription, client)
 
     async def _handle_trial_subscription(self, subscription, account_id, new_tier, client):
         if not subscription.get('trial_end'):
             return
         
-        existing_account = await client.from_('credit_accounts').select('trial_status').eq('account_id', account_id).execute()
-        if existing_account.data:
-            current_status = existing_account.data[0].get('trial_status')
-            if current_status == 'active':
-                logger.info(f"[WEBHOOK] Trial already active for account {account_id}, skipping duplicate processing")
-                return
-            elif current_status == 'none':
-                logger.info(f"[WEBHOOK] Activating trial for account {account_id}")
+        lock_key = f"credit_grant:trial:{account_id}"
+        lock = DistributedLock(lock_key, timeout_seconds=60)
         
-        recent_trial_credits = await client.from_('credit_ledger').select('*').eq(
-            'account_id', account_id
-        ).eq('description', f'{TRIAL_DURATION_DAYS}-day free trial credits').execute()
-        
-        if recent_trial_credits.data:
-            logger.warning(f"[WEBHOOK] Trial credits already granted for account {account_id} (found in ledger), skipping duplicate")
+        acquired = await lock.acquire(wait=True, wait_timeout=30)
+        if not acquired:
+            logger.error(f"[TRIAL GRANT] Failed to acquire lock for trial grant to {account_id}")
             return
+        
+        try:
+            logger.info(f"[TRIAL GRANT] 🔒 Acquired lock for trial activation for {account_id}")
             
-        trial_ends_at = datetime.fromtimestamp(subscription.trial_end, tz=timezone.utc)
-        
-        await client.from_('credit_accounts').update({
-            'trial_status': 'active',
-            'trial_started_at': datetime.now(timezone.utc).isoformat(),
-            'trial_ends_at': trial_ends_at.isoformat(),
-            'stripe_subscription_id': subscription['id'],
-            'tier': new_tier['name']
-        }).eq('account_id', account_id).execute()
-        
-        await credit_manager.add_credits(
-            account_id=account_id,
-            amount=TRIAL_CREDITS,
-            is_expiring=True,
-            description=f'{TRIAL_DURATION_DAYS}-day free trial credits',
-            expires_at=trial_ends_at
-        )
-        
-        await client.from_('trial_history').upsert({
-            'account_id': account_id,
-            'started_at': datetime.now(timezone.utc).isoformat()
-        }, on_conflict='account_id').execute()
-        
-        logger.info(f"[WEBHOOK] Started trial for user {account_id} via Stripe subscription - granted ${TRIAL_CREDITS} credits")
+            existing_account = await client.from_('credit_accounts').select('trial_status').eq('account_id', account_id).execute()
+            if existing_account.data:
+                current_status = existing_account.data[0].get('trial_status')
+                if current_status == 'active':
+                    logger.info(f"[WEBHOOK] Trial already active for account {account_id}, skipping duplicate processing")
+                    return
+                elif current_status == 'none':
+                    logger.info(f"[WEBHOOK] Activating trial for account {account_id}")
+            
+            recent_trial_credits = await client.from_('credit_ledger').select('*').eq(
+                'account_id', account_id
+            ).eq('description', f'{TRIAL_DURATION_DAYS}-day free trial credits').execute()
+            
+            if recent_trial_credits.data:
+                logger.warning(f"[WEBHOOK] Trial credits already granted for account {account_id} (found in ledger), skipping duplicate")
+                return
+                
+            trial_ends_at = datetime.fromtimestamp(subscription.trial_end, tz=timezone.utc)
+            
+            await client.from_('credit_accounts').update({
+                'trial_status': 'active',
+                'trial_started_at': datetime.now(timezone.utc).isoformat(),
+                'trial_ends_at': trial_ends_at.isoformat(),
+                'stripe_subscription_id': subscription['id'],
+                'tier': new_tier['name']
+            }).eq('account_id', account_id).execute()
+            
+            await credit_manager.add_credits(
+                account_id=account_id,
+                amount=TRIAL_CREDITS,
+                is_expiring=True,
+                description=f'{TRIAL_DURATION_DAYS}-day free trial credits',
+                expires_at=trial_ends_at
+            )
+            
+            await client.from_('trial_history').upsert({
+                'account_id': account_id,
+                'started_at': datetime.now(timezone.utc).isoformat()
+            }, on_conflict='account_id').execute()
+            
+            logger.info(f"[WEBHOOK] ✅ Started trial for user {account_id} via Stripe subscription - granted ${TRIAL_CREDITS} credits")
+        finally:
+            await lock.release()
 
     def _should_grant_credits(self, current_tier_name, current_tier, new_tier, subscription, old_subscription_id, is_renewal=False):
         should_grant_credits = False
@@ -829,41 +908,67 @@ class SubscriptionService:
 
     async def _grant_subscription_credits(self, account_id, new_tier, billing_anchor):
         full_amount = Decimal(new_tier['credits'])
-        logger.error(f"[CREDIT GRANT WARNING] subscription.updated is granting {full_amount} credits to {account_id}")
-        logger.error(f"[CREDIT GRANT WARNING] This should ONLY happen for tier UPGRADES, not renewals!")
-        logger.info(f"[CREDIT GRANT] Granting {full_amount} credits to user {account_id} for tier {new_tier['name']}")
-        logger.info(f"[CREDIT GRANT] Billing anchor: {billing_anchor}, Trigger: subscription.updated webhook")
         
-        expires_at = billing_anchor.replace(month=billing_anchor.month + 1) if billing_anchor.month < 12 else billing_anchor.replace(year=billing_anchor.year + 1, month=1)
-        result = await credit_manager.add_credits(
-            account_id=account_id,
-            amount=full_amount,
-            is_expiring=True,
-            description=f"Tier upgrade to {new_tier['name']}",
-            expires_at=expires_at
-        )
+        lock_key = f"credit_grant:upgrade:{account_id}:{int(billing_anchor.timestamp())}"
+        lock = DistributedLock(lock_key, timeout_seconds=60)
         
-        logger.info(f"[CREDIT GRANT] Successfully granted {full_amount} expiring credits for tier upgrade to {new_tier['name']}")
+        acquired = await lock.acquire(wait=True, wait_timeout=30)
+        if not acquired:
+            logger.error(f"[CREDIT GRANT] Failed to acquire lock for upgrade grant to {account_id}")
+            raise Exception(f"Failed to acquire lock for credit grant - possible concurrent processing")
+        
+        try:
+            logger.info(f"[CREDIT GRANT] 🔒 Acquired lock for granting ${full_amount} credits to {account_id} for tier {new_tier['name']} upgrade")
+            
+            expires_at = billing_anchor.replace(month=billing_anchor.month + 1) if billing_anchor.month < 12 else billing_anchor.replace(year=billing_anchor.year + 1, month=1)
+            result = await credit_manager.add_credits(
+                account_id=account_id,
+                amount=full_amount,
+                is_expiring=True,
+                description=f"Tier upgrade to {new_tier['name']}",
+                expires_at=expires_at
+            )
+            
+            logger.info(f"[CREDIT GRANT] ✅ Successfully granted {full_amount} expiring credits for tier upgrade to {new_tier['name']}")
+        finally:
+            await lock.release()
 
     async def _grant_initial_subscription_credits(self, account_id, new_tier, billing_anchor, subscription, client):
-        expires_at = billing_anchor.replace(month=billing_anchor.month + 1) if billing_anchor.month < 12 else billing_anchor.replace(year=billing_anchor.year + 1, month=1)
+        lock_key = f"credit_grant:initial:{account_id}:{int(billing_anchor.timestamp())}"
+        lock = DistributedLock(lock_key, timeout_seconds=60)
         
-        await credit_manager.add_credits(
-            account_id=account_id,
-            amount=Decimal(new_tier['credits']),
-            is_expiring=True,
-            description=f"Initial grant for {new_tier['name']} subscription",
-            expires_at=expires_at
-        )
+        acquired = await lock.acquire(wait=True, wait_timeout=30)
+        if not acquired:
+            logger.error(f"[CREDIT GRANT] Failed to acquire lock for initial grant to {account_id}")
+            raise Exception(f"Failed to acquire lock for initial credit grant - possible concurrent processing")
         
-        next_grant_date = datetime.fromtimestamp(subscription['current_period_end'], tz=timezone.utc)
-        
-        await client.from_('credit_accounts').update({
-            'tier': new_tier['name'],
-            'stripe_subscription_id': subscription['id'],
-            'billing_cycle_anchor': billing_anchor.isoformat(),
-            'next_credit_grant': next_grant_date.isoformat()
-        }).eq('account_id', account_id).execute()
+        try:
+            logger.info(f"[CREDIT GRANT] 🔒 Acquired lock for initial grant to {account_id} for tier {new_tier['name']}")
+            
+            expires_at = billing_anchor.replace(month=billing_anchor.month + 1) if billing_anchor.month < 12 else billing_anchor.replace(year=billing_anchor.year + 1, month=1)
+            
+            await credit_manager.add_credits(
+                account_id=account_id,
+                amount=Decimal(new_tier['credits']),
+                is_expiring=True,
+                description=f"Initial grant for {new_tier['name']} subscription",
+                expires_at=expires_at
+            )
+            
+            next_grant_date = datetime.fromtimestamp(subscription['current_period_end'], tz=timezone.utc)
+            
+            await client.from_('credit_accounts').update({
+                'tier': new_tier['name'],
+                'stripe_subscription_id': subscription['id'],
+                'billing_cycle_anchor': billing_anchor.isoformat(),
+                'next_credit_grant': next_grant_date.isoformat(),
+                'trial_status': 'none',
+                'last_grant_date': billing_anchor.isoformat()
+            }).eq('account_id', account_id).execute()
+            
+            logger.info(f"[CREDIT GRANT] ✅ Initial grant completed for {account_id}")
+        finally:
+            await lock.release()
 
     async def get_user_subscription_tier(self, account_id: str) -> Dict:
         cache_key = f"subscription_tier:{account_id}"
@@ -885,6 +990,13 @@ class SubscriptionService:
         if credit_result.data and len(credit_result.data) > 0:
             tier_name = credit_result.data[0].get('tier', 'none')
             trial_status = credit_result.data[0].get('trial_status')
+        
+        # IMPORTANT: If trial is active but tier is 'none', use TRIAL_TIER
+        # This handles cases where trial was activated but tier wasn't set properly
+        if trial_status == 'active' and tier_name == 'none':
+            from .config import TRIAL_TIER
+            tier_name = TRIAL_TIER
+            logger.info(f"[TIER] Trial active but tier=none for {account_id}, using TRIAL_TIER: {TRIAL_TIER}")
         
         tier_obj = TIERS.get(tier_name, TIERS['none'])
         tier_info = {
@@ -927,6 +1039,28 @@ class SubscriptionService:
             logger.error(f"[ALLOWED_MODELS] Error getting allowed models for user {user_id}: {e}")
             return []
 
+    async def _update_subscription_metadata_only(self, account_id: str, subscription: Dict, price_id: str, client):
+        logger.info(f"[SUBSCRIPTION] Updating metadata only (no credit grants) for {account_id}")
+        
+        new_tier_info = get_tier_by_price_id(price_id)
+        if not new_tier_info:
+            logger.warning(f"Unknown price ID in subscription: {price_id}")
+            return
+        
+        billing_anchor = datetime.fromtimestamp(subscription['current_period_start'], tz=timezone.utc)
+        next_grant_date = datetime.fromtimestamp(subscription['current_period_end'], tz=timezone.utc)
+        
+        await client.from_('credit_accounts').update({
+            'tier': new_tier_info.name,
+            'stripe_subscription_id': subscription['id'],
+            'billing_cycle_anchor': billing_anchor.isoformat(),
+            'next_credit_grant': next_grant_date.isoformat()
+        }).eq('account_id', account_id).execute()
+        
+        await self._track_commitment_if_needed(account_id, price_id, subscription, client)
+        
+        logger.info(f"[SUBSCRIPTION] ✅ Metadata updated for {account_id}, tier={new_tier_info.name}")
+    
     async def _track_commitment_if_needed(self, account_id: str, price_id: str, subscription: Dict, client):
         if not is_commitment_price_id(price_id):
             return

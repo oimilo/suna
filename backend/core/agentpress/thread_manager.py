@@ -313,6 +313,10 @@ class ThreadManager:
             ENABLE_CONTEXT_MANAGER = True   # Set to False to disable context compression
             ENABLE_PROMPT_CACHING = True    # Set to False to disable prompt caching
             # ==================================
+            LARGE_TOOL_RESULT_TOKEN_THRESHOLD = 6000
+            LARGE_TOOL_RESULT_CHAR_THRESHOLD = 50000
+            
+            context_manager = None
             
             # Fast path: Check stored token count + new message tokens
             skip_fetch = False
@@ -438,6 +442,44 @@ class ThreadManager:
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']
                 messages.append({"role": "assistant", "content": partial_content})
 
+            # Detect oversized tool payloads to avoid relying solely on the fast-path estimate
+            if ENABLE_CONTEXT_MANAGER and skip_fetch:
+                context_manager = context_manager or ContextManager()
+                large_tool_detected = False
+                for msg in messages:
+                    if context_manager.is_tool_result_message(msg):
+                        msg_for_tokens = {
+                            "role": msg.get("role", "assistant"),
+                            "content": msg.get("content", "")
+                        }
+                        tool_tokens = None
+                        try:
+                            tool_tokens = token_counter(model=llm_model, messages=[msg_for_tokens])
+                        except Exception as token_error:
+                            logger.debug(f"Token counting failed for tool result: {token_error}")
+                        content = msg.get("content", "")
+                        if isinstance(content, str):
+                            content_length = len(content)
+                        else:
+                            try:
+                                content_length = len(json.dumps(content))
+                            except Exception:
+                                content_length = 0
+                        if (
+                            (tool_tokens and tool_tokens >= LARGE_TOOL_RESULT_TOKEN_THRESHOLD)
+                            or content_length >= LARGE_TOOL_RESULT_CHAR_THRESHOLD
+                        ):
+                            large_tool_detected = True
+                            logger.info(
+                                f"📦 Large tool payload detected "
+                                f"(tokens: {tool_tokens or 'unknown'}, size: {content_length} chars); forcing context compression."
+                            )
+                            break
+                if large_tool_detected:
+                    skip_fetch = False
+                    need_compression = True
+                    estimated_total_tokens = None
+
             # Apply context compression (only if needed based on fast path check)
             if ENABLE_CONTEXT_MANAGER:
                 if skip_fetch:
@@ -446,7 +488,7 @@ class ThreadManager:
                 elif need_compression:
                     # We know we're over threshold, compress now
                     logger.info(f"Applying context compression on {len(messages)} messages")
-                    context_manager = ContextManager()
+                    context_manager = context_manager or ContextManager()
                     compressed_messages = await context_manager.compress_messages(
                         messages, llm_model, max_tokens=llm_max_tokens, 
                         actual_total_tokens=estimated_total_tokens,  # Use estimated from fast check!
@@ -458,7 +500,7 @@ class ThreadManager:
                 else:
                     # First turn or no fast path data: Run compression check
                     logger.debug(f"Running compression check on {len(messages)} messages")
-                    context_manager = ContextManager()
+                    context_manager = context_manager or ContextManager()
                     compressed_messages = await context_manager.compress_messages(
                         messages, llm_model, max_tokens=llm_max_tokens, 
                         actual_total_tokens=None,
