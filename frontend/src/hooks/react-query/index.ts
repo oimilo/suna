@@ -24,4 +24,7 @@ export * from './usage/use-health';
 
 export * from './triggers';
 
+export * from './admin/use-admin-users';
+export * from './admin/use-admin-billing';
+
 // Pipedream hooks removed; align with Suna 
