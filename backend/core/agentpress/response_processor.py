@@ -1971,7 +1971,9 @@ class ResponseProcessor:
             except Exception:
                 # If parsing fails, keep the original string
                 pass
-
+        truncated_for_llm = False
+        if for_llm:
+            output, truncated_for_llm = self._summarize_output_for_llm(output, tool_call)
         structured_result_v1 = {
             "tool_execution": {
                 "function_name": function_name,
@@ -1985,8 +1987,99 @@ class ResponseProcessor:
                 },
             }
         } 
+        if truncated_for_llm:
+            structured_result_v1["tool_execution"]["result"]["truncated_for_llm"] = True
             
         return structured_result_v1
+    
+    def _summarize_output_for_llm(self, output: Any, tool_call: Dict[str, Any]) -> Tuple[Any, bool]:
+        """Reduce oversized tool outputs before they go back into the LLM context."""
+        truncated = False
+        try:
+            if isinstance(output, dict):
+                tools_payload = output.get("tools")
+                if isinstance(tools_payload, list) and tools_payload:
+                    total_tools = len(tools_payload)
+                    serialized_size = None
+                    try:
+                        serialized_size = len(json.dumps(tools_payload))
+                    except Exception:
+                        serialized_size = None
+                    if total_tools > 50 or (serialized_size and serialized_size > 50000):
+                        truncated = True
+                        sample_count = min(total_tools, 20)
+                        sample_tools: List[Dict[str, Any]] = []
+                        for tool in tools_payload[:sample_count]:
+                            if not isinstance(tool, dict):
+                                continue
+                            name = tool.get("name")
+                            description = (tool.get("description") or "") if isinstance(tool.get("description"), str) else ""
+                            description = description[:240]
+                            input_schema = tool.get("inputSchema") if isinstance(tool.get("inputSchema"), dict) else {}
+                            required_keys: List[str] = []
+                            optional_inputs_count = 0
+                            if isinstance(input_schema, dict):
+                                required_keys = list(input_schema.get("required", []) or [])
+                                properties = input_schema.get("properties", {}) or {}
+                                if isinstance(properties, dict):
+                                    optional_inputs_count = max(len(properties) - len(required_keys), 0)
+                            sample_tools.append({
+                                "name": name,
+                                "description": description,
+                                "required_inputs": required_keys,
+                                "optional_inputs_count": optional_inputs_count
+                            })
+                        prefix_counts: Dict[str, int] = {}
+                        for tool in tools_payload:
+                            if not isinstance(tool, dict):
+                                continue
+                            tool_name = tool.get("name", "")
+                            prefix = tool_name.split("_", 1)[0] if tool_name else "unknown"
+                            prefix_counts[prefix] = prefix_counts.get(prefix, 0) + 1
+                        top_prefixes = sorted(prefix_counts.items(), key=lambda item: item[1], reverse=True)[:10]
+                        profile_info = output.get("profile_info") if isinstance(output.get("profile_info"), dict) else None
+                        summary: Dict[str, Any] = {
+                            "type": "mcp_tool_catalog_summary",
+                            "function_name": tool_call.get("function_name"),
+                            "total_tools": total_tools,
+                            "sample_count": sample_count,
+                            "sample_tools": sample_tools,
+                            "remaining_tools": max(total_tools - sample_count, 0),
+                            "top_prefix_counts": [{"prefix": prefix, "count": count} for prefix, count in top_prefixes],
+                            "truncated": True,
+                            "guidance": (
+                                "All discovered tools are registered as callable functions via the tool schemas. "
+                                "Use those schemas directly when planning tool calls and run the expand_message tool "
+                                "with this message_id if you need the full JSON payload."
+                            )
+                        }
+                        if profile_info:
+                            summary["profile_info"] = profile_info
+                        if output.get("message"):
+                            summary["discovery_message"] = output.get("message")
+                        return summary, truncated
+            if isinstance(output, list):
+                if len(output) > 50:
+                    truncated = True
+                    sample_items = output[:25]
+                    return ({
+                        "summary": "Output list truncated for LLM context to stay within token limits.",
+                        "sample_items": sample_items,
+                        "total_items": len(output),
+                        "remaining_items": len(output) - len(sample_items),
+                        "truncated": True,
+                        "guidance": "Use expand_message with this message_id to retrieve the full list when required."
+                    }, truncated)
+            if isinstance(output, str):
+                if len(output) > 6000:
+                    truncated = True
+                    return (
+                        output[:6000] + "... (truncated for LLM context; call expand_message with this message_id to view the complete content.)",
+                        truncated
+                    )
+        except Exception as e:
+            logger.debug(f"Could not summarize tool output: {e}")
+        return output, truncated
 
     def _create_tool_context(self, tool_call: Dict[str, Any], tool_index: int, assistant_message_id: Optional[str] = None, parsing_details: Optional[Dict[str, Any]] = None) -> ToolExecutionContext:
         """Create a tool execution context with display name and parsing details populated."""

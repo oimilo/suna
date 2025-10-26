@@ -39,7 +39,8 @@ class BillingIntegration:
             from decimal import Decimal
             non_cached_prompt_tokens = prompt_tokens - cache_read_tokens
             
-            model_lower = model.lower()
+            # Handle None model gracefully
+            model_lower = model.lower() if model else ''
             if any(provider in model_lower for provider in ['anthropic', 'claude', 'sonnet']):
                 cache_discount = Decimal('0.1')
             elif any(provider in model_lower for provider in ['gpt', 'openai', 'gpt-4o']):
@@ -125,12 +126,7 @@ class BillingIntegration:
                 }
             
             # Check billing/credits
-            try:
-                can_run, message, reservation_id = await BillingIntegration.check_and_reserve_credits(account_id)
-            except Exception as e:
-                logger.error(f"Billing credit reservation failed (tolerating): {e}")
-                # Em caso de falha infra (ex.: Redis), não derrubar a requisição
-                can_run, message, reservation_id = True, "Billing temporarily unavailable - bypass", None
+            can_run, message, reservation_id = await BillingIntegration.check_and_reserve_credits(account_id)
             if not can_run:
                 return False, f"Billing check failed: {message}", {
                     "tier_info": tier_info,
