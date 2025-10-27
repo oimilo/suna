@@ -544,54 +544,60 @@ class ResponseProcessor:
                 for execution in pending_tool_executions:
                     tool_idx = execution.get("tool_index", -1)
                     context = execution["context"]
+                    context.function_name = context.tool_call.get("function_name", context.function_name)
                     tool_name = context.function_name
-                    
+
                     if tool_idx in yielded_tool_indices:
-                         # logger.debug(f"Status for tool index {tool_idx} already yielded.")
-                         try:
-                             if execution["task"].done():
-                                 result = execution["task"].result()
-                                 context.result = result
-                                 tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
-                                 
-                                 if tool_name in ['ask', 'complete', 'present_presentation']:
-                                     logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
-                                     self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
-                                     agent_should_terminate = True
-                                     
-                             else:
+                        # logger.debug(f"Status for tool index {tool_idx} already yielded.")
+                        try:
+                            if execution["task"].done():
+                                result = execution["task"].result()
+                                context.result = result
+                                context.function_name = context.tool_call.get("function_name", context.function_name)
+                                tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
+
+                                if tool_name in ['ask', 'complete', 'present_presentation']:
+                                    logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
+                                    self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
+                                    agent_should_terminate = True
+
+                            else:
                                 logger.warning(f"Task for tool index {tool_idx} not done after wait.")
                                 self.trace.event(name="task_for_tool_index_not_done_after_wait", level="WARNING", status_message=(f"Task for tool index {tool_idx} not done after wait."))
-                         except Exception as e:
-                             logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
-                             self.trace.event(name="error_getting_result_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result for pending tool execution {tool_idx}: {str(e)}"))
-                             context.error = e
-                             error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                             if error_msg_obj: yield format_for_yield(error_msg_obj)
-                         continue
+                        except Exception as e:
+                            logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
+                            self.trace.event(name="error_getting_result_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result for pending tool execution {tool_idx}: {str(e)}"))
+                            context.error = e
+                            error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
+                            if error_msg_obj:
+                                yield format_for_yield(error_msg_obj)
+                        continue
 
                     try:
                         if execution["task"].done():
                             result = execution["task"].result()
                             context.result = result
+                            context.function_name = context.tool_call.get("function_name", context.function_name)
                             tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
-                            
+
                             if tool_name in ['ask', 'complete', 'present_presentation']:
                                 logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
                                 self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
                                 agent_should_terminate = True
-                                
+
                             completed_msg_obj = await self._yield_and_save_tool_completed(
                                 context, None, thread_id, thread_run_id
                             )
-                            if completed_msg_obj: yield format_for_yield(completed_msg_obj)
+                            if completed_msg_obj:
+                                yield format_for_yield(completed_msg_obj)
                             yielded_tool_indices.add(tool_idx)
                     except Exception as e:
                         logger.error(f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}")
                         self.trace.event(name="error_getting_result_yielding_status_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}"))
                         context.error = e
                         error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                        if error_msg_obj: yield format_for_yield(error_msg_obj)
+                        if error_msg_obj:
+                            yield format_for_yield(error_msg_obj)
                         yielded_tool_indices.add(tool_idx)
 
 
@@ -1481,8 +1487,26 @@ class ResponseProcessor:
             available_functions = self.tool_registry.get_available_functions()
             # logger.debug(f"📋 Available functions: {list(available_functions.keys())}")
 
-            # Look up the function by name
+            # Look up the function by name (with alias resolution fallback)
             tool_fn = available_functions.get(function_name)
+            resolved_function_name = function_name
+            if not tool_fn:
+                resolved = self._resolve_tool_function(function_name, available_functions)
+                if resolved:
+                    resolved_function_name, tool_fn = resolved
+                    original_name = function_name
+                    function_name = resolved_function_name
+                    tool_call.setdefault("requested_function_name", original_name)
+                    tool_call["function_name"] = resolved_function_name
+                    logger.info(
+                        f"🔁 Resolved tool alias '{original_name}' → '{resolved_function_name}'"
+                    )
+                    self.trace.event(
+                        name="resolved_tool_alias",
+                        level="DEFAULT",
+                        status_message=(f"Resolved tool alias '{original_name}' to '{resolved_function_name}'")
+                    )
+
             if not tool_fn:
                 logger.error(f"❌ Tool function '{function_name}' not found in registry")
                 # logger.error(f"❌ Available functions: {list(available_functions.keys())}")
@@ -1549,6 +1573,64 @@ class ResponseProcessor:
             logger.error(f"❌ Full traceback:", exc_info=True)
             span.end(status_message="critical_error", output=str(e), level="ERROR")
             return ToolResult(success=False, output=f"Critical error executing tool: {str(e)}")
+
+    def _normalize_tool_function_name(self, name: Optional[str]) -> str:
+        """Normalize tool names for flexible matching (case and delimiter agnostic)."""
+        if not name:
+            return ""
+        normalized = str(name).strip().lower()
+        for delimiter in ("-", " ", ".", "/", ":"):
+            normalized = normalized.replace(delimiter, "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return normalized.strip("_")
+
+    def _resolve_tool_function(
+        self,
+        requested_name: str,
+        available_functions: Dict[str, Callable]
+    ) -> Optional[Tuple[str, Callable]]:
+        """Resolve legacy/alias tool names to registered functions."""
+        if not requested_name:
+            return None
+
+        normalized_map: Dict[str, Tuple[str, Callable]] = {}
+        for registered_name, func in available_functions.items():
+            normalized = self._normalize_tool_function_name(registered_name)
+            if normalized and normalized not in normalized_map:
+                normalized_map[normalized] = (registered_name, func)
+
+        requested_normalized = self._normalize_tool_function_name(requested_name)
+        if requested_normalized in normalized_map:
+            return normalized_map[requested_normalized]
+
+        segments = [segment for segment in requested_normalized.split("_") if segment]
+        candidate_keys = []
+        for drop in range(1, min(len(segments), 4)):
+            candidate = "_".join(segments[drop:])
+            if candidate:
+                candidate_keys.append(candidate)
+
+        if len(segments) >= 2 and segments[1] in {"get", "list", "fetch", "retrieve", "search"}:
+            candidate = "_".join([segments[0]] + segments[2:])
+            if candidate:
+                candidate_keys.append(candidate)
+            candidate = "_".join(segments[2:])
+            if candidate:
+                candidate_keys.append(candidate)
+
+        for candidate in candidate_keys:
+            if candidate in normalized_map:
+                return normalized_map[candidate]
+
+        best_match: Optional[Tuple[str, Callable]] = None
+        best_length = -1
+        for normalized_name, value in normalized_map.items():
+            if requested_normalized.endswith(normalized_name) and len(normalized_name) > best_length:
+                best_match = value
+                best_length = len(normalized_name)
+
+        return best_match
 
     async def _execute_tools(
         self,
@@ -1974,6 +2056,7 @@ class ResponseProcessor:
         truncated_for_llm = False
         if for_llm:
             output, truncated_for_llm = self._summarize_output_for_llm(output, tool_call)
+        requested_function_name = tool_call.get("requested_function_name")
         structured_result_v1 = {
             "tool_execution": {
                 "function_name": function_name,
@@ -1989,6 +2072,9 @@ class ResponseProcessor:
         } 
         if truncated_for_llm:
             structured_result_v1["tool_execution"]["result"]["truncated_for_llm"] = True
+
+        if requested_function_name and requested_function_name != function_name:
+            structured_result_v1["tool_execution"]["requested_function_name"] = requested_function_name
             
         return structured_result_v1
     
