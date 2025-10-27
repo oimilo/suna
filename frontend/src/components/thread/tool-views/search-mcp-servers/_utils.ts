@@ -9,6 +9,9 @@ export interface McpServerResult {
   is_verified: boolean;
   url?: string | null;
   tags?: string[];
+  auth_schemes?: string[];
+  categories?: string[];
+  source?: string;
 }
 
 export interface SearchMcpServersData {
@@ -17,6 +20,9 @@ export interface SearchMcpServersData {
   limit: number;
   success?: boolean;
   timestamp?: string;
+  session?: Record<string, any> | null;
+  source?: string;
+  message?: string;
 }
 
 const parseContent = (content: any): any => {
@@ -50,12 +56,36 @@ const extractFromNewFormat = (content: any): SearchMcpServersData => {
       }
     }
 
-    const extractedData = {
-      query: args.query || null,
-      results: Array.isArray(parsedOutput) ? parsedOutput : [],
-      limit: args.limit || 10,
+    let results: McpServerResult[] = [];
+    let session = undefined;
+    let source = undefined;
+    let message = undefined;
+    let derivedQuery = args.query || null;
+    let derivedLimit = args.limit || 10;
+
+    if (parsedOutput && typeof parsedOutput === 'object' && !Array.isArray(parsedOutput)) {
+      const maybeResults = parsedOutput.results;
+      if (Array.isArray(maybeResults)) {
+        results = maybeResults as McpServerResult[];
+      }
+      derivedQuery = parsedOutput.query ?? derivedQuery;
+      derivedLimit = parsedOutput.limit ?? derivedLimit;
+      session = parsedOutput.session;
+      source = parsedOutput.source;
+      message = typeof parsedOutput.message === 'string' ? parsedOutput.message : undefined;
+    } else if (Array.isArray(parsedOutput)) {
+      results = parsedOutput as McpServerResult[];
+    }
+
+    const extractedData: SearchMcpServersData = {
+      query: derivedQuery,
+      results,
+      limit: derivedLimit,
       success: toolExecution.result?.success,
-      timestamp: toolExecution.execution_details?.timestamp
+      timestamp: toolExecution.execution_details?.timestamp,
+      session: session ?? null,
+      source,
+      message,
     };
 
     console.log('SearchMcpServersToolView: Extracted from new format:', {
@@ -114,6 +144,9 @@ export function extractSearchMcpServersData(
   actualIsSuccess: boolean;
   actualToolTimestamp?: string;
   actualAssistantTimestamp?: string;
+  session?: Record<string, any> | null;
+  source?: string;
+  message?: string;
 } {
   // Try to extract from new format first
   let data: SearchMcpServersData;
@@ -123,13 +156,16 @@ export function extractSearchMcpServersData(
     data = extractFromNewFormat(toolContent);
     if (data.success !== undefined || data.results.length > 0) {
       console.log('SearchMcpServersToolView: Using toolContent with new format');
-      return {
-        ...data,
-        actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
-        actualToolTimestamp: data.timestamp || toolTimestamp,
-        actualAssistantTimestamp: assistantTimestamp
-      };
-    }
+    return {
+      ...data,
+      actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
+      actualToolTimestamp: data.timestamp || toolTimestamp,
+      actualAssistantTimestamp: assistantTimestamp,
+      session: data.session,
+      source: data.source,
+      message: data.message,
+    };
+  }
   }
 
   // Check assistantContent 
@@ -137,13 +173,16 @@ export function extractSearchMcpServersData(
     data = extractFromNewFormat(assistantContent);
     if (data.success !== undefined || data.results.length > 0) {
       console.log('SearchMcpServersToolView: Using assistantContent with new format');
-      return {
-        ...data,
-        actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
-        actualToolTimestamp: toolTimestamp,
-        actualAssistantTimestamp: data.timestamp || assistantTimestamp
-      };
-    }
+    return {
+      ...data,
+      actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
+      actualToolTimestamp: toolTimestamp,
+      actualAssistantTimestamp: data.timestamp || assistantTimestamp,
+      session: data.session,
+      source: data.source,
+      message: data.message,
+    };
+  }
   }
 
   // Fallback to legacy format
@@ -159,7 +198,10 @@ export function extractSearchMcpServersData(
     limit: toolLegacy.limit || assistantLegacy.limit,
     actualIsSuccess: isSuccess,
     actualToolTimestamp: toolTimestamp,
-    actualAssistantTimestamp: assistantTimestamp
+    actualAssistantTimestamp: assistantTimestamp,
+    session: null,
+    source: undefined,
+    message: undefined,
   };
 
   console.log('SearchMcpServersToolView: Final extracted data:', {

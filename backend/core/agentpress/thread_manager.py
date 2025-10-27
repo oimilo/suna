@@ -2,7 +2,9 @@
 Simplified conversation thread management system for AgentPress.
 """
 
+import copy
 import json
+import time
 from typing import List, Dict, Any, Optional, Type, Union, AsyncGenerator, Literal, cast
 from core.services.llm import make_llm_api_call, LLMError
 from core.agentpress.prompt_caching import apply_anthropic_caching_strategy, validate_cache_blocks
@@ -27,6 +29,7 @@ class ThreadManager:
     def __init__(self, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
+        self._runtime_state: Dict[str, Dict[str, Any]] = {}
         
         self.trace = trace
         if not self.trace:
@@ -39,6 +42,88 @@ class ThreadManager:
             trace=self.trace,
             agent_config=self.agent_config
         )
+
+    # ------------------------------------------------------------------
+    # Runtime state utilities
+    # ------------------------------------------------------------------
+    def _ensure_runtime_bucket(self, thread_id: str) -> Dict[str, Any]:
+        return self._runtime_state.setdefault(thread_id, {})
+
+    def set_runtime_value(self, thread_id: str, key: str, value: Any) -> None:
+        if not thread_id or not key:
+            return
+        bucket = self._ensure_runtime_bucket(thread_id)
+        bucket[key] = copy.deepcopy(value)
+
+    def get_runtime_value(self, thread_id: str, key: str, default: Any = None) -> Any:
+        if not thread_id or not key:
+            return default
+        bucket = self._runtime_state.get(thread_id)
+        if not bucket:
+            return default
+        value = bucket.get(key, default)
+        return copy.deepcopy(value)
+
+    def clear_runtime_value(self, thread_id: str, key: str) -> None:
+        if not thread_id or not key:
+            return
+        bucket = self._runtime_state.get(thread_id)
+        if not bucket or key not in bucket:
+            return
+        del bucket[key]
+        if not bucket:
+            self._runtime_state.pop(thread_id, None)
+
+    # ------------------------------------------------------------------
+    # Composio session management
+    # ------------------------------------------------------------------
+    _COMPOSIO_SESSION_KEY = "__composio_session__"
+
+    def set_composio_session(self, thread_id: str, session_info: Dict[str, Any]) -> None:
+        if not thread_id or not isinstance(session_info, dict):
+            return
+
+        session_id = session_info.get("id") or session_info.get("session_id")
+        if not session_id:
+            logger.debug("Composio session missing id; skipping runtime store")
+            return
+
+        now_ts = time.time()
+        ttl_seconds = session_info.get("ttl") or session_info.get("expires_in")
+        expires_at_ts: Optional[float] = None
+        try:
+            if ttl_seconds:
+                expires_at_ts = now_ts + float(ttl_seconds)
+        except (TypeError, ValueError):
+            expires_at_ts = None
+
+        record = {
+            "session": copy.deepcopy(session_info),
+            "stored_at": now_ts,
+            "expires_at": expires_at_ts,
+        }
+        self.set_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY, record)
+        logger.debug(f"Stored Composio session for thread {thread_id}: {session_id}")
+
+    def get_composio_session(self, thread_id: str) -> Optional[Dict[str, Any]]:
+        record = self.get_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
+        if not record:
+            return None
+
+        expires_at = record.get("expires_at")
+        if isinstance(expires_at, (int, float)) and expires_at <= time.time():
+            logger.debug(f"Composio session expired for thread {thread_id}; purging")
+            self.clear_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
+            return None
+
+        session = record.get("session")
+        return copy.deepcopy(session) if isinstance(session, dict) else None
+
+    def clear_composio_session(self, thread_id: str) -> None:
+        cleared = self.get_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
+        self.clear_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
+        if cleared:
+            logger.debug(f"Cleared Composio session cache for thread {thread_id}")
 
     def add_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
         """Add a tool to the ThreadManager."""

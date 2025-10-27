@@ -291,7 +291,7 @@ class MCPManager:
         if not all_mcps:
             return None
         
-        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps)
+        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps, thread_manager=self.thread_manager)
         try:
             await mcp_wrapper_instance.initialize_and_register_tools()
             
