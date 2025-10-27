@@ -206,3 +206,6 @@ dump.rdb
 
 # CodeWebChat state and logs (auto-added)
 .cwc/
+
+# Local temp and backups
+tmp/
