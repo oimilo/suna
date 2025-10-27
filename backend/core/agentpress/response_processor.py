@@ -1992,6 +1992,21 @@ class ResponseProcessor:
 
             # If the message was saved, modify it in-memory for the frontend before returning
             if message_obj:
+                tool_message_id = message_obj.get("message_id")
+                if tool_message_id:
+                    # Attach message_id back onto both views so the LLM/front-end can fetch full content later
+                    structured_result_for_llm["tool_execution"]["message_id"] = tool_message_id
+                    structured_result_for_frontend["tool_execution"]["message_id"] = tool_message_id
+                    result_message_for_llm["content"] = json.dumps(structured_result_for_llm)
+
+                    try:
+                        client = await self.db.client
+                        await client.table('messages').update({
+                            'content': result_message_for_llm
+                        }).eq('message_id', tool_message_id).execute()
+                    except Exception as update_error:
+                        logger.warning(f"Failed to backfill message content with message_id {tool_message_id}: {update_error}")
+
                 # The frontend expects the rich content in the 'content' field.
                 # The DB has the rich content in metadata.frontend_content.
                 # Let's reconstruct the message for yielding.
