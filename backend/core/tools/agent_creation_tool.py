@@ -269,43 +269,45 @@ class AgentCreationTool(Tool):
     async def search_mcp_servers_for_agent(self, search_query: str) -> ToolResult:
         try:
             from core.composio_integration.composio_service import get_integration_service
-            from core.composio_integration.toolkit_service import ToolkitService
             
             integration_service = get_integration_service()
-            
-            toolkits_response = await integration_service.search_toolkits(search_query)
-            toolkits = toolkits_response.get("items", [])
-            
+
+            normalized_query = (search_query or "").strip()
+            if not normalized_query:
+                return self.fail_response("Search term cannot be empty.")
+
+            search_response = await integration_service.search_toolkits_with_queries(
+                [{"use_case": normalized_query}],
+                limit=10,
+            )
+
+            toolkits = search_response.get("results", [])
+            session_info = search_response.get("session", {})
             if not toolkits:
                 return self.success_response({
-                    "message": f"No MCP servers found matching '{search_query}'",
-                    "toolkits": []
+                    "message": f"No MCP servers found matching '{normalized_query}'",
+                    "toolkits": [],
+                    "session": session_info
                 })
             
-            result_text = f"## MCP Servers matching '{search_query}'\n\n"
+            result_text = f"## MCP Servers matching '{normalized_query}'\n\n"
             for toolkit in toolkits:
-                result_text += f"**{toolkit.name}**\n"
-                result_text += f"- Slug: `{toolkit.slug}`\n"
-                if toolkit.description:
-                    result_text += f"- Description: {toolkit.description}\n"
-                if toolkit.categories:
-                    result_text += f"- Categories: {', '.join(toolkit.categories)}\n"
+                result_text += f"**{toolkit.get('name')}**\n"
+                result_text += f"- Slug: `{toolkit.get('toolkit_slug')}`\n"
+                description = toolkit.get("description")
+                if description:
+                    result_text += f"- Description: {description}\n"
+                categories = toolkit.get("categories") or []
+                if categories:
+                    result_text += f"- Categories: {', '.join(categories)}\n"
                 result_text += "\n"
             
             result_text += f"\n💡 Use `create_credential_profile_for_agent` with the slug to set up authentication for any of these services."
             
-            formatted_toolkits = []
-            for toolkit in toolkits:
-                formatted_toolkits.append({
-                    "name": toolkit.name,
-                    "slug": toolkit.slug,
-                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
-                    "categories": toolkit.categories or []
-                })
-            
             return self.success_response({
                 "message": result_text,
-                "toolkits": formatted_toolkits,
+                "toolkits": toolkits,
+                "session": session_info,
                 "total_found": len(toolkits)
             })
             
@@ -707,7 +709,10 @@ class AgentCreationTool(Tool):
                     'customType': 'composio'
                 }
                 
-                mcp_wrapper_instance = MCPToolWrapper(mcp_configs=[mcp_config_for_wrapper])
+                mcp_wrapper_instance = MCPToolWrapper(
+                    mcp_configs=[mcp_config_for_wrapper],
+                    thread_manager=self.thread_manager,
+                )
                 await mcp_wrapper_instance.initialize_and_register_tools()
                 logger.debug(f"Successfully registered MCP tools dynamically for {profile.toolkit_name}")
                 

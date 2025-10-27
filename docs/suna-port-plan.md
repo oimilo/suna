@@ -135,11 +135,31 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
   - [x] Ajustar imports (`@/lib/api/admin`, `@/lib/supabase/admin`) e garantir build sem erros de TypeScript (`npm run lint` limpa; warnings herdados de `<img>` antigos permanecem).
   - [ ] Decidir ponto de entrada na UI (link dedicado na sidebar ou instruções internas) e revisar `middleware.ts` para permitir `/master-login`/`/admin`.
 - Testes & Operação
-  - [ ] Exercitar fluxos-chave: login mestre, listagem de usuários, ajuste de créditos/refund, visualização de threads/atividade.
+- [ ] Exercitar fluxos-chave: login mestre, listagem de usuários, ajuste de créditos/refund, visualização de threads/atividade.
     - ⚠️ Necessário configurar `ADMIN_MASTER_PASSWORD` + seed em `admin_users` antes de validar `/master-login`.
     - Executar smoke manual: autenticar via `/master-login` → acessar `/admin/billing` → abrir modal → testar `credits/adjust` e `refund` (verificar efeitos no Supabase).
   - [ ] Adicionar smoke tests simples (ex.: `admin/billing/credits/adjust` requer role, `AdminGuard` bloqueia usuários sem permissão).
   - [ ] Documentar requisitos de segurança: armazenar `ADMIN_MASTER_PASSWORD`, `KORTIX_ADMIN_API_KEY`, e definir frequência de rotação.
+
+### 3.6 Composio MCP “Queries + Session”
+- Objetivo: seguir o fluxo oficial do Composio (search → session → execução) para evitar dumps enormes e manter o contexto do agente saudável.
+- [ ] Atualizar o client Composio (`backend/core/composio_integration/client.py`) e `requirements.txt` para garantir suporte a `search_tools`/`session.generate`; documentar impactos em outros consumidores.
+- [ ] Criar wrapper `search_tools` em `ComposioIntegrationService` (`backend/core/composio_integration/composio_service.py`) aceitando array de queries + filtros opcionais, retornando resposta já normalizada.
+- [ ] Ajustar `MCPSearchTool.search_mcp_servers` (`backend/core/tools/agent_builder_tools/mcp_search_tool.py`) para usar o wrapper, enviar payload `{ "queries": [...] }` e remover o filtro em memória.
+- [ ] Implementar helper `start_mcp_session` em `ComposioIntegrationService` chamando `session.generate({"generate_id": true})`, retornando `session_id` + TTL e registrando métricas.
+- [x] Persistir `session_id` por thread via `ThreadManager`/`AgentContext`; renovar automaticamente se API retornar 401/410 antes de reexecutar a ferramenta.
+- [x] Atualizar `MCPToolExecutor` (`backend/core/tools/utils/mcp_tool_executor.py`) para anexar `session_id` nas execuções Composio e tentar novamente após renovar sessão.
+- [x] Adicionar pós-processador no executor que:
+  - Converta payloads em JSON estruturado;
+  - Aplique limites (linhas/bytes) e gere resumo (contagem, colunas relevantes);
+  - Envie conteúdo bruto grande para storage/Remote Workbench e retorne link + resumo (aplicável a qualquer MCP).
+- [x] Após `search_tools`, registrar ferramentas recomendadas como preferidas no `DynamicToolBuilder` (`backend/core/tools/utils/dynamic_tool_builder.py`) e despriorizar chamadas que geram dumps completos (`list_tables`, etc.).
+- [ ] Atualizar prompts do agente (`backend/core/prompts/prompt.py`) para orientar uso da busca + sessão e do resumo de resultados.
+- [ ] Documentar o fluxo em `docs/mcp.md` (referenciar “Universal MCP Search” / `session.generate` da doc oficial do Composio).
+- [ ] Testes:
+  - Cobrir `search_tools` + sessão (incluindo renovação) com unit tests;
+  - Smoke manual com integrações (ex.: Trello/GitHub) e confirmar resposta resumida;
+  - Monitorar logs (tamanho pré/pós-filtro) para validar redução de payload.
 
 ## 4. Testes & Validação
 - [ ] Atualizar/Adicionar testes unitários para `AgentCreationTool`, `AgentService`, `ThreadManager`.

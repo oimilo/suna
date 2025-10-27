@@ -48,42 +48,73 @@ class MCPSearchTool(AgentBuilderBaseTool):
         limit: int = 10
     ) -> ToolResult:
         try:
-            toolkit_service = ToolkitService()
             integration_service = get_integration_service()
-            
-            if query:
-                toolkits_response = await integration_service.search_toolkits(query, category=category)
-                toolkits = toolkits_response.get("items", [])
-            else:
-                toolkits_response = await toolkit_service.list_toolkits(limit=limit, category=category)
-                toolkits = toolkits_response.get("items", [])
-            
-            if len(toolkits) > limit:
-                toolkits = toolkits[:limit]
-            
-            formatted_toolkits = []
-            for toolkit in toolkits:
-                formatted_toolkits.append({
-                    "name": toolkit.name,
-                    "toolkit_slug": toolkit.slug,
-                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
-                    "logo_url": toolkit.logo or '',
-                    "auth_schemes": toolkit.auth_schemes,
-                    "tags": toolkit.tags,
-                    "categories": toolkit.categories
-                })
-            
-            if not formatted_toolkits:
+
+            normalized_query = (query or "").strip()
+            if not normalized_query:
+                return ToolResult(success=False, output=json.dumps({
+                    "query": normalized_query,
+                    "results": [],
+                    "limit": limit,
+                    "message": "Query is required to search MCP servers.",
+                }, ensure_ascii=False))
+
+            thread_id: Optional[str] = None
+            existing_session: Optional[dict] = None
+            try:
+                thread_id = self._get_current_thread_id()
+            except ValueError:
+                logger.debug("Composio search invoked without thread context; skipping session reuse")
+
+            if thread_id:
+                existing_session = self.thread_manager.get_composio_session(thread_id)
+
+            session_supplied = existing_session is not None
+
+            search_response = await integration_service.search_toolkits_with_queries(
+                [{"use_case": normalized_query}],
+                limit=limit,
+                session=existing_session,
+            )
+
+            results = search_response.get("results", [])
+            session_info = search_response.get("session", {})
+            source = search_response.get("source", "unknown")
+
+            if thread_id:
+                if (
+                    session_info
+                    and isinstance(session_info, dict)
+                    and session_info.get("id")
+                    and not str(session_info.get("id")).startswith("local-")
+                ):
+                    self.thread_manager.set_composio_session(thread_id, session_info)
+                elif session_supplied and isinstance(source, str) and source.startswith("fallback"):
+                    self.thread_manager.clear_composio_session(thread_id)
+
+            if not results:
                 return ToolResult(
                     success=False,
-                    output=json.dumps([], ensure_ascii=False)
+                    output=json.dumps({
+                        "query": normalized_query,
+                        "results": [],
+                        "limit": limit,
+                        "session": session_info,
+                        "source": source,
+                        "message": f"No MCP servers found matching '{normalized_query}'."
+                    }, ensure_ascii=False)
                 )
-            
+
             return ToolResult(
                 success=True,
-                output=json.dumps(formatted_toolkits, ensure_ascii=False)
+                output=json.dumps({
+                    "query": normalized_query,
+                    "results": results,
+                    "limit": limit,
+                    "session": session_info,
+                    "source": source
+                }, ensure_ascii=False)
             )
-                
         except Exception as e:
             logger.error(f"Error searching Composio toolkits: {str(e)}")
             return self.fail_response("Error searching Composio toolkits")
