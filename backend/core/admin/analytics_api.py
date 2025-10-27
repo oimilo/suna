@@ -114,6 +114,12 @@ async def get_dashboard(admin: Dict[str, Any] = Depends(require_admin)):
                 "agent_runs_failed": failed_agent_runs,
                 "error_rate": round(error_rate, 2),
             },
+            "platform": {
+                "threads_total": total_threads,
+                "agents_total": total_agents,
+                "accounts_total": total_accounts,
+                "agent_runs_total": total_agent_runs,
+            },
             "recent_activity": recent_activity,
         }
     except HTTPException:

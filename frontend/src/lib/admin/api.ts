@@ -10,7 +10,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:800
 /**
  * Get auth headers for admin requests
  */
-async function getAdminHeaders(): Promise<Record<string, string>> {
+export async function getAdminHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   }
@@ -91,14 +91,44 @@ export async function fetchAnalyticsData(period: string = "30d") {
       return await getFallbackAnalyticsData()
     }
 
-    // Transform backend data to match frontend format
+    const totalUsers = dashboardData?.users?.total ?? 0
+    const activeToday = dashboardData?.users?.active_today ?? 0
+    const activeWeek = dashboardData?.users?.active_week ?? 0
+
+    const platform = dashboardData?.platform ?? {}
+    const threadsTotal = platform?.threads_total ?? 0
+    const agentsTotal = platform?.agents_total ?? 0
+    const agentRunsTotal = dashboardData?.system?.agent_runs_total ?? 0
+    const agentRunsFailed = dashboardData?.system?.agent_runs_failed ?? 0
+    const messagesTotal = dashboardData?.usage?.messages_total ?? 0
+    const messagesToday = dashboardData?.usage?.messages_today ?? 0
+    const avgMessagesPerUser = dashboardData?.usage?.avg_messages_per_user ?? 0
+    const errorRate = dashboardData?.system?.error_rate ?? 0
+
+    const recentActivity = (dashboardData?.recent_activity || []).map((item: any) => ({
+      id: item?.id,
+      action: item?.action,
+      amount: typeof item?.amount === 'number' ? item.amount : Number(item?.amount || 0),
+      created_at: item?.created_at,
+    }))
+
+    const systemHealth = (health || []).map((item: any) => ({
+      service: item?.service ?? item?.service_name ?? 'Serviço',
+      status: item?.status ?? 'healthy',
+      uptime: typeof item?.uptime === 'number' ? item.uptime : 0,
+      lastCheck: item?.lastCheck ?? item?.last_check ?? new Date().toISOString(),
+      responseTimeMs: typeof item?.response_time_ms === 'number' ? item.response_time_ms : undefined,
+      errorRate: typeof item?.error_rate === 'number' ? item.error_rate : undefined,
+      metadata: item?.metadata ?? {},
+    }))
+
     return {
       userMetrics: {
-        totalUsers: dashboardData?.users?.total || 0,
-        activeUsers: dashboardData?.users?.active_week || 0,
-        newUsersToday: dashboardData?.users?.active_today || 0,
-        newUsersThisWeek: dashboardData?.users?.active_week || 0,
-        newUsersThisMonth: dashboardData?.users?.total || 0,
+        totalUsers,
+        activeUsers: activeWeek,
+        newUsersToday: activeToday,
+        newUsersThisWeek: activeWeek,
+        newUsersThisMonth: totalUsers,
         userGrowthData: userGrowth?.data?.map((p: any) => ({
           date: p.timestamp,
           count: p.value
@@ -112,16 +142,17 @@ export async function fetchAnalyticsData(period: string = "30d") {
         topProjects: []
       },
       agentMetrics: {
-        totalAgents: 0,
+        totalAgents: agentsTotal,
         agentsThisWeek: 0,
-        averageAgentsPerUser: 0,
+        averageAgentsPerUser: totalUsers ? parseFloat((agentsTotal / totalUsers).toFixed(2)) : 0,
         agentUsageData: [],
         popularAgentTypes: []
       },
       conversationMetrics: {
-        totalThreads: 0,
-        totalMessages: dashboardData?.usage?.messages_today || 0,
-        averageMessagesPerThread: dashboardData?.usage?.avg_messages_per_user || 0,
+        totalThreads: threadsTotal,
+        totalMessages: messagesTotal,
+        messagesToday,
+        averageMessagesPerThread: threadsTotal ? parseFloat((messagesTotal / threadsTotal).toFixed(2)) : 0,
         messageVolumeByHour: [],
         messageGrowthData: usage?.data?.map((p: any) => ({
           date: p.timestamp,
@@ -136,11 +167,11 @@ export async function fetchAnalyticsData(period: string = "30d") {
         triggerExecutions: []
       },
       performanceMetrics: {
-        totalAgentRuns: 0,
-        successfulRuns: 0,
-        failedRuns: 0,
+        totalAgentRuns: agentRunsTotal,
+        successfulRuns: agentRunsTotal - agentRunsFailed,
+        failedRuns: agentRunsFailed,
         averageRunDuration: 0,
-        errorRate: dashboardData?.system?.error_rate || 0,
+        errorRate,
         commonErrors: []
       },
       toolUsageData: [],
@@ -154,10 +185,11 @@ export async function fetchAnalyticsData(period: string = "30d") {
         lifetimeValue: billing?.lifetime_value || 0,
         revenueGrowthData: []
       },
-      systemHealth: health || [],
-      errors: dashboardData?.recent_activity?.filter((a: any) => 
-        a.action?.toLowerCase().includes('error')
-      ) || []
+      systemHealth,
+      recentActivity,
+      errors: recentActivity.filter((a: any) =>
+        typeof a.action === 'string' && a.action.toLowerCase().includes('error')
+      )
     }
   } catch (error) {
     console.error('Error fetching analytics from backend:', error)
@@ -220,6 +252,7 @@ export async function fetchAnalyticsData(period: string = "30d") {
         revenueGrowthData: []
       },
       systemHealth: [],
+      recentActivity: [],
       errors: []
     }
   }
