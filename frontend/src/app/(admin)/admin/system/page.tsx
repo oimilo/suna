@@ -1,273 +1,209 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Activity, AlertTriangle, RefreshCw, Server } from "lucide-react"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Activity, Database, Server, Shield, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { backendApi } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
-interface SystemHealth {
-  api_status: 'healthy' | 'degraded' | 'down'
-  database_status: 'healthy' | 'degraded' | 'down'
-  redis_status: 'healthy' | 'degraded' | 'down'
-  response_time_ms: number
-  error_rate: number
-  uptime_percentage: number
-  last_incident?: {
-    timestamp: string
-    description: string
-    resolved: boolean
-  }
+interface SystemHealthRecord {
+  service_name?: string
+  service?: string
+  status?: "healthy" | "degraded" | "down"
+  response_time_ms?: number | null
+  error_rate?: number | null
+  metadata?: Record<string, unknown>
+  last_check?: string
 }
 
+const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 })
+
 export default function AdminSystemPage() {
-  const [health, setHealth] = useState<SystemHealth | null>(null)
+  const [records, setRecords] = useState<SystemHealthRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-  const supabase = useMemo(() => createClient(), [])
 
-  const checkSystemHealth = useCallback(async () => {
+  const refreshHealth = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        toast({
-          title: "Erro",
-          description: "Sessão expirada",
-          variant: "destructive"
-        })
-        return
+      const response = await backendApi.get<SystemHealthRecord[]>("/admin/analytics/system-health")
+      if (response.success && Array.isArray(response.data)) {
+        setRecords(response.data)
+      } else {
+        throw new Error(response.error?.message ?? "Erro desconhecido")
       }
-
-      // Simular dados de saúde do sistema enquanto o endpoint não existe
-      // TODO: Implementar endpoint real /admin/system/health no backend
-      const mockHealth: SystemHealth = {
-        api_status: 'healthy',
-        database_status: 'healthy',
-        redis_status: 'healthy',
-        response_time_ms: Math.floor(Math.random() * 100) + 50,
-        error_rate: Math.random() * 2,
-        uptime_percentage: 99.9,
-        last_incident: undefined
-      }
-      
-      // Simular delay de rede
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      setHealth(mockHealth)
-      
     } catch (error) {
-      console.error("Error checking system health:", error)
+      console.error("Erro ao consultar saúde do sistema:", error)
       toast({
-        title: "Erro",
-        description: "Erro ao verificar saúde do sistema",
-        variant: "destructive"
+        title: "Não foi possível atualizar",
+        description: "Verifique sua conexão ou tente novamente em instantes.",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
     }
-  }, [supabase, toast])
+  }, [toast])
 
   useEffect(() => {
-    void checkSystemHealth()
-    const interval = setInterval(checkSystemHealth, 30000) // Refresh every 30s
+    void refreshHealth()
+    const interval = setInterval(refreshHealth, 30000)
     return () => clearInterval(interval)
-  }, [checkSystemHealth])
+  }, [refreshHealth])
 
-  const getStatusBadge = (status: string) => {
+  const summary = useMemo(() => {
+    if (!records.length) {
+      return {
+        services: 0,
+        degraded: 0,
+        avgLatency: 0,
+        avgErrorRate: 0,
+      }
+    }
+
+    const healthyMetrics = records.filter((record) => typeof record.response_time_ms === "number")
+    const avgLatency =
+      healthyMetrics.reduce((acc, record) => acc + (record.response_time_ms ?? 0), 0) /
+      (healthyMetrics.length || 1)
+
+    const errorMetrics = records.filter((record) => typeof record.error_rate === "number")
+    const avgErrorRate =
+      errorMetrics.reduce((acc, record) => acc + (record.error_rate ?? 0), 0) /
+      (errorMetrics.length || 1)
+
+    const degraded = records.filter((record) => record.status === "degraded" || record.status === "down").length
+
+    return {
+      services: records.length,
+      degraded,
+      avgLatency,
+      avgErrorRate,
+    }
+  }, [records])
+
+  const getStatusBadge = (status: string | undefined) => {
     switch (status) {
-      case 'healthy':
+      case "healthy":
         return <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">Saudável</Badge>
-      case 'degraded':
+      case "degraded":
         return <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">Degradado</Badge>
-      case 'down':
+      case "down":
         return <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20">Offline</Badge>
       default:
-        return <Badge className="bg-gray-500 text-white hover:bg-gray-600">Desconhecido</Badge>
+        return <Badge className="bg-gray-500/10 text-gray-600 dark:text-gray-300 border-gray-500/20">Desconhecido</Badge>
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sistema</h1>
           <p className="text-muted-foreground">
-            Monitoramento e saúde do sistema
+            Monitoramento em tempo quase real dos serviços críticos
           </p>
         </div>
-        <Button onClick={checkSystemHealth} disabled={isLoading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button onClick={refreshHealth} disabled={isLoading}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Atualizar
         </Button>
       </div>
 
-      {/* System Status */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">API</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.api_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
-            </div>
-            {health && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Tempo de resposta: {health.response_time_ms}ms
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Banco de Dados</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.database_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              PostgreSQL via Supabase
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cache</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {health ? getStatusBadge(health.redis_status) : <Badge className="bg-gray-500 text-white animate-pulse">Carregando...</Badge>}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Redis via Upstash
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Serviços monitorados</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {health ? `${health.uptime_percentage}%` : '...'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Últimos 30 dias
-            </p>
+            <div className="text-2xl font-bold">{summary.services}</div>
+            <p className="text-xs text-muted-foreground">Cobertura de monitoramento atual</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Erro</CardTitle>
+            <CardTitle className="text-sm font-medium">Latência média</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summary.services ? `${numberFormatter.format(summary.avgLatency)}ms` : "—"}
+            </div>
+            <p className="text-xs text-muted-foreground">Média ponderada entre serviços</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de erro média</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {health ? `${health.error_rate.toFixed(2)}%` : '...'}
+              {summary.services ? `${numberFormatter.format(summary.avgErrorRate)}%` : "—"}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Últimas 24 horas
-            </p>
+            <p className="text-xs text-muted-foreground">Nas últimas consultas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latência Média</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Serviços degradados</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {health ? `${health.response_time_ms}ms` : '...'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              P50 das requisições
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Segurança</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              OK
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Sem incidentes
-            </p>
+            <div className="text-2xl font-bold">{summary.degraded}</div>
+            <p className="text-xs text-muted-foreground">Inclui status degraded e down</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Incidents */}
       <Card>
         <CardHeader>
-          <CardTitle>Incidentes Recentes</CardTitle>
+          <CardTitle>Status por serviço</CardTitle>
           <CardDescription>
-            Últimos incidentes e manutenções do sistema
+            Detalhes do último healthcheck executado pelo backend
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {health?.last_incident ? (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-              <div className={`p-1.5 rounded ${health.last_incident.resolved ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
-                {health.last_incident.resolved ? (
-                  <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{health.last_incident.description}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(health.last_incident.timestamp).toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <Badge className={health.last_incident.resolved ? "bg-gray-500 text-white hover:bg-gray-600" : "bg-red-500 text-white hover:bg-red-600"}>
-                {health.last_incident.resolved ? "Resolvido" : "Em andamento"}
-              </Badge>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum incidente registrado
-            </div>
+        <CardContent className="space-y-4">
+          {records.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhum dado disponível no momento.
+            </p>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ações de Sistema</CardTitle>
-          <CardDescription>
-            Ferramentas administrativas e manutenção
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-          <Button variant="outline">Limpar Cache</Button>
-          <Button variant="outline">Reiniciar Workers</Button>
-          <Button variant="outline">Backup Manual</Button>
-          <Button variant="outline">Ver Logs</Button>
+          {records.map((record) => {
+            const label = record.service ?? record.service_name ?? "Serviço"
+            return (
+              <div
+                key={label}
+                className="flex items-center justify-between rounded-lg border border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-center">
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Latência: {typeof record.response_time_ms === "number" ? `${record.response_time_ms}ms` : "—"} ·
+                      Erro: {typeof record.error_rate === "number" ? `${numberFormatter.format(record.error_rate)}%` : "—"}
+                    </p>
+                    {record.metadata && Object.keys(record.metadata).length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Object.entries(record.metadata)
+                          .map(([key, value]) => `${key}: ${value}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {getStatusBadge(record.status)}
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     </div>

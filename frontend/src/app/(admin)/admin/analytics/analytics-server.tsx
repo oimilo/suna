@@ -28,6 +28,7 @@ export interface AnalyticsData {
   conversationMetrics: {
     totalThreads: number
     totalMessages: number
+    messagesToday?: number
     averageMessagesPerThread: number
     messageVolumeByHour: Array<{ hour: number; count: number }>
     messageGrowthData: Array<{ date: string; count: number }>
@@ -63,6 +64,15 @@ export interface AnalyticsData {
     status: 'healthy' | 'degraded' | 'down'
     uptime: number
     lastCheck: string
+    responseTimeMs?: number
+    errorRate?: number
+    metadata?: Record<string, any>
+  }>
+  recentActivity: Array<{
+    id?: string
+    action?: string
+    amount: number
+    created_at?: string
   }>
   errors: Array<{
     timestamp: string
@@ -93,7 +103,7 @@ export async function fetchAnalyticsData(period: string = "30d"): Promise<Analyt
 
     // Use backend API if in production
     if (process.env.NODE_ENV === 'production' || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return await fetchAnalyticsFromBackend(period)
+      return await fetchAnalyticsFromBackend(period) as AnalyticsData
     }
 
     // For development with service role key, fetch directly from Supabase
@@ -143,6 +153,7 @@ export async function fetchAnalyticsData(period: string = "30d"): Promise<Analyt
       conversationMetrics: {
         totalThreads: threadsResult.count || 0,
         totalMessages: messagesResult.count || 0,
+        messagesToday: 0,
         averageMessagesPerThread: (messagesResult.count || 0) / Math.max(threadsResult.count || 1, 1),
         messageVolumeByHour: [],
         messageGrowthData: []
@@ -178,15 +189,20 @@ export async function fetchAnalyticsData(period: string = "30d"): Promise<Analyt
           service: 'API',
           status: 'healthy',
           uptime: 99.9,
-          lastCheck: new Date().toISOString()
+          lastCheck: new Date().toISOString(),
+          responseTimeMs: 80,
+          errorRate: 0.2,
         },
         {
           service: 'Database',
           status: 'healthy',
           uptime: 99.99,
-          lastCheck: new Date().toISOString()
+          lastCheck: new Date().toISOString(),
+          responseTimeMs: 65,
+          errorRate: 0.1,
         }
       ],
+      recentActivity: [],
       errors: []
     }
   } catch (error) {
@@ -219,6 +235,7 @@ export async function fetchAnalyticsData(period: string = "30d"): Promise<Analyt
       conversationMetrics: {
         totalThreads: 0,
         totalMessages: 0,
+        messagesToday: 0,
         averageMessagesPerThread: 0,
         messageVolumeByHour: [],
         messageGrowthData: []
@@ -250,6 +267,7 @@ export async function fetchAnalyticsData(period: string = "30d"): Promise<Analyt
         revenueGrowthData: []
       },
       systemHealth: [],
+      recentActivity: [],
       errors: []
     }
   }
