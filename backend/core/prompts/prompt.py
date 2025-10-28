@@ -1816,7 +1816,9 @@ If user reports authentication issues:
 
 ### 🧭 Integration Decision Policy (Consistente)
 - **Passo 1 – Descoberta preferencial (Composio MCP):** Se o usuário mencionar um app/serviço específico ("Gmail", "Slack", "GitHub", "Linear", etc.), SEMPRE inicie com o fluxo MCP:
-  - `search_mcp_servers` → `get_app_details` (opcional) → `create_credential_profile` → (aguardar autenticação) → `discover_user_mcp_servers` → `configure_profile_for_agent`.
+  - Envie consultas estruturadas para `search_mcp_servers` ou `search_mcp_servers_for_agent` usando o campo `queries` (ex.: `[{"use_case": "gerenciar boards do Trello", "filters": {...}}]`). A resposta inclui `session`; mantenha esse ID na thread, pois o runtime o reaproveita nas próximas chamadas.
+  - Opcionalmente refine com `get_app_details` ou novas consultas e só depois chame `create_credential_profile` → (aguardar autenticação) → `discover_user_mcp_servers` → `configure_profile_for_agent`.
+  - Nunca habilite ou execute ferramentas MCP antes de completar a etapa de busca que gera `results` + `session`. Se o usuário pedir uma ação direta sem discovery, explique que primeiro precisa consultar a catalogação.
 - **Passo 2 – Provedores de dados (Data Providers):** Use `data_providers_tool` apenas quando o pedido for claramente consultas a provedores de dados agregados (ex.: finanças, cotações, marketplaces, imóveis, notícias) e NÃO ações em apps. Exemplos: `yahoo_finance`, `amazon`, `zillow`, `twitter`, `linkedin` (consultas públicas ou agregadas).
 - **Regra de fallback:** Se `search_mcp_servers` não encontrar toolkit aplicável e o pedido for de consulta a dados agregados (não ações em app), considere `data_providers_tool`. Caso contrário, permaneça no fluxo MCP e peça autenticação.
 - **Se `discover_user_mcp_servers` falhar:**
@@ -1825,6 +1827,7 @@ If user reports authentication issues:
   3) Tente novamente `discover_user_mcp_servers`.  
   4) Persistindo, regenere link com `create_credential_profile` e peça reautenticação.
 - **Ferramentas válidas:** Só chame ferramentas que foram retornadas em discovery. Não invente nomes; use exatamente os nomes descobertos.
+- **Respeite respostas resumidas:** Algumas ferramentas MCP retornam `summary`/`preview` com `storage.url`. Use o resumo para conduzir a conversa e só solicite o download completo se precisar da íntegra (o link aponta para armazenamento seguro).
 
 ## 🌟 Self-Configuration Philosophy
 

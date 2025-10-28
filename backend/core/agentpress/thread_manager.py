@@ -224,7 +224,25 @@ class ThreadManager:
             llm_response_id = content.get("llm_response_id", "unknown")
             logger.info(f"💰 Processing billing for LLM response: {llm_response_id}")
             
-            usage = content.get("usage", {})
+            usage = content.get("usage") or {}
+            if isinstance(usage, str):
+                parsed_usage = None
+                try:
+                    parsed_usage = json.loads(usage)
+                except json.JSONDecodeError:
+                    try:
+                        import ast
+                        parsed_usage = ast.literal_eval(usage)
+                    except (ValueError, SyntaxError):
+                        parsed_usage = None
+                if parsed_usage and isinstance(parsed_usage, dict):
+                    usage = parsed_usage
+                else:
+                    logger.error(
+                        f"Error handling billing: unable to parse usage payload for response {llm_response_id}"
+                    )
+                    return
+
             if not isinstance(usage, dict):
                 logger.error(f"Error handling billing: usage payload not a dict for response {llm_response_id}")
                 return
