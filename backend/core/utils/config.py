@@ -316,6 +316,8 @@ class Configuration:
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str
+    SUPABASE_PUBLIC_IMAGE_BUCKET: Optional[str] = "agentpress-public-images"
+    SUPABASE_AGENT_PROFILE_BUCKET: Optional[str] = "agentpress-agent-profile-images"
     
     # Redis configuration
     REDIS_HOST: Optional[str] = "localhost"
