@@ -90,7 +90,7 @@ async def create_sandbox(password: str, project_id: str = None) -> AsyncSandbox:
         labels = {'id': project_id}
         
     params = CreateSandboxFromSnapshotParams(
-        snapshot=Configuration.SANDBOX_SNAPSHOT_NAME,
+        snapshot=config.SANDBOX_SNAPSHOT_NAME or Configuration.SANDBOX_SNAPSHOT_NAME,
         public=True,
         labels=labels,
         env_vars={
