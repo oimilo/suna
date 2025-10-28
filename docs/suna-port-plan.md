@@ -154,12 +154,13 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
   - Aplique limites (linhas/bytes) e gere resumo (contagem, colunas relevantes);
   - Envie conteúdo bruto grande para storage/Remote Workbench e retorne link + resumo (aplicável a qualquer MCP).
 - [x] Após `search_tools`, registrar ferramentas recomendadas como preferidas no `DynamicToolBuilder` (`backend/core/tools/utils/dynamic_tool_builder.py`) e despriorizar chamadas que geram dumps completos (`list_tables`, etc.).
-- [ ] Atualizar prompts do agente (`backend/core/prompts/prompt.py`) para orientar uso da busca + sessão e do resumo de resultados.
-- [ ] Documentar o fluxo em `docs/mcp.md` (referenciar “Universal MCP Search” / `session.generate` da doc oficial do Composio).
+- [x] Atualizar prompts do agente (`backend/core/prompts/prompt.py`) para orientar uso da busca + sessão e do resumo de resultados.
+- [x] Documentar o fluxo em `docs/mcp.md` (referenciar “Universal MCP Search” / `session.generate` da doc oficial do Composio).
 - [ ] Testes:
   - Cobrir `search_tools` + sessão (incluindo renovação) com unit tests;
   - Smoke manual com integrações (ex.: Trello/GitHub) e confirmar resposta resumida;
   - Monitorar logs (tamanho pré/pós-filtro) para validar redução de payload.
+  - ✅ Coberto: executor (header de sessão + resumo/armazenamento) via `test_mcp_tool_executor.py`.
 
 ## 4. Testes & Validação
 - [ ] Atualizar/Adicionar testes unitários para `AgentCreationTool`, `AgentService`, `ThreadManager`.
