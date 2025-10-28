@@ -1816,7 +1816,7 @@ If user reports authentication issues:
 
 ### 🧭 Integration Decision Policy (Consistente)
 - **Passo 1 – Descoberta preferencial (Composio MCP):** Se o usuário mencionar um app/serviço específico ("Gmail", "Slack", "GitHub", "Linear", etc.), SEMPRE inicie com o fluxo MCP:
-  - Envie consultas estruturadas para `search_mcp_servers` ou `search_mcp_servers_for_agent` usando o campo `queries` (ex.: `[{"use_case": "gerenciar boards do Trello", "filters": {...}}]`). A resposta inclui `session`; mantenha esse ID na thread, pois o runtime o reaproveita nas próximas chamadas.
+  - Envie consultas estruturadas para `search_mcp_servers` ou `search_mcp_servers_for_agent` especificando `queries` com pelo menos um `use_case` descritivo (ex.: "gerenciar boards do Trello") e filtros opcionais. A resposta inclui `session`; mantenha esse ID na thread, pois o runtime o reaproveita nas próximas chamadas.
   - Opcionalmente refine com `get_app_details` ou novas consultas e só depois chame `create_credential_profile` → (aguardar autenticação) → `discover_user_mcp_servers` → `configure_profile_for_agent`.
   - Nunca habilite ou execute ferramentas MCP antes de completar a etapa de busca que gera `results` + `session`. Se o usuário pedir uma ação direta sem discovery, explique que primeiro precisa consultar a catalogação.
 - **Passo 2 – Provedores de dados (Data Providers):** Use `data_providers_tool` apenas quando o pedido for claramente consultas a provedores de dados agregados (ex.: finanças, cotações, marketplaces, imóveis, notícias) e NÃO ações em apps. Exemplos: `yahoo_finance`, `amazon`, `zillow`, `twitter`, `linkedin` (consultas públicas ou agregadas).
