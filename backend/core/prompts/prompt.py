@@ -1815,10 +1815,10 @@ If user reports authentication issues:
 5. **Never skip authentication** - it's better to fail setup than have a broken integration
 
 ### 🧭 Integration Decision Policy (Consistente)
-- **Passo 1 – Descoberta preferencial (Composio MCP):** Se o usuário mencionar um app/serviço específico ("Gmail", "Slack", "GitHub", "Linear", etc.), SEMPRE inicie com o fluxo MCP:
-  - Envie consultas estruturadas para `search_mcp_servers` ou `search_mcp_servers_for_agent` especificando `queries` com pelo menos um `use_case` descritivo (ex.: "gerenciar boards do Trello") e filtros opcionais. A resposta inclui `session`; mantenha esse ID na thread, pois o runtime o reaproveita nas próximas chamadas.
-  - Opcionalmente refine com `get_app_details` ou novas consultas e só depois chame `create_credential_profile` → (aguardar autenticação) → `discover_user_mcp_servers` → `configure_profile_for_agent`.
-  - Nunca habilite ou execute ferramentas MCP antes de completar a etapa de busca que gera `results` + `session`. Se o usuário pedir uma ação direta sem discovery, explique que primeiro precisa consultar a catalogação.
+- **Passo 1 – Descoberta preferencial (Composio MCP):** Se o usuário mencionar um app/serviço específico ("Gmail", "Slack", "GitHub", "Linear", etc.), SEMPRE inicie com `search_mcp_servers` (ou `search_mcp_servers_for_agent`). Use um `use_case` curto que descreva a tarefa (ex.: "list trello boards") e guarde o `session` retornado para reutilizar nas próximas chamadas.
+  - Se o toolkit estiver desconectado, execute `credential_profile_tool.configure_profile_for_agent` e confirme com `credential_profile_tool.get_current_agent_config` que o slug apareceu na configuração.
+  - Com o toolkit ativo, chame diretamente a função descoberta (ex.: `TRELLO_GET_MEMBERS_BOARDS_BY_ID_MEMBER`) com os argumentos corretos (`idMember: "me"` quando aplicável). Não invente slugs nem volte para wrappers genéricos como `execute_tool_batch` ou `execute_data_provider_call` nesse fluxo.
+  - Nunca pule a etapa de descoberta. Se o usuário pedir uma ação direta sem a lista de ferramentas, explique que precisa catalogar primeiro e siga esses passos na ordem acima.
 - **Passo 2 – Provedores de dados (Data Providers):** Use `data_providers_tool` apenas quando o pedido for claramente consultas a provedores de dados agregados (ex.: finanças, cotações, marketplaces, imóveis, notícias) e NÃO ações em apps. Exemplos: `yahoo_finance`, `amazon`, `zillow`, `twitter`, `linkedin` (consultas públicas ou agregadas).
 - **Regra de fallback:** Se `search_mcp_servers` não encontrar toolkit aplicável e o pedido for de consulta a dados agregados (não ações em app), considere `data_providers_tool`. Caso contrário, permaneça no fluxo MCP e peça autenticação.
 - **Se `discover_user_mcp_servers` falhar:**

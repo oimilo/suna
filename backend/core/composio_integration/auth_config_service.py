@@ -100,6 +100,7 @@ class AuthConfigService:
                 preferred_scheme = available_managed_schemes[0]
 
             existing_configs = await self.list_auth_configs(toolkit_slug)
+            requested_slug = (toolkit_slug or "").strip().lower() or None
             matching_existing = next(
                 (
                     cfg for cfg in existing_configs
@@ -107,9 +108,16 @@ class AuthConfigService:
                 ),
                 None,
             )
+            if matching_existing and requested_slug:
+                normalized_existing_slug = (matching_existing.toolkit_slug or "").strip().lower() or None
+                if normalized_existing_slug != requested_slug:
+                    matching_existing = None
             if not matching_existing and existing_configs:
-                # fall back to any existing when scheme didn't match
-                matching_existing = existing_configs[0]
+                # Only reuse arbitrary configs when no specific toolkit was requested.
+                if requested_slug:
+                    matching_existing = None
+                else:
+                    matching_existing = existing_configs[0]
 
             if matching_existing and not use_custom_auth:
                 logger.debug(
@@ -240,10 +248,21 @@ class AuthConfigService:
             auth_configs: List[AuthConfig] = []
             items = getattr(response, 'items', [])
 
+            requested_slug = (toolkit_slug or "").strip().lower() or None
+
             for item in items:
                 item_toolkit_slug = getattr(item, 'toolkit_slug', None)
-                if toolkit_slug and item_toolkit_slug and item_toolkit_slug != toolkit_slug:
-                    continue
+                normalized_item_slug = (item_toolkit_slug or "").strip().lower() or None
+
+                if requested_slug:
+                    # When specifically searching for a toolkit slug, ignore auth configs
+                    # that are not explicitly associated with that slug. Older Composio
+                    # responses sometimes omit the slug, which previously caused us to
+                    # reuse configs from unrelated apps (e.g. Google Calendar for Gmail).
+                    if not normalized_item_slug:
+                        continue
+                    if normalized_item_slug != requested_slug:
+                        continue
 
                 auth_configs.append(
                     AuthConfig(
@@ -251,7 +270,7 @@ class AuthConfigService:
                         auth_scheme=item.auth_scheme,
                         is_composio_managed=getattr(item, 'is_composio_managed', True),
                         restrict_to_following_tools=getattr(item, 'restrict_to_following_tools', []),
-                        toolkit_slug=item_toolkit_slug or toolkit_slug or ''
+                        toolkit_slug=item_toolkit_slug or ''
                     )
                 )
 
