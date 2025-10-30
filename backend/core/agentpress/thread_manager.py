@@ -2,10 +2,16 @@
 Simplified conversation thread management system for AgentPress.
 """
 
+import asyncio
 import copy
 import json
 import time
 from typing import List, Dict, Any, Optional, Type, Union, AsyncGenerator, Literal, cast
+
+import anyio
+import httpcore
+import httpx
+
 from core.services.llm import make_llm_api_call, LLMError
 from core.agentpress.prompt_caching import apply_anthropic_caching_strategy, validate_cache_blocks
 from core.agentpress.tool import Tool
@@ -185,22 +191,41 @@ class ThreadManager:
         if agent_version_id:
             data_to_insert['agent_version_id'] = agent_version_id
 
-        try:
-            result = await client.table('messages').insert(data_to_insert).execute()
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                result = await client.table('messages').insert(data_to_insert).execute()
 
-            if result.data and len(result.data) > 0 and 'message_id' in result.data[0]:
-                saved_message = result.data[0]
-                
-                if type == "llm_response_end" and isinstance(content, dict):
-                    await self._handle_billing(thread_id, content, saved_message)
-                
-                return saved_message
-            else:
-                logger.error(f"Insert operation failed for thread {thread_id}")
-                return None
-        except Exception as e:
-            logger.error(f"Failed to add message to thread {thread_id}: {str(e)}", exc_info=True)
-            raise
+                if result.data and len(result.data) > 0 and 'message_id' in result.data[0]:
+                    saved_message = result.data[0]
+                    
+                    if type == "llm_response_end" and isinstance(content, dict):
+                        await self._handle_billing(thread_id, content, saved_message)
+                    
+                    return saved_message
+                else:
+                    logger.error(f"Insert operation failed for thread {thread_id}")
+                    return None
+            except (httpx.WriteError, httpx.ConnectError, httpx.RemoteProtocolError,
+                    httpx.ReadError, httpx.ReadTimeout, httpx.TimeoutException,
+                    httpcore.WriteError, httpcore.RemoteProtocolError,
+                    anyio.BrokenResourceError) as e:
+                if attempt >= max_attempts:
+                    logger.error(
+                        f"Failed to add message to thread {thread_id} after {attempt} attempts: {e}",
+                        exc_info=True
+                    )
+                    raise
+
+                backoff_seconds = min(2 ** (attempt - 1) * 0.5, 5.0)
+                logger.warning(
+                    f"Transient error adding message to thread {thread_id} (attempt {attempt}/{max_attempts}): {e}. "
+                    f"Retrying in {backoff_seconds:.2f}s"
+                )
+                await asyncio.sleep(backoff_seconds)
+            except Exception as e:
+                logger.error(f"Failed to add message to thread {thread_id}: {str(e)}", exc_info=True)
+                raise
 
     async def _handle_billing(self, thread_id: str, content: dict, saved_message: dict):
         try:
