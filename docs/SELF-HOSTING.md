@@ -59,7 +59,7 @@ Obtain the following API keys:
   - [Daytona](https://app.daytona.io/) - For secure agent execution
 
 - **Background Job Processing**:
-  - [QStash](https://console.upstash.com/qstash) - For workflows, automated tasks, and webhook handling
+  - Supabase Cron (habilitado via migrações; usa as funções `schedule_trigger_http` e `unschedule_job_by_name`)
 
 #### Optional
 
@@ -131,13 +131,14 @@ As part of the setup, you'll need to:
    - Image name: `kortix/suna:0.1.3`
    - Entrypoint: `/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf`
 
-### 5. QStash Configuration
+### 5. Supabase Cron Configuration
 
-QStash is required for background job processing, workflows, and webhook handling:
+Supabase Cron executa os agendamentos de triggers e workflows:
 
-1. Create an account at [Upstash Console](https://console.upstash.com/qstash)
-2. Get your QStash token and signing keys
-3. Configure a publicly accessible webhook base URL for workflow callbacks
+1. Aplique as migrações que criam as funções `schedule_trigger_http` e `unschedule_job_by_name` (já incluídas no diretório `backend/supabase/migrations`).
+2. Confirme no painel Supabase que as extensões `pg_cron` e `pg_net` estão habilitadas (`Database` → `Extensions`).
+3. Defina um `TRIGGER_WEBHOOK_SECRET` seguro no `.env` e no projeto Supabase (será validado em cada requisição HTTP).
+4. Configure `WEBHOOK_BASE_URL` apontando para o backend acessível publicamente (usado para montar o callback do cron).
 
 ## Manual Configuration
 
@@ -188,11 +189,8 @@ DAYTONA_API_KEY=your-daytona-key
 DAYTONA_SERVER_URL=https://app.daytona.io/api
 DAYTONA_TARGET=us
 
-# Background job processing (Required)
-QSTASH_URL=https://qstash.upstash.io
-QSTASH_TOKEN=your-qstash-token
-QSTASH_CURRENT_SIGNING_KEY=your-current-signing-key
-QSTASH_NEXT_SIGNING_KEY=your-next-signing-key
+# Automation (Supabase Cron)
+TRIGGER_WEBHOOK_SECRET=your-shared-secret
 WEBHOOK_BASE_URL=https://yourdomain.com
 
 # MCP Configuration
@@ -204,6 +202,8 @@ SMITHERY_API_KEY=your-smithery-key
 
 NEXT_PUBLIC_URL=http://localhost:3000
 ```
+
+> Dica: após aplicar as migrações, execute `select * from cron.job;` no Supabase para confirmar que os jobs são criados quando você agenda um trigger.
 
 ### Frontend Configuration (.env.local)
 

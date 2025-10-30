@@ -145,7 +145,7 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
 - Objetivo: seguir o fluxo oficial do Composio (search → session → execução) para evitar dumps enormes e manter o contexto do agente saudável.
 - [ ] Atualizar o client Composio (`backend/core/composio_integration/client.py`) e `requirements.txt` para garantir suporte a `search_tools`/`session.generate`; documentar impactos em outros consumidores.
 - [ ] Criar wrapper `search_tools` em `ComposioIntegrationService` (`backend/core/composio_integration/composio_service.py`) aceitando array de queries + filtros opcionais, retornando resposta já normalizada.
-- [ ] Ajustar `MCPSearchTool.search_mcp_servers` (`backend/core/tools/agent_builder_tools/mcp_search_tool.py`) para usar o wrapper, enviar payload `{ "queries": [...] }` e remover o filtro em memória.
+- [ ] Ajustar `MCPSearchTool.search_mcp_servers` (`backend/core/tools/agent_builder_tools/mcp_search_tool.py`) para usar o wrapper `{ "queries": [...] }` (parcial: agora consumindo Composio diretamente, falta expor `search_tools`).
 - [ ] Implementar helper `start_mcp_session` em `ComposioIntegrationService` chamando `session.generate({"generate_id": true})`, retornando `session_id` + TTL e registrando métricas.
 - [x] Persistir `session_id` por thread via `ThreadManager`/`AgentContext`; renovar automaticamente se API retornar 401/410 antes de reexecutar a ferramenta.
 - [x] Atualizar `MCPToolExecutor` (`backend/core/tools/utils/mcp_tool_executor.py`) para anexar `session_id` nas execuções Composio e tentar novamente após renovar sessão.
@@ -161,6 +161,54 @@ Plano vivo para alinhar o repositório Prophet com a base de código do Suna ori
   - Smoke manual com integrações (ex.: Trello/GitHub) e confirmar resposta resumida;
   - Monitorar logs (tamanho pré/pós-filtro) para validar redução de payload.
   - ✅ Coberto: executor (header de sessão + resumo/armazenamento) via `test_mcp_tool_executor.py`.
+
+### 3.7 Automação (Triggers & Workflows)
+- Objetivo: reproduzir o sistema de automações do Suna (triggers + workflows) adotando Supabase Cron e sincronização com `agent_versions`.
+- [ ] **Migrações & Estrutura de Dados**
+  - [ ] Portar íntegro o conjunto de migrações relacionadas (`20250705161610_agent_workflows.sql`, `20250705164211_fix_agent_workflows.sql`, `20250708034613_add_steps_to_workflows.sql`, `20250708123910_cleanup_db.sql`, `20250723093053_fix_workflow_policy_conflicts.sql`, `20250726180605_remove_old_workflow_sys.sql`, `20250814184554_add_workflows_to_config.sql`).
+  - [ ] Reaplicar políticas RLS, índices GIN (`steps`) e triggers `update_agent_workflows_updated_at` conforme upstream.
+  - [ ] Criar/atualizar funções RPC `schedule_trigger_http` e `unschedule_job_by_name` + helpers requeridos pela versão Cron.
+  - [ ] Alinhar tabelas auxiliares (`trigger_event_logs`, estatísticas via RPC) e grants para `service_role`/`authenticated`.
+- [ ] **Adoção do Supabase Cron**
+  - [x] Remover dependência do QStash (`ScheduleProvider` antigo) e configurar `ScheduleProvider` igual ao Suna (RPC + `X-Trigger-Secret`).
+  - [x] Garantir que variáveis `WEBHOOK_BASE_URL`, `TRIGGER_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` estejam documentadas em `.env` e `docs/deployment.md`.
+  - [x] Atualizar `backend/utils/config.py` para expor as novas chaves e remover referências a `QSTASH_TOKEN`.
+- [x] **Providers & Integrações**
+  - [x] Portar `ComposioEventProvider` (contagem de triggers ativos, enable/disable remoto, `delete_remote_trigger`).
+  - [x] Revisar `ProviderService` para registrar dinamicamente schedule/webhook/composio e preservar schema de config.
+  - [x] Confirmar dependências extras (`httpx`, `COMPOSIO_API_BASE`, `COMPOSIO_API_KEY`) no `requirements.txt`.
+- [ ] **Trigger Service & Logs**
+  - [ ] Atualizar `TriggerService` para incluir `TriggerEvent.context`, reconciliar enable/disable incremental e logging serializado.
+  - [ ] Garantir que `_log_trigger_event` siga formato seguro (strings/JSON), e que métricas/contagens existam no Supabase.
+  - [ ] Ajustar `process_trigger_event` para retornar variáveis de execução (`provider`, `trigger_slug`, `composio_trigger_id`, etc.).
+- [ ] **Execution Service**
+  - [ ] Portar `backend/triggers/execution_service.py` inteiro do Suna (SessionManager, AgentExecutor, WorkflowExecutor) para usar `run_agent_background`, billing (`billing_integration.check_and_reserve_credits`), seleção de modelo via versão ativa e prompts formatados.
+  - [ ] Sincronizar dependências: `run_agent_background`, `core.versioning.version_service`, `model_manager`, `billing_integration`.
+  - [ ] Revisar criação de sandboxes (import `core.sandbox.sandbox`) e tratamento de falhas (rollback de projetos/threads em caso de erro).
+- [ ] **API & Rotas**
+  - [ ] Copiar `core/triggers/api.py` e `api_all_triggers.py`, incluindo:
+    - [ ] Funções `sync_workflows_to_version_config` e `sync_triggers_to_version_config` chamadas após create/update/delete.
+    - [ ] Modelos de passo com `id`, `parentConditionalId`, suporte a playbooks e `WorkflowExecuteRequest.model_name`.
+    - [ ] Hardening de webhook (`TRIGGER_WEBHOOK_SECRET` obrigatório) e respostas detalhadas.
+    - [ ] Integração com billing/model gating em `execute_agent_workflow`.
+  - [ ] Revisar inclusão dos routers (`router.include_router(workflows_router)`) seguindo estrutura do Suna.
+  - [ ] Remover dependências do feature flag `agent_triggers` ou definir rollout para habilitá-lo permanentemente.
+- [x] **Agent Builder & Ferramentas**
+  - [x] Portar `core/tools/agent_builder_tools/trigger_tool.py`, incluindo `_sync_workflows_to_version_config`, retorno correto do dataclass e mensagens formatadas.
+  - [x] Atualizar chamadas a `get_trigger_service`/`TriggerManager` para refletir novos métodos e ausência de QStash.
+  - [ ] Ajustar UI/frontend do builder (se necessário) para lidar com passos que preservam `id` e metadados extras.
+- [ ] **Edge Functions & Jobs**
+  - [ ] Confirmar necessidade de `supabase/functions/run-agent-trigger`; ajustar payload gerado pelo Cron/ExecutionService.
+  - [ ] Documentar fluxo: Supabase Cron → webhook `/api/triggers/{id}/webhook` → ExecutionService → `run_agent_background`.
+- [ ] **Environment & Observabilidade**
+  - [ ] Atualizar checklists de deploy para criação/remoção de jobs Cron via RPC (permissões `postgres`/`service_role`).
+  - [ ] Instrumentar logs (`logger.debug/info`) conforme upstream e integrar com Sentry/Langfuse se habilitados.
+  - [ ] Validar dashboards/queries existentes (upcoming runs, estatísticas) após ajustes estruturais.
+- [ ] **Testes & Migração de Dados**
+  - [ ] Escrever testes unitários para `ScheduleProvider`, `ComposioEventProvider`, `convert_steps_to_json` (condicionais/IDs) e `ExecutionService` (mockado).
+  - [ ] Criar script de migração de dados para triggers/workflows existentes: normalizar config, preencher IDs de steps, recalcular índice GIN.
+  - [ ] Conduzir smoke tests manuais: criar trigger schedule (agent + workflow), trigger Composio, trigger webhook manual.
+  - [ ] Validar que `agent_versions.config` recebe listas `workflows`/`triggers` após operações CRUD.
 
 ## 4. Testes & Validação
 - [ ] Atualizar/Adicionar testes unitários para `AgentCreationTool`, `AgentService`, `ThreadManager`.
