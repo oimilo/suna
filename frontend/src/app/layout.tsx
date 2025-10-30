@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
 import { BRANDING } from '@/lib/branding';

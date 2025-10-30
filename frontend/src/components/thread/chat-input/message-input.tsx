@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface MessageInputProps {
   value: string;

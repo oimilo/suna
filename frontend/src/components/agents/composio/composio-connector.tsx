@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -689,7 +690,14 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
             <DialogHeader className="px-6 pb-3">
               <div className="flex items-center gap-3">
                 {app.logo ? (
-                  <img src={app.logo} alt={app.name} className="w-10 h-10 rounded-lg object-contain bg-muted p-1.5 border" />
+                  <Image
+                    src={app.logo}
+                    alt={app.name}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-lg object-contain bg-muted p-1.5 border"
+                    unoptimized
+                  />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                     {app.name.charAt(0)}
@@ -728,7 +736,14 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
                         <div className="space-y-4">
                           <div className="flex items-center gap-3 mb-4">
                             {app.logo ? (
-                              <img src={app.logo} alt={app.name} className="w-8 h-8 rounded-lg object-contain bg-muted p-1 border flex-shrink-0" />
+                              <Image
+                                src={app.logo}
+                                alt={app.name}
+                                width={32}
+                                height={32}
+                                className="w-8 h-8 rounded-lg object-contain bg-muted p-1 border flex-shrink-0"
+                                unoptimized
+                              />
                             ) : (
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                                 {app.name.charAt(0)}
@@ -792,7 +807,14 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
                                                 <SelectItem key={profile.profile_id} value={profile.profile_id}>
                                                   <div className="flex items-center gap-3">
                                                     {app.logo ? (
-                                                      <img src={app.logo} alt={app.name} className="w-5 h-5 rounded-lg object-contain bg-muted p-0.5 border flex-shrink-0" />
+                                                      <Image
+                                                        src={app.logo}
+                                                        alt={app.name}
+                                                        width={20}
+                                                        height={20}
+                                                        className="w-5 h-5 rounded-lg object-contain bg-muted p-0.5 border flex-shrink-0"
+                                                        unoptimized
+                                                      />
                                                     ) : (
                                                       <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary text-xs font-semibold flex-shrink-0">
                                                         {app.name.charAt(0)}
@@ -1341,10 +1363,13 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
             <DialogHeader className="px-8 border-border/50 flex-shrink-0 bg-muted/10">
               <div className="flex items-center gap-4">
                 {app.logo ? (
-                  <img
+                  <Image
                     src={app.logo}
                     alt={app.name}
+                    width={56}
+                    height={56}
                     className="w-14 h-14 rounded-xl object-contain bg-muted p-2 border"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-semibold shadow-sm">

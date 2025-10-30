@@ -78,4 +78,5 @@ export interface EventTriggerConfig {
   composio_trigger_id?: string;
   workflow_id?: string;
   workflow_input?: Record<string, any>;
+  is_active?: boolean;
 } 
