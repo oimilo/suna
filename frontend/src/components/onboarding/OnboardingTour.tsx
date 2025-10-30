@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useOnboardingStore } from '@/hooks/use-onboarding-store';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { OnboardingQuestions } from './OnboardingQuestions';
+import { useAuth } from '@/components/AuthProvider';
 
 export function OnboardingTour() {
   const router = useRouter();
@@ -13,11 +15,15 @@ export function OnboardingTour() {
     tourStep = 0,
     setTourStep,
     updateChecklistStep,
-    setOnboardingResponses 
+    setOnboardingResponses,
+    setHasSeenWelcome 
   } = store;
+  const { user } = useAuth();
+
+  const metadataCompleted = Boolean(user?.user_metadata?.onboarding_completed);
 
   // Verificar se o onboarding já foi completado
-  const isCompleted = typeof window !== 'undefined' && localStorage.getItem('onboarding_completed') === 'true';
+  const isCompleted = metadataCompleted || (typeof window !== 'undefined' && localStorage.getItem('onboarding_completed') === 'true');
   
   // Only show questions if welcome was seen and tour step is 0 AND not completed
   const shouldShowQuestions = hasSeenWelcome && tourStep === 0 && !isCompleted;
@@ -29,8 +35,22 @@ export function OnboardingTour() {
       tourStep: tourStep || 0,
       shouldShowQuestions,
       isCompleted,
+      metadataCompleted,
     });
   }
+
+  useEffect(() => {
+    if (!metadataCompleted) {
+      return;
+    }
+
+    setHasSeenWelcome(true);
+    updateChecklistStep('welcome', true);
+    updateChecklistStep('questions', true);
+    if (tourStep !== -1) {
+      setTourStep(-1);
+    }
+  }, [metadataCompleted, setHasSeenWelcome, setTourStep, tourStep, updateChecklistStep]);
 
   const handleQuestionsComplete = async (responses: any) => {
     try {
