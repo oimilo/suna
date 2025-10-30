@@ -69,8 +69,13 @@ export const hasErrorInput = [
   'ring-red-200 dark:ring-red-700/30',
 ];
 
-export function truncateString(str: string | null | undefined, maxLength = 50) {
-  if (!str) return '';
+export function truncateString(
+  value: string | null | undefined,
+  maxLength = 50,
+) {
+  if (value == null) return '';
+  const str = value ?? '';
+  if (typeof str !== 'string') return String(str).slice(0, maxLength);
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength) + '...';
 }

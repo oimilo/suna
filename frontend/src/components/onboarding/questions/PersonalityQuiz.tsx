@@ -171,7 +171,7 @@ export function PersonalityQuiz({ disabled }: Omit<PersonalityQuizProps, 'onAnsw
   const [showResult, setShowResult] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const { user } = useAuth();
+  const { user, supabase } = useAuth();
   const router = useRouter();
   const createTemplateProject = useCreateTemplateProject();
   const hasCreatedProject = useRef(false);
@@ -218,12 +218,24 @@ export function PersonalityQuiz({ disabled }: Omit<PersonalityQuizProps, 'onAnsw
             profileType: correctPersonality?.id || 'website-general',
             onboardingAnswers: newAnswers
           }, {
-            onSuccess: (data) => {
+            onSuccess: async (data) => {
               console.log('[PersonalityQuiz] Projeto criado com sucesso:', data);
               
               // Calcular tempo restante do loader (mínimo 15 segundos total para garantir criação completa)
               const elapsedTime = Date.now() - (window as any).loaderStartTime;
               const remainingTime = Math.max(3000, 15000 - elapsedTime); // Mínimo 3 segundos de espera
+
+              try {
+                await supabase.auth.updateUser({
+                  data: {
+                    onboarding_completed: true,
+                    onboarding_completed_at: new Date().toISOString(),
+                    onboarding_project_id: data.projectId,
+                  },
+                });
+              } catch (metadataError) {
+                console.error('[PersonalityQuiz] Erro ao atualizar metadados de onboarding:', metadataError);
+              }
               
               // Redirecionar direto para o projeto quando o loader terminar
               setTimeout(() => {
