@@ -19,8 +19,9 @@ import {
   ExternalLink,
   Loader2
 } from 'lucide-react';
-import { TriggerProvider, TriggerConfiguration, ScheduleTriggerConfig } from './types';
+import { TriggerProvider, TriggerConfiguration, ScheduleTriggerConfig, EventTriggerConfig } from './types';
 import { ScheduleTriggerConfigForm } from './providers/schedule-config';
+import { EventTriggerConfigForm } from './providers/event-config';
 
 
 interface TriggerConfigDialogProps {
@@ -52,6 +53,23 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
     }
   }, [provider, existingConfig, name]);
 
+  useEffect(() => {
+    if (provider.provider_id === 'composio' || provider.trigger_type === 'webhook') {
+      setConfig((prev) => {
+        const executionType = prev?.execution_type ?? 'agent';
+        return {
+          execution_type: executionType,
+          trigger_slug: prev?.trigger_slug ?? '',
+          profile_id: prev?.profile_id ?? '',
+          agent_prompt: executionType === 'agent' ? prev?.agent_prompt ?? '' : undefined,
+          workflow_id: executionType === 'workflow' ? prev?.workflow_id ?? '' : undefined,
+          workflow_input: prev?.workflow_input ?? (executionType === 'workflow' ? { prompt: '' } : undefined),
+          ...prev,
+        } as EventTriggerConfig;
+      });
+    }
+  }, [provider.provider_id, provider.trigger_type]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!name.trim()) {
@@ -69,13 +87,31 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
       if (!config.cron_expression) {
         newErrors.cron_expression = 'Expressão cron é obrigatória';
       }
-      if (config.execution_type === 'workflow') {
+      const executionType: 'agent' | 'workflow' = config.execution_type ?? 'agent';
+      if (executionType === 'workflow') {
         if (!config.workflow_id) {
           newErrors.workflow_id = 'Seleção de fluxo de trabalho é obrigatória';
         }
       } else {
         if (!config.agent_prompt) {
           newErrors.agent_prompt = 'Prompt do agente é obrigatório';
+        }
+      }
+    } else if (provider.provider_id === 'composio' || provider.trigger_type === 'webhook') {
+      if (!config.trigger_slug) {
+        newErrors.trigger_slug = 'Selecione um evento';
+      }
+      if (!config.profile_id) {
+        newErrors.profile_id = 'Selecione uma credencial conectada';
+      }
+      const executionType: 'agent' | 'workflow' = config.execution_type ?? 'agent';
+      if (executionType === 'workflow') {
+        if (!config.workflow_id) {
+          newErrors.workflow_id = 'Selecione um fluxo de trabalho';
+        }
+      } else {
+        if (!config.agent_prompt) {
+          newErrors.agent_prompt = 'Informe um prompt para o agente';
         }
       }
     }
@@ -112,7 +148,36 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
             onActiveChange={setIsActive}
           />
         );
+      case 'composio':
+        return (
+          <EventTriggerConfigForm
+            provider={provider}
+            config={config as EventTriggerConfig}
+            onChange={(value) => setConfig(value)}
+            errors={errors}
+            agentId={agentId}
+            name={name}
+            description={description}
+            onNameChange={setName}
+            onDescriptionChange={setDescription}
+          />
+        );
       default:
+        if (provider.trigger_type === 'webhook') {
+          return (
+            <EventTriggerConfigForm
+              provider={provider}
+              config={config as EventTriggerConfig}
+              onChange={(value) => setConfig(value)}
+              errors={errors}
+              agentId={agentId}
+              name={name}
+              description={description}
+              onNameChange={setName}
+              onDescriptionChange={setDescription}
+            />
+          );
+        }
         return (
           <div className="text-center py-8 text-muted-foreground">
             <Activity className="h-12 w-12 mx-auto mb-4" />
@@ -134,7 +199,7 @@ export const TriggerConfigDialog: React.FC<TriggerConfigDialogProps> = ({
       </DialogHeader>
       <div className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-6 pr-2">
-          {provider.provider_id === 'schedule' ? (
+          {provider.provider_id === 'schedule' || provider.provider_id === 'composio' || provider.trigger_type === 'webhook' ? (
             renderProviderSpecificConfig()
           ) : (
           <>
