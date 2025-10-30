@@ -154,7 +154,7 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 - [Morph](https://morphllm.com/) - For AI-powered code editing
 - [Tavily](https://tavily.com/) - Search capabilities
 - [Firecrawl](https://firecrawl.dev/) - Web scraping capabilities
-- [QStash](https://upstash.com/qstash) - Background job processing and workflows
+- [Supabase Cron](https://supabase.com/docs/guides/functions/cron) - Scheduled automations
 - [RapidAPI](https://rapidapi.com/) - API services
 - [Smithery](https://smithery.ai/) - Custom agent development
 
