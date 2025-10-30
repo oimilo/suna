@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import { Suspense } from "react"
 import { fetchAnalyticsData } from "./analytics-server"
 import { AnalyticsClient } from "./analytics-client"

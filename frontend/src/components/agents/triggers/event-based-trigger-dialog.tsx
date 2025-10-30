@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,14 @@ const AppCard = ({ app, onClick, connectionStatus }: { app: any; onClick: () => 
     <div className="flex items-start gap-3">
       {app.logo ? (
         <div className="border flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-          <img src={app.logo} alt={app.name} className="w-6 h-6 object-contain" />
+          <Image
+            src={app.logo}
+            alt={app.name}
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain"
+            unoptimized
+          />
         </div>
       ) : (
         <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
@@ -152,7 +160,14 @@ const TriggerCard = ({ app, trigger, onClick }: { app: any; trigger: any; onClic
       <div className="flex items-start justify-between">
         {app.logo ? (
           <div className="border flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-            <img src={app.logo} alt={app.name} className="w-6 h-6 object-contain" />
+            <Image
+              src={app.logo}
+              alt={app.name}
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain"
+              unoptimized
+            />
           </div>
         ) : (
           <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
@@ -550,7 +565,14 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                     <div className="flex items-center gap-3">
                       {selectedApp.logo && (
                         <div className="border w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                          <img src={selectedApp.logo} alt={selectedApp.name} className="w-5 h-5 object-contain" />
+                          <Image
+                            src={selectedApp.logo}
+                            alt={selectedApp.name}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 object-contain"
+                            unoptimized
+                          />
                         </div>
                       )}
                       <div>

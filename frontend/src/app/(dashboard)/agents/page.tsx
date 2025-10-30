@@ -26,6 +26,7 @@ type ViewMode = 'grid' | 'list';
 type AgentSortOption = 'name' | 'created_at' | 'updated_at' | 'tools_count';
 type MarketplaceSortOption = 'newest' | 'popular' | 'most_downloaded' | 'name';
 type SortOrder = 'asc' | 'desc';
+type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface FilterOptions {
   hasDefaultAgent: boolean;
@@ -59,7 +60,7 @@ export default function AgentsPage() {
   const [agentConfigDialog, setAgentConfigDialog] = useState<{
     open: boolean;
     agentId: string | null;
-    initialTab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+    initialTab: AgentConfigTab;
   }>({
     open: false,
     agentId: null,
@@ -254,11 +255,11 @@ export default function AgentsPage() {
     }
   };
 
-  const handleEditAgent = (agentId: string) => {
+  const handleEditAgent = (agentId: string, initialTab: AgentConfigTab = 'instructions') => {
     setAgentConfigDialog({
       open: true,
       agentId,
-      initialTab: 'instructions',
+      initialTab,
     });
   };
 

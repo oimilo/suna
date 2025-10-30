@@ -54,9 +54,11 @@ interface Agent {
   };
 }
 
+type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
+
 interface AgentsGridProps {
   agents: Agent[];
-  onEditAgent: (agentId: string) => void;
+  onEditAgent: (agentId: string, tab?: AgentConfigTab) => void;
   onDeleteAgent: (agentId: string) => void;
   onToggleDefault: (agentId: string, currentDefault: boolean) => void;
   deleteAgentMutation: { isPending: boolean };
@@ -76,8 +78,8 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
   const { t } = usePtTranslations();
   const [agentPendingDeletion, setAgentPendingDeletion] = useState<Agent | null>(null);
 
-  const handleCustomize = (agentId: string) => {
-    onEditAgent(agentId);
+  const handleCustomize = (agentId: string, tab: AgentConfigTab = 'instructions') => {
+    onEditAgent(agentId, tab);
   };
 
   const handlePublish = (agent: Agent) => {
@@ -140,9 +142,9 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                 actions={{
                   onPrimaryAction: (data, e) => {
                     e?.stopPropagation();
-                    handleCustomize(data.agent_id || agent.agent_id);
+                    handleCustomize(data.agent_id || agent.agent_id, 'instructions');
                   },
-                  onClick: (data) => handleCustomize(data.agent_id || agent.agent_id),
+                  onClick: (data) => handleCustomize(data.agent_id || agent.agent_id, 'instructions'),
                   onSecondaryAction: agent.is_public
                     ? undefined
                     : (data, e) => {
@@ -155,6 +157,14 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                         e?.stopPropagation();
                         setAgentPendingDeletion(agent);
                       },
+                  onOpenTriggers: (data, e) => {
+                    e?.stopPropagation();
+                    handleCustomize(data.agent_id || agent.agent_id, 'triggers');
+                  },
+                  onOpenWorkflows: (data, e) => {
+                    e?.stopPropagation();
+                    handleCustomize(data.agent_id || agent.agent_id, 'workflows');
+                  },
                 }}
                 state={{
                   isActioning: externalPublishingId === agent.agent_id,

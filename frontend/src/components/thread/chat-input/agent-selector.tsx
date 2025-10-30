@@ -63,7 +63,7 @@ interface AgentSelectorProps {
   toolCallIndex?: number;
   showToolPreview?: boolean;
   onExpandToolPreview?: () => void;
-  onOpenAgentConfig?: (tab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers') => void;
+  onOpenAgentConfig?: (tab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers') => void;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = ({

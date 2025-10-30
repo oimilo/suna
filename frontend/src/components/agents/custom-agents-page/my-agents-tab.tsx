@@ -18,6 +18,7 @@ import { Pagination } from '../pagination';
 import { AgentCard } from './agent-card';
 
 type AgentFilter = 'all' | 'templates';
+type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface MyAgentsTabProps {
   agentsSearchQuery: string;
@@ -27,7 +28,7 @@ interface MyAgentsTabProps {
   agentsPagination: any;
   viewMode: 'grid' | 'list';
   onCreateAgent: () => void;
-  onEditAgent: (agentId: string) => void;
+  onEditAgent: (agentId: string, tab?: AgentConfigTab) => void;
   onDeleteAgent: (agentId: string) => void;
   onToggleDefault: (agentId: string, currentDefault: boolean) => void;
   onClearFilters: () => void;

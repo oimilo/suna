@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { MCPConfiguration } from './types';
 import { useCredentialProfile, useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
 
 import { useComposioToolkits, useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
+import Image from 'next/image';
 
 interface ConfiguredMcpListProps {
   configuredMCPs: MCPConfiguration[];
@@ -74,23 +75,29 @@ const MCPLogo: React.FC<{ mcp: MCPConfiguration; slugOverride?: string | null }>
 
   const firstLetter = mcp.name.charAt(0).toUpperCase();
 
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUrl]);
+
   return (
     <div className="w-4 h-4 flex items-center justify-center flex-shrink-0 overflow-hidden">
-      {logoUrl ? (
-        <img
+      {logoUrl && !logoFailed ? (
+        <Image
           src={logoUrl}
           alt={mcp.name}
+          width={16}
+          height={16}
           className="w-full h-full object-cover rounded"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
-          }}
+          unoptimized
+          onError={() => setLogoFailed(true)}
         />
-      ) : null}
-      <div className={logoUrl ? 'hidden' : 'flex w-full h-full items-center justify-center bg-muted rounded-md text-xs font-medium text-muted-foreground'}>
-        {firstLetter}
-      </div>
+      ) : (
+        <div className="flex w-full h-full items-center justify-center bg-muted rounded-md text-xs font-medium text-muted-foreground">
+          {firstLetter}
+        </div>
+      )}
     </div>
   );
 };

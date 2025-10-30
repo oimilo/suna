@@ -45,6 +45,7 @@ import {
   Cpu,
   Clock3,
   Star,
+  Workflow,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ import { GranularToolConfiguration } from './tools/granular-tool-configuration';
 import { AgentMCPConfiguration } from './agent-mcp-configuration';
 import { AgentKnowledgeBaseManager } from './knowledge-base/agent-knowledge-base-manager';
 import { AgentTriggersConfiguration } from './triggers/agent-triggers-configuration';
+import { AgentWorkflowsConfiguration } from './workflows/agent-workflows-configuration';
 import { AgentAvatar } from '../thread/content/agent-avatar';
 import { AgentIconEditorDialog } from './config/agent-icon-editor-dialog';
 import { AgentVersionSwitcher } from './agent-version-switcher';
@@ -71,7 +73,7 @@ interface AgentConfigurationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
-  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
   onAgentChange?: (agentId: string) => void;
 }
 
@@ -427,6 +429,7 @@ export function AgentConfigurationDialog({
     { id: 'tools', label: 'Tools', icon: Wrench, disabled: false },
     { id: 'integrations', label: 'Integrations', icon: Server, disabled: false },
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen, disabled: false },
+    { id: 'workflows', label: 'Workflows', icon: Workflow, disabled: false },
     { id: 'triggers', label: 'Triggers', icon: Zap, disabled: false },
   ];
 
@@ -801,6 +804,15 @@ export function AgentConfigurationDialog({
                       }}
                       saveMode="callback"
                     />
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="workflows"
+                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
+                >
+                  <div className="flex flex-col flex-1 min-h-0">
+                    <AgentWorkflowsConfiguration agentId={agentId} agentName={formData.name || 'Agent'} />
                   </div>
                 </TabsContent>
 

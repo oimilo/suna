@@ -16,6 +16,8 @@ import {
   User,
   ArrowRight,
   Plug,
+  Zap,
+  Workflow,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,8 @@ export interface AgentCardActions {
   onDeleteAction?: (data: BaseAgentData, e?: React.MouseEvent) => void;
   onClick?: (data: BaseAgentData) => void;
   onToggle?: (agentId: string) => void;
+  onOpenTriggers?: (data: BaseAgentData, e?: React.MouseEvent) => void;
+  onOpenWorkflows?: (data: BaseAgentData, e?: React.MouseEvent) => void;
 }
 
 export interface AgentCardState {
@@ -480,6 +484,16 @@ const AgentCardComponent: React.FC<UnifiedAgentCardProps> = ({ data, actions, st
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={(e) => actions?.onPrimaryAction?.(data, e)}>Configurar</DropdownMenuItem>
+            {actions?.onOpenTriggers && (
+              <DropdownMenuItem onClick={(e) => actions.onOpenTriggers?.(data, e)}>
+                <Zap className="h-3.5 w-3.5 mr-2" /> Gatilhos
+              </DropdownMenuItem>
+            )}
+            {actions?.onOpenWorkflows && (
+              <DropdownMenuItem onClick={(e) => actions.onOpenWorkflows?.(data, e)}>
+                <Workflow className="h-3.5 w-3.5 mr-2" /> Fluxos de trabalho
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={(e) => actions?.onSecondaryAction?.(data, e)} disabled={!data.is_public}>
               Ver no marketplace
             </DropdownMenuItem>

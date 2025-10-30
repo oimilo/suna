@@ -130,7 +130,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
-    type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+    type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: AgentConfigTab }>({
       open: false,
       tab: 'integrations',

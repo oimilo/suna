@@ -159,7 +159,16 @@ export function AdvancedToolbar({
   }, [editor]);
 
   const insertPageBreak = useCallback(() => {
-    editor.chain().focus().setPageBreak().run();
+    const chain = editor.chain().focus();
+    const chainWithPageBreak = chain as unknown as { setPageBreak?: () => { run: () => void } };
+
+    if (chainWithPageBreak.setPageBreak) {
+      chainWithPageBreak.setPageBreak().run();
+      return;
+    }
+
+    const commandsWithPageBreak = editor.commands as unknown as { setPageBreak?: () => void };
+    commandsWithPageBreak.setPageBreak?.();
   }, [editor]);
 
   const addColumnBefore = () => editor.chain().focus().addColumnBefore().run();
