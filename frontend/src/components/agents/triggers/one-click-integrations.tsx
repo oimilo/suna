@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Plus } from 'lucide-react';
+import { Loader2, Plus, PlugZap } from 'lucide-react';
 import { TriggerConfigDialog } from './trigger-config-dialog';
 import { TriggerProvider } from './types';
 import { Dialog } from '@/components/ui/dialog';
@@ -17,6 +17,7 @@ import {
   useDeleteTrigger 
 } from '@/hooks/react-query/triggers';
 import { toast } from 'sonner';
+import { EventBasedTriggerDialog } from './event-based-trigger-dialog';
 
 interface OneClickIntegrationsProps {
   agentId: string;
@@ -27,6 +28,11 @@ const OAUTH_PROVIDERS = {
     name: 'Adicionar Gatilho',
     icon: <Plus className="h-3.5 w-3.5" />,
     isOAuth: false
+  },
+  event: {
+    name: 'Gatilho de Evento',
+    icon: <PlugZap className="h-3.5 w-3.5" />,
+    isOAuth: false
   }
 } as const;
 
@@ -36,6 +42,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
   agentId
 }) => {
   const [configuringSchedule, setConfiguringSchedule] = useState(false);
+  const [showEventDialog, setShowEventDialog] = useState(false);
   const { data: triggers = [] } = useAgentTriggers(agentId);
   const installMutation = useInstallOAuthIntegration();
   const uninstallMutation = useUninstallOAuthIntegration();
@@ -50,6 +57,10 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
   const handleInstall = async (provider: ProviderKey) => {
     if (provider === 'schedule') {
       setConfiguringSchedule(true);
+      return;
+    }
+    if (provider === 'event') {
+      setShowEventDialog(true);
       return;
     }
     
@@ -75,6 +86,9 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
         toast.error('Falha ao remover gatilho de agendamento');
         console.error('Error removing schedule trigger:', error);
       }
+      return;
+    }
+    if (provider === 'event') {
       return;
     }
     
@@ -105,6 +119,9 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
   const getIntegrationForProvider = (provider: ProviderKey) => {
     if (provider === 'schedule') {
       return triggers.find(trigger => trigger.trigger_type === 'schedule');
+    }
+    if (provider === 'event') {
+      return undefined;
     }
   };
 
@@ -139,9 +156,11 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
                            (provider === 'schedule' && (createTriggerMutation.isPending || deleteTriggerMutation.isPending));
           const triggerId = getTriggerId(provider);
           
-          const buttonText = provider === 'schedule' 
-            ? config.name 
-            : (isInstalled ? `Disconnect ${config.name}` : `Connect ${config.name}`);
+          const buttonText = provider === 'schedule'
+            ? config.name
+            : provider === 'event'
+              ? 'Gatilho de Evento'
+              : (isInstalled ? `Disconnect ${config.name}` : `Connect ${config.name}`);
           
           return (
             <Button
@@ -150,7 +169,9 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
               size="sm"
               onClick={() => {
                 if (provider === 'schedule') {
-                  handleInstall(provider); 
+                  handleInstall(provider);
+                } else if (provider === 'event') {
+                  handleInstall(provider);
                 } else {
                   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                   isInstalled ? handleUninstall(provider, triggerId) : handleInstall(provider);
@@ -181,6 +202,15 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
           />
         </Dialog>
       )}
+      <EventBasedTriggerDialog
+        open={showEventDialog}
+        onOpenChange={setShowEventDialog}
+        agentId={agentId}
+        onTriggerCreated={() => {
+          setShowEventDialog(false);
+          toast.success('Gatilho de evento criado com sucesso');
+        }}
+      />
     </div>
   );
 };

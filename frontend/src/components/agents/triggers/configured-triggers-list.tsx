@@ -7,13 +7,6 @@ import {
   Edit, 
   Trash2, 
   ExternalLink, 
-  MessageSquare, 
-  Webhook, 
-  Clock, 
-  Mail,
-  Github,
-  Gamepad2,
-  Activity,
   Copy
 } from 'lucide-react';
 import { TriggerConfiguration } from './types';
@@ -35,26 +28,6 @@ const copyToClipboard = async (text: string) => {
   } catch (err) {
     console.error('Failed to copy text: ', err);
   }
-};
-
-const getCronDescription = (cron: string): string => {
-  const cronDescriptions: Record<string, string> = {
-    '0 9 * * *': 'Daily at 9:00 AM',
-    '0 18 * * *': 'Daily at 6:00 PM',
-    '0 9 * * 1-5': 'Weekdays at 9:00 AM',
-    '0 10 * * 1-5': 'Weekdays at 10:00 AM',
-    '0 9 * * 1': 'Every Monday at 9:00 AM',
-    '0 9 1 * *': 'Monthly on the 1st at 9:00 AM',
-    '0 9 1 1 *': 'Yearly on Jan 1st at 9:00 AM',
-    '0 */2 * * *': 'Every 2 hours',
-    '*/30 * * * *': 'Every 30 minutes',
-    '0 0 * * *': 'Daily at midnight',
-    '0 12 * * *': 'Daily at noon',
-    '0 9 * * 0': 'Every Sunday at 9:00 AM',
-    '0 9 * * 6': 'Every Saturday at 9:00 AM',
-  };
-
-  return cronDescriptions[cron] || cron;
 };
 
 export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
@@ -149,6 +122,22 @@ export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
                     )}
                     {trigger.config.execution_type === 'workflow' && trigger.config.workflow_id && (
                       <p>Workflow: {trigger.config.workflow_id}</p>
+                    )}
+                  </div>
+                )}
+                {trigger.provider_id === 'composio' && trigger.config && (
+                  <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                    {trigger.config.trigger_slug && (
+                      <p>Evento: {trigger.config.trigger_slug}</p>
+                    )}
+                    {trigger.config.profile_id && (
+                      <p>Credencial: {trigger.config.profile_id}</p>
+                    )}
+                    {trigger.config.execution_type === 'workflow' && trigger.config.workflow_id && (
+                      <p>Workflow: {trigger.config.workflow_id}</p>
+                    )}
+                    {trigger.config.execution_type === 'agent' && trigger.config.agent_prompt && (
+                      <p>Prompt: {truncateString(trigger.config.agent_prompt, 40)}</p>
                     )}
                   </div>
                 )}
