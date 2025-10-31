@@ -81,7 +81,7 @@ export function TaskDetailPanel({ trigger, onClose }: TaskDetailPanelProps) {
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-foreground">{trigger.name}</h2>
-            <Badge variant={trigger.is_active ? 'default' : 'secondary'}>
+            <Badge variant={trigger.is_active ? 'success' : 'neutral'}>
               {trigger.is_active ? 'Ativa' : 'Inativa'}
             </Badge>
           </div>
