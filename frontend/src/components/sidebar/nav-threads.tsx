@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, KeyboardEvent } from 'react';
+import { useState, useRef, KeyboardEvent, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Star, 
@@ -397,7 +397,21 @@ function ThreadItem({
   );
 }
 
-export function NavThreads({ showOnlyFavorites = false }: { showOnlyFavorites?: boolean }) {
+type NavThreadsProps = {
+  showOnlyFavorites?: boolean;
+  excludeTriggerThreads?: boolean;
+  showOnlyTriggerThreads?: boolean;
+  emptyState?: ReactNode;
+};
+
+const TRIGGER_PREFIX = 'Trigger:';
+
+export function NavThreads({
+  showOnlyFavorites = false,
+  excludeTriggerThreads = false,
+  showOnlyTriggerThreads = false,
+  emptyState,
+}: NavThreadsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null);
@@ -410,10 +424,24 @@ export function NavThreads({ showOnlyFavorites = false }: { showOnlyFavorites?: 
     ? processThreadsWithProjects(threads, projects)
     : [];
 
+  const filteredByTriggerState = combinedThreads.filter((thread) => {
+    const isTriggerThread = (thread.projectName || '').trim().startsWith(TRIGGER_PREFIX);
+
+    if (showOnlyTriggerThreads) {
+      return isTriggerThread;
+    }
+
+    if (excludeTriggerThreads) {
+      return !isTriggerThread;
+    }
+
+    return true;
+  });
+
   // Filtra favoritos se necessário
   const displayThreads = showOnlyFavorites
-    ? combinedThreads.filter(thread => isFavorite(thread.threadId))
-    : combinedThreads;
+    ? filteredByTriggerState.filter(thread => isFavorite(thread.threadId))
+    : filteredByTriggerState;
 
   const handleThreadClick = (e: React.MouseEvent<HTMLDivElement>, threadId: string, url: string) => {
     e.preventDefault();
@@ -458,7 +486,9 @@ export function NavThreads({ showOnlyFavorites = false }: { showOnlyFavorites?: 
   if (displayThreads.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm px-3">
-        {showOnlyFavorites ? (
+        {emptyState ? (
+          <>{emptyState}</>
+        ) : showOnlyFavorites ? (
           <>
             <Star className="h-8 w-8 mx-auto mb-2 opacity-20" />
             <p>Nenhum favorito ainda</p>
