@@ -469,9 +469,10 @@ async def get_subscription_cancellation_status(
                 'canceled_at': stripe_subscription.canceled_at,
                 'current_period_end': stripe_subscription.current_period_end,
                 'status': stripe_subscription.status,
-                'cancellation_details': stripe_subscription.cancellation_details if hasattr(stripe_subscription, 'cancellation_details') else None
+                'cancellation_details': getattr(stripe_subscription, 'cancellation_details', None)
             }
         except stripe.error.StripeError as e:
+            logger.error(f"[BILLING] Stripe error retrieving cancellation status for {subscription_data.get('id')}: {e}")
             return {
                 'has_subscription': True,
                 'subscription_id': subscription_data.get('id'),
@@ -480,11 +481,31 @@ async def get_subscription_cancellation_status(
                 'cancel_at_period_end': False,
                 'current_period_end': subscription_data.get('current_period_end'),
                 'status': subscription_data.get('status'),
-                'error': 'Could not retrieve cancellation status from Stripe'
+                'error': 'stripe_error'
             }
-        
+        except Exception as e:
+            logger.exception(f"[BILLING] Unexpected error retrieving cancellation status for {subscription_data.get('id')}")
+            return {
+                'has_subscription': True,
+                'subscription_id': subscription_data.get('id'),
+                'is_cancelled': False,
+                'cancel_at': None,
+                'cancel_at_period_end': False,
+                'current_period_end': subscription_data.get('current_period_end'),
+                'status': subscription_data.get('status'),
+                'error': 'unexpected_error'
+            }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"[BILLING] Failed to load subscription cancellation status for {account_id}")
+        return {
+            'has_subscription': False,
+            'is_cancelled': False,
+            'cancel_at': None,
+            'cancel_at_period_end': False,
+            'current_period_end': None,
+            'status': None,
+            'error': 'internal_error'
+        }
 
 @router.post("/create-checkout-session")
 async def create_checkout_session(
