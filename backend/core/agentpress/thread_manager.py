@@ -279,7 +279,10 @@ class ThreadManager:
             
             cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
             if cache_read_tokens == 0:
-                cache_read_tokens = int(usage.get("prompt_tokens_details", {}).get("cached_tokens", 0) or 0)
+                prompt_details = usage.get("prompt_tokens_details") or {}
+                if not isinstance(prompt_details, dict):
+                    prompt_details = {}
+                cache_read_tokens = int(prompt_details.get("cached_tokens", 0) or 0)
             
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
             model = content.get("model")
