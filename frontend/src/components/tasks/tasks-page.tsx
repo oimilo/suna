@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 import { TriggerCreationDialog } from './trigger-creation-dialog';
 import { TaskDetailPanel } from './task-detail-panel';
 import { useAllTriggers, type TriggerWithAgent } from '@/hooks/react-query/triggers';
@@ -11,27 +14,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Plus, Zap, PlugZap } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Plus, Zap, PlugZap, Calendar, Activity } from 'lucide-react';
 
 const TasksSkeleton = () => (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-base font-medium">Minhas tarefas</CardTitle>
+  <Card className="overflow-hidden border-none bg-gradient-to-br from-muted/50 via-background to-background shadow-sm">
+    <CardHeader className="pb-4">
+      <CardTitle className="text-lg font-semibold text-foreground">Minhas automações</CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Carregando automações configuradas...
+      </p>
     </CardHeader>
     <CardContent className="space-y-3 pt-0">
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="flex items-center justify-between rounded-xl border px-4 py-3"
+          className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/80 px-4 py-4"
         >
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-9 w-9 rounded-lg" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-24" />
-            </div>
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
           </div>
-          <Skeleton className="h-4 w-14" />
+          <Skeleton className="h-4 w-12" />
         </div>
       ))}
     </CardContent>
@@ -48,43 +54,66 @@ const TaskListItem = ({
   onSelect: () => void;
 }) => {
   const isSchedule = trigger.trigger_type?.toLowerCase() === 'schedule';
+  const Icon = isSchedule ? Calendar : Zap;
+  const lastUpdated = trigger.updated_at
+    ? formatDistanceToNow(new Date(trigger.updated_at), { locale: ptBR, addSuffix: true })
+    : null;
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full rounded-xl border px-4 py-3 text-left transition-colors',
-        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/60 hover:bg-muted/60'
+        'group w-full overflow-hidden rounded-2xl border border-border/60 bg-background px-4 py-4 text-left shadow-sm transition-all duration-200',
+        isSelected
+          ? 'border-primary/60 ring-2 ring-primary/20'
+          : 'hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md'
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{trigger.name}</span>
-            <Badge
-              variant={trigger.is_active ? 'success' : 'neutral'}
-              className="text-[10px]"
-            >
-              {trigger.is_active ? 'Ativa' : 'Inativa'}
-            </Badge>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-1 items-start gap-3">
+          <Avatar className="size-10 rounded-xl border border-border/80 bg-muted text-muted-foreground">
+            <AvatarFallback className="bg-transparent">
+              <Icon className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-semibold text-foreground">
+                {trigger.name}
+              </span>
+              <Badge
+                variant={trigger.is_active ? 'success' : 'neutral'}
+                className="rounded-full px-2 py-0 text-[10px] font-semibold uppercase tracking-wide"
+              >
+                {trigger.is_active ? 'Ativa' : 'Inativa'}
+              </Badge>
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground/80">
+                {trigger.provider_id ?? (isSchedule ? 'Schedule' : 'Webhook')}
+              </span>
+            </div>
+            {trigger.description && (
+              <p className="line-clamp-2 text-xs text-muted-foreground/90">
+                {trigger.description}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                {trigger.agent_name ?? 'Sem agente'}
+              </span>
+              {lastUpdated && <span>Atualizada {lastUpdated}</span>}
+            </div>
           </div>
-          {trigger.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {trigger.description}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Agente:&nbsp;
-            <span className="font-medium text-foreground">
-              {trigger.agent_name ?? 'Sem agente'}
-            </span>
-          </p>
         </div>
         <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
-          <span className="capitalize">{trigger.trigger_type}</span>
+          <span className="rounded-lg bg-muted px-2 py-1 font-medium capitalize tracking-wide text-foreground/80">
+            {trigger.trigger_type}
+          </span>
           {isSchedule && trigger.config?.cron_expression && (
-            <span>{trigger.config.cron_expression}</span>
+            <span className="font-mono text-[11px] text-muted-foreground/70">
+              {trigger.config.cron_expression}
+            </span>
           )}
         </div>
       </div>
@@ -133,63 +162,77 @@ export function TasksPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
-            Atalhos guiados para criar automações agendadas ou baseadas em eventos.
-          </p>
+    <div className="space-y-10">
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-background via-background to-muted/40 p-[1px] shadow-lg">
+        <div className="flex flex-col gap-6 rounded-[28px] bg-background/95 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
+              Automations
+            </p>
+            <h1 className="text-3xl font-semibold text-foreground">Central de automações do Prophet</h1>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Veja, edite e monitore todas as rotinas criadas pelo agente. Agendamentos e webhooks ficam reunidos aqui,
+              com estado em tempo real e atalhos rápidos para ajustes.
+            </p>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="lg" className="h-12 gap-2 rounded-2xl px-6 shadow-sm">
+                <Plus className="h-4 w-4" />
+                Nova automação
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
+              <DropdownMenuItem onClick={() => setCreationType('schedule')} className="gap-3 rounded-xl px-3 py-3">
+                <Calendar className="h-4 w-4 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-foreground">Agendada</span>
+                  <span className="text-xs text-muted-foreground">Configure horários, frequências e fusos personalizados.</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCreationType('event')} className="gap-3 rounded-xl px-3 py-3">
+                <PlugZap className="h-4 w-4 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-foreground">Por evento</span>
+                  <span className="text-xs text-muted-foreground">Dispare automações com integrações e webhooks.</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nova tarefa
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <DropdownMenuItem onClick={() => setCreationType('schedule')} className="gap-3">
-              <Zap className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span>Agendada</span>
-                <span className="text-xs text-muted-foreground">Executa em horários definidos</span>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setCreationType('event')} className="gap-3">
-              <PlugZap className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span>Por evento</span>
-                <span className="text-xs text-muted-foreground">Dispara ao detectar integrações</span>
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {isLoading ? (
         <TasksSkeleton />
       ) : sortedTriggers.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className="rounded-full bg-muted p-4">
-              <Zap className="h-6 w-6 text-muted-foreground" />
+        <Card className="overflow-hidden border-none bg-gradient-to-br from-muted/70 via-background to-background shadow-sm">
+          <CardContent className="flex flex-col items-center gap-6 py-20 text-center">
+            <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6">
+              <Zap className="h-8 w-8 text-primary" />
             </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold">Nenhuma tarefa configurada</h2>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">Nenhuma automação configurada</h2>
               <p className="text-sm text-muted-foreground">
-                Crie uma tarefa para automatizar execuções recorrentes.
+                Crie uma rotina para executar tarefas recorrentes ou disparar ações a partir de integrações.
               </p>
             </div>
+            <Button onClick={() => setCreationType('schedule')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Começar agora
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <Card className="h-full">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">
-                {sortedTriggers.length} tarefa{sortedTriggers.length > 1 ? 's' : ''}
+          <Card className="h-full overflow-hidden border-none bg-gradient-to-b from-background to-muted/30 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold text-foreground">
+                {sortedTriggers.length} automação{sortedTriggers.length > 1 ? 'es' : ''}
               </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Prioridade para as automações ativas e mais recentes.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
               {sortedTriggers.map((trigger) => (
@@ -213,10 +256,10 @@ export function TasksPage() {
               onClose={() => setSelectedTriggerId(null)}
             />
           ) : (
-            <Card className="h-full border-dashed">
+            <Card className="h-full border border-dashed border-border/60 bg-background/90">
               <CardContent className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
                 <Zap className="h-6 w-6" />
-                <p className="text-sm">Selecione uma tarefa para ver os detalhes.</p>
+                <p className="text-sm">Selecione uma automação para visualizar detalhes, configurações e histórico.</p>
               </CardContent>
             </Card>
           )}
