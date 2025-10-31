@@ -82,26 +82,26 @@ const TaskListItem = ({
               <span className="truncate text-sm font-semibold text-foreground">
                 {trigger.name}
               </span>
-              <Badge
-                variant={trigger.is_active ? 'success' : 'neutral'}
+            <Badge
+              variant={trigger.is_active ? 'success' : 'neutral'}
                 className="rounded-full px-2 py-0 text-[10px] font-semibold uppercase tracking-wide"
-              >
-                {trigger.is_active ? 'Ativa' : 'Inativa'}
-              </Badge>
+            >
+              {trigger.is_active ? 'Ativa' : 'Inativa'}
+            </Badge>
               <span className="text-[11px] uppercase tracking-wide text-muted-foreground/80">
                 {trigger.provider_id ?? (isSchedule ? 'Schedule' : 'Webhook')}
               </span>
-            </div>
-            {trigger.description && (
+          </div>
+          {trigger.description && (
               <p className="line-clamp-2 text-xs text-muted-foreground/90">
-                {trigger.description}
-              </p>
-            )}
+              {trigger.description}
+            </p>
+          )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Activity className="h-3 w-3" />
-                {trigger.agent_name ?? 'Sem agente'}
-              </span>
+              {trigger.agent_name ?? 'Sem agente'}
+            </span>
               {lastUpdated && <span>Atualizada {lastUpdated}</span>}
             </div>
           </div>
@@ -173,33 +173,33 @@ export function TasksPage() {
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
               Veja, edite e monitore todas as rotinas criadas pelo agente. Agendamentos e webhooks ficam reunidos aqui,
               com estado em tempo real e atalhos rápidos para ajustes.
-            </p>
-          </div>
+          </p>
+        </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
               <Button size="lg" className="h-12 gap-2 rounded-2xl px-6 shadow-sm">
-                <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
                 Nova automação
-              </Button>
-            </DropdownMenuTrigger>
+            </Button>
+          </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
               <DropdownMenuItem onClick={() => setCreationType('schedule')} className="gap-3 rounded-xl px-3 py-3">
                 <Calendar className="h-4 w-4 text-primary" />
-                <div className="flex flex-col">
+              <div className="flex flex-col">
                   <span className="text-sm font-medium text-foreground">Agendada</span>
                   <span className="text-xs text-muted-foreground">Configure horários, frequências e fusos personalizados.</span>
-                </div>
-              </DropdownMenuItem>
+              </div>
+            </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setCreationType('event')} className="gap-3 rounded-xl px-3 py-3">
                 <PlugZap className="h-4 w-4 text-primary" />
-                <div className="flex flex-col">
+              <div className="flex flex-col">
                   <span className="text-sm font-medium text-foreground">Por evento</span>
                   <span className="text-xs text-muted-foreground">Dispare automações com integrações e webhooks.</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         </div>
       </div>
 

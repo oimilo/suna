@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { HoverSidebar } from '@/components/sidebar/hover-sidebar';
 import { useSidebarContext } from '@/contexts/sidebar-context';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
 import { MaintenanceAlert } from '@/components/maintenance-alert';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -102,37 +103,43 @@ export default function DashboardLayoutContent({
   }
 
   return (
-    <DeleteOperationProvider>
-      <>
-        <HoverSidebar />
-        <div className={`min-h-screen transition-all duration-200 ${isPinned ? 'pl-64' : 'pl-0'}`}>
-          {mantenanceBanner}
-          {children}
-        </div>
-      </>
+    <SubscriptionProvider>
+      <DeleteOperationProvider>
+        <>
+          <HoverSidebar />
+          <div
+            className={`min-h-screen transition-all duration-200 ${
+              isPinned ? 'pl-64' : 'pl-0'
+            }`}
+          >
+            {mantenanceBanner}
+            {children}
+          </div>
+        </>
 
-      {/* <PricingAlert 
-      open={showPricingAlert} 
-      onOpenChange={setShowPricingAlert}
-      closeable={false}
-      accountId={personalAccount?.account_id}
-      /> */}
+        {/* <PricingAlert 
+        open={showPricingAlert} 
+        onOpenChange={setShowPricingAlert}
+        closeable={false}
+        accountId={personalAccount?.account_id}
+        /> */}
 
-      <MaintenanceAlert
-        open={showMaintenanceAlert}
-        onOpenChange={setShowMaintenanceAlert}
-        closeable={true}
-      />
+        <MaintenanceAlert
+          open={showMaintenanceAlert}
+          onOpenChange={setShowMaintenanceAlert}
+          closeable={true}
+        />
 
-      {/* Status overlay for deletion operations */}
-      <StatusOverlay />
-      
-      {/* Onboarding components */}
-      <WelcomeAnnouncement />
-      <OnboardingTour />
-      {/* <OnboardingFloatingButton /> */}
-      {/** <OnboardingDevControls /> */}
-      <AnnouncementDialog />
-    </DeleteOperationProvider>
+        {/* Status overlay for deletion operations */}
+        <StatusOverlay />
+        
+        {/* Onboarding components */}
+        <WelcomeAnnouncement />
+        <OnboardingTour />
+        {/* <OnboardingFloatingButton /> */}
+        {/** <OnboardingDevControls /> */}
+        <AnnouncementDialog />
+      </DeleteOperationProvider>
+    </SubscriptionProvider>
   );
 }
