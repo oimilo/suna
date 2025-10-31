@@ -1678,6 +1678,21 @@ export interface SubscriptionStatus {
   minutes_limit?: number;
   cost_limit?: number;
   current_usage?: number;
+  credits?: {
+    balance: number;
+    tier_credits?: number;
+    lifetime_granted?: number;
+    lifetime_purchased?: number;
+    lifetime_used?: number;
+    can_purchase_credits?: boolean;
+  };
+  subscription?: {
+    id: string;
+    status: string;
+    cancel_at_period_end?: boolean;
+    cancel_at?: number;
+    current_period_end?: number | string;
+  } | null;
   // Fields for scheduled changes
   has_schedule: boolean;
   scheduled_plan_name?: string;
@@ -1689,6 +1704,14 @@ export interface SubscriptionStatus {
   daily_credits_used?: number;
   daily_credits_granted?: number;
   daily_expires_in?: string;
+}
+
+export interface CommitmentInfo {
+  has_commitment: boolean;
+  commitment_type?: string;
+  months_remaining?: number;
+  can_cancel: boolean;
+  commitment_end_date?: string;
 }
 
 export interface BillingStatusResponse {
@@ -1923,6 +1946,56 @@ export const getSubscription = async (): Promise<SubscriptionStatus> => {
 
     console.error('Failed to get subscription:', error);
     handleApiError(error, { operation: 'load subscription', resource: 'billing information' });
+    throw error;
+  }
+};
+
+export const getSubscriptionCommitment = async (
+  subscriptionId: string,
+): Promise<CommitmentInfo | null> => {
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new NoAccessTokenAvailableError();
+    }
+
+    const response = await fetch(
+      `${BASE_URL}/billing/subscription-commitment/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response
+        .text()
+        .catch(() => 'No error details available');
+      console.error(
+        `Error getting subscription commitment: ${response.status} ${response.statusText}`,
+        errorText,
+      );
+      throw new Error(
+        `Error getting subscription commitment: ${response.statusText} (${response.status})`,
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof NoAccessTokenAvailableError) {
+      throw error;
+    }
+
+    console.error('Failed to get subscription commitment:', error);
+    handleApiError(error, {
+      operation: 'load subscription commitment',
+      resource: 'commitment information',
+    });
     throw error;
   }
 };

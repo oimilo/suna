@@ -1,149 +1,187 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useState } from 'react';
+import { Loader2, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { PricingSection } from '@/components/home/sections/pricing-section';
+import { useAuth } from '@/components/AuthProvider';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { isLocalMode } from '@/lib/config';
 import {
-    getSubscription,
-    createPortalSession,
-    SubscriptionStatus,
+  getSubscription,
+  createPortalSession,
+  SubscriptionStatus,
 } from '@/lib/api';
-import { useAuth } from '@/components/AuthProvider';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CreditPurchaseModal } from '@/components/billing/credit-purchase';
+import { CreditBalanceCard } from '@/components/billing/credit-balance-card';
+import { useSubscriptionCommitment } from '@/hooks/react-query/subscriptions/use-subscriptions';
 
 interface BillingModalProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    returnUrl?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  returnUrl?: string;
+  showUsageLimitAlert?: boolean;
 }
 
-export function BillingModal({ open, onOpenChange, returnUrl = typeof window !== 'undefined' ? window?.location?.href || '/' : '/' }: BillingModalProps) {
-    const { session, isLoading: authLoading } = useAuth();
-    const [subscriptionData, setSubscriptionData] = useState<SubscriptionStatus | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isManaging, setIsManaging] = useState(false);
+export function BillingModal({
+  open,
+  onOpenChange,
+  returnUrl = typeof window !== 'undefined' ? window.location.href : '/',
+  showUsageLimitAlert = false,
+}: BillingModalProps) {
+  const { session, isLoading: authLoading } = useAuth();
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionStatus | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isManaging, setIsManaging] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
 
-    useEffect(() => {
-        async function fetchSubscription() {
-            if (!open || authLoading || !session) return;
+  const { data: commitmentInfo } = useSubscriptionCommitment(subscriptionData?.subscription?.id || undefined);
 
-            try {
-                setIsLoading(true);
-                const data = await getSubscription();
-                setSubscriptionData(data);
-                setError(null);
-            } catch (err) {
-                console.error('Failed to get subscription:', err);
-                setError(err instanceof Error ? err.message : 'Failed to load subscription data');
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        fetchSubscription();
-    }, [open, session, authLoading]);
-
-    const handleManageSubscription = async () => {
-        try {
-            setIsManaging(true);
-            const { url } = await createPortalSession({ return_url: returnUrl });
-            window.location.href = url;
-        } catch (err) {
-            console.error('Failed to create portal session:', err);
-            setError(err instanceof Error ? err.message : 'Failed to create portal session');
-        } finally {
-            setIsManaging(false);
-        }
-    };
-
-    // Local mode content
-    if (isLocalMode()) {
-        return (
-            <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Cobrança e Assinatura</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-4 bg-muted/30 border border-border rounded-lg text-center">
-                        <p className="text-sm text-muted-foreground">
-                            Executando em modo de desenvolvimento local - recursos de cobrança desabilitados
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Todos os recursos premium estão disponíveis neste ambiente
-                        </p>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        );
+  const fetchSubscription = useCallback(async () => {
+    if (!session) return;
+    try {
+      setIsLoading(true);
+      const data = await getSubscription();
+      setSubscriptionData(data);
+      setError(null);
+    } catch (err) {
+      console.error('Erro ao carregar assinatura:', err);
+      setError(err instanceof Error ? err.message : 'Falha ao carregar dados de assinatura');
+    } finally {
+      setIsLoading(false);
     }
+  }, [session]);
 
+  useEffect(() => {
+    if (open && !authLoading) {
+      void fetchSubscription();
+    }
+  }, [open, authLoading, fetchSubscription]);
+
+  const handleManageSubscription = async () => {
+    try {
+      setIsManaging(true);
+      const { url } = await createPortalSession({ return_url: returnUrl });
+      window.location.href = url;
+    } catch (err) {
+      console.error('Falha ao abrir o portal de cobrança:', err);
+      toast.error('Não foi possível abrir o portal de cobrança.');
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  if (isLocalMode()) {
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0">
-                <DialogHeader className="px-6 py-4 border-b border-black/6 dark:border-white/8">
-                    <DialogTitle className="text-lg font-semibold">Escolha seu plano</DialogTitle>
-                </DialogHeader>
-                <div className="overflow-y-auto px-4 py-6">
-
-                {isLoading || authLoading ? (
-                    <div className="space-y-4">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-40 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                ) : error ? (
-                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-center">
-                        <p className="text-sm text-destructive">Erro ao carregar status de cobrança: {error}</p>
-                    </div>
-                ) : (
-                    <>
-                        {subscriptionData && (
-                            <div className="mb-6">
-                                <div className="rounded-lg border bg-background p-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-foreground/90">
-                                            Uso de Agentes Este Mês
-                                        </span>
-                                        <span className="text-sm font-medium">
-                                            {(() => {
-                                                // Convert dollars to credits (100 credits = $1)
-                                                const usedCredits = Math.round((subscriptionData.current_usage || 0) * 100);
-                                                const limitCredits = Math.round((subscriptionData.cost_limit || 0) * 100);
-                                                // Never show usage above limit
-                                                const displayedUsed = Math.min(usedCredits, limitCredits);
-                                                return `${displayedUsed.toLocaleString('pt-BR')} / ${limitCredits.toLocaleString('pt-BR')}`;
-                                            })()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="px-2">
-                            <PricingSection returnUrl={returnUrl} showTitleAndTabs={false} insideDialog={true} />
-                        </div>
-
-                        {subscriptionData && (
-                            <Button
-                                onClick={handleManageSubscription}
-                                disabled={isManaging}
-                                className="max-w-xs mx-auto w-full bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all mt-4"
-                            >
-                                {isManaging ? 'Carregando...' : 'Gerenciar Assinatura'}
-                            </Button>
-                        )}
-                    </>
-                )}
-                </div>
-            </DialogContent>
-        </Dialog>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Billing desabilitado no modo local</DialogTitle>
+            <DialogDescription>
+              Em desenvolvimento local o Prophet permite uso ilimitado sem cobrança.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     );
-} 
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" />
+            Gerenciar assinatura
+          </DialogTitle>
+          <DialogDescription>
+            Escolha um plano, visualize limites e créditos adicionais disponíveis.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading || authLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="space-y-6">
+            <CreditBalanceCard
+              showPurchaseButton={subscriptionData?.credits?.can_purchase_credits ?? false}
+              tierCredits={subscriptionData?.credits?.tier_credits}
+            />
+
+            {showUsageLimitAlert && (
+              <Alert>
+                <AlertDescription>
+                  Você está próximo do limite mensal do plano. Considere atualizar ou adquirir créditos extras.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <PricingSection
+              returnUrl={returnUrl}
+              showTitleAndTabs={false}
+              insideDialog
+            />
+
+            <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setShowCreditModal(true)}
+                >
+                  Comprar créditos avulsos
+                </Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={handleManageSubscription}
+                  disabled={isManaging}
+                >
+                  {isManaging ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Abrindo portal...
+                    </>
+                  ) : (
+                    'Gerenciar cobrança no Stripe'
+                  )}
+                </Button>
+              </div>
+              {commitmentInfo?.has_commitment && commitmentInfo.commitment_end_date && (
+                <span className="text-xs text-muted-foreground text-center sm:text-right w-full sm:w-auto">
+                  Compromisso anual ativo até {new Date(commitmentInfo.commitment_end_date).toLocaleDateString('pt-BR')}.
+                </span>
+              )}
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+
+      <CreditPurchaseModal
+        open={showCreditModal}
+        onOpenChange={setShowCreditModal}
+        currentBalance={subscriptionData?.credits?.balance}
+        canPurchase={subscriptionData?.credits?.can_purchase_credits ?? false}
+      />
+    </Dialog>
+  );
+}

@@ -92,18 +92,18 @@ export function TaskDetailPanel({ trigger, onClose }: TaskDetailPanelProps) {
                 {trigger.name}
               </h2>
               <Badge variant={trigger.is_active ? 'success' : 'neutral'} className="rounded-full px-3 py-1 text-xs">
-                {trigger.is_active ? 'Ativa' : 'Inativa'}
-              </Badge>
-            </div>
-            {trigger.description && (
+              {trigger.is_active ? 'Ativa' : 'Inativa'}
+            </Badge>
+          </div>
+          {trigger.description && (
               <p className="max-w-xl text-sm text-muted-foreground/80 break-words">
                 {trigger.description}
               </p>
-            )}
-          </div>
+          )}
+        </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-            <X className="h-4 w-4" />
-          </Button>
+          <X className="h-4 w-4" />
+        </Button>
         </div>
       </div>
 
@@ -112,41 +112,41 @@ export function TaskDetailPanel({ trigger, onClose }: TaskDetailPanelProps) {
           <section className="px-6 py-6">
             <h3 className="text-sm font-medium text-foreground/80">Ações rápidas</h3>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
+            <Button
+              size="sm"
                 variant={trigger.is_active ? 'secondary' : 'default'}
-                onClick={handleToggle}
-                disabled={toggleMutation.isPending}
+              onClick={handleToggle}
+              disabled={toggleMutation.isPending}
                 className="rounded-xl px-4"
-              >
-                {trigger.is_active ? (
-                  <>
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Desativar
-                  </>
-                ) : (
-                  <>
-                    <Power className="mr-2 h-4 w-4" />
-                    Ativar
-                  </>
-                )}
-              </Button>
+            >
+              {trigger.is_active ? (
+                <>
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Desativar
+                </>
+              ) : (
+                <>
+                  <Power className="mr-2 h-4 w-4" />
+                  Ativar
+                </>
+              )}
+            </Button>
 
               <Button size="sm" variant="outline" onClick={() => setEditOpen(true)} className="rounded-xl px-4">
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
+            <Button
+              size="sm"
+              variant="outline"
                 className="rounded-xl px-4 text-destructive hover:bg-destructive/10"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </Button>
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir
+            </Button>
             </div>
           </section>
 
@@ -185,28 +185,28 @@ export function TaskDetailPanel({ trigger, onClose }: TaskDetailPanelProps) {
               <div className="flex items-center justify-between gap-4">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground/70">Tipo</span>
                 <span className="font-mono text-foreground break-words">{trigger.trigger_type}</span>
-              </div>
-              <Separator />
+            </div>
+            <Separator />
               <div className="flex items-center justify-between gap-4">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground/70">Provider</span>
                 <span className="font-mono text-foreground break-words">{trigger.provider_id ?? 'schedule'}</span>
-              </div>
-              {trigger.webhook_url && (
-                <>
-                  <Separator />
+            </div>
+            {trigger.webhook_url && (
+              <>
+                <Separator />
                   <div className="flex flex-col gap-2">
                     <span className="text-xs uppercase tracking-wide text-muted-foreground/70">Webhook</span>
-                    <a
-                      href={trigger.webhook_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <a
+                    href={trigger.webhook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                       className="break-all font-mono text-primary hover:underline"
-                    >
-                      {trigger.webhook_url}
-                    </a>
-                  </div>
-                </>
-              )}
+                  >
+                    {trigger.webhook_url}
+                  </a>
+                </div>
+              </>
+            )}
             </div>
           </section>
         </div>

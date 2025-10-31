@@ -34,13 +34,13 @@ class EmailService:
         self.calendar_url = os.getenv("MAILTRAP_CALENDAR_URL", DEFAULT_CALENDAR_URL)
         self.welcome_form_url = os.getenv("MAILTRAP_WELCOME_FORM_URL", DEFAULT_WELCOME_FORM_URL)
         self.discount_code = os.getenv("MAILTRAP_WELCOME_DISCOUNT_CODE", DEFAULT_DISCOUNT_CODE)
-
+        
         if not self.api_token:
             logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
             self.client = None
         else:
             self.client = mt.MailtrapClient(token=self.api_token)
-
+    
     @property
     def is_configured(self) -> bool:
         return self.client is not None
@@ -49,14 +49,14 @@ class EmailService:
         if not self.is_configured:
             logger.error("Cannot send email: MAILTRAP_API_TOKEN not configured")
             return False
-
+    
         if not user_name:
             user_name = user_email.split("@")[0].title()
-
+        
         subject = f"🎉 Welcome to {self.app_name} — Let's Get Started "
         html_content = self._render_welcome_email_html(user_name)
         text_content = self._render_welcome_email_text(user_name)
-
+        
         return self._send_email(
             to_email=user_email,
             to_name=user_name,
@@ -93,13 +93,13 @@ class EmailService:
             text_content=text_content,
             category="team_invite",
         )
-
+    
     def _send_email(
-        self,
-        to_email: str,
-        to_name: str,
-        subject: str,
-        html_content: str,
+        self, 
+        to_email: str, 
+        to_name: str, 
+        subject: str, 
+        html_content: str, 
         text_content: str,
         category: str,
     ) -> bool:
@@ -116,7 +116,7 @@ class EmailService:
                 html=html_content,
                 category=category,
             )
-
+            
             response = self.client.send(mail)
             logger.debug(
                 "Mailtrap email sent",
@@ -126,7 +126,7 @@ class EmailService:
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.error(f"Error sending email to {to_email}: {exc}")
             return False
-
+    
     def _render_welcome_email_html(self, user_name: str) -> str:
         discount_block = (
             f"<p>🎁 Use code <strong>{self.discount_code}</strong> at checkout.</p>"
@@ -229,7 +229,7 @@ class EmailService:
   </div>
 </body>
 </html>"""
-
+    
     def _render_welcome_email_text(self, user_name: str) -> str:
         discount_line = (
             f"To celebrate your arrival, here's a discount for your first month to get more usage:\n🎁 Use code {self.discount_code} at checkout.\n\n"

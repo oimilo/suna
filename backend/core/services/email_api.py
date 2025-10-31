@@ -35,7 +35,7 @@ async def send_welcome_email(
                 user_email=request.email,
                 user_name=request.name,
             )
-
+        
         with concurrent.futures.ThreadPoolExecutor() as executor:
             success = executor.submit(send_email).result()
 
@@ -44,7 +44,7 @@ async def send_welcome_email(
             raise HTTPException(status_code=500, detail="Failed to send welcome email")
 
         return EmailResponse(success=True, message="Welcome email sent")
-
+            
     except HTTPException:
         raise
     except Exception as exc:

@@ -1,22 +1,28 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
 import { createMutationHook, createQueryHook } from '@/hooks/use-query';
 import {
   getSubscription,
+  getSubscriptionCommitment,
   createPortalSession,
   SubscriptionStatus,
+  CommitmentInfo,
 } from '@/lib/api';
 import { subscriptionKeys } from './keys';
-import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
 import { hasPlan as checkHasPlan } from '@/lib/subscription-utils';
 
 export const useSubscription = createQueryHook(
   subscriptionKeys.details(),
   getSubscription,
   {
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 15,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
   },
 );
 
@@ -37,17 +43,19 @@ export const useSubscriptionWithStreaming = (isStreaming: boolean = false) => {
   return useQuery({
     queryKey: subscriptionKeys.details(),
     queryFn: getSubscription,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    refetchOnWindowFocus: true,
-    refetchInterval: (data) => {
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchInterval: () => {
       // No refresh if tab is hidden
       if (!isVisible) return false;
       
       // If actively streaming: refresh every 5s (costs are changing)
-      if (isStreaming) return 5 * 1000;
+      if (isStreaming) return 2 * 60 * 1000;
       
       // If visible but not streaming: refresh every 5min
-      return 5 * 60 * 1000;
+      return 10 * 60 * 1000;
     },
     refetchIntervalInBackground: false, // Stop when tab backgrounded
   });
@@ -63,6 +71,18 @@ export const useCreatePortalSession = createMutationHook(
     },
   },
 );
+
+export const useSubscriptionCommitment = (subscriptionId?: string, enabled = true) =>
+  useQuery<CommitmentInfo | null>({
+    queryKey: subscriptionKeys.commitment(subscriptionId || ''),
+    queryFn: () => getSubscriptionCommitment(subscriptionId!),
+    enabled: enabled && !!subscriptionId,
+    staleTime: 1000 * 60 * 15,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
 
 export const isPlan = (
   subscriptionData: SubscriptionStatus | null | undefined,
