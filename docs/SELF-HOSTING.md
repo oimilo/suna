@@ -196,6 +196,19 @@ WEBHOOK_BASE_URL=https://yourdomain.com
 # MCP Configuration
 MCP_CREDENTIAL_ENCRYPTION_KEY=your-generated-encryption-key
 
+# Transactional Email (Mailtrap)
+MAILTRAP_API_TOKEN=your-mailtrap-api-token
+MAILTRAP_SENDER_EMAIL=noreply@example.com
+MAILTRAP_SENDER_NAME="Suna Team"
+MAILTRAP_APP_NAME=Suna
+MAILTRAP_COMPANY_NAME=Kortix
+MAILTRAP_APP_URL=https://www.suna.so/
+MAILTRAP_BRANDING_LOGO_URL=https://your-cdn.com/logo.png  # optional override
+MAILTRAP_DISCORD_URL=https://discord.com/invite/FjD644cfcs
+MAILTRAP_CALENDAR_URL=https://cal.com/team/kortix/enterprise-demo
+MAILTRAP_WELCOME_FORM_URL=https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform
+MAILTRAP_WELCOME_DISCOUNT_CODE=WELCOME15  # optional override
+
 # Optional APIs
 RAPID_API_KEY=your-rapidapi-key
 SMITHERY_API_KEY=your-smithery-key
