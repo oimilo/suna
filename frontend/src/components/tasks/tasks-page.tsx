@@ -15,14 +15,14 @@ import { Plus, Zap, PlugZap } from 'lucide-react';
 
 const TasksSkeleton = () => (
   <Card>
-    <CardHeader>
+    <CardHeader className="pb-3">
       <CardTitle className="text-base font-medium">Minhas tarefas</CardTitle>
     </CardHeader>
-    <CardContent className="space-y-3">
+    <CardContent className="space-y-3 pt-0">
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
-          className="flex items-center justify-between rounded-xl border p-4"
+          className="flex items-center justify-between rounded-xl border px-4 py-3"
         >
           <div className="flex items-center gap-3">
             <Skeleton className="h-9 w-9 rounded-lg" />
@@ -54,15 +54,18 @@ const TaskListItem = ({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full rounded-xl border p-4 text-left transition-colors',
-        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/60 hover:bg-muted'
+        'w-full rounded-xl border px-4 py-3 text-left transition-colors',
+        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/60 hover:bg-muted/60'
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{trigger.name}</span>
-            <Badge variant={trigger.is_active ? 'default' : 'secondary'} className="text-[10px]">
+            <Badge
+              variant={trigger.is_active ? 'success' : 'neutral'}
+              className="text-[10px]"
+            >
               {trigger.is_active ? 'Ativa' : 'Inativa'}
             </Badge>
           </div>
@@ -183,12 +186,12 @@ export function TasksPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <Card className="h-full">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium">
                 {sortedTriggers.length} tarefa{sortedTriggers.length > 1 ? 's' : ''}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 pt-0">
               {sortedTriggers.map((trigger) => (
                 <TaskListItem
                   key={trigger.trigger_id}
