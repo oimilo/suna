@@ -12,6 +12,11 @@ from collections import deque
 import litellm
 from litellm.router import Router
 from litellm.files.main import ModelResponse
+
+try:
+    from litellm import ContextWindowExceededError
+except ImportError:
+    ContextWindowExceededError = Exception
 from core.utils.logger import logger
 from core.utils.config import config
 from core.agentpress.error_processor import ErrorProcessor
@@ -91,9 +96,35 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
             ]
         },
         {
+            "claude-sonnet-4-5-20250929": [
+                "anthropic/claude-sonnet-4-20250514",
+                "anthropic/claude-3-7-sonnet-latest"
+            ]
+        },
+        {
             "anthropic/claude-haiku-4-5-20251001": [
                 "anthropic/claude-3.5-haiku",
+                "anthropic/claude-sonnet-4-5-20250929",
                 "deepseek/deepseek-chat-v3.1"
+            ]
+        },
+        {
+            "claude-haiku-4-5-20251001": [
+                "anthropic/claude-3.5-haiku",
+                "anthropic/claude-sonnet-4-5-20250929",
+                "deepseek/deepseek-chat-v3.1"
+            ]
+        },
+        {
+            "anthropic/claude-3.5-haiku": [
+                "anthropic/claude-sonnet-4-5-20250929",
+                "anthropic/claude-sonnet-4-20250514"
+            ]
+        },
+        {
+            "claude-3.5-haiku": [
+                "anthropic/claude-sonnet-4-5-20250929",
+                "anthropic/claude-sonnet-4-20250514"
             ]
         },
         # Lightweight auxiliary model fallback: GPT-5-nano -> DeepSeek Chat v3.1
@@ -278,6 +309,24 @@ async def make_llm_api_call(
             except Exception as e:
                 last_exception = e
                 error_message = str(e)
+
+                # Handle context window overflow by retrying with larger-context models
+                if isinstance(e, ContextWindowExceededError) or "prompt is too long" in error_message.lower():
+                    logger.warning(
+                        "Context window exceeded for model '%s' (%s). Attempting larger-context fallbacks.",
+                        current_model,
+                        error_message
+                    )
+                    large_context_fallbacks = [
+                        "anthropic/claude-3.5-haiku",
+                        "anthropic/claude-sonnet-4-5-20250929",
+                        "anthropic/claude-sonnet-4-20250514",
+                        "anthropic/claude-3-7-sonnet-latest"
+                    ]
+                    for candidate in large_context_fallbacks:
+                        enqueue(candidate)
+                    if model_queue:
+                        continue
 
                 if forced_preferred and current_model == (model_manager.resolve_model_id(preferred_vision_model_id) or preferred_vision_model_id):
                     logger.warning(

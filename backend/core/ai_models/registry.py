@@ -2,7 +2,8 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-FREE_MODEL_ID = "anthropic/claude-haiku-4-5-20251001"
+# Default free-tier model prioritizes large context window to avoid overflow errors
+FREE_MODEL_ID = "anthropic/claude-3.5-haiku"
 
 # Set premium model ID based on environment
 PREMIUM_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929"
