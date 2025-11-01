@@ -14,7 +14,7 @@ const PUBLIC_ROUTES = [
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  // Skip public, static, and API routes early (align with Suna)
+  // Skip public, static, and API routes early (align with Prophet)
   if (
     PUBLIC_ROUTES.some(route => pathname.startsWith(route)) ||
     pathname.startsWith('/_next') ||

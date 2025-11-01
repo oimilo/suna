@@ -202,7 +202,7 @@ export const getProjects = async (): Promise<Project[]> => {
     }
 
     // Temporary fix: Try to get projects using user_id directly
-    // This matches the original Suna behavior
+    // This matches the original Prophet behavior
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -371,7 +371,7 @@ export const createProject = async (
     if (!userData.user)
       throw new Error('You must be logged in to create a project');
 
-    // Temporary: Use user_id as account_id (original Suna behavior)
+    // Temporary: Use user_id as account_id (original Prophet behavior)
     accountId = userData.user.id;
   }
 
@@ -498,7 +498,7 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
     return [];
   }
 
-  // Use user_id as account_id (original Suna behavior)
+  // Use user_id as account_id (original Prophet behavior)
   let query = supabase.from('threads').select('*');
 
   // Always filter by the current user's ID
@@ -560,7 +560,7 @@ export const createThread = async (projectId: string): Promise<Thread> => {
     throw new Error('You must be logged in to create a thread');
   }
 
-  // Temporary: Use user_id as account_id (original Suna behavior)
+  // Temporary: Use user_id as account_id (original Prophet behavior)
   const { data, error } = await supabase
     .from('threads')
     .insert({

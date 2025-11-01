@@ -6,12 +6,12 @@ import mailtrap as mt
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LOGO_URL = "https://i.postimg.cc/WdNtRx5Z/kortix-suna-logo.png"
-DEFAULT_APP_NAME = "Suna"
-DEFAULT_COMPANY_NAME = "Kortix"
-DEFAULT_APP_URL = "https://www.suna.so/"
-DEFAULT_DISCORD_URL = "https://discord.com/invite/FjD644cfcs"
-DEFAULT_CALENDAR_URL = "https://cal.com/team/kortix/enterprise-demo"
+DEFAULT_LOGO_URL = "https://prophet.build/assets/prophet-logo.png"
+DEFAULT_APP_NAME = "Prophet"
+DEFAULT_COMPANY_NAME = "Milo"
+DEFAULT_APP_URL = "https://prophet.build/"
+DEFAULT_DISCORD_URL = "https://discord.gg/milo"
+DEFAULT_CALENDAR_URL = "https://cal.com/team/milo/enterprise-demo"
 DEFAULT_WELCOME_FORM_URL = (
     "https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform"
 )
@@ -23,8 +23,8 @@ class EmailService:
 
     def __init__(self) -> None:
         self.api_token = os.getenv("MAILTRAP_API_TOKEN")
-        self.sender_email = os.getenv("MAILTRAP_SENDER_EMAIL", "dom@kortix.ai")
-        self.sender_name = os.getenv("MAILTRAP_SENDER_NAME", "Suna Team")
+        self.sender_email = os.getenv("MAILTRAP_SENDER_EMAIL", "dom@milo.com")
+        self.sender_name = os.getenv("MAILTRAP_SENDER_NAME", "Prophet Team")
 
         self.app_name = os.getenv("MAILTRAP_APP_NAME", DEFAULT_APP_NAME)
         self.company_name = os.getenv("MAILTRAP_COMPANY_NAME", DEFAULT_COMPANY_NAME)

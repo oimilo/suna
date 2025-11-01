@@ -205,9 +205,9 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
           const savedAgentId = localStorage.getItem('lastSelectedAgentId');
           if (savedAgentId) {
             if (savedAgentId === 'suna') {
-              const defaultSunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-              if (defaultSunaAgent) {
-                onAgentSelect(defaultSunaAgent.agent_id);
+              const defaultProphetAgent = agents.find(agent => agent.metadata?.is_suna_default);
+              if (defaultProphetAgent) {
+                onAgentSelect(defaultProphetAgent.agent_id);
               } else {
                 onAgentSelect(undefined);
               }
@@ -215,12 +215,12 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
               onAgentSelect(savedAgentId);
             }
           } else {
-            const defaultSunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-            if (defaultSunaAgent) {
-              console.log('Auto-selecting default Suna agent:', defaultSunaAgent.agent_id);
-              onAgentSelect(defaultSunaAgent.agent_id);
+            const defaultProphetAgent = agents.find(agent => agent.metadata?.is_suna_default);
+            if (defaultProphetAgent) {
+              console.log('Auto-selecting default Prophet agent:', defaultProphetAgent.agent_id);
+              onAgentSelect(defaultProphetAgent.agent_id);
             } else if (agents.length > 0) {
-              console.log('No default Suna agent found, selecting first available agent:', agents[0].agent_id);
+              console.log('No default Prophet agent found, selecting first available agent:', agents[0].agent_id);
               onAgentSelect(agents[0].agent_id);
             } else {
               console.log('No agents available, keeping undefined');
@@ -241,11 +241,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     // Save selected agent to localStorage whenever it changes
     useEffect(() => {
       if (typeof window !== 'undefined' && agents.length > 0) {
-        // Check if the selected agent is the Suna default agent
+        // Check if the selected agent is the Prophet default agent
         const selectedAgent = agents.find(agent => agent.agent_id === selectedAgentId);
         const isSunaAgent = selectedAgent?.metadata?.is_suna_default || selectedAgentId === undefined;
         
-        // Use 'suna' as a special key for the Suna default agent
+        // Use the legacy 'suna' key for the Prophet default agent to preserve existing localStorage entries
         const keyToStore = isSunaAgent ? 'suna' : selectedAgentId;
         console.log('Saving selected agent to localStorage:', keyToStore, 'for selectedAgentId:', selectedAgentId);
         localStorage.setItem('lastSelectedAgentId', keyToStore);

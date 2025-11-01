@@ -87,8 +87,8 @@ interface AgentCardProps {
   isPublishing?: boolean;
 }
 
-const MarketplaceBadge: React.FC<{ isKortixTeam?: boolean }> = ({ isKortixTeam }) => {
-  if (isKortixTeam) {
+const MarketplaceBadge: React.FC<{ isMiloTeam?: boolean }> = ({ isMiloTeam }) => {
+  if (isMiloTeam) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium">
         <CheckCircle className="h-3 w-3 opacity-60" />
@@ -414,7 +414,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   const renderBadge = () => {
     switch (mode) {
       case 'marketplace':
-        return <MarketplaceBadge isKortixTeam={(data as MarketplaceData).is_kortix_team} />;
+        return <MarketplaceBadge isMiloTeam={(data as MarketplaceData).is_kortix_team} />;
       case 'template':
         return <TemplateBadge isPublic={(data as TemplateData).is_public} />;
       case 'agent':

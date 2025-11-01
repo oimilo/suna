@@ -32,5 +32,5 @@ export function BrandLogo({ size = 24 }: BrandLogoProps) {
   );
 }
 
-// Keep KortixLogo export for backward compatibility
-export const KortixLogo = BrandLogo;
+// Milo-branded logo helper
+export const MiloLogo = BrandLogo;

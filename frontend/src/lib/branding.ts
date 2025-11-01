@@ -41,7 +41,7 @@ export const BRANDING = {
   // Social links
   social: {
     twitter: process.env.NEXT_PUBLIC_TWITTER_URL || "https://twitter.com/oimilo",
-    github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/oimilo/suna",
+    github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/oimilo/prophet",
     discord: process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/milo",
     linkedin: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/milo/",
     instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://instagram.com/oimilo"
@@ -51,7 +51,7 @@ export const BRANDING = {
   legal: {
     privacy: process.env.NEXT_PUBLIC_PRIVACY_URL || "https://prophet.build/legal?tab=privacy",
     terms: process.env.NEXT_PUBLIC_TERMS_URL || "https://prophet.build/legal?tab=terms",
-    license: process.env.NEXT_PUBLIC_LICENSE_URL || "https://github.com/oimilo/suna/blob/main/LICENSE"
+    license: process.env.NEXT_PUBLIC_LICENSE_URL || "https://github.com/oimilo/prophet/blob/main/LICENSE"
   },
   
   // Feature flags

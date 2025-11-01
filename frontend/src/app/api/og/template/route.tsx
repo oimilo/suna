@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
                 bottom: '40px',
               }}
             >
-              <span style={{ color: '#64748b', fontSize: '20px' }}>Kortix Suna</span>
+              <span style={{ color: '#64748b', fontSize: '20px' }}>Prophet</span>
               <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
             >
               🤖
             </div>
-            <h1 style={{ fontSize: '48px', fontWeight: 700 }}>Kortix Suna Templates</h1>
+            <h1 style={{ fontSize: '48px', fontWeight: 700 }}>Prophet Templates</h1>
             <p style={{ fontSize: '20px', color: '#94a3b8', maxWidth: '800px', textAlign: 'center' }}>
               Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.
             </p>

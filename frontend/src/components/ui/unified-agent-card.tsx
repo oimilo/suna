@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/brand-logo';
+import { MiloLogo } from '@/components/sidebar/brand-logo';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import Image from 'next/image';
@@ -127,7 +127,7 @@ const CardAvatar: React.FC<{
   size?: number;
   variant: AgentCardVariant;
 }> = ({ data, size = 48, variant }) => {
-  const isSunaAgent = data.metadata?.is_suna_default === true;
+  const isProphetDefaultAgent = data.metadata?.is_suna_default === true;
 
   if (variant === 'showcase') {
     return (
@@ -141,7 +141,7 @@ const CardAvatar: React.FC<{
     );
   }
 
-  if (isSunaAgent) {
+  if (isProphetDefaultAgent) {
     return <AgentAvatar isSunaDefault={true} size={size} className="border" />;
   }
 
@@ -161,14 +161,14 @@ const CardAvatar: React.FC<{
 };
 
 const MarketplaceBadge: React.FC<{
-  isKortixTeam?: boolean;
+  isMiloTeam?: boolean;
   isOwner?: boolean;
-}> = ({ isKortixTeam, isOwner }) => (
+}> = ({ isMiloTeam, isOwner }) => (
   <div className="flex gap-1 flex-wrap">
-    {isKortixTeam && (
+    {isMiloTeam && (
       <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-950 dark:text-blue-300">
         <CheckCircle className="h-3 w-3 mr-1" />
-        Kortix
+        Milo
       </Badge>
     )}
     {isOwner && (
@@ -284,7 +284,7 @@ const DashboardCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state }
             <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
             {data.metadata?.is_suna_default && (
               <Badge variant="secondary" className="gap-1 text-[0.65rem]">
-                <KortixLogo size={12} />
+                <MiloLogo size={12} />
                 Default
               </Badge>
             )}
@@ -331,7 +331,7 @@ const MarketplaceCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state
                 <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
                 {data.creator_name && <p className="text-xs text-muted-foreground">por {data.creator_name}</p>}
               </div>
-              <MarketplaceBadge isKortixTeam={data.is_kortix_team} isOwner={isOwner} />
+              <MarketplaceBadge isMiloTeam={data.is_kortix_team} isOwner={isOwner} />
             </div>
             {data.description && <p className="line-clamp-3 text-sm text-muted-foreground">{data.description}</p>}
           </div>
@@ -463,7 +463,7 @@ const AgentCardComponent: React.FC<UnifiedAgentCardProps> = ({ data, actions, st
             <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
             {data.metadata?.is_suna_default && (
               <Badge variant="secondary" className="gap-1 text-[0.65rem]">
-                <KortixLogo size={12} />
+                <MiloLogo size={12} />
                 Default
               </Badge>
             )}

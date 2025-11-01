@@ -18,7 +18,7 @@ export async function generateMetadata({
 
     const template = await response.json();
 
-    const title = `${template.name} - AI Agent Template | Kortix Suna`;
+    const title = `${template.name} - AI Agent Template | Prophet`;
     const description =
       template.description ||
       'Discover and install this AI agent template to enhance your workflow with powerful automation capabilities.';
@@ -50,7 +50,7 @@ export async function generateMetadata({
       },
     } satisfies Metadata;
   } catch (error) {
-    const fallbackTitle = 'AI Agent Template | Kortix Suna';
+    const fallbackTitle = 'AI Agent Template | Prophet';
     const fallbackDescription =
       'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.';
 
@@ -67,7 +67,7 @@ export async function generateMetadata({
             url: `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`,
             width: 1200,
             height: 630,
-            alt: 'Kortix Suna AI Agent Template',
+            alt: 'Prophet AI Agent Template',
           },
         ],
       },

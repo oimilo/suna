@@ -787,13 +787,13 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                     msg.type === 'assistant' && (msg.agents?.avatar || msg.agents?.avatar_color)
                                                                 );
 
-                                                                const isSunaAgent = firstAssistantWithAgent?.agents?.name === BRANDING.name;
+                                                                const isProphetAgent = firstAssistantWithAgent?.agents?.name === BRANDING.name;
 
                                                                 if (firstAssistantWithAgent?.agents?.avatar) {
                                                                     const avatar = firstAssistantWithAgent.agents.avatar;
                                                                     return (
                                                                         <>
-                                                                            {isSunaAgent ? (
+                                                                            {isProphetAgent ? (
                                                                                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
                                                                                     <BrandLogo size={16} />
                                                                                 </div>

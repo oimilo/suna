@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
 
-// Alinha com Suna: usar /billing/check e shape simplificado
+// Alinha com Prophet: usar /billing/check e shape simplificado
 export interface CreditsStatus {
   can_run: boolean;
   message: string;

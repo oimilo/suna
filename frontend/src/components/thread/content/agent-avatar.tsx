@@ -4,7 +4,7 @@ import React from 'react';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { icons } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/brand-logo';
+import { MiloLogo } from '@/components/sidebar/brand-logo';
 import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
 import type { Agent } from '@/hooks/react-query/agents/utils';
 
@@ -24,7 +24,7 @@ interface AgentAvatarProps {
 export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   agent: propAgent,
   agentId,
-  fallbackName = 'Suna',
+  fallbackName = 'Prophet',
   iconName: propIconName,
   iconColor: propIconColor,
   backgroundColor: propBackgroundColor,
@@ -61,7 +61,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         className={cn('flex items-center justify-center bg-muted border', className)}
         style={{ width: size, height: size, ...borderRadiusStyle }}
       >
-        <KortixLogo size={size * 0.6} />
+        <MiloLogo size={size * 0.6} />
       </div>
     );
   }
@@ -122,7 +122,7 @@ interface AgentNameProps {
 export const AgentName: React.FC<AgentNameProps> = ({
   agent: propAgent,
   agentId,
-  fallback = 'Suna',
+  fallback = 'Prophet',
 }) => {
   const cachedAgent = useAgentFromCache(!propAgent && agentId ? agentId : undefined);
   const agent = propAgent || cachedAgent;

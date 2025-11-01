@@ -32,7 +32,7 @@ export const JsonImportDialog: React.FC<JsonImportDialogProps> = ({
             Importar agente via JSON
           </DialogTitle>
           <DialogDescription>
-            Estamos finalizando a porta do fluxo completo de importação do Suna.
+            Estamos finalizando a porta do fluxo completo de importação do Prophet.
             Em breve você poderá colar o JSON exportado e restaurar o agente automaticamente.
           </DialogDescription>
         </DialogHeader>

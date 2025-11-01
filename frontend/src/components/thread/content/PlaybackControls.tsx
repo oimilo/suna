@@ -425,7 +425,7 @@ export const PlaybackControls = ({
                 <Link href="/">
                   <Image
                     src="/symbol.svg"
-                    alt="Kortix"
+                    alt="Milo"
                     width={16}
                     height={16}
                     className="object-contain"

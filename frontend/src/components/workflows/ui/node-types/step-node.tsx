@@ -31,7 +31,7 @@ import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
 
 // Import agent configuration components
-// PipedreamRegistry removed; align to Suna using only Custom MCP and backend tools
+// PipedreamRegistry removed; align to Prophet using only Custom MCP and backend tools
 import { CustomMCPDialog } from '@/components/agents/mcp/custom-mcp-dialog';
 import { useAgent, useUpdateAgent } from '@/hooks/react-query/agents/use-agents';
 import { useQueryClient } from '@tanstack/react-query';

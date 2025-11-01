@@ -272,7 +272,7 @@ export function AgentConfigurationDialog({
     if (!isNameEditable) {
       if (isSunaAgent) {
         toast.error("Name cannot be edited", {
-          description: "Suna's name is managed centrally and cannot be changed.",
+          description: "Prophet's name is managed centrally and cannot be changed.",
         });
       }
       setEditName(formData.name);
@@ -288,7 +288,7 @@ export function AgentConfigurationDialog({
     if (!isSystemPromptEditable) {
       if (isSunaAgent) {
         toast.error("System prompt cannot be edited", {
-          description: "Suna's system prompt is managed centrally.",
+          description: "Prophet's system prompt is managed centrally.",
         });
       }
       return;
@@ -305,7 +305,7 @@ export function AgentConfigurationDialog({
     if (!areToolsEditable) {
       if (isSunaAgent) {
         toast.error("Tools cannot be edited", {
-          description: "Suna's tools are managed centrally.",
+          description: "Prophet's tools are managed centrally.",
         });
       }
       return;
@@ -318,7 +318,7 @@ export function AgentConfigurationDialog({
     if (!isDefaultEditable) {
       if (isSunaAgent) {
         toast.error('Default status cannot be changed', {
-          description: "Suna's status is managed centrally.",
+          description: "Prophet's status is managed centrally.",
         });
       } else if (isViewingOldVersion) {
         toast.error('Default status cannot be changed while viewing an older version.');
@@ -744,7 +744,7 @@ export function AgentConfigurationDialog({
                       <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -770,7 +770,7 @@ export function AgentConfigurationDialog({
                       <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}

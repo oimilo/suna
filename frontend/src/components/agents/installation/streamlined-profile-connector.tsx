@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CredentialProfileSelector } from '@/components/workflows/CredentialProfileSelector';
-// Removed Pipedream connector and hooks to align with Suna
+// Removed Pipedream connector and hooks to align with Prophet
 import { useCreateCredentialProfile, type CreateCredentialProfileRequest } from '@/hooks/react-query/mcp/use-credential-profiles';
 import { useMCPServerDetails } from '@/hooks/react-query/mcp/use-mcp-servers';
 import type { SetupStep } from './types';
