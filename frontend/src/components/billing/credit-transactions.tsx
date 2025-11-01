@@ -119,7 +119,7 @@ export function CreditTransactions() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="rounded-3xl border border-border/60 shadow-sm">
         <CardHeader>
           <CardTitle>Histórico de Créditos</CardTitle>
           <CardDescription>Não foi possível carregar suas transações.</CardDescription>
@@ -137,7 +137,7 @@ export function CreditTransactions() {
 
   if (isLoading && !data) {
     return (
-      <Card>
+      <Card className="rounded-3xl border border-border/60 shadow-sm">
         <CardHeader>
           <CardTitle>Histórico de Créditos</CardTitle>
           <CardDescription>Carregando suas transações...</CardDescription>
@@ -156,7 +156,7 @@ export function CreditTransactions() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="rounded-3xl border border-border/60 shadow-sm">
         <CardHeader>
           <CardTitle>Resumo de Créditos</CardTitle>
           <CardDescription>Visão geral do saldo atual</CardDescription>
@@ -201,7 +201,7 @@ export function CreditTransactions() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-3xl border border-border/60 shadow-sm">
         <CardHeader className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -260,58 +260,60 @@ export function CreditTransactions() {
               <p className="text-sm">Nenhuma transação encontrada com os filtros atuais.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Saldo após</TableHead>
-                  <TableHead className="text-right">Tipo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => {
-                  const isPositive = transaction.amount >= 0;
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Saldo após</TableHead>
+                    <TableHead className="text-right">Tipo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => {
+                    const isPositive = transaction.amount >= 0;
 
-                  return (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                        {formatTimestamp(transaction.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm font-medium text-foreground">
-                            {transaction.description || 'Sem descrição'}
-                          </span>
-                          {transaction.metadata && (
-                            <span className="text-xs text-muted-foreground">
-                              {JSON.stringify(transaction.metadata)}
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {formatTimestamp(transaction.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-medium text-foreground">
+                              {transaction.description || 'Sem descrição'}
                             </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span
-                          className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500'}
-                        >
-                          {isPositive ? '+' : '-'}
-                          {formatCurrency(Math.abs(transaction.amount))}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">
-                        {formatCurrency(transaction.balance_after)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={TRANSACTION_BADGE_VARIANTS[transaction.type]}>
-                          {TYPE_FILTER_LABELS[transaction.type] ?? transaction.type}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                            {transaction.metadata && (
+                              <span className="text-xs text-muted-foreground">
+                                {JSON.stringify(transaction.metadata)}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500'}
+                          >
+                            {isPositive ? '+' : '-'}
+                            {formatCurrency(Math.abs(transaction.amount))}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                          {formatCurrency(transaction.balance_after)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={TRANSACTION_BADGE_VARIANTS[transaction.type]}>
+                            {TYPE_FILTER_LABELS[transaction.type] ?? transaction.type}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           <div className="flex items-center justify-between border-t pt-4">

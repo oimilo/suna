@@ -27,10 +27,10 @@ export default function PersonalAccountSettingsLayout({ children }: SettingsLayo
   ];
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="w-full space-y-6">
       <Separator className="border-subtle dark:border-white/10" />
-      <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 w-full max-w-7xl mx-auto px-4">
-        <aside className="lg:w-1/4 p-1">
+      <div className="mx-auto flex w-full max-w-6xl flex-col space-y-8 px-4 lg:flex-row lg:space-x-12 lg:space-y-0">
+        <aside className="lg:w-56 lg:flex-none">
           <nav className="flex flex-col space-y-1">
             {items.map((item) => {
               const isActive = pathname === item.href;
@@ -50,9 +50,7 @@ export default function PersonalAccountSettingsLayout({ children }: SettingsLayo
             })}
           </nav>
         </aside>
-        <div className="flex-1 bg-card dark:bg-background-secondary rounded-2xl p-6">
-          {children}
-        </div>
+        <div className="flex-1 pb-12 lg:pb-16">{children}</div>
       </div>
     </div>
   );
