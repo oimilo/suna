@@ -233,9 +233,9 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
 
   const handleSidePanelMaximize = useCallback(() => {
     console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
-    setIsPanelMinimized(false);
-    setIsSidePanelOpen(true);
-    setHasMainFileDetected(true);
+    setIsPanelMinimized(prev => (prev ? false : prev));
+    setIsSidePanelOpen(prev => (prev ? prev : true));
+    setHasMainFileDetected(prev => (prev ? prev : true));
   }, [setIsSidePanelOpen]);
 
   const handleSidePanelRequestOpen = useCallback(() => {

@@ -89,12 +89,15 @@ export function ToolCallSidePanel({
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
   const [navigationMode, setNavigationMode] = React.useState<'live' | 'manual'>('live');
-  const [toolCallSnapshots, setToolCallSnapshots] = React.useState<ToolCallSnapshot[]>([]);
+  const toolCallSnapshotsRef = React.useRef<ToolCallSnapshot[]>([]);
+  const toolCallSnapshotsLengthRef = React.useRef(0);
   const [isInitialized, setIsInitialized] = React.useState(false);
   const [mainDeliveryIndex, setMainDeliveryIndex] = React.useState<number>(-1);
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
   const [hasUserInteracted, setHasUserInteracted] = React.useState(false);
   const [isMaximized, setIsMaximized] = React.useState(false);
+  const autoOpenGuardRef = React.useRef<string | null>(null);
+  const lastRequestedOpenRef = React.useRef<string | null>(null);
 
   const isMobile = useIsMobile();
   
@@ -212,70 +215,93 @@ export function ToolCallSidePanel({
     return technicalOps.includes(name);
   };
 
-  React.useEffect(() => {
-    const previousSnapshots = toolCallSnapshots;
+  const buildAutoOpenKey = React.useCallback(
+    (snapshot: ToolCallSnapshot | undefined, reason: 'main' | 'delivery'): string | null => {
+      if (!snapshot) return null;
+      const rawResultContent = snapshot.toolCall.toolResult?.content;
+      const serializedContent = typeof rawResultContent === 'string'
+        ? rawResultContent
+        : JSON.stringify(rawResultContent ?? '');
+      const resultSignature = `${snapshot.toolCall.toolResult?.timestamp ?? 'no-result'}:${serializedContent}`;
+      return `${snapshot.id}:${reason}:${resultSignature}`;
+    },
+  []);
 
-    const nextSnapshots = toolCalls.map((toolCall, index) => {
+  const toolCallSnapshots = React.useMemo(() => {
+    const previousSnapshots = toolCallSnapshotsRef.current;
+    const prevLength = previousSnapshots.length;
+    const prevById = new Map(previousSnapshots.map(snapshot => [snapshot.id, snapshot]));
+
+    let changed = previousSnapshots.length !== toolCalls.length;
+    const nextSnapshots: ToolCallSnapshot[] = [];
+
+    for (let index = 0; index < toolCalls.length; index++) {
+      const toolCall = toolCalls[index];
       const stableIdBase =
         toolCall.assistantCall?.timestamp ||
         toolCall.toolResult?.timestamp ||
         `${toolCall.assistantCall?.name || 'tool'}-${index}`;
       const snapshotId = `${index}-${stableIdBase}`;
 
-      const existing = previousSnapshots.find(snapshot => snapshot.id === snapshotId);
-      if (existing) {
-        return {
-          ...existing,
-          toolCall,
-          index,
-        };
+      let snapshot: ToolCallSnapshot | undefined;
+
+      if (previousSnapshots[index] && previousSnapshots[index].id === snapshotId) {
+        snapshot = previousSnapshots[index];
+      } else if (prevById.has(snapshotId)) {
+        snapshot = prevById.get(snapshotId);
+        changed = true;
       }
 
-      return {
-        id: snapshotId,
-        toolCall,
-        index,
-        timestamp: Date.now(),
-      };
-    });
+      if (!snapshot) {
+        snapshot = {
+          id: snapshotId,
+          toolCall,
+          index,
+          timestamp: Date.now(),
+        };
+        changed = true;
+      } else {
+        snapshot.toolCall = toolCall;
+        if (snapshot.index !== index) {
+          snapshot.index = index;
+          changed = true;
+        }
+      }
 
-    const snapshotsChanged =
-      nextSnapshots.length !== previousSnapshots.length ||
-      nextSnapshots.some((snapshot, idx) => {
-        const prev = previousSnapshots[idx];
-        if (!prev) return true;
-        if (prev.id !== snapshot.id) return true;
-
-        const prevAssistant = prev.toolCall.assistantCall;
-        const nextAssistant = snapshot.toolCall.assistantCall;
-        if ((prevAssistant?.name ?? '') !== (nextAssistant?.name ?? '')) return true;
-        if ((prevAssistant?.content ?? '') !== (nextAssistant?.content ?? '')) return true;
-
-        const prevResult = prev.toolCall.toolResult;
-        const nextResult = snapshot.toolCall.toolResult;
-        if ((prevResult?.content ?? '') !== (nextResult?.content ?? '')) return true;
-        if ((prevResult?.isSuccess ?? null) !== (nextResult?.isSuccess ?? null)) return true;
-
-        return false;
-      });
-
-    if (snapshotsChanged) {
-      setToolCallSnapshots(nextSnapshots);
+      nextSnapshots.push(snapshot);
     }
 
-    const currentSnapshots = snapshotsChanged ? nextSnapshots : previousSnapshots;
-    const hasNewSnapshots = nextSnapshots.length > previousSnapshots.length;
+    if (!changed) {
+      return previousSnapshots;
+    }
 
-    if (!isInitialized && currentSnapshots.length > 0) {
-      const completedCount = currentSnapshots.filter(s =>
+    toolCallSnapshotsRef.current = nextSnapshots;
+    toolCallSnapshotsLengthRef.current = prevLength;
+    return nextSnapshots;
+  }, [toolCalls]);
+
+  React.useEffect(() => {
+    if (toolCallSnapshots.length === 0) {
+      autoOpenGuardRef.current = null;
+      lastRequestedOpenRef.current = null;
+    }
+  }, [toolCallSnapshots.length]);
+
+  React.useEffect(() => {
+    const previousLength = toolCallSnapshotsLengthRef.current;
+    const hasNewSnapshots = toolCallSnapshots.length > previousLength;
+    toolCallSnapshotsLengthRef.current = toolCallSnapshots.length;
+
+    if (!isInitialized && toolCallSnapshots.length > 0) {
+      const completedCount = toolCallSnapshots.filter(s =>
         s.toolCall.toolResult?.content &&
         s.toolCall.toolResult.content !== 'STREAMING'
       ).length;
 
       if (completedCount > 0) {
         let lastCompletedIndex = -1;
-        for (let i = currentSnapshots.length - 1; i >= 0; i--) {
-          const snapshot = currentSnapshots[i];
+        for (let i = toolCallSnapshots.length - 1; i >= 0; i--) {
+          const snapshot = toolCallSnapshots[i];
           if (snapshot.toolCall.toolResult?.content &&
             snapshot.toolCall.toolResult.content !== 'STREAMING') {
             lastCompletedIndex = i;
@@ -284,16 +310,16 @@ export function ToolCallSidePanel({
         }
         setInternalIndex(Math.max(0, lastCompletedIndex));
       } else {
-        setInternalIndex(Math.max(0, currentSnapshots.length - 1));
+        setInternalIndex(Math.max(0, toolCallSnapshots.length - 1));
       }
       setIsInitialized(true);
     } else if (hasNewSnapshots && navigationMode === 'live') {
-      const latestSnapshot = currentSnapshots[currentSnapshots.length - 1];
+      const latestSnapshot = toolCallSnapshots[toolCallSnapshots.length - 1];
       const isLatestStreaming = latestSnapshot?.toolCall.toolResult?.content === 'STREAMING';
       if (isLatestStreaming) {
         let lastCompletedIndex = -1;
-        for (let i = currentSnapshots.length - 1; i >= 0; i--) {
-          const snapshot = currentSnapshots[i];
+        for (let i = toolCallSnapshots.length - 1; i >= 0; i--) {
+          const snapshot = toolCallSnapshots[i];
           if (snapshot.toolCall.toolResult?.content &&
             snapshot.toolCall.toolResult.content !== 'STREAMING') {
             lastCompletedIndex = i;
@@ -303,15 +329,13 @@ export function ToolCallSidePanel({
         if (lastCompletedIndex >= 0) {
           setInternalIndex(lastCompletedIndex);
         } else {
-          setInternalIndex(currentSnapshots.length - 1);
+          setInternalIndex(toolCallSnapshots.length - 1);
         }
       } else {
-        setInternalIndex(currentSnapshots.length - 1);
+        setInternalIndex(toolCallSnapshots.length - 1);
       }
-    } else if (hasNewSnapshots && navigationMode === 'manual') {
-      // No-op: keep manual navigation when new snapshots arrive
     }
-  }, [toolCalls, navigationMode, toolCallSnapshots, isInitialized]);
+  }, [toolCallSnapshots, navigationMode, isInitialized]);
 
   React.useEffect(() => {
     if (isOpen && !isInitialized && toolCallSnapshots.length > 0) {
@@ -321,86 +345,90 @@ export function ToolCallSidePanel({
 
   // Detecta arquivo principal sempre que toolCalls mudar
   React.useEffect(() => {
-    // console.log('[DEBUG-USEEFFECT] ===== useEffect de detecção disparado =====');
-    // console.log('[DEBUG-USEEFFECT] toolCalls.length:', toolCalls.length);
-    
     if (!toolCalls.length) {
-      // console.log('[DEBUG-USEEFFECT] Sem tool calls, retornando');
+      setMainDeliveryIndex(prev => (prev === -1 ? prev : -1));
       return;
     }
-    
-    // Sempre detecta o arquivo principal para mostrar a tag "Principal"
+
     const mainIdx = detectMainFile(toolCalls);
-    // console.log('[DEBUG-USEEFFECT] Resultado de detectMainFile:', mainIdx);
-    
+
     if (mainIdx > -1) {
-      // console.log('[DEBUG-USEEFFECT] ✓ Arquivo principal detectado! Setando mainDeliveryIndex para:', mainIdx);
-      setMainDeliveryIndex(mainIdx);
+      setMainDeliveryIndex(prev => (prev === mainIdx ? prev : mainIdx));
     } else {
-      // console.log('[DEBUG-USEEFFECT] ✗ Nenhum arquivo principal. Resetando mainDeliveryIndex para -1');
-      setMainDeliveryIndex(-1);
+      setMainDeliveryIndex(prev => (prev === -1 ? prev : -1));
     }
-  }, [toolCalls, detectMainFile]); // Roda sempre que toolCalls mudar
+  }, [toolCalls, detectMainFile]);
 
   // Auto-abertura inteligente e navegação para arquivo principal
   React.useEffect(() => {
-    if (!toolCalls.length || hasUserInteracted || isLoading) return;
-
-    // console.log('[PANEL] 🔍 Verificando', toolCalls.length, 'toolCalls para entregas relevantes');
-    
-    // Detecta se há entregas relevantes (não apenas qualquer toolcall)
-    const hasDelivery = toolCalls.some(tc => isDeliveryMoment(tc));
-    
-    // console.log('[PANEL] Tem entrega relevante?', hasDelivery);
-    
-    if (hasDelivery) {
-      // Encontra o arquivo principal
-      const mainIdx = detectMainFile(toolCalls);
-      
-      // console.log('[PANEL] Índice do arquivo principal:', mainIdx);
-      
-      // Se não encontrou arquivo principal, procura por outras entregas importantes
-      const deliveryIdx = mainIdx > -1 ? mainIdx : toolCalls.findIndex(tc => {
-        const name = tc.assistantCall?.name;
-        return name === 'deploy' || name === 'expose_port' || 
-               name === 'create_credential_profile';
-      });
-      
-      if (deliveryIdx > -1) {
-        // console.log('[PANEL] 🎯 Navegando para entrega no índice:', deliveryIdx);
-        setMainDeliveryIndex(deliveryIdx);
-        // SEMPRE navega para a entrega principal quando detectada
-        setInternalIndex(deliveryIdx);
-        // Também atualiza o índice externo para sincronizar
-        onNavigate(deliveryIdx);
-        
-        // Se encontrou arquivo principal (mainIdx > -1), abre maximizado
-        if (mainIdx > -1) {
-          // console.log('[PANEL] ✅ Arquivo principal detectado no índice', mainIdx, '- abrindo workspace maximizado');
-          // Garante que o painel está aberto
-          if (!isOpen && onRequestOpen) {
-            // console.log('[PANEL] Abrindo painel para mostrar arquivo principal');
-            onRequestOpen();
-          }
-          // Chama callback para maximizar o painel quando arquivo principal é detectado
-          // Este callback SEMPRE deve ser chamado quando arquivo principal é detectado
-          if (onMainFileDetected) {
-            // console.log('[PANEL] 🚀 Chamando onMainFileDetected para maximizar workspace');
-            onMainFileDetected();
-          } else {
-            // console.log('[PANEL] ⚠️ onMainFileDetected não está definido!');
-          }
-        } else if (!isOpen && !isPanelMinimized && navigationMode === 'live' && onRequestOpen) {
-          // Para outras entregas que não são arquivo principal, apenas abre se necessário
-          // console.log('[PANEL] Solicitando abertura do painel');
-          onRequestOpen();
-        }
-      }
-    } else {
-      // console.log('[PANEL] Nenhuma entrega relevante detectada - mantendo painel como está');
+    if (hasUserInteracted || isLoading) {
+      return;
     }
-    // Se não há entregas relevantes, mantém o painel como está (fechado ou minimizado)
-  }, [toolCalls, hasUserInteracted, navigationMode, isOpen, isPanelMinimized, isLoading, onNavigate, onRequestOpen, onMainFileDetected, detectMainFile, isDeliveryMoment]);
+
+    if (!toolCallSnapshots.length) {
+      return;
+    }
+
+    const snapshotCalls = toolCallSnapshots.map(snapshot => snapshot.toolCall);
+    const mainIdx = detectMainFile(snapshotCalls);
+
+    const deliveryIdx = mainIdx > -1
+      ? mainIdx
+      : toolCallSnapshots.findIndex(snapshot => isDeliveryMoment(snapshot.toolCall));
+
+    if (deliveryIdx < 0) {
+      return;
+    }
+
+    const latestSnapshot = toolCallSnapshots[deliveryIdx];
+    const reason: 'main' | 'delivery' = mainIdx > -1 ? 'main' : 'delivery';
+    const autoOpenKey = buildAutoOpenKey(latestSnapshot, reason);
+
+    if (!autoOpenKey || autoOpenGuardRef.current === autoOpenKey) {
+      return;
+    }
+
+    autoOpenGuardRef.current = autoOpenKey;
+
+    if (internalIndex !== deliveryIdx) {
+      setInternalIndex(deliveryIdx);
+    }
+
+    if (currentIndex !== deliveryIdx) {
+      onNavigate(deliveryIdx);
+    }
+
+    if (deliveryIdx === toolCallSnapshots.length - 1 && navigationMode !== 'live') {
+      setNavigationMode('live');
+    } else if (deliveryIdx !== toolCallSnapshots.length - 1 && navigationMode !== 'manual') {
+      setNavigationMode('manual');
+    }
+
+    const shouldRequestOpen = !isOpen || isPanelMinimized;
+    if (shouldRequestOpen && onRequestOpen && lastRequestedOpenRef.current !== autoOpenKey) {
+      onRequestOpen();
+      lastRequestedOpenRef.current = autoOpenKey;
+    }
+
+    if (mainIdx > -1 && onMainFileDetected) {
+      onMainFileDetected();
+    }
+  }, [
+    toolCallSnapshots,
+    buildAutoOpenKey,
+    detectMainFile,
+    isDeliveryMoment,
+    hasUserInteracted,
+    isLoading,
+    internalIndex,
+    currentIndex,
+    navigationMode,
+    isOpen,
+    isPanelMinimized,
+    onNavigate,
+    onRequestOpen,
+    onMainFileDetected,
+  ]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];
