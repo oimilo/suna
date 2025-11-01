@@ -1,10 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
+import {
+  ToolCallInput,
+  shouldAutoOpenForStreaming,
+  normalizeToolName,
+} from '@/components/thread/tool-call-helpers';
 import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '../_types';
 import { safeJsonParse } from '@/components/thread/utils';
 import { ParsedContent } from '@/components/thread/types';
 import { extractToolName } from '@/components/thread/tool-views/xml-parser';
+import { extractAskData } from '@/components/thread/tool-views/ask-tool/_utils';
+
+const DEBUG_TOOLCALLS = process.env.NODE_ENV !== 'production';
+
+const logToolCallDebug = (...args: unknown[]) => {
+  if (DEBUG_TOOLCALLS) {
+    console.debug('[workspace:toolcalls]', ...args);
+  }
+};
+
+export const shouldFilterAskTool = (
+  toolName: string,
+  assistantContent: any,
+  toolContent: any,
+): boolean => {
+  if (toolName.toLowerCase() !== 'ask') {
+    return false;
+  }
+  const { attachments } = extractAskData(assistantContent, toolContent, true);
+  return !attachments || attachments.length === 0;
+};
 
 interface UseToolCallsReturn {
   toolCalls: ToolCallInput[];
@@ -123,7 +148,7 @@ export function useToolCalls(
         
         if (toolContentParsed) {
           // New format detected
-          toolName = toolContentParsed.toolName.replace(/_/g, '-').toLowerCase();
+          toolName = normalizeToolName(toolContentParsed.toolName);
           
           // Extract success status from the result
           if (toolContentParsed.result && typeof toolContentParsed.result === 'object') {
@@ -154,7 +179,7 @@ export function useToolCalls(
               ) {
                 const firstToolCall = assistantContentParsed.tool_calls[0];
                 const rawName = firstToolCall.function?.name || firstToolCall.name || 'unknown';
-                toolName = rawName.replace(/_/g, '-').toLowerCase();
+                toolName = normalizeToolName(rawName);
               }
             }
           } catch { }
@@ -182,6 +207,14 @@ export function useToolCalls(
               }
             }
           } catch { }
+        }
+
+        if (shouldFilterAskTool(toolName, assistantMsg.content, resultMessage.content)) {
+          logToolCallDebug('ask-tool-filtered', {
+            assistantMessageId: assistantMsg.message_id,
+            reason: 'missing-attachments',
+          });
+          return;
         }
 
         const toolIndex = historicalToolPairs.length;
@@ -289,6 +322,10 @@ export function useToolCalls(
       }
       
       toast.info('Não foi possível encontrar detalhes para esta chamada de ferramenta.');
+      logToolCallDebug('tool-click-miss', {
+        assistantMessageId: clickedAssistantMessageId,
+        toolName: clickedToolName,
+      });
     }
   }, [messages, toolCalls]);
 
@@ -298,7 +335,7 @@ export function useToolCalls(
 
       // Get the raw tool name and ensure it uses hyphens
       const rawToolName = toolCall.name || toolCall.xml_tag_name || 'Unknown Tool';
-      const toolName = rawToolName.replace(/_/g, '-').toLowerCase();
+      const toolName = normalizeToolName(rawToolName);
 
       console.log('[STREAM] Received tool call:', toolName, '(raw:', rawToolName, ')');
 
@@ -382,57 +419,44 @@ export function useToolCalls(
         });
       }
       
-      // Only auto-open panel for specific important tools, not for every file operation
-      // For file operations, check if it's a main deliverable file
-      const shouldAutoOpen = 
-        toolName === 'deploy' || 
+      const importantToolAutoOpen =
+        toolName === 'deploy' ||
         toolName === 'expose-port' ||
         toolName === 'create_credential_profile' ||
         toolName === 'connect_credential_profile';
-      
-      // For file operations, check if it's creating a main file
-      if ((toolName === 'create-file' || toolName === 'full-file-rewrite') && formattedContent) {
-        // Extract filename from the content
-        const fileNameMatch = formattedContent.match(/file_path[="]+"([^"]+)"|target_file[="]+"([^"]+)"/);
-        if (fileNameMatch) {
-          const fullPath = fileNameMatch[1] || fileNameMatch[2];
-          const fileName = fullPath?.split('/').pop() || fullPath?.split('\\').pop() || '';
-          
-          // Main file patterns - same as in ToolCallSidePanel
-          const mainFilePatterns = [
-            'index.html', 'home.html', 'main.html', 'app.html',
-            'game.html', 'play.html', 'main.js',
-            'main.py', 'app.py', 'server.py', 'bot.py', 'script.py',
-            'index.js', 'app.js', 'server.js', 'index.ts',
-            'dashboard.html', 'admin.html', 'panel.html',
-            'webhook.js', 'api.py', 'handler.js', 'function.js'
-          ];
-          
-          // Auxiliary files that should NOT trigger opening
-          const auxiliaryFiles = [
-            'style.css', 'styles.css', 'config.js', 'config.json', 
-            'package.json', 'requirements.txt', '.env', '.gitignore',
-            'README.md', 'Dockerfile', 'docker-compose.yml',
-            'tsconfig.json', 'webpack.config.js', 'babel.config.js'
-          ];
-          
-          const isAuxiliary = auxiliaryFiles.some(aux => 
-            fileName === aux || 
-            fileName.includes('test.') || 
-            fileName.includes('spec.') || 
-            fileName.includes('_test.') || 
-            fileName.includes('.test.')
-          );
-          
-          if (!isAuxiliary && mainFilePatterns.includes(fileName)) {
-            console.log('[STREAM] Main file detected:', fileName, '- opening panel');
-            setIsSidePanelOpen(true);
-          } else {
-            console.log('[STREAM] Not a main file:', fileName, '- panel remains closed');
-          }
-        }
-      } else if (shouldAutoOpen) {
+
+      if (importantToolAutoOpen) {
         setIsSidePanelOpen(true);
+        logToolCallDebug('auto-open', {
+          reason: 'streaming-important-tool',
+          toolName,
+        });
+      } else if (
+        (toolName === 'create-file' ||
+          toolName === 'full-file-rewrite' ||
+          toolName === 'edit-file' ||
+          toolName === 'create-slide' ||
+          toolName === 'validate-slide') &&
+        formattedContent
+      ) {
+        const decision = shouldAutoOpenForStreaming(toolName, formattedContent, {
+          index: toolCalls.length,
+          totalCalls: toolCalls.length + 1,
+        });
+
+        if (decision.shouldOpen) {
+          console.log('[STREAM] Main file detected via heurística:', decision.fileName, '- abrindo painel');
+          logToolCallDebug('auto-open', {
+            reason: 'streaming-main-file-heuristic',
+            fileName: decision.fileName,
+            filePath: decision.filePath,
+            score: decision.score,
+            toolName,
+          });
+          setIsSidePanelOpen(true);
+        } else if (decision.fileName) {
+          console.log('[STREAM] Heurística reprovou', decision.fileName, '- painel permanece fechado');
+        }
       }
     },
     [toolCalls.length],

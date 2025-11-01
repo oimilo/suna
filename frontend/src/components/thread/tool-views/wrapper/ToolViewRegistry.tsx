@@ -49,7 +49,7 @@ import { PresentPresentationToolView } from '../presentation-tools/PresentPresen
 import { SheetsToolView } from '../sheets-tools/sheets-tool-view';
 import { GetProjectStructureView } from '../web-dev/GetProjectStructureView';
 import { ImageEditGenerateToolView } from '../image-edit-generate-tool/ImageEditGenerateToolView';
-const DesignerToolView = GenericToolView;
+import { DesignerToolView } from '../designer-tool/DesignerToolView';
 import { UploadFileToolView } from '../UploadFileToolView';
 import { DeployToolView } from '../DeployToolView';
 import { DocsToolView, ListDocumentsToolView, DeleteDocumentToolView } from '../docs-tool';
@@ -61,12 +61,12 @@ import { DiscoverMcpToolsForAgentToolView } from '../discover-mcp-tools-for-agen
 const DiscoverUserMcpServersToolView = GenericToolView;
 const ConfigureAgentIntegrationToolView = GenericToolView;
 import CreateAgentScheduledTriggerToolView from '../create-agent-scheduled-trigger/create-agent-scheduled-trigger';
-const MakeCallToolView = GenericToolView;
-const CallStatusToolView = GenericToolView;
-const EndCallToolView = GenericToolView;
-const ListCallsToolView = GenericToolView;
-const MonitorCallToolView = GenericToolView;
-const WaitForCallCompletionToolView = GenericToolView;
+import { MakeCallToolView } from '../vapi-call/MakeCallToolView';
+import { CallStatusToolView } from '../vapi-call/CallStatusToolView';
+import { EndCallToolView } from '../vapi-call/EndCallToolView';
+import { ListCallsToolView } from '../vapi-call/ListCallsToolView';
+import { MonitorCallToolView } from '../vapi-call/MonitorCallToolView';
+import { WaitForCallCompletionToolView } from '../vapi-call/WaitForCallCompletionToolView';
 import { createPresentationViewerToolContent, parsePresentationSlidePath } from '../utils/presentation-utils';
 import { extractToolData } from '../utils';
 const KbToolView = GenericToolView;

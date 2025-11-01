@@ -5,20 +5,9 @@ import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils'
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BRANDING } from '@/lib/branding';
+import type { ToolCallInput } from '../tool-call-helpers';
 
-export interface ToolCallInput {
-  assistantCall: {
-    content?: string;
-    name?: string;
-    timestamp?: string;
-  };
-  toolResult?: {
-    content?: string;
-    isSuccess?: boolean;
-    timestamp?: string;
-  };
-  messages?: any[];
-}
+export type { ToolCallInput } from '../tool-call-helpers';
 
 interface FloatingToolPreviewProps {
   toolCalls: ToolCallInput[];
