@@ -213,27 +213,69 @@ export function ToolCallSidePanel({
   };
 
   React.useEffect(() => {
-    const newSnapshots = toolCalls.map((toolCall, index) => ({
-      id: `${index}-${toolCall.assistantCall.timestamp || Date.now()}`,
-      toolCall,
-      index,
-      timestamp: Date.now(),
-    }));
+    const previousSnapshots = toolCallSnapshots;
 
-    const hadSnapshots = toolCallSnapshots.length > 0;
-    const hasNewSnapshots = newSnapshots.length > toolCallSnapshots.length;
-    setToolCallSnapshots(newSnapshots);
+    const nextSnapshots = toolCalls.map((toolCall, index) => {
+      const stableIdBase =
+        toolCall.assistantCall?.timestamp ||
+        toolCall.toolResult?.timestamp ||
+        `${toolCall.assistantCall?.name || 'tool'}-${index}`;
+      const snapshotId = `${index}-${stableIdBase}`;
 
-    if (!isInitialized && newSnapshots.length > 0) {
-      const completedCount = newSnapshots.filter(s =>
+      const existing = previousSnapshots.find(snapshot => snapshot.id === snapshotId);
+      if (existing) {
+        return {
+          ...existing,
+          toolCall,
+          index,
+        };
+      }
+
+      return {
+        id: snapshotId,
+        toolCall,
+        index,
+        timestamp: Date.now(),
+      };
+    });
+
+    const snapshotsChanged =
+      nextSnapshots.length !== previousSnapshots.length ||
+      nextSnapshots.some((snapshot, idx) => {
+        const prev = previousSnapshots[idx];
+        if (!prev) return true;
+        if (prev.id !== snapshot.id) return true;
+
+        const prevAssistant = prev.toolCall.assistantCall;
+        const nextAssistant = snapshot.toolCall.assistantCall;
+        if ((prevAssistant?.name ?? '') !== (nextAssistant?.name ?? '')) return true;
+        if ((prevAssistant?.content ?? '') !== (nextAssistant?.content ?? '')) return true;
+
+        const prevResult = prev.toolCall.toolResult;
+        const nextResult = snapshot.toolCall.toolResult;
+        if ((prevResult?.content ?? '') !== (nextResult?.content ?? '')) return true;
+        if ((prevResult?.isSuccess ?? null) !== (nextResult?.isSuccess ?? null)) return true;
+
+        return false;
+      });
+
+    if (snapshotsChanged) {
+      setToolCallSnapshots(nextSnapshots);
+    }
+
+    const currentSnapshots = snapshotsChanged ? nextSnapshots : previousSnapshots;
+    const hasNewSnapshots = nextSnapshots.length > previousSnapshots.length;
+
+    if (!isInitialized && currentSnapshots.length > 0) {
+      const completedCount = currentSnapshots.filter(s =>
         s.toolCall.toolResult?.content &&
         s.toolCall.toolResult.content !== 'STREAMING'
       ).length;
 
       if (completedCount > 0) {
         let lastCompletedIndex = -1;
-        for (let i = newSnapshots.length - 1; i >= 0; i--) {
-          const snapshot = newSnapshots[i];
+        for (let i = currentSnapshots.length - 1; i >= 0; i--) {
+          const snapshot = currentSnapshots[i];
           if (snapshot.toolCall.toolResult?.content &&
             snapshot.toolCall.toolResult.content !== 'STREAMING') {
             lastCompletedIndex = i;
@@ -242,16 +284,16 @@ export function ToolCallSidePanel({
         }
         setInternalIndex(Math.max(0, lastCompletedIndex));
       } else {
-        setInternalIndex(Math.max(0, newSnapshots.length - 1));
+        setInternalIndex(Math.max(0, currentSnapshots.length - 1));
       }
       setIsInitialized(true);
     } else if (hasNewSnapshots && navigationMode === 'live') {
-      const latestSnapshot = newSnapshots[newSnapshots.length - 1];
+      const latestSnapshot = currentSnapshots[currentSnapshots.length - 1];
       const isLatestStreaming = latestSnapshot?.toolCall.toolResult?.content === 'STREAMING';
       if (isLatestStreaming) {
         let lastCompletedIndex = -1;
-        for (let i = newSnapshots.length - 1; i >= 0; i--) {
-          const snapshot = newSnapshots[i];
+        for (let i = currentSnapshots.length - 1; i >= 0; i--) {
+          const snapshot = currentSnapshots[i];
           if (snapshot.toolCall.toolResult?.content &&
             snapshot.toolCall.toolResult.content !== 'STREAMING') {
             lastCompletedIndex = i;
@@ -261,14 +303,15 @@ export function ToolCallSidePanel({
         if (lastCompletedIndex >= 0) {
           setInternalIndex(lastCompletedIndex);
         } else {
-          setInternalIndex(newSnapshots.length - 1);
+          setInternalIndex(currentSnapshots.length - 1);
         }
       } else {
-        setInternalIndex(newSnapshots.length - 1);
+        setInternalIndex(currentSnapshots.length - 1);
       }
     } else if (hasNewSnapshots && navigationMode === 'manual') {
+      // No-op: keep manual navigation when new snapshots arrive
     }
-  }, [toolCalls, navigationMode, toolCallSnapshots.length, isInitialized]);
+  }, [toolCalls, navigationMode, toolCallSnapshots, isInitialized]);
 
   React.useEffect(() => {
     if (isOpen && !isInitialized && toolCallSnapshots.length > 0) {
