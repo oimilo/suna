@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { backendApi } from '@/lib/api-client';
+import { billingKeys } from '../use-billing-v2';
 
 export interface CreditTransaction {
   id: string;
@@ -60,7 +61,7 @@ export interface TransactionsSummary {
 
 export function useTransactions(limit = 50, offset = 0, typeFilter?: string) {
   return useQuery<TransactionsResponse>({
-    queryKey: ['billing', 'transactions', limit, offset, typeFilter],
+    queryKey: billingKeys.transactions(limit, offset, typeFilter),
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: limit.toString(),
@@ -84,7 +85,7 @@ export function useTransactions(limit = 50, offset = 0, typeFilter?: string) {
 
 export function useTransactionsSummary(days = 30) {
   return useQuery<TransactionsSummary>({
-    queryKey: ['billing', 'transactions', 'summary', days],
+    queryKey: billingKeys.usageHistory(days),
     queryFn: async () => {
       const response = await backendApi.get(`/billing/transactions/summary?days=${days}`);
       if (response.error) {

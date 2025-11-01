@@ -213,5 +213,9 @@ export const isLocalMode = (): boolean => {
   return config.IS_LOCAL;
 };
 
+export const isStagingMode = (): boolean => {
+  return config.ENV_MODE === EnvMode.STAGING;
+};
+
 // Export subscription tier type for typing elsewhere
 export type SubscriptionTier = keyof typeof PROD_TIERS;

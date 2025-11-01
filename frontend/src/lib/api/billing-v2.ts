@@ -241,10 +241,17 @@ export const billingApiV2 = {
     return response.data!;
   },
 
-  async getTransactions(limit = 50, offset = 0) {
-    const response = await backendApi.get<{ transactions: unknown[]; count: number }>(
-      `/billing/transactions?limit=${limit}&offset=${offset}`
-    );
+  async getTransactions(limit = 50, offset = 0, typeFilter?: string) {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+
+    if (typeFilter) {
+      params.append('type_filter', typeFilter);
+    }
+
+    const response = await backendApi.get(`/billing/transactions?${params.toString()}`);
     if (response.error) throw response.error;
     return response.data!;
   },
