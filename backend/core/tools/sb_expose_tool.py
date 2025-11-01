@@ -2,8 +2,8 @@ from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 import asyncio
-import time
 import os
+from urllib.parse import urlparse
 
 @tool_metadata(
     display_name="Port Exposure",
@@ -68,10 +68,7 @@ class SandboxExposeTool(SandboxToolsBase):
             original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
 
             # Build unique per-project proxy URL (backup logic)
-            base_host = os.getenv('NEXT_PUBLIC_APP_URL') or os.getenv('APP_URL') or 'https://www.prophet.build'
-            base_host = base_host.rstrip('/')
-            # Route supports /api/preview/:projectId/p/:port/*
-            proxy_url = f"{base_host}/api/preview/{self.project_id}/p/{port}/"
+            proxy_url = f"{self._get_proxy_base_url()}/api/preview/{self.project_id}/p/{port}/"
 
             return self.success_response({
                 "url": original_url,
@@ -88,3 +85,39 @@ class SandboxExposeTool(SandboxToolsBase):
             return self.fail_response(f"Invalid port number: {port}. Must be a valid integer between 1 and 65535.")
         except Exception as e:
             return self.fail_response(f"Error exposing port {port}: {str(e)}")
+
+    def _get_proxy_base_url(self) -> str:
+        candidates = [
+            os.getenv("NEXT_PUBLIC_BACKEND_URL"),
+            os.getenv("BACKEND_URL"),
+            os.getenv("APP_BACKEND_URL"),
+            os.getenv("NEXT_PUBLIC_APP_URL"),
+            os.getenv("APP_URL"),
+        ]
+
+        for raw_candidate in candidates:
+            if not raw_candidate:
+                continue
+
+            candidate = raw_candidate.strip()
+            if not candidate:
+                continue
+
+            if not candidate.startswith("http://") and not candidate.startswith("https://"):
+                candidate = f"https://{candidate}"
+
+            parsed = urlparse(candidate)
+            if not parsed.netloc:
+                continue
+
+            base = f"{parsed.scheme or 'https'}://{parsed.netloc}"
+
+            path = parsed.path.rstrip('/') if parsed.path else ""
+            if path.endswith('/api'):
+                path = path[:-4]
+            if path:
+                base = f"{base}{path}"
+
+            return base.rstrip('/')
+
+        return "https://www.prophet.build"
