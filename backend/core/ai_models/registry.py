@@ -55,7 +55,7 @@ class ModelRegistry:
                 "claude-4.5-haiku",
                 "anthropic/claude-4.5-haiku"
             ],
-            context_window=1_000_000,
+            context_window=200_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
