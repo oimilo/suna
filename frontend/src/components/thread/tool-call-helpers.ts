@@ -23,6 +23,7 @@ export const FILE_PATTERNS = {
   dashboard: ['dashboard.html', 'admin.html', 'panel.html', 'index.html'],
   api: ['webhook.js', 'api.py', 'handler.js', 'function.js'],
   presentation: ['metadata.json'],
+  landing: ['landing.html', 'landing_page.html', 'landing-page.html', 'homepage.html'],
 } as const;
 
 export const MAIN_FILE_NAME_SET = new Set(
@@ -494,7 +495,15 @@ export const shouldAutoOpenForStreaming = (
 
   const passesScore = score >= MAIN_FILE_SCORE_THRESHOLD;
   const nameMatch = isMainFileName(fileName);
-  const shouldOpen = passesScore || nameMatch;
+  const baseShouldOpen = passesScore || nameMatch;
+
+  const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+  const prioritizedExtensions = new Set(['html', 'htm', 'tsx', 'jsx', 'mdx']);
+  const extensionBoost =
+    !baseShouldOpen && prioritizedExtensions.has(extension) &&
+    (normalizedName === 'create-file' || normalizedName === 'full-file-rewrite');
+
+  const shouldOpen = baseShouldOpen || extensionBoost;
 
   logMainFileDebug('streaming-auto-open-check', {
     toolName: normalizedName,
@@ -503,6 +512,7 @@ export const shouldAutoOpenForStreaming = (
     score,
     passesScore,
     nameMatch,
+    extensionBoost,
     shouldOpen,
   });
 
@@ -511,7 +521,13 @@ export const shouldAutoOpenForStreaming = (
     fileName,
     filePath,
     score,
-    reason: shouldOpen ? (passesScore ? 'score-threshold' : 'name-keyword') : 'score-too-low',
+    reason: shouldOpen
+      ? (passesScore
+        ? 'score-threshold'
+        : nameMatch
+          ? 'name-keyword'
+          : 'priority-extension')
+      : 'score-too-low',
   };
 };
 

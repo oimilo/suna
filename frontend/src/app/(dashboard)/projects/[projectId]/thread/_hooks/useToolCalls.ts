@@ -101,6 +101,7 @@ export function useToolCalls(
   const [externalNavIndex, setExternalNavIndex] = useState<number | undefined>(undefined);
   const userClosedPanelRef = useRef(false);
   const userNavigatedRef = useRef(false); // Track if user manually navigated
+  const lastHistoricalSignatureRef = useRef<string>('');
 
   const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prevIsOpen) => {
@@ -123,7 +124,7 @@ export function useToolCalls(
   // Create a map of assistant message IDs to their tool call indices for faster lookup
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
+  const buildHistoricalToolPairs = useCallback(() => {
     const historicalToolPairs: ToolCallInput[] = [];
     const messageIdToIndex = new Map<string, number>();
     const assistantMessages = messages.filter(m => m.type === 'assistant' && m.message_id);
@@ -238,8 +239,69 @@ export function useToolCalls(
       }
     });
 
+    return { historicalToolPairs, messageIdToIndex };
+  }, [messages]);
+
+  const getToolCallsSignature = useCallback((pairs: ToolCallInput[]) => {
+    if (pairs.length === 0) {
+      return 'empty';
+    }
+
+    const serializeSegment = (value: string | undefined): string => {
+      if (!value) {
+        return '∅';
+      }
+
+      const normalized = value.trim();
+      if (normalized.length <= 160) {
+        return normalized;
+      }
+
+      const start = normalized.slice(0, 80);
+      const end = normalized.slice(-40);
+      return `${start}…${end}`;
+    };
+
+    return pairs
+      .map(pair => {
+        const assistant = pair.assistantCall;
+        const toolResult = pair.toolResult;
+        const assistantContent = typeof assistant?.content === 'string'
+          ? assistant.content
+          : JSON.stringify(assistant?.content ?? '');
+        const toolResultContent = typeof toolResult?.content === 'string'
+          ? toolResult.content
+          : JSON.stringify(toolResult?.content ?? '');
+        return [
+          assistant?.name ?? 'unknown',
+          assistant?.timestamp ?? 'no-timestamp',
+          serializeSegment(assistantContent),
+          toolResult?.timestamp ?? 'no-result-ts',
+          serializeSegment(toolResultContent),
+        ].join('|');
+      })
+      .join('::');
+  }, []);
+
+  useEffect(() => {
+    const { historicalToolPairs, messageIdToIndex } = buildHistoricalToolPairs();
+    const signature = getToolCallsSignature(historicalToolPairs);
+
     assistantMessageToToolIndex.current = messageIdToIndex;
-    setToolCalls(historicalToolPairs);
+
+    let didUpdateToolCalls = false;
+    setToolCalls(prev => {
+      if (lastHistoricalSignatureRef.current === signature) {
+        return prev;
+      }
+      didUpdateToolCalls = true;
+      lastHistoricalSignatureRef.current = signature;
+      return historicalToolPairs;
+    });
+
+    if (!didUpdateToolCalls) {
+      return;
+    }
 
     if (historicalToolPairs.length > 0) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
@@ -251,7 +313,7 @@ export function useToolCalls(
       // O painel agora só abre automaticamente quando o ToolCallSidePanel
       // detecta uma entrega relevante (arquivo principal, deploy, etc.)
     }
-  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus]);
+  }, [buildHistoricalToolPairs, getToolCallsSignature, agentStatus, isSidePanelOpen]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
