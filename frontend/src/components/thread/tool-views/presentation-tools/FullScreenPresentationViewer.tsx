@@ -75,9 +75,11 @@ export function FullScreenPresentationViewer({
   // Create a stable refresh timestamp when metadata changes (like PresentationViewer)
   const refreshTimestamp = useMemo(() => metadata?.updated_at || Date.now(), [metadata?.updated_at]);
 
-  const slides = metadata ? Object.entries(metadata.slides)
-    .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
-    .sort((a, b) => a.number - b.number) : [];
+  const slides = metadata && metadata.slides && typeof metadata.slides === 'object'
+    ? Object.entries(metadata.slides)
+        .map(([num, slide]) => ({ number: parseInt(num, 10), ...slide }))
+        .sort((a, b) => a.number - b.number)
+    : [];
 
   const totalSlides = slides.length;
 
@@ -108,9 +110,19 @@ export function FullScreenPresentationViewer({
       const sanitizedPresentationName = sanitizeFilename(presentationName);
       
       const metadataUrl = constructHtmlPreviewUrl(
-        sandboxUrl, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
+        sandboxUrl,
+        `presentations/${sanitizedPresentationName}/metadata.json`,
       );
+
+      if (!metadataUrl) {
+        console.error('FullScreenPresentationViewer: invalid metadata URL', {
+          sandboxUrl,
+          sanitizedPresentationName,
+        });
+        setError('Não foi possível carregar a apresentação (URL inválida).');
+        setIsLoading(false);
+        return;
+      }
       
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
@@ -334,16 +346,24 @@ export function FullScreenPresentationViewer({
           return;
         }
 
-        const resizeObserver = new ResizeObserver(() => {
+        if (typeof ResizeObserver !== 'undefined') {
+          const resizeObserver = new ResizeObserver(() => {
+            updateScale();
+          });
+
+          resizeObserver.observe(container);
           updateScale();
-        });
 
-        resizeObserver.observe(container);
+          window.addEventListener('resize', updateScale);
+          return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateScale);
+          };
+        }
+
         updateScale();
-
         window.addEventListener('resize', updateScale);
         return () => {
-          resizeObserver.disconnect();
           window.removeEventListener('resize', updateScale);
         };
       }, [updateScale]);
