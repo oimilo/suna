@@ -2,13 +2,10 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-FREE_MODEL_ID = "deepseek/deepseek-chat-v3.1"
+FREE_MODEL_ID = "anthropic/claude-4.5-haiku"
 
 # Set premium model ID based on environment
-if config.ENV_MODE == EnvMode.LOCAL:
-    PREMIUM_MODEL_ID = "anthropic/claude-sonnet-4-20250514"
-else:  # STAGING or PRODUCTION
-    PREMIUM_MODEL_ID = "bedrock/anthropic.claude-sonnet-4-20250514-v1:0"
+PREMIUM_MODEL_ID = "anthropic/claude-4.5-sonnet"
 
 is_local = config.ENV_MODE == EnvMode.LOCAL
 
@@ -21,10 +18,18 @@ class ModelRegistry:
     def _initialize_models(self):
         
         self.register(Model(
-            id="anthropic/claude-sonnet-4-5-20250929" if is_local else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-            name="Sonnet 4.5",
+            id="anthropic/claude-4.5-sonnet",
+            name="Claude 4.5 Sonnet",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0"],
+            aliases=[
+                "claude-4.5-sonnet",
+                "Claude 4.5 Sonnet",
+                "anthropic/claude-sonnet-4-5-20250929",
+                "claude-sonnet-4-5-20250929",
+                "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+                "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0"
+            ],
             context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -40,11 +45,36 @@ class ModelRegistry:
             priority=101,
             recommended=True,
             enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
-                },
-            )
+            config=ModelConfig()
+        ))
+
+        self.register(Model(
+            id="anthropic/claude-4.5-haiku",
+            name="Claude 4.5 Haiku",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=[
+                "claude-4.5-haiku",
+                "Claude 4.5 Haiku",
+                "anthropic/claude-haiku-4-5-20250929",
+                "claude-haiku-4-5-20250929",
+                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-haiku-4-5-20250929-v1:0",
+                "bedrock/anthropic.claude-haiku-4-5-20250929-v1:0"
+            ],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00
+            ),
+            tier_availability=["free", "paid"],
+            priority=100,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
         ))
         
         self.register(Model(

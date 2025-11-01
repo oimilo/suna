@@ -6,10 +6,10 @@ import { isLocalMode } from '@/lib/config';
 import { useAvailableModels } from '@/hooks/react-query/subscriptions/use-model';
 import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscription-utils';
 
-export const STORAGE_KEY_MODEL = 'suna-preferred-model-v6'; // Changed version - Claude Sonnet 4 + DeepSeek V3.1
+export const STORAGE_KEY_MODEL = 'suna-preferred-model-v7'; // Atualizado para Claude 4.5 (Haiku/Sonnet)
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514'; // Claude 4 Sonnet - Agente avançado
-export const DEFAULT_FREE_MODEL_ID = 'deepseek/deepseek-chat-v3.1'; // DeepSeek V3.1 - Agente padrão
+export const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-4.5-sonnet'; // Claude 4.5 Sonnet - Agente avançado
+export const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-4.5-haiku'; // Claude 4.5 Haiku - Agente padrão
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
 
@@ -30,21 +30,58 @@ export interface CustomModel {
 
 // SINGLE SOURCE OF TRUTH for all model data - aligned with backend constants
 export const MODELS = {
-  // Agente padrão - DeepSeek V3.1 (Free for all users)
+  // Agente padrão - Claude 4.5 Haiku
+  [DEFAULT_FREE_MODEL_ID]: {
+    tier: 'free',
+    priority: 95,
+    recommended: true,
+    lowQuality: false,
+  },
+  'claude-4.5-haiku': {
+    tier: 'free',
+    priority: 94,
+    recommended: true,
+    lowQuality: false,
+  },
+  'anthropic/claude-haiku-4-5-20250929': {
+    tier: 'free',
+    priority: 93,
+    recommended: true,
+    lowQuality: false,
+  },
+  // Mantém DeepSeek disponível para usuários que já o selecionaram
   'deepseek/deepseek-chat-v3.1': {
     tier: 'free',
-    priority: 90,
-    recommended: true,
-    lowQuality: false
+    priority: 60,
+    recommended: false,
+    lowQuality: false,
   },
-  
-  // Agente avançado - Claude 4 Sonnet (Premium only)
+
+  // Agente avançado - Claude 4.5 Sonnet (Premium only)
+  [DEFAULT_PREMIUM_MODEL_ID]: {
+    tier: 'premium',
+    priority: 105,
+    recommended: true,
+    lowQuality: false,
+  },
+  'claude-4.5-sonnet': {
+    tier: 'premium',
+    priority: 104,
+    recommended: true,
+    lowQuality: false,
+  },
+  'anthropic/claude-sonnet-4-5-20250929': {
+    tier: 'premium',
+    priority: 103,
+    recommended: true,
+    lowQuality: false,
+  },
   'claude-sonnet-4-20250514': {
     tier: 'premium',
-    priority: 100,
+    priority: 90,
     recommended: true,
-    lowQuality: false
-  }
+    lowQuality: false,
+  },
 };
 
 // Helper to check if a user can access a model based on subscription status

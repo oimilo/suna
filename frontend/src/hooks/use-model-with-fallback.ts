@@ -20,8 +20,8 @@ export function useModelWithFallback(options?: UseModelWithFallbackOptions) {
       agent_id?: string;
     }
   ) => {
-    // Always use Claude Sonnet 4
-    const fixedModel = 'claude-sonnet-4-20250514';
+    // Always use Claude Sonnet 4.5
+    const fixedModel = 'anthropic/claude-4.5-sonnet';
     
     try {
       setIsRetrying(false);
@@ -32,7 +32,7 @@ export function useModelWithFallback(options?: UseModelWithFallbackOptions) {
       setLastUsedModel(fixedModel);
       return result;
     } catch (error: any) {
-      console.error('[ModelFallback] Error with Claude Sonnet 4:', error);
+      console.error('[ModelFallback] Error with Claude Sonnet 4.5:', error);
       // No fallback needed - always use Claude Sonnet 4
       throw error;
     } finally {

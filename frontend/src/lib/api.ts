@@ -1598,26 +1598,70 @@ export const initiateAgent = async (
     });
 
     if (!response.ok) {
-      const errorText = await response
+      const rawErrorText = await response
         .text()
-        .catch(() => 'No error details available');
-      
+        .catch(() => '');
+
+      let parsedDetail: any = null;
+      if (rawErrorText) {
+        try {
+          parsedDetail = JSON.parse(rawErrorText);
+        } catch {
+          parsedDetail = { message: rawErrorText };
+        }
+      }
+
+      const detail =
+        parsedDetail && typeof parsedDetail === 'object'
+          ? parsedDetail
+          : rawErrorText
+            ? { message: rawErrorText }
+            : {};
+
+      const detailMessage =
+        detail.message ||
+        detail.detail ||
+        rawErrorText ||
+        `Error initiating agent: ${response.statusText} (${response.status})`;
+
       console.error(
         `[API] Error initiating agent: ${response.status} ${response.statusText}`,
-        errorText,
+        detail,
       );
-    
+
       if (response.status === 402) {
-        throw new Error('Payment Required');
+        const billingDetail = {
+          ...detail,
+          message:
+            detailMessage ||
+            'Saldo insuficiente. Recarregue seus créditos ou contrate um plano para continuar.',
+        };
+        throw new BillingError(402, billingDetail, 'Payment Required');
       } else if (response.status === 401) {
         throw new Error('Authentication error: Please sign in again');
       } else if (response.status >= 500) {
         throw new Error('Server error: Please try again later');
       }
-    
-      throw new Error(
+
+      if (response.status === 403) {
+        const forbiddenError = new Error(detailMessage || 'Access denied.') as Error & {
+          status?: number;
+          details?: any;
+        };
+        forbiddenError.status = response.status;
+        forbiddenError.details = detail;
+        throw forbiddenError;
+      }
+
+      const genericError = new Error(
         `Error initiating agent: ${response.statusText} (${response.status})`,
-      );
+      ) as Error & {
+        status?: number;
+        details?: any;
+      };
+      genericError.status = response.status;
+      genericError.details = detail;
+      throw genericError;
     }
 
     const result = await response.json();
