@@ -850,6 +850,10 @@ class ThreadManager:
                 
                 # Trigger auto-continue for: native tool calls, length limit, or XML tools executed
                 if finish_reason == 'tool_calls' or tools_executed:
+                    if content.get('tools_all_failed'):
+                        logger.debug("Skipping auto-continue because all tools failed in the last run")
+                        auto_continue_state['active'] = False
+                        return False
                     if native_max_auto_continues > 0:
                         logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                         auto_continue_state['active'] = True

@@ -717,6 +717,9 @@ class ResponseProcessor:
 
 
                 tool_results_map = {} # tool_index -> (tool_call, result, context)
+                tools_executed_this_run = False
+                tools_succeeded_this_run = False
+                tools_failed_this_run = False
 
                 # Populate from buffer if executed on stream
                 if config.execute_on_stream and tool_results_buffer:
@@ -725,6 +728,14 @@ class ResponseProcessor:
                     for tool_call, result, tool_idx, context in tool_results_buffer:
                         if last_assistant_message_object: context.assistant_message_id = last_assistant_message_object['message_id']
                         tool_results_map[tool_idx] = (tool_call, result, context)
+                        tools_executed_this_run = True
+                        if hasattr(result, 'success'):
+                            if result.success:
+                                tools_succeeded_this_run = True
+                            else:
+                                tools_failed_this_run = True
+                        else:
+                            tools_failed_this_run = True
 
                 # Or execute now if not streamed
                 elif final_tool_calls_to_process and not config.execute_on_stream:
@@ -753,6 +764,14 @@ class ResponseProcessor:
                            )
                            context.result = res
                            tool_results_map[current_tool_idx] = (tc, res, context)
+                           tools_executed_this_run = True
+                           if hasattr(res, 'success'):
+                               if res.success:
+                                   tools_succeeded_this_run = True
+                               else:
+                                   tools_failed_this_run = True
+                           else:
+                               tools_failed_this_run = True
                        else:
                            logger.warning(f"Could not map result for tool index {current_tool_idx}")
                            self.trace.event(name="could_not_map_result_for_tool_index", level="WARNING", status_message=(f"Could not map result for tool index {current_tool_idx}"))
@@ -805,6 +824,12 @@ class ResponseProcessor:
                 # Check if tools were actually detected during this run
                 if xml_tool_call_count > 0 or len(complete_native_tool_calls) > 0:
                     finish_content["tools_executed"] = True
+                    if tools_succeeded_this_run:
+                        finish_content["tools_succeeded"] = True
+                    if tools_failed_this_run:
+                        finish_content["tools_failed"] = True
+                    if tools_failed_this_run and not tools_succeeded_this_run and tools_executed_this_run:
+                        finish_content["tools_all_failed"] = True
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id, type="status", content=finish_content, 
                     is_llm_message=False, metadata={"thread_run_id": thread_run_id}

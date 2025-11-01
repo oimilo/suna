@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   CheckCircle,
   AlertTriangle,
@@ -24,6 +24,7 @@ import {
 } from '@/components/file-renderers/markdown-renderer';
 import { CsvRenderer } from '@/components/file-renderers/csv-renderer';
 import { cn } from '@/lib/utils';
+import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import {
@@ -128,10 +129,17 @@ export function FileOperationToolView({
   const looksLikeEncodedHtml = typeof fileContent === 'string' && /&lt;\s*(?:!DOCTYPE|html)[\s>]/i.test(fileContent);
   const isHtmlFile = isHtml || looksLikeHtml || looksLikeEncodedHtml;
 
-  // Use proxy URL quando possível (render em servidor), senão fallback com srcDoc
-  // Importante: para garantir preview imediato e evitar 404 do provider antes do servidor subir,
-  // usamos srcDoc inline para HTML. Mantemos o botão externo apenas quando disponível em outras views.
-  const htmlPreviewUrl = undefined as unknown as string | undefined;
+  const combinedContent = React.useMemo(() => {
+    const assistantStr = normalizeContentToString(assistantContent) || '';
+    const toolStr = normalizeContentToString(toolContent) || '';
+    return `${assistantStr}\n${toolStr}`;
+  }, [assistantContent, toolContent]);
+
+  const autoDetectedPreviewUrl = React.useMemo(() => {
+    const match = combinedContent.match(/https?:\/\/[^\s)'"`]+/i);
+    if (!match) return undefined;
+    return match[0].replace(/[)>'"`]+$/, '');
+  }, [combinedContent]);
 
   // Deriva porta provável do preview (padrão 8080), lendo dicas do conteúdo
   const projectId = (project as any)?.project_id || (project as any)?.id;
@@ -161,6 +169,18 @@ export function FileOperationToolView({
     }
     return undefined;
   })();
+
+  const sandboxHtmlPreviewUrl = React.useMemo(() => {
+    if (isHtml && project?.sandbox?.sandbox_url && processedFilePath) {
+      return constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath);
+    }
+    return undefined;
+  }, [isHtml, processedFilePath, project?.sandbox?.sandbox_url]);
+
+  const htmlPreviewUrl = React.useMemo(() => {
+    if (!isHtmlFile) return undefined;
+    return autoDetectedPreviewUrl || proxiedBaseHref || sandboxHtmlPreviewUrl;
+  }, [autoDetectedPreviewUrl, proxiedBaseHref, sandboxHtmlPreviewUrl, isHtmlFile]);
 
   const FileIcon = getFileIcon(fileName);
 
@@ -512,7 +532,7 @@ export function FileOperationToolView({
                   </span>
                 </div>
               )}
-              {isHtml && htmlPreviewUrl && !isStreaming && (
+              {isHtmlFile && htmlPreviewUrl && !isStreaming && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
