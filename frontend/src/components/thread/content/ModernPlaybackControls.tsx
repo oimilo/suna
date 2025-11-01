@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { UnifiedMessage } from '../types';
-import { ToolCallInput } from '../tool-call-side-panel';
+import { ToolCallInput } from '../tool-call-helpers';
 
 const HIDE_STREAMING_XML_TAGS = new Set([
   'execute-command',

@@ -12,10 +12,8 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
-import {
-  ToolCallSidePanel,
-  ToolCallInput,
-} from '@/components/thread/tool-call-side-panel';
+import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';
+import { ToolCallInput } from '@/components/thread/tool-call-helpers';
 import { ThreadContent } from '@/components/thread/content/ThreadContent';
 import {
   PlaybackControls,

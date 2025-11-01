@@ -9,7 +9,8 @@
     "lint": "next lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run test:presentation",
+    "test": "npm run test:workspace && npm run test:presentation",
+    "test:workspace": "tsx --test tests/**/*.test.ts",
     "test:presentation": "node --test tests/presentation-utils.test.cjs"
   },
   "dependencies": {
@@ -209,6 +210,7 @@
     "prettier": "^3.5.3",
     "shiki": "^3.12.0",
     "tailwindcss": "^4",
+    "tsx": "^4.19.1",
     "tw-animate-css": "^1.2.4",
     "typescript": "^5"
   }

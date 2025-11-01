@@ -5,7 +5,7 @@ import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';
 import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
 import { Project } from '@/lib/api';
 import { ApiMessageType, BillingData } from '../_types';
-import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
+import { ToolCallInput } from '@/components/thread/tool-call-helpers';
 import { useSidebarContext } from '@/contexts/sidebar-context';
 
 interface ThreadLayoutProps {

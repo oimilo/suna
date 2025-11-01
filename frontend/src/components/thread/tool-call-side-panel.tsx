@@ -16,30 +16,18 @@ import { BRANDING } from '@/lib/branding';
 import { useSidebarContext } from '@/contexts/sidebar-context';
 import { ToolNavigationDropdown } from './tool-navigation-dropdown';
 import { WindowControls } from './window-controls';
-// Debug logger removido - usar console.log diretamente
-
-const FILE_PATTERNS = {
-  web: ['index.html', 'home.html', 'main.html', 'app.html'],
-  game: ['game.html', 'play.html', 'index.html', 'main.js'],
-  python: ['main.py', 'app.py', 'server.py', 'bot.py', 'script.py'],
-  node: ['index.js', 'app.js', 'server.js', 'main.js', 'index.ts'],
-  dashboard: ['dashboard.html', 'admin.html', 'panel.html', 'index.html'],
-  api: ['webhook.js', 'api.py', 'handler.js', 'function.js'],
-};
-
-export interface ToolCallInput {
-  assistantCall: {
-    content?: string;
-    name?: string;
-    timestamp?: string;
-  };
-  toolResult?: {
-    content?: string;
-    isSuccess?: boolean;
-    timestamp?: string;
-  };
-  messages?: ApiMessageType[];
-}
+import {
+  ToolCallInput,
+  AUXILIARY_FILE_NAME_SET,
+  MAIN_FILE_TOOL_NAMES,
+  MAIN_FILE_SCORE_THRESHOLD,
+  computeMainFileScore,
+  detectMainFileIndex,
+  extractToolCallFileInfo,
+  isMainFileName,
+  logMainFileDebug,
+  normalizeToolName,
+} from './tool-call-helpers';
 
 interface ToolCallSidePanelProps {
   isOpen: boolean;
@@ -129,220 +117,83 @@ export function ToolCallSidePanel({
     }
   }, [onMinimize]);
 
-  // Extrai o nome do arquivo do conteúdo do tool call
-  const extractFileName = React.useCallback((rawContent: any): string | null => {
-    // console.log('[DEBUG-EXTRACT] Tipo do conteúdo recebido:', typeof rawContent);
-    
-    if (!rawContent) {
-      // console.log('[DEBUG-EXTRACT] Conteúdo vazio ou null');
-      return null;
-    }
-    
-    // Extrai o conteúdo real se estiver em formato estruturado
-    let content: string = '';
-    
-    if (typeof rawContent === 'string') {
-      // Tenta fazer parse se for uma string JSON
-      try {
-        const parsed = JSON.parse(rawContent);
-        // Se tiver um campo 'content', usa ele
-        if (parsed.content) {
-          content = typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed.content);
-          // console.log('[DEBUG-EXTRACT] Extraindo content de objeto parseado');
-        } else {
-          content = rawContent;
-        }
-      } catch {
-        // Não é JSON, usa como string mesmo
-        content = rawContent;
-      }
-    } else if (typeof rawContent === 'object') {
-      // Se já for objeto, procura o campo content
-      if (rawContent.content) {
-        content = typeof rawContent.content === 'string' ? rawContent.content : JSON.stringify(rawContent.content);
-        // console.log('[DEBUG-EXTRACT] Usando campo content do objeto');
-      } else {
-        content = JSON.stringify(rawContent);
-      }
-    }
-    
-    // Log do conteúdo após extração
-    // console.log('[DEBUG-EXTRACT] Conteúdo processado (primeiros 300 chars):', content.substring(0, 300));
-    
-    // Tenta extrair o nome do arquivo de diferentes formatos
-    const patterns = [
-      /<parameter name="file_path">([^<]+)<\/parameter>/,
-      /<parameter name="target_file">([^<]+)<\/parameter>/,
-      /<parameter name="file-path">([^<]+)<\/parameter>/,  // Com hífen
-      /<parameter name="target-file">([^<]+)<\/parameter>/, // Com hífen
-      /file_path["\s:=]+["']([^"']+)["']/,
-      /target_file["\s:=]+["']([^"']+)["']/,
-      /file-path["\s:=]+["']([^"']+)["']/,  // Com hífen
-      /target-file["\s:=]+["']([^"']+)["']/,  // Com hífen
-      /"file_path"\s*:\s*"([^"]+)"/,
-      /"target_file"\s*:\s*"([^"]+)"/,
-      /"file-path"\s*:\s*"([^"]+)"/,  // Com hífen
-      /"target-file"\s*:\s*"([^"]+)"/  // Com hífen
-    ];
-    
-    for (let i = 0; i < patterns.length; i++) {
-      const pattern = patterns[i];
-      // console.log(`[DEBUG-EXTRACT] Tentando padrão ${i + 1}:`, pattern.toString());
-      const match = content.match(pattern);
-      if (match && match[1]) {
-        // Retorna apenas o nome do arquivo (última parte do caminho)
-        const fullPath = match[1];
-        const fileName = fullPath.split('/').pop() || fullPath.split('\\').pop() || fullPath;
-        // console.log(`[DEBUG-EXTRACT] ✓ Match! Caminho: "${fullPath}", Arquivo: "${fileName}"`);
-        return fileName;
-      }
-    }
-    
-    // console.log('[DEBUG-EXTRACT] ✗ Nenhum padrão encontrou match');
-    return null;
-  }, []);
+  const getToolCallFileInfo = React.useCallback(extractToolCallFileInfo, []);
 
   // Detecta se é um momento de entrega relevante
   const isDeliveryMoment = React.useCallback((toolCall: ToolCallInput): boolean => {
-    const name = toolCall.assistantCall?.name;
-    // console.log('[DEBUG-DELIVERY] Tool name:', name);
-    
-    if (!name) return false;
+    const rawName = toolCall.assistantCall?.name;
+    if (!rawName) return false;
 
-    // Prioridade 1: Arquivos principais criados (não arquivos auxiliares)
-    // Suporta tanto underscore quanto hífen nos nomes das ferramentas
-    if (name === 'create_file' || name === 'create-file' || 
-        name === 'full_file_rewrite' || name === 'full-file-rewrite') {
-      const rawContent = toolCall.assistantCall?.content;
-      // console.log('[DEBUG-DELIVERY] Raw content type:', typeof rawContent);
-      // console.log('[DEBUG-DELIVERY] Raw content:', rawContent);
-      
-      // Passa o conteúdo bruto diretamente para extractFileName
-      // que agora lida com a extração do conteúdo real
-      const fileName = extractFileName(rawContent);
-      
+    const normalizedName = normalizeToolName(rawName);
+
+    if (MAIN_FILE_TOOL_NAMES.has(normalizedName)) {
+      const { fileName, filePath } = getToolCallFileInfo(toolCall);
       if (!fileName) {
-        // console.log(`[DEBUG-DELIVERY] ✗ Não foi possível extrair nome do arquivo de ${name}`);
         return false;
       }
-      
-      // console.log('[DEBUG-DELIVERY] Arquivo extraído:', fileName);
-      
-      // Lista de arquivos auxiliares que NÃO são entregas principais
-      const auxiliaryFiles = [
-        'style.css', 'styles.css', 'config.js', 'config.json', 
-        'package.json', 'requirements.txt', '.env', '.gitignore',
-        'README.md', 'Dockerfile', 'docker-compose.yml',
-        'tsconfig.json', 'webpack.config.js', 'babel.config.js'
-      ];
-      
-      // Verifica se é um arquivo auxiliar
-      const isAuxiliary = auxiliaryFiles.some(aux => 
-        fileName === aux || 
-        fileName.includes('test.') || 
-        fileName.includes('spec.') || 
-        fileName.includes('_test.') || 
-        fileName.includes('.test.')
-      );
-      
-      if (isAuxiliary) {
-        // console.log('[DELIVERY] Arquivo auxiliar detectado, ignorando:', fileName);
+
+      const normalizedFileName = fileName.toLowerCase();
+      if (
+        AUXILIARY_FILE_NAME_SET.has(normalizedFileName) ||
+        normalizedFileName.includes('test.') ||
+        normalizedFileName.includes('spec.') ||
+        normalizedFileName.includes('_test.') ||
+        normalizedFileName.includes('.test.')
+      ) {
         return false;
       }
-      
-      // Verifica se é um arquivo principal conhecido
-      const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
-      const isMainFile = mainFilePatterns.includes(fileName);
-      
-      if (isMainFile) {
-        // console.log('[DELIVERY] ✅ Arquivo principal detectado:', fileName);
-      } else {
-        // console.log('[DELIVERY] Arquivo não reconhecido como principal:', fileName);
-      }
-      
-      return isMainFile;
-    }
 
-    // Prioridade 2: Deploy ou exposição de serviço (sempre importante)
-    if (name === 'deploy' || name === 'expose-port') {
-      return true;
-    }
-
-    // Prioridade 3: Configurações de integração importantes
-    if (name === 'create_credential_profile' || name === 'connect_credential_profile') {
-      return true;
-    }
-
-    // Por padrão, retorna false (não é uma entrega relevante)
-    // Apenas casos específicos acima (arquivos principais, deploy, etc.) são considerados entregas
-    return false;
-  }, [extractFileName]);
-
-  // Detecta o arquivo principal baseado no contexto do projeto
-  const detectMainFile = React.useCallback((calls: ToolCallInput[]): number => {
-    // console.log('[DEBUG-DETECT] ========== INICIANDO DETECÇÃO DE ARQUIVO PRINCIPAL ==========');
-    // console.log('[DEBUG-DETECT] Total de tool calls:', calls.length);
-    
-    // Log de cada tool call
-    calls.forEach((tc, idx) => {
-      console.log(`[DEBUG-DETECT] Tool ${idx}: name="${tc.assistantCall?.name}"`);
-    });
-    
-    const fileCreations = calls
-      .map((tc, idx) => ({ tc, idx }))
-      .filter(({ tc }) => {
-        const name = tc.assistantCall?.name;
-        // Inclui edit_file para detectar quando arquivos principais são editados
-        // Suporta tanto underscore quanto hífen
-        return name === 'create_file' || name === 'create-file' || 
-               name === 'full_file_rewrite' || name === 'full-file-rewrite' || 
-               name === 'edit_file' || name === 'edit-file' ||
-               name === 'str_replace_editor' || name === 'str-replace-editor';
+      const candidateIndex = toolCalls.findIndex(candidate => candidate === toolCall);
+      const index = candidateIndex >= 0 ? candidateIndex : toolCalls.length - 1;
+      const score = computeMainFileScore({
+        index,
+        totalCalls: Math.max(toolCalls.length, 1),
+        fileName,
+        filePath,
+        toolName: normalizedName,
       });
 
-    // console.log('[DEBUG-DETECT] Arquivos encontrados:', fileCreations.length);
-    
-    if (fileCreations.length === 0) return -1;
+      const passed = score >= MAIN_FILE_SCORE_THRESHOLD || isMainFileName(fileName);
 
-    // Lista de todos os padrões de arquivos principais
-    const mainFilePatterns = Object.values(FILE_PATTERNS).flat();
-    
-    // Procura arquivo principal usando extração correta
-    for (const { tc, idx } of fileCreations) {
-      // Usa extractFileName diretamente que agora lida com todos os formatos
-      const fileName = extractFileName(tc.assistantCall?.content);
-      
-      if (!fileName) {
-        // console.log(`[DEBUG-DETECT] Não foi possível extrair nome do arquivo no índice ${idx}`);
-        continue;
+      logMainFileDebug('delivery-check', {
+        toolName: normalizedName,
+        fileName,
+        filePath,
+        score,
+        passed,
+      });
+
+      if (score >= MAIN_FILE_SCORE_THRESHOLD) {
+        return true;
       }
-      
-      // console.log(`[DEBUG-DETECT] Verificando arquivo extraído: ${fileName} no índice ${idx}`);
-      
-      // Verifica se é um arquivo principal
-      if (mainFilePatterns.includes(fileName)) {
-        // console.log(`[DEBUG-DETECT] ✅ Arquivo principal encontrado: ${fileName} no índice ${idx}`);
-        return idx;
-      }
+
+      return isMainFileName(fileName);
     }
-    
-    // console.log('[DEBUG-DETECT] Nenhum arquivo principal encontrado nos padrões');
-    
-    // Fallback mais conservador: procura especificamente por index.html
-    const indexHtml = fileCreations.find(({ tc }) => {
-      const fileName = extractFileName(tc.assistantCall?.content);
-      return fileName === 'index.html';
-    });
-    
-    if (indexHtml) {
-      // console.log(`[DEBUG-DETECT] Fallback: index.html encontrado no índice ${indexHtml.idx}`);
-      return indexHtml.idx;
+
+    if (normalizedName === 'deploy' || normalizedName === 'expose-port') {
+      logMainFileDebug('delivery-check', {
+        toolName: normalizedName,
+        reason: 'forced-delivery-tool',
+      });
+      return true;
     }
-    
-    // Não retorna mais o primeiro arquivo como fallback
-    // console.log('[DEBUG-DETECT] Nenhum arquivo principal detectado');
-    return -1;
-  }, [extractFileName]);
+
+    if (
+      normalizedName === 'create-credential-profile' ||
+      normalizedName === 'connect-credential-profile'
+    ) {
+      logMainFileDebug('delivery-check', {
+        toolName: normalizedName,
+        reason: 'credential-tool',
+      });
+      return true;
+    }
+
+    return false;
+  }, [getToolCallFileInfo, toolCalls]);
+
+  // Detecta o arquivo principal baseado no contexto do projeto
+  const detectMainFile = React.useCallback((calls: ToolCallInput[]): number => detectMainFileIndex(calls), []);
 
   // Verifica se é uma operação técnica que deve ser ocultada
   const isTechnicalOperation = (name?: string): boolean => {
