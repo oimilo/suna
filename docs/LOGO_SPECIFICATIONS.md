@@ -51,7 +51,7 @@ NEXT_PUBLIC_FAVICON=/prophet-symbol.svg
 
 ## Atualização das Referências
 
-Todas as referências a "Kortix" devem ser substituídas por sua marca nas variáveis de ambiente:
+Todas as referências à identidade anterior devem ser substituídas pela nova marca nas variáveis de ambiente:
 
 ```env
 NEXT_PUBLIC_APP_NAME=Prophet
@@ -63,6 +63,6 @@ NEXT_PUBLIC_COMPANY_URL=https://oimilo.com
 ## Observações Técnicas
 
 - Os SVGs devem ter `fill="black"` para permitir inversão de cor automática em tema escuro
-- O componente `KortixLogo` aplica classe `invert` automaticamente em tema escuro
+- O componente `MiloLogo` aplica classe `invert` automaticamente em tema escuro
 - Mantenha as proporções originais para evitar distorções
 - Use SVG sempre que possível para melhor qualidade em diferentes resoluções

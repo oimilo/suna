@@ -290,7 +290,7 @@ export default function UsageLogs({ accountId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Barra de Créditos com Design Suna */}
+      {/* Barra de Créditos com Design Prophet */}
       <Card className="border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -334,7 +334,7 @@ export default function UsageLogs({ accountId }: Props) {
               </div>
             </div>
             
-            {/* Legenda com design Suna minimalista */}
+            {/* Legenda com design Prophet minimalista */}
             <div className="flex flex-col gap-2.5 pt-1 pb-6">
               {/* Sempre mostra créditos do plano primeiro se existirem */}
               {summary.subscriptionCredits > 0 && (
@@ -368,7 +368,7 @@ export default function UsageLogs({ accountId }: Props) {
         </CardContent>
       </Card>
 
-      {/* Logs de Uso Diário com Design Suna */}
+      {/* Logs de Uso Diário com Design Prophet */}
       <Card className="border border-black/6 dark:border-white/8 bg-transparent">
         <CardHeader className="px-6 py-4">
           <CardTitle className="text-lg font-semibold">Histórico Detalhado</CardTitle>

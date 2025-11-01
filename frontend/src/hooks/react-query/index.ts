@@ -29,4 +29,4 @@ export * from './triggers';
 export * from './admin/use-admin-users';
 export * from './admin/use-admin-billing';
 
-// Pipedream hooks removed; align with Suna 
+// Pipedream hooks removed; align with Prophet 

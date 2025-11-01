@@ -91,7 +91,7 @@ export const AgentBuilderChat = React.memo(function AgentBuilderChat({
   const agentList = agentsResponse?.agents;
   const agents = useMemo(() => agentList ?? [], [agentList]);
   
-  // Find the default Prophet/Suna agent to use for execution
+  // Find the default Prophet agent to use for execution
   const defaultProphetAgent = useMemo(() => agents.find((agent: any) => agent.metadata?.is_suna_default === true), [agents]);
   const prophetAgentId = defaultProphetAgent?.agent_id;
   

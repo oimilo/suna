@@ -341,7 +341,7 @@ class TrialService:
             
             return {
                 'checkout_url': session.url,  # Direct Stripe checkout (for web fallback)
-                'fe_checkout_url': fe_checkout_url,  # Kortix-branded wrapper with embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Milo-branded wrapper with embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,  # For direct API usage
             }

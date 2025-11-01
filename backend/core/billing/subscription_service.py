@@ -276,7 +276,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': session.url,  # Direct Stripe (fallback)
-                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Milo-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
                 'converting_from_trial': True,
@@ -357,7 +357,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': session.url,  # Direct Stripe (fallback)
-                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Milo-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
             }
