@@ -18,6 +18,8 @@ export * from './subscriptions/use-subscriptions';
 export * from './subscriptions/use-billing';
 export * from './subscriptions/use-credits-status';
 
+export * from './accounts/use-account-by-slug';
+
 export * from './dashboard/use-initiate-agent';
 
 export * from './usage/use-health';

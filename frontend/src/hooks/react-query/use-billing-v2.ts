@@ -14,8 +14,8 @@ export const billingKeys = {
   subscription: () => [...billingKeys.all, 'subscription'] as const,
   balance: () => [...billingKeys.all, 'balance'] as const,
   status: () => [...billingKeys.all, 'status'] as const,
-  transactions: (limit?: number, offset?: number) =>
-    [...billingKeys.all, 'transactions', { limit, offset }] as const,
+  transactions: (limit?: number, offset?: number, typeFilter?: string) =>
+    [...billingKeys.all, 'transactions', { limit, offset, typeFilter }] as const,
   usageHistory: (days?: number) =>
     [...billingKeys.all, 'usage-history', { days }] as const,
 };
@@ -43,10 +43,10 @@ export const useBillingStatus = () =>
     staleTime: 30_000,
   });
 
-export const useTransactions = (limit = 50, offset = 0) =>
+export const useTransactions = (limit = 50, offset = 0, typeFilter?: string) =>
   useQuery({
-    queryKey: billingKeys.transactions(limit, offset),
-    queryFn: () => billingApiV2.getTransactions(limit, offset),
+    queryKey: billingKeys.transactions(limit, offset, typeFilter),
+    queryFn: () => billingApiV2.getTransactions(limit, offset, typeFilter),
     staleTime: 5 * 60_000,
   });
 

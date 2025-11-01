@@ -126,7 +126,7 @@ export default function AccountBillingStatus({ accountId, returnUrl }: Props) {
                     <Skeleton className="h-4 w-24" />
                   )}
                   <Button variant='outline' asChild className='text-sm'>
-                    <Link href="/settings/usage-logs">
+                    <Link href="/settings/transactions">
                       Logs de uso
                     </Link>
                   </Button>
