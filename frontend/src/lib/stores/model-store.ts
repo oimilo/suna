@@ -39,8 +39,8 @@ interface ModelStore {
   resetToDefault: (subscriptionStatus: SubscriptionStatus) => void;
 }
 
-const DEFAULT_FREE_MODEL_ID = 'moonshotai/kimi-k2';
-const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4';
+const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-4.5-haiku';
+const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-4.5-sonnet';
 
 export const useModelStore = create<ModelStore>()(
   persist(

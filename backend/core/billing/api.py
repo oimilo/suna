@@ -458,18 +458,26 @@ async def get_subscription_cancellation_status(
         
         try:
             stripe_subscription = await StripeAPIWrapper.retrieve_subscription(subscription_data['id'])
-            is_cancelled = stripe_subscription.cancel_at_period_end or stripe_subscription.cancel_at is not None
-            
+
+            cancel_at_period_end = getattr(stripe_subscription, 'cancel_at_period_end', False)
+            cancel_at = getattr(stripe_subscription, 'cancel_at', None)
+            canceled_at = getattr(stripe_subscription, 'canceled_at', None)
+            current_period_end = getattr(stripe_subscription, 'current_period_end', None)
+            status = getattr(stripe_subscription, 'status', None)
+            cancellation_details = getattr(stripe_subscription, 'cancellation_details', None)
+
+            is_cancelled = bool(cancel_at_period_end or cancel_at or status == 'canceled')
+
             return {
                 'has_subscription': True,
-                'subscription_id': stripe_subscription.id,
+                'subscription_id': getattr(stripe_subscription, 'id', subscription_data.get('id')),
                 'is_cancelled': is_cancelled,
-                'cancel_at': stripe_subscription.cancel_at,
-                'cancel_at_period_end': stripe_subscription.cancel_at_period_end,
-                'canceled_at': stripe_subscription.canceled_at,
-                'current_period_end': stripe_subscription.current_period_end,
-                'status': stripe_subscription.status,
-                'cancellation_details': getattr(stripe_subscription, 'cancellation_details', None)
+                'cancel_at': cancel_at,
+                'cancel_at_period_end': cancel_at_period_end,
+                'canceled_at': canceled_at,
+                'current_period_end': current_period_end,
+                'status': status,
+                'cancellation_details': cancellation_details
             }
         except stripe.error.StripeError as e:
             logger.error(f"[BILLING] Stripe error retrieving cancellation status for {subscription_data.get('id')}: {e}")

@@ -50,8 +50,8 @@ interface Props {
 // Mapeamento de modelos seguindo a mesma lógica do seletor
 const getModelAlias = (model: string): string => {
   // IDs exatos dos modelos conforme definido no sistema
-  const DEFAULT_PREMIUM_MODEL_ID = 'claude-sonnet-4-20250514';
-  const DEFAULT_FREE_MODEL_ID = 'gemini-2.5-pro';
+  const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-4.5-sonnet';
+  const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-4.5-haiku';
   
   // Verifica match exato primeiro
   if (model === DEFAULT_FREE_MODEL_ID) {
@@ -64,8 +64,8 @@ const getModelAlias = (model: string): string => {
   // Verifica por padrões conhecidos
   const modelLower = model.toLowerCase();
   
-  // Gemini models -> Agente padrão
-  if (modelLower.includes('gemini')) {
+  // Haiku/Gemini models -> Agente padrão
+  if (modelLower.includes('haiku') || modelLower.includes('gemini')) {
     return 'Agente padrão';
   }
   

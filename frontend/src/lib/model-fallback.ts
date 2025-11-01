@@ -2,24 +2,27 @@
  * Model fallback configuration - simplified for Claude Sonnet 4 only
  */
 
-// All models fallback to Claude Sonnet 4
+// All models fallback to Claude 4.5 Sonnet
 export const MODEL_FALLBACK_MAP: Record<string, string[]> = {
-  'anthropic/claude-sonnet-4': ['claude-sonnet-4-20250514'],
-  'claude-sonnet-4': ['claude-sonnet-4-20250514'],
-  'claude-sonnet-4-20250514': ['claude-sonnet-4-20250514'],
+  'anthropic/claude-4.5-sonnet': ['anthropic/claude-4.5-haiku'],
+  'claude-4.5-sonnet': ['anthropic/claude-4.5-haiku'],
+  'claude-sonnet-4-20250514': ['anthropic/claude-4.5-sonnet'],
+  'claude-sonnet-4': ['anthropic/claude-4.5-sonnet'],
+  'anthropic/claude-sonnet-4-20250514': ['anthropic/claude-4.5-sonnet'],
+  'anthropic/claude-sonnet-4': ['anthropic/claude-4.5-sonnet'],
 };
 
-// Only Claude Sonnet 4 is available
+// Model padrão gratuito disponível
 export const FREE_TIER_MODELS = [
-  'claude-sonnet-4-20250514',
+  'anthropic/claude-4.5-haiku',
 ];
 
 /**
  * Get fallback model - always returns Claude Sonnet 4
  */
 export function getFallbackModel(failedModel: string): string | null {
-  // Always return Claude Sonnet 4
-  return 'claude-sonnet-4-20250514';
+  // Sempre retorna Claude 4.5 Sonnet como fallback avançado
+  return 'anthropic/claude-4.5-sonnet';
 }
 
 /**

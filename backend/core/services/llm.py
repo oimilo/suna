@@ -63,14 +63,6 @@ def setup_api_keys() -> None:
         # logger.debug(f"Set OPENROUTER_API_BASE to {config.OPENROUTER_API_BASE}")
 
 
-    # Set up AWS Bedrock bearer token authentication
-    bedrock_token = config.AWS_BEARER_TOKEN_BEDROCK
-    if bedrock_token:
-        os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bedrock_token
-        logger.debug("AWS Bedrock bearer token configured")
-    else:
-        logger.warning("AWS_BEARER_TOKEN_BEDROCK not configured - Bedrock models will not be available")
-
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router
     model_list = [
@@ -90,34 +82,11 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     
-    # Configure fallbacks: Bedrock models -> Direct Anthropic API
     fallbacks = [
-        # Bedrock Sonnet 4.5 -> Anthropic Sonnet 4.5
-        # {
-        #     "bedrock/converse/arn:aws:bedrock:eu-north-1:737973863695:inference-profile/eu.anthropic.claude-sonnet-4-5-20250929-v1:0": [
-        #         "anthropic/claude-sonnet-4-5-20250929"  # Fallback to direct Anthropic API
-        #     ]
-        # },
+        # Prefer fallback para modelos Anthropic diretos quando o principal estiver indisponível
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0": [
-                "anthropic/claude-sonnet-4-5-20250929"
-            ]
-        },
-        # Bedrock Sonnet 4 -> Anthropic Sonnet 4
-        # {
-        #     "bedrock/converse/arn:aws:bedrock:eu-north-1:737973863695:inference-profile/eu.anthropic.claude-sonnet-4-20250929-v1:0": [
-        #         "anthropic/claude-sonnet-4-20250514"
-        #     ]
-        # },
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0": [
-                "anthropic/claude-sonnet-4-20250514"
-            ]
-        },
-        # Bedrock Sonnet 3.7 -> Anthropic Sonnet 3.7
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0": [
-                "anthropic/claude-3-7-sonnet-latest"
+            "anthropic/claude-4.5-sonnet": [
+                "anthropic/claude-4.5-haiku"
             ]
         },
         # Lightweight auxiliary model fallback: GPT-5-nano -> DeepSeek Chat v3.1

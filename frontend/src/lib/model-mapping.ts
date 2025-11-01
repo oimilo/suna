@@ -2,13 +2,21 @@
  * Map frontend model IDs to backend/API model names
  */
 export const MODEL_MAPPING: Record<string, string> = {
-  // Claude models - Sonnet 4 now uses direct Anthropic API
-  'claude-sonnet-4': 'claude-sonnet-4-20250514',
-  'claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
-  'claude-sonnet-4-0': 'claude-sonnet-4-20250514',
-  'anthropic/claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
-  'anthropic/claude-sonnet-4': 'claude-sonnet-4-20250514',
-  
+  // Claude models - direciona aliases antigos para os modelos 4.5
+  'claude-sonnet-4': 'anthropic/claude-4.5-sonnet',
+  'claude-sonnet-4-20250514': 'anthropic/claude-4.5-sonnet',
+  'claude-sonnet-4-0': 'anthropic/claude-4.5-sonnet',
+  'anthropic/claude-sonnet-4-20250514': 'anthropic/claude-4.5-sonnet',
+  'anthropic/claude-sonnet-4': 'anthropic/claude-4.5-sonnet',
+  'claude-4.5-sonnet': 'anthropic/claude-4.5-sonnet',
+  'claude-4.5-sonnet-latest': 'anthropic/claude-4.5-sonnet',
+
+  // Haiku aliases
+  'claude-haiku': 'anthropic/claude-4.5-haiku',
+  'claude-haiku-4-5-20250929': 'anthropic/claude-4.5-haiku',
+  'claude-4.5-haiku': 'anthropic/claude-4.5-haiku',
+  'anthropic/claude-haiku-4-5-20250929': 'anthropic/claude-4.5-haiku',
+
   // Add other model mappings as needed
   'gemini-flash': 'google/gemini-flash-1.5',
   'gpt-4': 'openai/gpt-4',
