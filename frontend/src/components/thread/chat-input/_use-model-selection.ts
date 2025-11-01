@@ -6,10 +6,10 @@ import { isLocalMode } from '@/lib/config';
 import { useAvailableModels } from '@/hooks/react-query/subscriptions/use-model';
 import { hasActiveSubscription as checkActiveSubscription } from '@/lib/subscription-utils';
 
-export const STORAGE_KEY_MODEL = 'suna-preferred-model-v7'; // Atualizado para Claude 4.5 (Haiku/Sonnet)
+export const STORAGE_KEY_MODEL = 'suna-preferred-model-v9'; // Atualizado para Claude 4.5 (Haiku/Sonnet)
 export const STORAGE_KEY_CUSTOM_MODELS = 'customModels';
-export const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-4.5-sonnet'; // Claude 4.5 Sonnet - Agente avançado
-export const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-4.5-haiku'; // Claude 4.5 Haiku - Agente padrão
+export const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-sonnet-4-5-20250929'; // Claude 4.5 Sonnet - Agente avançado
+export const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-haiku-4-5-20251001'; // Claude 4.5 Haiku - Agente padrão
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
 
@@ -33,19 +33,19 @@ export const MODELS = {
   // Agente padrão - Claude 4.5 Haiku
   [DEFAULT_FREE_MODEL_ID]: {
     tier: 'free',
+    priority: 105,
+    recommended: true,
+    lowQuality: false,
+  },
+  'claude-haiku-4-5-20251001': {
+    tier: 'free',
+    priority: 104,
+    recommended: true,
+    lowQuality: false,
+  },
+  'anthropic/claude-3.5-haiku': {
+    tier: 'free',
     priority: 95,
-    recommended: true,
-    lowQuality: false,
-  },
-  'claude-4.5-haiku': {
-    tier: 'free',
-    priority: 94,
-    recommended: true,
-    lowQuality: false,
-  },
-  'anthropic/claude-haiku-4-5-20250929': {
-    tier: 'free',
-    priority: 93,
     recommended: true,
     lowQuality: false,
   },
@@ -60,25 +60,25 @@ export const MODELS = {
   // Agente avançado - Claude 4.5 Sonnet (Premium only)
   [DEFAULT_PREMIUM_MODEL_ID]: {
     tier: 'premium',
-    priority: 105,
+    priority: 110,
     recommended: true,
     lowQuality: false,
   },
-  'claude-4.5-sonnet': {
+  'claude-sonnet-4-5-20250929': {
     tier: 'premium',
-    priority: 104,
-    recommended: true,
-    lowQuality: false,
-  },
-  'anthropic/claude-sonnet-4-5-20250929': {
-    tier: 'premium',
-    priority: 103,
+    priority: 109,
     recommended: true,
     lowQuality: false,
   },
   'claude-sonnet-4-20250514': {
     tier: 'premium',
-    priority: 90,
+    priority: 100,
+    recommended: true,
+    lowQuality: false,
+  },
+  'anthropic/claude-sonnet-4-20250514': {
+    tier: 'premium',
+    priority: 99,
     recommended: true,
     lowQuality: false,
   },

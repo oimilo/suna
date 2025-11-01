@@ -2,10 +2,10 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-FREE_MODEL_ID = "anthropic/claude-4.5-haiku"
+FREE_MODEL_ID = "anthropic/claude-haiku-4-5-20251001"
 
 # Set premium model ID based on environment
-PREMIUM_MODEL_ID = "anthropic/claude-4.5-sonnet"
+PREMIUM_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929"
 
 is_local = config.ENV_MODE == EnvMode.LOCAL
 
@@ -18,17 +18,71 @@ class ModelRegistry:
     def _initialize_models(self):
         
         self.register(Model(
-            id="anthropic/claude-4.5-sonnet",
+            id="claude-sonnet-4-5-20250929",
             name="Claude 4.5 Sonnet",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
-                "claude-4.5-sonnet",
-                "Claude 4.5 Sonnet",
                 "anthropic/claude-sonnet-4-5-20250929",
                 "claude-sonnet-4-5-20250929",
-                "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-                "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0"
+                "claude-4.5-sonnet",
+                "anthropic/claude-4.5-sonnet"
+            ],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00
+            ),
+            tier_availability=["paid"],
+            priority=110,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+
+        self.register(Model(
+            id="claude-haiku-4-5-20251001",
+            name="Claude 4.5 Haiku",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=[
+                "anthropic/claude-haiku-4-5-20251001",
+                "claude-haiku-4-5-20251001",
+                "claude-4.5-haiku",
+                "anthropic/claude-4.5-haiku"
+            ],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00
+            ),
+            tier_availability=["free", "paid"],
+            priority=105,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+
+        self.register(Model(
+            id="claude-sonnet-4-20250514",
+            name="Claude 4 Sonnet",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=[
+                "anthropic/claude-sonnet-4-20250514",
+                "anthropic/claude-sonnet-4",
+                "claude-sonnet-4",
+                "Claude Sonnet 4",
+                "bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0"
             ],
             context_window=1_000_000,
             capabilities=[
@@ -49,16 +103,14 @@ class ModelRegistry:
         ))
 
         self.register(Model(
-            id="anthropic/claude-4.5-haiku",
-            name="Claude 4.5 Haiku",
+            id="claude-3.5-haiku-latest",
+            name="Claude 3.5 Haiku",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
-                "claude-4.5-haiku",
-                "Claude 4.5 Haiku",
-                "anthropic/claude-haiku-4-5-20250929",
-                "claude-haiku-4-5-20250929",
-                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-haiku-4-5-20250929-v1:0",
-                "bedrock/anthropic.claude-haiku-4-5-20250929-v1:0"
+                "anthropic/claude-3.5-haiku",
+                "claude-3.5-haiku",
+                "Claude 3.5 Haiku",
+                "claude-haiku-3.5"
             ],
             context_window=1_000_000,
             capabilities=[
@@ -67,7 +119,7 @@ class ModelRegistry:
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
+                input_cost_per_million_tokens=1.50,
                 output_cost_per_million_tokens=5.00
             ),
             tier_availability=["free", "paid"],
@@ -75,33 +127,6 @@ class ModelRegistry:
             recommended=True,
             enabled=True,
             config=ModelConfig()
-        ))
-        
-        self.register(Model(
-            id="anthropic/claude-sonnet-4-20250514" if is_local else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0",
-            name="Sonnet 4",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4", "Claude Sonnet 4", "claude-sonnet-4-20250514", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/anthropic.claude-sonnet-4-20250514-v1:0"],
-            context_window=1_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=100,
-            recommended=True,
-            enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
-                },
-            )
         ))
         
         self.register(Model(

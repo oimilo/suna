@@ -3,19 +3,24 @@
  */
 export const MODEL_MAPPING: Record<string, string> = {
   // Claude models - direciona aliases antigos para os modelos 4.5
-  'claude-sonnet-4': 'anthropic/claude-4.5-sonnet',
-  'claude-sonnet-4-20250514': 'anthropic/claude-4.5-sonnet',
-  'claude-sonnet-4-0': 'anthropic/claude-4.5-sonnet',
-  'anthropic/claude-sonnet-4-20250514': 'anthropic/claude-4.5-sonnet',
-  'anthropic/claude-sonnet-4': 'anthropic/claude-4.5-sonnet',
-  'claude-4.5-sonnet': 'anthropic/claude-4.5-sonnet',
-  'claude-4.5-sonnet-latest': 'anthropic/claude-4.5-sonnet',
+  'claude-sonnet-4': 'anthropic/claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-20250514': 'anthropic/claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-0': 'anthropic/claude-sonnet-4-5-20250929',
+  'anthropic/claude-sonnet-4-20250514': 'anthropic/claude-sonnet-4-5-20250929',
+  'anthropic/claude-sonnet-4': 'anthropic/claude-sonnet-4-5-20250929',
+  'claude-4.5-sonnet': 'anthropic/claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-5-20250929': 'anthropic/claude-sonnet-4-5-20250929',
+  'claude-4.5-sonnet-latest': 'anthropic/claude-sonnet-4-5-20250929',
+  'anthropic/claude-4.5-sonnet': 'anthropic/claude-sonnet-4-5-20250929',
 
   // Haiku aliases
-  'claude-haiku': 'anthropic/claude-4.5-haiku',
-  'claude-haiku-4-5-20250929': 'anthropic/claude-4.5-haiku',
-  'claude-4.5-haiku': 'anthropic/claude-4.5-haiku',
-  'anthropic/claude-haiku-4-5-20250929': 'anthropic/claude-4.5-haiku',
+  'claude-haiku': 'anthropic/claude-haiku-4-5-20251001',
+  'claude-haiku-3.5': 'anthropic/claude-haiku-4-5-20251001',
+  'claude-3.5-haiku': 'anthropic/claude-haiku-4-5-20251001',
+  'anthropic/claude-haiku-3-5': 'anthropic/claude-haiku-4-5-20251001',
+  'anthropic/claude-4.5-haiku': 'anthropic/claude-haiku-4-5-20251001',
+  'claude-4.5-haiku': 'anthropic/claude-haiku-4-5-20251001',
+  'claude-haiku-4-5-20251001': 'anthropic/claude-haiku-4-5-20251001',
 
   // Add other model mappings as needed
   'gemini-flash': 'google/gemini-flash-1.5',

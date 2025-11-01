@@ -20,8 +20,8 @@ export function useModelWithFallback(options?: UseModelWithFallbackOptions) {
       agent_id?: string;
     }
   ) => {
-    // Always use Claude Sonnet 4.5
-    const fixedModel = 'anthropic/claude-4.5-sonnet';
+    // Always use Claude 4.5 Sonnet (API ID)
+    const fixedModel = 'anthropic/claude-sonnet-4-5-20250929';
     
     try {
       setIsRetrying(false);
