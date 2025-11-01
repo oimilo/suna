@@ -85,8 +85,15 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     fallbacks = [
         # Prefer fallback para modelos Anthropic diretos quando o principal estiver indisponível
         {
-            "anthropic/claude-4.5-sonnet": [
-                "anthropic/claude-4.5-haiku"
+            "anthropic/claude-sonnet-4-5-20250929": [
+                "anthropic/claude-sonnet-4-20250514",
+                "anthropic/claude-3-7-sonnet-latest"
+            ]
+        },
+        {
+            "anthropic/claude-haiku-4-5-20251001": [
+                "anthropic/claude-3.5-haiku",
+                "deepseek/deepseek-chat-v3.1"
             ]
         },
         # Lightweight auxiliary model fallback: GPT-5-nano -> DeepSeek Chat v3.1

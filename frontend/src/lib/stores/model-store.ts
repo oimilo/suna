@@ -39,8 +39,8 @@ interface ModelStore {
   resetToDefault: (subscriptionStatus: SubscriptionStatus) => void;
 }
 
-const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-4.5-haiku';
-const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-4.5-sonnet';
+const DEFAULT_FREE_MODEL_ID = 'anthropic/claude-haiku-4-5-20251001';
+const DEFAULT_PREMIUM_MODEL_ID = 'anthropic/claude-sonnet-4-5-20250929';
 
 export const useModelStore = create<ModelStore>()(
   persist(

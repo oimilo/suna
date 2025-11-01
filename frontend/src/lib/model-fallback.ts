@@ -2,27 +2,45 @@
  * Model fallback configuration - simplified for Claude Sonnet 4 only
  */
 
-// All models fallback to Claude 4.5 Sonnet
+// Fallbacks priorizam modelos estáveis (Sonnet 4 / Haiku 3.5 / DeepSeek)
 export const MODEL_FALLBACK_MAP: Record<string, string[]> = {
-  'anthropic/claude-4.5-sonnet': ['anthropic/claude-4.5-haiku'],
-  'claude-4.5-sonnet': ['anthropic/claude-4.5-haiku'],
-  'claude-sonnet-4-20250514': ['anthropic/claude-4.5-sonnet'],
-  'claude-sonnet-4': ['anthropic/claude-4.5-sonnet'],
-  'anthropic/claude-sonnet-4-20250514': ['anthropic/claude-4.5-sonnet'],
-  'anthropic/claude-sonnet-4': ['anthropic/claude-4.5-sonnet'],
+  'anthropic/claude-sonnet-4-5-20250929': [
+    'anthropic/claude-sonnet-4-20250514',
+    'anthropic/claude-3-7-sonnet-latest',
+  ],
+  'claude-sonnet-4-5-20250929': [
+    'anthropic/claude-sonnet-4-20250514',
+    'anthropic/claude-3-7-sonnet-latest',
+  ],
+  'anthropic/claude-sonnet-4-20250514': ['anthropic/claude-3-7-sonnet-latest'],
+  'claude-sonnet-4-20250514': ['anthropic/claude-3-7-sonnet-latest'],
+  'claude-sonnet-4': ['anthropic/claude-3-7-sonnet-latest'],
+  'anthropic/claude-sonnet-4': ['anthropic/claude-3-7-sonnet-latest'],
+
+  'anthropic/claude-haiku-4-5-20251001': [
+    'anthropic/claude-3.5-haiku',
+    'deepseek/deepseek-chat-v3.1',
+  ],
+  'claude-haiku-4-5-20251001': [
+    'anthropic/claude-3.5-haiku',
+    'deepseek/deepseek-chat-v3.1',
+  ],
+  'anthropic/claude-3.5-haiku': ['deepseek/deepseek-chat-v3.1'],
+  'claude-3.5-haiku': ['deepseek/deepseek-chat-v3.1'],
 };
 
 // Model padrão gratuito disponível
 export const FREE_TIER_MODELS = [
-  'anthropic/claude-4.5-haiku',
+  'anthropic/claude-haiku-4-5-20251001',
+  'anthropic/claude-3.5-haiku',
 ];
 
 /**
  * Get fallback model - always returns Claude Sonnet 4
  */
 export function getFallbackModel(failedModel: string): string | null {
-  // Sempre retorna Claude 4.5 Sonnet como fallback avançado
-  return 'anthropic/claude-4.5-sonnet';
+  // Usa Sonnet 4 como fallback padrão quando nada definido
+  return 'anthropic/claude-sonnet-4-20250514';
 }
 
 /**
