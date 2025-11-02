@@ -50,6 +50,13 @@ import { useAgentSelection } from '@/lib/stores/agent-selection-store';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { handleGoogleSlidesUpload } from '@/components/thread/tool-views/utils/presentation-utils';
 
+const DEBUG_THREAD = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
+const logThreadDebug = (...args: unknown[]) => {
+  if (DEBUG_THREAD) {
+    console.debug('[workspace:thread]', ...args);
+  }
+};
+
 interface ThreadComponentProps {
   projectId: string;
   threadId: string;
@@ -133,6 +140,27 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     handleSidePanelNavigate,
     userClosedPanelRef,
   } = useToolCalls(messages, setLeftSidebarOpen, agentStatus);
+
+  useEffect(() => {
+    if (!DEBUG_THREAD) return;
+    logThreadDebug('state:snapshot', {
+      isSidePanelOpen,
+      isPanelMinimized,
+      currentToolIndex,
+      autoOpenedPanel,
+      hasMainFileDetected,
+      toolCallCount: toolCalls.length,
+      userClosedPanel: userClosedPanelRef.current,
+    });
+  }, [
+    isSidePanelOpen,
+    isPanelMinimized,
+    currentToolIndex,
+    autoOpenedPanel,
+    hasMainFileDetected,
+    toolCalls.length,
+    userClosedPanelRef,
+  ]);
 
   const {
     showBillingAlert,
@@ -226,19 +254,26 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   }, [setIsSidePanelOpen, setAutoOpenedPanel, setIsPanelMinimized, userClosedPanelRef]);
 
   const handleSidePanelMinimize = useCallback(() => {
-    console.log('[PAGE] onSidePanelMinimize chamado - minimizando workspace');
+    if (DEBUG_THREAD) {
+      logThreadDebug('action:minimize');
+    }
     setIsPanelMinimized(true);
     setHasMainFileDetected(false);
   }, []);
 
   const handleSidePanelMaximize = useCallback(() => {
-    console.log('[PAGE] onSidePanelMaximize chamado - maximizando workspace');
+    if (DEBUG_THREAD) {
+      logThreadDebug('action:maximize');
+    }
     setIsPanelMinimized(prev => (prev ? false : prev));
     setIsSidePanelOpen(prev => (prev ? prev : true));
     setHasMainFileDetected(prev => (prev ? prev : true));
   }, [setIsSidePanelOpen]);
 
   const handleSidePanelRequestOpen = useCallback(() => {
+    if (DEBUG_THREAD) {
+      logThreadDebug('action:request-open');
+    }
     setIsSidePanelOpen(true);
     userClosedPanelRef.current = false;
   }, [setIsSidePanelOpen, userClosedPanelRef]);

@@ -11,7 +11,7 @@ import { ParsedContent } from '@/components/thread/types';
 import { extractToolName } from '@/components/thread/tool-views/xml-parser';
 import { extractAskData } from '@/components/thread/tool-views/ask-tool/_utils';
 
-const DEBUG_TOOLCALLS = process.env.NODE_ENV !== 'production';
+const DEBUG_TOOLCALLS = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
 
 const logToolCallDebug = (...args: unknown[]) => {
   if (DEBUG_TOOLCALLS) {
@@ -102,6 +102,17 @@ export function useToolCalls(
   const userClosedPanelRef = useRef(false);
   const userNavigatedRef = useRef(false); // Track if user manually navigated
   const lastHistoricalSignatureRef = useRef<string>('');
+
+  useEffect(() => {
+    logToolCallDebug('state:update', {
+      toolCallCount: toolCalls.length,
+      currentToolIndex,
+      isSidePanelOpen,
+      autoOpenedPanel,
+      userClosedPanel: userClosedPanelRef.current,
+      userNavigated: userNavigatedRef.current,
+    });
+  }, [toolCalls, currentToolIndex, isSidePanelOpen, autoOpenedPanel]);
 
   const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prevIsOpen) => {

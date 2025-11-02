@@ -67,6 +67,13 @@ interface ToolCallSnapshot {
 const FLOATING_LAYOUT_ID = 'tool-panel-float';
 const CONTENT_LAYOUT_ID = 'tool-panel-content';
 
+const DEBUG_WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
+const logWorkspaceDebug = (...args: unknown[]) => {
+  if (DEBUG_WORKSPACE) {
+    console.debug('[workspace:panel]', ...args);
+  }
+};
+
 export function ToolCallSidePanel({
   isOpen,
   isPanelMinimized = false,
@@ -358,11 +365,30 @@ export function ToolCallSidePanel({
 
   // Auto-abertura inteligente e navegação para arquivo principal
   React.useEffect(() => {
+    if (DEBUG_WORKSPACE) {
+      logWorkspaceDebug('auto-open:check', {
+        hasUserInteracted,
+        isLoading,
+        snapshotCount: toolCallSnapshots.length,
+        internalIndex,
+        currentIndex,
+        navigationMode,
+        isOpen,
+        isPanelMinimized,
+      });
+    }
+
     if (hasUserInteracted || isLoading) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:skip-user-or-loading');
+      }
       return;
     }
 
     if (!toolCallSnapshots.length) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:skip-no-snapshots');
+      }
       return;
     }
 
@@ -374,6 +400,9 @@ export function ToolCallSidePanel({
       : toolCallSnapshots.findIndex(snapshot => isDeliveryMoment(snapshot.toolCall));
     
     if (deliveryIdx < 0) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:skip-no-delivery');
+      }
       return;
     }
 
@@ -381,34 +410,67 @@ export function ToolCallSidePanel({
     const reason: 'main' | 'delivery' = mainIdx > -1 ? 'main' : 'delivery';
     const autoOpenKey = buildAutoOpenKey(latestSnapshot, reason);
 
+    if (DEBUG_WORKSPACE) {
+      logWorkspaceDebug('auto-open:evaluated', {
+        deliveryIdx,
+        mainIdx,
+        reason,
+        autoOpenKey,
+        guard: autoOpenGuardRef.current,
+        lastRequested: lastRequestedOpenRef.current,
+        lastMainEvent: lastMainFileEventRef.current,
+      });
+    }
+
     if (!autoOpenKey || autoOpenGuardRef.current === autoOpenKey) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:skip-guard', { autoOpenKey });
+      }
       return;
     }
 
     autoOpenGuardRef.current = autoOpenKey;
 
     if (internalIndex !== deliveryIdx) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:set-internal-index', { from: internalIndex, to: deliveryIdx });
+      }
         setInternalIndex(deliveryIdx);
     }
 
     if (currentIndex !== deliveryIdx) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:onNavigate', { from: currentIndex, to: deliveryIdx });
+      }
         onNavigate(deliveryIdx);
     }
 
     if (deliveryIdx === toolCallSnapshots.length - 1 && navigationMode !== 'live') {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:set-mode-live');
+      }
       setNavigationMode('live');
     } else if (deliveryIdx !== toolCallSnapshots.length - 1 && navigationMode !== 'manual') {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:set-mode-manual');
+      }
       setNavigationMode('manual');
     }
 
     const shouldRequestOpen = !isOpen || isPanelMinimized;
     if (shouldRequestOpen && onRequestOpen && lastRequestedOpenRef.current !== autoOpenKey) {
+      if (DEBUG_WORKSPACE) {
+        logWorkspaceDebug('auto-open:request-open');
+      }
             onRequestOpen();
       lastRequestedOpenRef.current = autoOpenKey;
     }
 
     if (mainIdx > -1 && onMainFileDetected) {
       if (lastMainFileEventRef.current !== autoOpenKey) {
+        if (DEBUG_WORKSPACE) {
+          logWorkspaceDebug('auto-open:onMainFileDetected');
+        }
         onMainFileDetected();
         lastMainFileEventRef.current = autoOpenKey;
       }
@@ -748,6 +810,9 @@ export function ToolCallSidePanel({
 
   // Oculta o painel quando está minimizado OU fechado
   if (!isOpen || isPanelMinimized) {
+    if (DEBUG_WORKSPACE) {
+      logWorkspaceDebug('render:skip-panel-hidden', { isOpen, isPanelMinimized });
+    }
     return null;
   }
 
