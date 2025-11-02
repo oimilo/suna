@@ -847,6 +847,43 @@ class ThreadManager:
                 content = json.loads(chunk.get('content', '{}')) if isinstance(chunk.get('content'), str) else chunk.get('content', {})
                 finish_reason = content.get('finish_reason')
                 tools_executed = content.get('tools_executed', False)
+
+                tool_conflicts = content.get('tool_conflicts', []) or []
+                if isinstance(tool_conflicts, list):
+                    for entry in tool_conflicts:
+                        if not isinstance(entry, dict):
+                            continue
+                        function_name = entry.get('function_name')
+                        reason = entry.get('reason')
+                        try:
+                            consecutive_failures = int(entry.get('consecutive_failures', 0) or 0)
+                        except (TypeError, ValueError):
+                            consecutive_failures = 0
+                        if function_name in {'create_file'} and reason == 'already_exists':
+                            logger.debug("Stopping auto-continue due to create_file conflict (already exists)")
+                            auto_continue_state['active'] = False
+                            return False
+
+                failure_summary = content.get('tool_failure_summary', []) or []
+                if isinstance(failure_summary, list):
+                    for entry in failure_summary:
+                        if not isinstance(entry, dict):
+                            continue
+                        function_name = entry.get('function_name')
+                        try:
+                            consecutive_failures = int(entry.get('consecutive_failures', 0) or 0)
+                        except (TypeError, ValueError):
+                            consecutive_failures = 0
+                        last_reason = entry.get('last_reason')
+                        if function_name in {'create_file'}:
+                            if last_reason == 'already_exists' and consecutive_failures >= 1:
+                                logger.debug("Stopping auto-continue due to create_file already-existing conflict (summary)")
+                                auto_continue_state['active'] = False
+                                return False
+                            if consecutive_failures >= 2:
+                                logger.debug("Stopping auto-continue due to repeated create_file failures")
+                                auto_continue_state['active'] = False
+                                return False
                 
                 # Trigger auto-continue for: native tool calls, length limit, or XML tools executed
                 if finish_reason == 'tool_calls' or tools_executed:

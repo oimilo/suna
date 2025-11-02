@@ -4,6 +4,7 @@ import {
   ToolCallInput,
   shouldAutoOpenForStreaming,
   normalizeToolName,
+  detectExistingFileConflict,
 } from '@/components/thread/tool-call-helpers';
 import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '../_types';
 import { safeJsonParse } from '@/components/thread/utils';
@@ -250,7 +251,165 @@ export function useToolCalls(
       }
     });
 
-    return { historicalToolPairs, messageIdToIndex };
+    const annotatedPairs = historicalToolPairs.map((pair): ToolCallInput => {
+      const outcome: ToolCallInput['outcome'] = (() => {
+        const resultContent = pair.toolResult?.content;
+        if (!pair.toolResult || resultContent === 'STREAMING') {
+          return 'pending';
+        }
+        if (pair.toolResult.isSuccess === false) {
+          return 'failure';
+        }
+        return 'success';
+      })();
+
+      const initialFailureReason = (() => {
+        if (outcome === 'failure') {
+          const inspected = pair.toolResult?.content ?? pair.assistantCall?.content;
+          if (detectExistingFileConflict(inspected)) {
+            return 'already_exists';
+          }
+          return 'unknown';
+        }
+        return null;
+      })();
+
+      return {
+        ...pair,
+        assistantCall: {
+          ...pair.assistantCall,
+          name: normalizeToolName(pair.assistantCall?.name ?? 'unknown'),
+        },
+        outcome,
+        failureReason: initialFailureReason,
+      };
+    });
+
+    const toolIndicesByName = new Map<string, number[]>();
+    annotatedPairs.forEach((pair, index) => {
+      const name = pair.assistantCall?.name ?? 'unknown';
+      const list = toolIndicesByName.get(name) ?? [];
+      list.push(index);
+      toolIndicesByName.set(name, list);
+    });
+
+    const pointerByTool = new Map<string, number>();
+    const sortedMessages = [...messages].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return aTime - bTime;
+    });
+
+    sortedMessages.forEach(message => {
+      if (message.type !== 'status') {
+        return;
+      }
+
+      const parsedContent = typeof message.content === 'string'
+        ? safeJsonParse<any>(message.content, {})
+        : (message.content ?? {});
+
+      if (!parsedContent || typeof parsedContent !== 'object') {
+        return;
+      }
+
+      const statusType = parsedContent.status_type;
+      const rawFunctionName = parsedContent.function_name || parsedContent.xml_tag_name;
+      const normalizedFunctionName = rawFunctionName ? normalizeToolName(rawFunctionName) : undefined;
+
+      if (statusType === 'tool_completed' || statusType === 'tool_failed') {
+        if (!normalizedFunctionName) {
+          return;
+        }
+        const indices = toolIndicesByName.get(normalizedFunctionName);
+        if (!indices || indices.length === 0) {
+          return;
+        }
+
+        const pointer = pointerByTool.get(normalizedFunctionName) ?? 0;
+        if (pointer >= indices.length) {
+          return;
+        }
+
+        const pairIndex = indices[pointer];
+        pointerByTool.set(normalizedFunctionName, pointer + 1);
+        const pair = annotatedPairs[pairIndex];
+        if (!pair) {
+          return;
+        }
+
+        if (statusType === 'tool_completed') {
+          pair.outcome = 'success';
+          pair.failureReason = null;
+        } else {
+          pair.outcome = 'failure';
+          if (!pair.failureReason || pair.failureReason === 'unknown') {
+            pair.failureReason = 'unknown';
+          }
+        }
+      }
+
+      if (statusType === 'finish') {
+        const conflicts = parsedContent.tool_conflicts;
+        if (Array.isArray(conflicts)) {
+          conflicts.forEach((conflict: any) => {
+            if (!conflict || typeof conflict !== 'object') {
+              return;
+            }
+            const conflictNameRaw = conflict.function_name || conflict.xml_tag_name;
+            const normalizedConflictName = conflictNameRaw ? normalizeToolName(conflictNameRaw) : undefined;
+            if (!normalizedConflictName) {
+              return;
+            }
+            const indices = toolIndicesByName.get(normalizedConflictName);
+            if (!indices || indices.length === 0) {
+              return;
+            }
+            const pointer = pointerByTool.get(normalizedConflictName);
+            const latestIndex = typeof pointer === 'number' && pointer > 0
+              ? indices[Math.min(pointer - 1, indices.length - 1)]
+              : indices[indices.length - 1];
+            const pair = annotatedPairs[latestIndex];
+            if (!pair) {
+              return;
+            }
+            pair.outcome = 'conflict' as ToolCallInput['outcome'];
+            pair.failureReason = conflict.reason || 'already_exists';
+          });
+        }
+
+        const failureSummary = parsedContent.tool_failure_summary;
+        if (Array.isArray(failureSummary)) {
+          failureSummary.forEach((entry: any) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            const summaryNameRaw = entry.function_name || entry.xml_tag_name;
+            const normalizedSummaryName = summaryNameRaw ? normalizeToolName(summaryNameRaw) : undefined;
+            if (!normalizedSummaryName) {
+              return;
+            }
+            const indices = toolIndicesByName.get(normalizedSummaryName);
+            if (!indices || indices.length === 0) {
+              return;
+            }
+            const pointer = pointerByTool.get(normalizedSummaryName);
+            const latestIndex = typeof pointer === 'number' && pointer > 0
+              ? indices[Math.min(pointer - 1, indices.length - 1)]
+              : indices[indices.length - 1];
+            const pair = annotatedPairs[latestIndex];
+            if (!pair) {
+              return;
+            }
+            if (pair.outcome === 'failure' || pair.outcome === 'conflict') {
+              pair.failureReason = entry.last_reason || pair.failureReason || 'unknown';
+            }
+          });
+        }
+      }
+    });
+
+    return { historicalToolPairs: annotatedPairs, messageIdToIndex };
   }, [messages]);
 
   const getToolCallsSignature = useCallback((pairs: ToolCallInput[]) => {
@@ -289,6 +448,8 @@ export function useToolCalls(
           serializeSegment(assistantContent),
           toolResult?.timestamp ?? 'no-result-ts',
           serializeSegment(toolResultContent),
+          pair.outcome ?? 'pending',
+          pair.failureReason ?? '∅',
         ].join('|');
       })
       .join('::');
@@ -471,6 +632,8 @@ export function useToolCalls(
           isSuccess: true,
           timestamp: new Date().toISOString(),
         },
+        outcome: 'pending',
+        failureReason: null,
       };
 
       setToolCalls((prev) => {
