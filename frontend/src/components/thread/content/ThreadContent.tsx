@@ -131,26 +131,11 @@ export function renderMarkdownContent(
         try {
             const projectId = (project as any)?.project_id || (project as any)?.id;
             if (!projectId) return text;
-
-            const composeAbsoluteUrl = (relativePath: string) => {
-                const normalizedRelative = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
-                const windowOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
-                const envOrigin = process.env.NEXT_PUBLIC_APP_URL;
-                const base = (windowOrigin || envOrigin || '').trim();
-
-                if (!base) {
-                    return normalizedRelative;
-                }
-
-                return `${base.replace(/\/$/, '')}${normalizedRelative}`;
-            };
-
             // Matches: https://8080-xxxx.proxy.daytona.works[/path]
             const re = /https?:\/\/(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works(\/[\w\-./%?=&#]*)?/g;
             return text.replace(re, (_m, port: string, path: string | undefined) => {
                 const cleanPath = (path || '').replace(/^\/+/, '');
-                const relativePath = `/api/preview/${projectId}/p/${port}${cleanPath ? '/' + cleanPath : ''}`;
-                return composeAbsoluteUrl(relativePath);
+                return `/api/preview/${projectId}/p/${port}${cleanPath ? '/' + cleanPath : ''}`;
             });
         } catch {
             return text;

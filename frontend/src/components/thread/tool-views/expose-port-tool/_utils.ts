@@ -5,7 +5,6 @@ export interface ExposePortData {
   url: string | null;
   proxyUrl: string | null;
   directUrl: string | null;
-  legacyProxyUrl: string | null;
   message: string | null;
   success?: boolean;
   timestamp?: string;
@@ -27,7 +26,6 @@ const extractFromNewFormat = (content: any): {
   url: string | null;
   proxyUrl: string | null;
   directUrl: string | null;
-  legacyProxyUrl: string | null;
   message: string | null;
   success?: boolean;
   timestamp?: string;
@@ -40,7 +38,6 @@ const extractFromNewFormat = (content: any): {
       url: null,
       proxyUrl: null,
       directUrl: null,
-      legacyProxyUrl: null,
       message: null,
       success: undefined,
       timestamp: undefined
@@ -64,7 +61,6 @@ const extractFromNewFormat = (content: any): {
       url: parsedOutput?.proxy_url || parsedOutput?.url || parsedOutput?.original_url || null,
       proxyUrl: parsedOutput?.proxy_url || null,
       directUrl: parsedOutput?.original_url || parsedOutput?.url || null,
-      legacyProxyUrl: parsedOutput?.legacy_proxy_url || null,
       message: parsedOutput?.message || parsedContent.summary || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
@@ -91,7 +87,6 @@ const extractFromNewFormat = (content: any): {
     url: null,
     proxyUrl: null,
     directUrl: null,
-    legacyProxyUrl: null,
     message: null,
     success: undefined,
     timestamp: undefined
@@ -116,7 +111,6 @@ const extractFromLegacyFormat = (content: any): {
   url: string | null;
   proxyUrl: string | null;
   directUrl: string | null;
-  legacyProxyUrl: string | null;
   message: string | null;
 } => {
   const toolData = extractToolData(content);
@@ -131,14 +125,13 @@ const extractFromLegacyFormat = (content: any): {
       url: null,
       proxyUrl: null,
       directUrl: null,
-      legacyProxyUrl: null,
       message: null
     };
   }
 
   const contentStr = normalizeContentToString(content);
   if (!contentStr) {
-    return { port: null, url: null, proxyUrl: null, directUrl: null, legacyProxyUrl: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   }
   try {
     const parsed = JSON.parse(contentStr);
@@ -148,7 +141,6 @@ const extractFromLegacyFormat = (content: any): {
         url: parsed.url,
         proxyUrl: parsed.proxy_url || null,
         directUrl: parsed.original_url || parsed.url || null,
-        legacyProxyUrl: parsed.legacy_proxy_url || null,
         message: parsed.message || null
       };
     }
@@ -174,7 +166,6 @@ const extractFromLegacyFormat = (content: any): {
         url: result.url || null,
         proxyUrl: result.proxy_url || null,
         directUrl: result.original_url || result.url || null,
-        legacyProxyUrl: result.legacy_proxy_url || null,
         message: result.message || null
       };
     }
@@ -190,16 +181,15 @@ const extractFromLegacyFormat = (content: any): {
         url: result.url || null,
         proxyUrl: result.proxy_url || null,
         directUrl: result.original_url || result.url || null,
-        legacyProxyUrl: result.legacy_proxy_url || null,
         message: result.message || null
       };
     }
     
-    return { port: null, url: null, proxyUrl: null, directUrl: null, legacyProxyUrl: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   } catch (e) {
     console.error('Failed to parse tool content:', e);
     console.error('Tool content was:', contentStr);
-    return { port: null, url: null, proxyUrl: null, directUrl: null, legacyProxyUrl: null, message: null };
+    return { port: null, url: null, proxyUrl: null, directUrl: null, message: null };
   }
 };
 
@@ -214,7 +204,6 @@ export function extractExposePortData(
   url: string | null;
   proxyUrl: string | null;
   directUrl: string | null;
-  legacyProxyUrl: string | null;
   message: string | null;
   actualIsSuccess: boolean;
   actualToolTimestamp?: string;
@@ -224,7 +213,6 @@ export function extractExposePortData(
   let url: string | null = null;
   let proxyUrl: string | null = null;
   let directUrl: string | null = null;
-  let legacyProxyUrl: string | null = null;
   let message: string | null = null;
   let actualIsSuccess = isSuccess;
   let actualToolTimestamp = toolTimestamp;
@@ -255,7 +243,6 @@ export function extractExposePortData(
     url = assistantNewFormat.url;
     proxyUrl = assistantNewFormat.proxyUrl;
     directUrl = assistantNewFormat.directUrl;
-    legacyProxyUrl = assistantNewFormat.legacyProxyUrl;
     message = assistantNewFormat.message;
     if (assistantNewFormat.success !== undefined) {
       actualIsSuccess = assistantNewFormat.success;
@@ -269,7 +256,6 @@ export function extractExposePortData(
     url = toolNewFormat.url;
     proxyUrl = toolNewFormat.proxyUrl;
     directUrl = toolNewFormat.directUrl;
-    legacyProxyUrl = toolNewFormat.legacyProxyUrl;
     message = toolNewFormat.message;
     if (toolNewFormat.success !== undefined) {
       actualIsSuccess = toolNewFormat.success;
@@ -286,7 +272,6 @@ export function extractExposePortData(
     url = assistantLegacy.url || toolLegacy.url;
     proxyUrl = assistantLegacy.proxyUrl || toolLegacy.proxyUrl;
     directUrl = assistantLegacy.directUrl || toolLegacy.directUrl || url;
-    legacyProxyUrl = assistantLegacy.legacyProxyUrl || toolLegacy.legacyProxyUrl;
     message = assistantLegacy.message || toolLegacy.message;
     
     if (!port) {
@@ -323,7 +308,6 @@ export function extractExposePortData(
 
   const normalizedProxy = normaliseUrl(proxyUrl);
   const normalizedDirect = normaliseUrl(directUrl);
-  const normalizedLegacy = normaliseUrl(legacyProxyUrl);
   const normalizedUrl = normaliseUrl(url) || normalizedProxy || normalizedDirect;
 
   return {
@@ -331,7 +315,6 @@ export function extractExposePortData(
     url: normalizedUrl,
     proxyUrl: normalizedProxy,
     directUrl: normalizedDirect,
-    legacyProxyUrl: normalizedLegacy,
     message,
     actualIsSuccess,
     actualToolTimestamp,

@@ -28,7 +28,6 @@ export function ExposePortToolView({
     url,
     proxyUrl,
     directUrl,
-    legacyProxyUrl,
     message,
     actualIsSuccess,
     actualToolTimestamp
@@ -79,7 +78,7 @@ export function ExposePortToolView({
         ) : (
           <ScrollArea className="h-full w-full">
             <div className="p-4 pt-4 pb-0 space-y-6">
-              {(url || proxyUrl || directUrl || legacyProxyUrl) && (
+              {(url || proxyUrl || directUrl) && (
                 <div className="space-y-4">
                   {/* URL Exposta Section */}
                   <div>
@@ -97,22 +96,6 @@ export function ExposePortToolView({
                             className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
                           >
                             {proxyUrl}
-                            <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
-                          </a>
-                        </div>
-                      )}
-                      {legacyProxyUrl && legacyProxyUrl !== proxyUrl && (
-                        <div className="mt-2">
-                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                            API Legacy (Compatibilidade)
-                          </div>
-                          <a
-                            href={legacyProxyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
-                          >
-                            {legacyProxyUrl}
                             <ExternalLink className="flex-shrink-0 h-3.5 w-3.5 opacity-60" />
                           </a>
                         </div>
@@ -173,7 +156,7 @@ export function ExposePortToolView({
               )}
 
               {/* Empty State */}
-              {!port && !url && !proxyUrl && !legacyProxyUrl && !directUrl && !isStreaming && (
+              {!port && !url && !proxyUrl && !directUrl && !isStreaming && (
                 <div className="flex flex-col items-center justify-center py-12 px-6">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
                     <Computer className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />

@@ -320,9 +320,9 @@ export function ToolCallSidePanel({
       if (!snapshot) {
         snapshot = {
           id: snapshotId,
-      toolCall,
-      index,
-      timestamp: Date.now(),
+          toolCall,
+          index,
+          timestamp: Date.now(),
         };
         changed = true;
       } else {
@@ -415,9 +415,9 @@ export function ToolCallSidePanel({
       setMainDeliveryIndex(prev => (prev === -1 ? prev : -1));
       return;
     }
-    
+
     const mainIdx = detectMainFile(toolCalls);
-    
+
     if (mainIdx > -1) {
       setMainDeliveryIndex(prev => (prev === mainIdx ? prev : mainIdx));
     } else {
@@ -460,7 +460,7 @@ export function ToolCallSidePanel({
     const deliveryIdx = mainIdx > -1
       ? mainIdx
       : toolCallSnapshots.findIndex(snapshot => isDeliveryMoment(snapshot.toolCall));
-    
+
     if (deliveryIdx < 0) {
       if (DEBUG_WORKSPACE) {
         logWorkspaceDebug('auto-open:skip-no-delivery');
@@ -497,14 +497,14 @@ export function ToolCallSidePanel({
       if (DEBUG_WORKSPACE) {
         logWorkspaceDebug('auto-open:set-internal-index', { from: internalIndex, to: deliveryIdx });
       }
-        setInternalIndex(deliveryIdx);
+      setInternalIndex(deliveryIdx);
     }
 
     if (currentIndex !== deliveryIdx) {
       if (DEBUG_WORKSPACE) {
         logWorkspaceDebug('auto-open:onNavigate', { from: currentIndex, to: deliveryIdx });
       }
-        onNavigate(deliveryIdx);
+      onNavigate(deliveryIdx);
     }
 
     if (deliveryIdx === toolCallSnapshots.length - 1 && navigationMode !== 'live') {
@@ -524,7 +524,7 @@ export function ToolCallSidePanel({
       if (DEBUG_WORKSPACE) {
         logWorkspaceDebug('auto-open:request-open');
       }
-            onRequestOpen();
+      onRequestOpen();
       lastRequestedOpenRef.current = autoOpenKey;
     }
 
