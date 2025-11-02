@@ -162,11 +162,12 @@ export function FileOperationToolView({
 
   const normalizedAutoPreviewUrl = React.useMemo(() => {
     if (!autoDetectedPreviewUrl) return undefined;
-    if (!projectId || !previewPort || !projectSandboxUrl) return autoDetectedPreviewUrl;
+    if (!projectId || !previewPort) return autoDetectedPreviewUrl;
 
     try {
       const parsedAuto = new URL(autoDetectedPreviewUrl);
       const sandboxHost = (() => {
+        if (!projectSandboxUrl) return null;
         try {
           return new URL(projectSandboxUrl).host;
         } catch {
@@ -174,11 +175,26 @@ export function FileOperationToolView({
         }
       })();
 
+      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(parsedAuto.hostname);
+
       if (sandboxHost && parsedAuto.host === sandboxHost) {
         const proxied = constructProjectPreviewProxyUrl(
           projectId,
           previewPort,
           parsedAuto.pathname,
+        );
+        if (proxied) {
+          return `${proxied}${parsedAuto.search || ''}${parsedAuto.hash || ''}`;
+        }
+      } else if (isLocalhost) {
+        const prefix = `/api/preview/${projectId}/p/${previewPort}`;
+        const remainingPath = parsedAuto.pathname.startsWith(prefix)
+          ? parsedAuto.pathname.slice(prefix.length)
+          : undefined;
+        const proxied = constructProjectPreviewProxyUrl(
+          projectId,
+          previewPort,
+          remainingPath,
         );
         if (proxied) {
           return `${proxied}${parsedAuto.search || ''}${parsedAuto.hash || ''}`;

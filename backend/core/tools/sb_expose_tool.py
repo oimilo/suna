@@ -1,9 +1,12 @@
+import os
+import secrets
+import string
+from urllib.parse import urlparse
+
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
-import asyncio
-import os
-from urllib.parse import urlparse
+from core.services.supabase import DBConnection
 
 @tool_metadata(
     display_name="Port Exposure",
@@ -67,17 +70,22 @@ class SandboxExposeTool(SandboxToolsBase):
             preview_link = await self.sandbox.get_preview_link(port)
             original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
 
-            # Build unique per-project proxy URL (backup logic)
-            proxy_url = f"{self._get_proxy_base_url()}/api/preview/{self.project_id}/p/{port}/"
+            slug = await self._get_or_create_preview_slug(self.project_id, port)
+
+            base_host = self._get_proxy_base_url()
+            short_url = f"{base_host}/p-{slug}"
+            legacy_proxy_url = f"{base_host}/api/preview/{self.project_id}/p/{port}/"
 
             return self.success_response({
                 "url": original_url,
                 "original_url": original_url,
-                "proxy_url": proxy_url,
+                "proxy_url": short_url,
+                "preview_slug": slug,
+                "legacy_proxy_url": legacy_proxy_url,
                 "port": port,
                 "message": (
                     f"Successfully exposed port {port}. "
-                    f"Project proxy: {proxy_url}  |  Direct preview: {original_url}"
+                    f"Preview available at {short_url}. Legacy API path: {legacy_proxy_url}"
                 )
             })
                 
@@ -121,3 +129,38 @@ class SandboxExposeTool(SandboxToolsBase):
             return base.rstrip('/')
 
         return "https://www.prophet.build"
+
+    async def _get_or_create_preview_slug(self, project_id: str, port: int) -> str:
+        client = await self._get_supabase_client()
+
+        existing = await client.table('sandbox_preview_links').select('slug').eq('project_id', project_id).eq('port', port).limit(1).execute()
+        if existing.data:
+            return existing.data[0]['slug']
+
+        for _ in range(10):
+            slug = self._generate_preview_slug()
+            try:
+                await client.table('sandbox_preview_links').insert({
+                    'slug': slug,
+                    'project_id': project_id,
+                    'port': port
+                }).execute()
+                return slug
+            except Exception as insert_err:
+                error_text = str(getattr(insert_err, 'message', insert_err))
+                if 'duplicate key value' not in error_text.lower():
+                    raise insert_err
+
+        raise RuntimeError("Failed to generate a unique preview slug after multiple attempts")
+
+    async def _get_supabase_client(self):
+        if getattr(self.thread_manager, "db", None):
+            return await self.thread_manager.db.client
+
+        db_connection = DBConnection()
+        await db_connection.initialize()
+        return await db_connection.client
+
+    def _generate_preview_slug(self, length: int = 8) -> str:
+        alphabet = string.ascii_lowercase + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
