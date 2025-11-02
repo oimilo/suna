@@ -24,7 +24,7 @@ import {
 } from '@/components/file-renderers/markdown-renderer';
 import { CsvRenderer } from '@/components/file-renderers/csv-renderer';
 import { cn } from '@/lib/utils';
-import { constructHtmlPreviewUrl } from '@/lib/utils/url';
+import { constructHtmlPreviewUrl, constructProjectPreviewProxyUrl } from '@/lib/utils/url';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import {
@@ -135,14 +135,8 @@ export function FileOperationToolView({
     return `${assistantStr}\n${toolStr}`;
   }, [assistantContent, toolContent]);
 
-  const autoDetectedPreviewUrl = React.useMemo(() => {
-    const match = combinedContent.match(/https?:\/\/[^\s)'"`]+/i);
-    if (!match) return undefined;
-    return match[0].replace(/[)>'"`]+$/, '');
-  }, [combinedContent]);
-
-  // Deriva porta provável do preview (padrão 8080), lendo dicas do conteúdo
   const projectId = (project as any)?.project_id || (project as any)?.id;
+  const projectSandboxUrl = (project as any)?.sandbox?.sandbox_url;
   const derivePreviewPort = React.useCallback(() => {
     const a = normalizeContentToString(assistantContent) || '';
     const t = normalizeContentToString(toolContent) || '';
@@ -159,28 +153,71 @@ export function FileOperationToolView({
     return 8080;
   }, [assistantContent, toolContent]);
   const previewPort = derivePreviewPort();
-  const proxiedBaseHref = (() => {
-    if (projectId && previewPort) {
-      return `/api/preview/${projectId}/p/${previewPort}/`;
+
+  const autoDetectedPreviewUrl = React.useMemo(() => {
+    const match = combinedContent.match(/https?:\/\/[^\s)\'"`]+/i);
+    if (!match) return undefined;
+    return match[0].replace(/[)>\'"`]+$/, '');
+  }, [combinedContent]);
+
+  const normalizedAutoPreviewUrl = React.useMemo(() => {
+    if (!autoDetectedPreviewUrl) return undefined;
+    if (!projectId || !previewPort || !projectSandboxUrl) return autoDetectedPreviewUrl;
+
+    try {
+      const parsedAuto = new URL(autoDetectedPreviewUrl);
+      const sandboxHost = (() => {
+        try {
+          return new URL(projectSandboxUrl).host;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (sandboxHost && parsedAuto.host === sandboxHost) {
+        const proxied = constructProjectPreviewProxyUrl(
+          projectId,
+          previewPort,
+          parsedAuto.pathname,
+        );
+        if (proxied) {
+          return `${proxied}${parsedAuto.search || ''}${parsedAuto.hash || ''}`;
+        }
+      }
+    } catch {
+      // Ignore parsing errors and fall back to the original URL
     }
-    const sandboxUrl = (project as any)?.sandbox?.sandbox_url;
-    if (sandboxUrl) {
-      return `${sandboxUrl.replace(/\/$/, '')}/`;
+
+    return autoDetectedPreviewUrl;
+  }, [autoDetectedPreviewUrl, projectId, previewPort, projectSandboxUrl]);
+
+  const proxiedBaseHref = React.useMemo(() => {
+    const proxied = constructProjectPreviewProxyUrl(projectId, previewPort);
+    if (proxied) {
+      return proxied;
+    }
+    if (projectSandboxUrl) {
+      return `${projectSandboxUrl.replace(/\/$/, '')}/`;
     }
     return undefined;
-  })();
+  }, [projectId, previewPort, projectSandboxUrl]);
 
   const sandboxHtmlPreviewUrl = React.useMemo(() => {
-    if (isHtml && project?.sandbox?.sandbox_url && processedFilePath) {
-      return constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath);
+    if (isHtml && projectSandboxUrl && processedFilePath) {
+      return constructHtmlPreviewUrl(projectSandboxUrl, processedFilePath);
     }
     return undefined;
-  }, [isHtml, processedFilePath, project?.sandbox?.sandbox_url]);
+  }, [isHtml, processedFilePath, projectSandboxUrl]);
+
+  const proxiedHtmlPreviewUrl = React.useMemo(() => {
+    if (!isHtmlFile) return undefined;
+    return constructProjectPreviewProxyUrl(projectId, previewPort, processedFilePath);
+  }, [isHtmlFile, projectId, previewPort, processedFilePath]);
 
   const htmlPreviewUrl = React.useMemo(() => {
     if (!isHtmlFile) return undefined;
-    return autoDetectedPreviewUrl || proxiedBaseHref || sandboxHtmlPreviewUrl;
-  }, [autoDetectedPreviewUrl, proxiedBaseHref, sandboxHtmlPreviewUrl, isHtmlFile]);
+    return normalizedAutoPreviewUrl || proxiedHtmlPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
+  }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile]);
 
   const FileIcon = getFileIcon(fileName);
 
