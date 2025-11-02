@@ -27,3 +27,38 @@ export function constructHtmlPreviewUrl(
 
   return `${sandboxUrl}/${encodedPath}`;
 }
+
+/**
+ * Constructs a proxied preview URL that goes through our backend preview endpoint.
+ * This is necessary to embed sandbox content within the workspace iframe without cross-origin issues.
+ *
+ * @param projectId - Unique project identifier used by the preview proxy
+ * @param port - Target sandbox port to proxy (defaults to undefined to allow caller fallbacks)
+ * @param filePath - Optional file path to append under the proxied URL
+ */
+export function constructProjectPreviewProxyUrl(
+  projectId: string | undefined,
+  port: number | undefined,
+  filePath?: string,
+): string | undefined {
+  if (!projectId || !port) {
+    return undefined;
+  }
+
+  const base = `/api/preview/${projectId}/p/${port}`;
+
+  if (!filePath) {
+    return `${base}/`;
+  }
+
+  const processedPath = filePath
+    .replace(/^\/workspace\//, '')
+    .replace(/^\/+/, '');
+
+  const encodedSegments = processedPath
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment));
+
+  return `${base}/${encodedSegments.join('/')}`;
+}
