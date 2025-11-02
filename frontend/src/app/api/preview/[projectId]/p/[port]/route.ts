@@ -10,20 +10,20 @@ export async function GET(
   const { projectId, port } = await params
 
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-  }
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('sandbox')
+    .select('sandbox, is_public')
     .eq('project_id', projectId)
-    .eq('account_id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (projectError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
+  if (projectError) {
+    console.error('Preview proxy project lookup error:', projectError)
+  }
+
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found or access denied' }, { status: user ? 403 : 401 })
   }
 
   if (!project.sandbox?.sandbox_url) {
@@ -33,7 +33,8 @@ export async function GET(
   // sandbox_url example: https://8080-<id>.proxy.daytona.works
   const sandboxUrl: string = project.sandbox.sandbox_url
   const rewritten = sandboxUrl.replace(/https:\/\/(\d+)-/, `https://${port}-`)
-  const daytonaPreviewUrl = `${rewritten}/`
+  const searchParams = request.nextUrl.search
+  const daytonaPreviewUrl = `${rewritten}/${searchParams ? searchParams : ''}`
 
   try {
     const response = await fetch(daytonaPreviewUrl, {
@@ -57,6 +58,7 @@ export async function GET(
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
         'X-Frame-Options': 'SAMEORIGIN',
+        'X-Upstream-URL': daytonaPreviewUrl,
       },
     })
   } catch (error) {

@@ -53,6 +53,53 @@ export const AUXILIARY_FILE_NAME_SET = new Set(
   AUXILIARY_FILE_NAMES.map(name => name.toLowerCase()),
 );
 
+const detectSuccessFlag = (raw: unknown): boolean | undefined => {
+  if (!raw) return undefined;
+
+  const parseValue = (value: unknown): any => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return undefined;
+      }
+    }
+    return value;
+  };
+
+  const parsed = parseValue(raw);
+
+  if (!parsed || typeof parsed !== 'object') {
+    return undefined;
+  }
+
+  if ('success' in parsed && typeof (parsed as any).success === 'boolean') {
+    return (parsed as any).success;
+  }
+
+  if ('result' in parsed && typeof (parsed as any).result === 'object') {
+    const innerResult = (parsed as any).result;
+    if (innerResult && typeof innerResult.success === 'boolean') {
+      return innerResult.success;
+    }
+  }
+
+  if ('tool_execution' in parsed && typeof (parsed as any).tool_execution === 'object') {
+    const toolExecution = (parsed as any).tool_execution;
+    if (toolExecution?.result && typeof toolExecution.result.success === 'boolean') {
+      return toolExecution.result.success;
+    }
+  }
+
+  if ('content' in parsed) {
+    return detectSuccessFlag((parsed as any).content);
+  }
+
+  return undefined;
+};
+
+const streamingFailureKeywords = ['already exists', 'permission denied', 'failed to', 'erro ao'];
+
 export const MAIN_FILE_TOOL_NAMES = new Set([
   'create-file',
   'full-file-rewrite',
@@ -365,6 +412,32 @@ export const detectMainFileIndex = (calls: ToolCallInput[]): number => {
         });
         return false;
       }
+      const toolResult = calls[candidate.idx].toolResult;
+      const resultContent = toolResult?.content;
+      const explicitFailure = toolResult?.isSuccess === false;
+      const parsedSuccess = detectSuccessFlag(resultContent);
+      const isStreaming = resultContent === 'STREAMING';
+
+      if (isStreaming) {
+        logMainFileDebug('candidate-skip', {
+          reason: 'streaming-incomplete',
+          index: candidate.idx,
+          toolName: candidate.normalizedName,
+        });
+        return false;
+      }
+
+      if (explicitFailure || parsedSuccess === false) {
+        logMainFileDebug('candidate-skip', {
+          reason: 'failed-tool-call',
+          index: candidate.idx,
+          toolName: candidate.normalizedName,
+          successFlag: parsedSuccess,
+          explicitFailure,
+        });
+        return false;
+      }
+
       if (isExcludedFileName(candidate.fileName)) {
         logMainFileDebug('candidate-skip', {
           reason: 'auxiliary-or-test-file',
@@ -476,6 +549,11 @@ export const shouldAutoOpenForStreaming = (
 
   if (!fileName) {
     return { shouldOpen: false, reason: 'missing-file-name' };
+  }
+
+  const lowerContent = formattedContent?.toLowerCase() ?? '';
+  if (lowerContent.includes('"success": false') || streamingFailureKeywords.some(keyword => lowerContent.includes(keyword))) {
+    return { shouldOpen: false, reason: 'failure-detected', fileName, filePath };
   }
 
   if (isExcludedFileName(fileName)) {

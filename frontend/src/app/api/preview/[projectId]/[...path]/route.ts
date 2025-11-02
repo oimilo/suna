@@ -12,27 +12,23 @@ export async function GET(
   
   // Get current user
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    )
-  }
-  
-  // Verify user has access to the project
+  // Verify user has access to the project (or that it's public)
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('sandbox')
+    .select('sandbox, is_public')
     .eq('project_id', projectId)
-    .eq('account_id', user.id)
-    .single()
+    .maybeSingle()
   
-  if (projectError || !project) {
+  if (projectError) {
+    console.error('Preview proxy lookup error:', projectError)
+  }
+
+  if (!project) {
     return NextResponse.json(
       { error: 'Project not found or access denied' },
-      { status: 403 }
+      { status: user ? 403 : 401 }
     )
   }
   
@@ -47,7 +43,8 @@ export async function GET(
   // sandbox_url format: https://8080-sandbox-id.proxy.daytona.works
   const sandboxUrl = project.sandbox.sandbox_url
   const cleanPath = filePath.replace(/^\/+/, '')
-  const daytonaPreviewUrl = `${sandboxUrl}/${cleanPath}`
+  const searchParams = request.nextUrl.search
+  const daytonaPreviewUrl = `${sandboxUrl}/${cleanPath}${searchParams ? searchParams : ''}`
   
   try {
     // Fetch from Daytona with the skip-warning header
