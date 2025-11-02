@@ -98,6 +98,7 @@ export function ToolCallSidePanel({
   const [isMaximized, setIsMaximized] = React.useState(false);
   const autoOpenGuardRef = React.useRef<string | null>(null);
   const lastRequestedOpenRef = React.useRef<string | null>(null);
+  const lastMainFileEventRef = React.useRef<string | null>(null);
 
   const isMobile = useIsMobile();
   
@@ -218,14 +219,9 @@ export function ToolCallSidePanel({
   const buildAutoOpenKey = React.useCallback(
     (snapshot: ToolCallSnapshot | undefined, reason: 'main' | 'delivery'): string | null => {
       if (!snapshot) return null;
-      const rawResultContent = snapshot.toolCall.toolResult?.content;
-      const serializedContent = typeof rawResultContent === 'string'
-        ? rawResultContent
-        : JSON.stringify(rawResultContent ?? '');
-      const resultSignature = `${snapshot.toolCall.toolResult?.timestamp ?? 'no-result'}:${serializedContent}`;
-      return `${snapshot.id}:${reason}:${resultSignature}`;
+      return `${snapshot.id}:${reason}`;
     },
-  []);
+    []);
 
   const toolCallSnapshots = React.useMemo(() => {
     const previousSnapshots = toolCallSnapshotsRef.current;
@@ -284,6 +280,7 @@ export function ToolCallSidePanel({
     if (toolCallSnapshots.length === 0) {
       autoOpenGuardRef.current = null;
       lastRequestedOpenRef.current = null;
+      lastMainFileEventRef.current = null;
     }
   }, [toolCallSnapshots.length]);
 
@@ -411,7 +408,10 @@ export function ToolCallSidePanel({
     }
 
     if (mainIdx > -1 && onMainFileDetected) {
-            onMainFileDetected();
+      if (lastMainFileEventRef.current !== autoOpenKey) {
+        onMainFileDetected();
+        lastMainFileEventRef.current = autoOpenKey;
+      }
     }
   }, [
     toolCallSnapshots,
