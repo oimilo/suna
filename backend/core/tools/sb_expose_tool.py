@@ -53,19 +53,6 @@ class SandboxExposeTool(SandboxToolsBase):
             if not 1 <= port <= 65535:
                 return self.fail_response(f"Invalid port number: {port}. Must be between 1 and 65535.")
 
-            # Check if something is listening on the port (skip for known sandbox services)
-            if port not in [6080, 8080, 8003]:
-                try:
-                    port_check = await self.sandbox.process.exec(f"netstat -tlnp | grep :{port}", timeout=5)
-                    if hasattr(port_check, "exit_code") and port_check.exit_code != 0:
-                        return self.fail_response(
-                            f"No service is currently listening on port {port}. "
-                            "Start the server before exposing the port."
-                        )
-                except Exception:
-                    # Soft-fail if diagnostics aren't available; agent may be starting the service next.
-                    pass
-
             # Get the preview link for the specified port (ensures the preview is available at provider)
             preview_link = await self.sandbox.get_preview_link(port)
             original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
