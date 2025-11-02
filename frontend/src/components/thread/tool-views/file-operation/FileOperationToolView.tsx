@@ -295,7 +295,7 @@ export function FileOperationToolView({
   const proxiedBaseHref = React.useMemo(() => {
     const proxied = constructProjectPreviewProxyUrl(projectId, previewPort);
     if (proxied) {
-      return proxied;
+      return proxied.endsWith('/') ? proxied : `${proxied}/`;
     }
     if (projectSandboxUrl) {
       return `${projectSandboxUrl.replace(/\/$/, '')}/`;
@@ -317,7 +317,7 @@ export function FileOperationToolView({
 
   const rawHtmlPreviewUrl = React.useMemo(() => {
     if (!isHtmlFile || !allowPreview) return undefined;
-    return normalizedAutoPreviewUrl || proxiedHtmlPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
+    return proxiedHtmlPreviewUrl || normalizedAutoPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
   }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile, allowPreview]);
 
   const htmlPreviewUrl = React.useMemo(() => {
