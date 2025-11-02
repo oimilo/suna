@@ -268,6 +268,30 @@ class ResponseProcessor:
         should_auto_continue = False
         last_assistant_message_object = None # Store the final saved assistant message object
         tool_result_message_objects = {} # tool_index -> full saved message object
+        tool_outcomes: List[Dict[str, Any]] = []
+
+        recent_tool_failures_state = continuous_state.get('recent_tool_failures')
+        if isinstance(recent_tool_failures_state, dict):
+            recent_tool_failures_state = {
+                key: dict(value) if isinstance(value, dict) else {"count": 0, "last_reason": None}
+                for key, value in recent_tool_failures_state.items()
+            }
+        else:
+            recent_tool_failures_state = {}
+
+        def classify_tool_failure(output: Optional[str]) -> str:
+            if not output:
+                return "unknown"
+            lowered = output.lower()
+            if "already exists" in lowered:
+                return "already_exists"
+            if "permission denied" in lowered:
+                return "permission_denied"
+            if "no such file or directory" in lowered:
+                return "missing_target"
+            if "file not found" in lowered:
+                return "missing_target"
+            return "generic_failure"
         has_printed_thinking_prefix = False # Flag for printing thinking prefix only once
         agent_should_terminate = False # Flag to track if a terminating tool has been executed
         complete_native_tool_calls = [] # Initialize early for use in assistant_response_end
@@ -737,6 +761,31 @@ class ResponseProcessor:
                         else:
                             tools_failed_this_run = True
 
+                        # Record outcome for failure tracking / conflict detection
+                        function_name = (
+                            context.function_name
+                            or context.xml_tag_name
+                            or (context.tool_call or {}).get('function_name')
+                            or (context.tool_call or {}).get('name')
+                            or (tool_call or {}).get('function_name')
+                            or (tool_call or {}).get('name')
+                            or 'unknown'
+                        )
+
+                        success_flag = bool(getattr(result, 'success', False))
+                        outcome_record = {
+                            "function_name": function_name,
+                            "success": success_flag,
+                        }
+
+                        output_value = getattr(result, 'output', None)
+                        if not success_flag:
+                            reason = classify_tool_failure(output_value if isinstance(output_value, str) else None)
+                            outcome_record["reason"] = reason
+                            if isinstance(output_value, str) and output_value:
+                                outcome_record["output_excerpt"] = output_value[:300]
+                        tool_outcomes.append(outcome_record)
+
                 # Or execute now if not streamed
                 elif final_tool_calls_to_process and not config.execute_on_stream:
                     logger.info(f"🔄 STREAMING: Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream")
@@ -763,6 +812,17 @@ class ResponseProcessor:
                                tool_data.get('parsing_details')
                            )
                            context.result = res
+                           outcome_record = {
+                               "function_name": context.function_name or context.xml_tag_name or "unknown",
+                               "success": bool(getattr(res, 'success', False)),
+                               "output": getattr(res, 'output', None),
+                           }
+                           if not outcome_record["success"]:
+                               reason = classify_tool_failure(outcome_record["output"])
+                               outcome_record["reason"] = reason
+                               if isinstance(outcome_record["output"], str):
+                                   outcome_record["output_excerpt"] = outcome_record["output"][:300]
+                           tool_outcomes.append(outcome_record)
                            tool_results_map[current_tool_idx] = (tc, res, context)
                            tools_executed_this_run = True
                            if hasattr(res, 'success'):
@@ -818,6 +878,61 @@ class ResponseProcessor:
                              # Optionally yield error status for saving failure?
 
             # --- Final Finish Status ---
+            latest_failure_summary: Dict[str, Dict[str, Any]] = {}
+            conflict_map: Dict[str, Dict[str, Any]] = {}
+
+            updated_recent_failures = {
+                name: dict(info)
+                for name, info in recent_tool_failures_state.items()
+                if isinstance(info, dict) and int(info.get("count", 0)) > 0
+            }
+
+            for outcome in tool_outcomes:
+                name = outcome.get("function_name") or "unknown"
+                if outcome.get("success"):
+                    updated_recent_failures.pop(name, None)
+                    latest_failure_summary.pop(name, None)
+                    continue
+
+                reason = outcome.get("reason", "generic_failure")
+                excerpt = outcome.get("output_excerpt")
+                if excerpt is None and isinstance(outcome.get("output"), str):
+                    excerpt = outcome["output"][:300]
+
+                previous_entry = updated_recent_failures.get(name) or recent_tool_failures_state.get(name) or {}
+                prev_count = int(previous_entry.get("count", 0))
+                consecutive_failures = prev_count + 1
+
+                updated_recent_failures[name] = {
+                    "count": consecutive_failures,
+                    "last_reason": reason,
+                    "last_output": excerpt,
+                }
+
+                summary_payload = {
+                    "function_name": name,
+                    "consecutive_failures": consecutive_failures,
+                    "last_reason": reason,
+                }
+                if excerpt:
+                    summary_payload["last_output_excerpt"] = excerpt
+                latest_failure_summary[name] = summary_payload
+
+                if reason == "already_exists":
+                    conflict_map[name] = {
+                        "function_name": name,
+                        "reason": reason,
+                        "consecutive_failures": consecutive_failures,
+                    }
+
+            if updated_recent_failures:
+                continuous_state['recent_tool_failures'] = updated_recent_failures
+            elif 'recent_tool_failures' in continuous_state:
+                continuous_state.pop('recent_tool_failures', None)
+
+            failure_summaries = list(latest_failure_summary.values())
+            conflict_entries = list(conflict_map.values())
+
             if finish_reason and finish_reason != "xml_tool_limit_reached":
                 finish_content = {"status_type": "finish", "finish_reason": finish_reason}
                 # Add metadata to indicate tools were detected (for auto-continue detection)
@@ -830,6 +945,10 @@ class ResponseProcessor:
                         finish_content["tools_failed"] = True
                     if tools_failed_this_run and not tools_succeeded_this_run and tools_executed_this_run:
                         finish_content["tools_all_failed"] = True
+                    if failure_summaries:
+                        finish_content["tool_failure_summary"] = failure_summaries
+                    if conflict_entries:
+                        finish_content["tool_conflicts"] = conflict_entries
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id, type="status", content=finish_content, 
                     is_llm_message=False, metadata={"thread_run_id": thread_run_id}

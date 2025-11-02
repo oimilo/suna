@@ -135,6 +135,10 @@ export function ToolCallSidePanel({
   type ToolOutcome = 'pending' | 'success' | 'failure' | 'conflict';
 
   const evaluateToolOutcome = React.useCallback((toolCall: ToolCallInput): ToolOutcome => {
+    if (toolCall.outcome) {
+      return toolCall.outcome;
+    }
+
     const result = toolCall.toolResult;
     const content = result?.content;
 
@@ -186,10 +190,11 @@ export function ToolCallSidePanel({
       return false;
     }
 
-    if (outcome === 'failure') {
+    if (outcome === 'failure' || outcome === 'conflict') {
       logMainFileDebug('delivery-check', {
         toolName: normalizedName,
-        reason: 'tool-failure',
+        reason: outcome === 'conflict' ? 'tool-conflict' : 'tool-failure',
+        failureReason: toolCall.failureReason,
       });
       return false;
     }
@@ -241,9 +246,9 @@ export function ToolCallSidePanel({
     if (normalizedName === 'deploy' || normalizedName === 'expose-port') {
       logMainFileDebug('delivery-check', {
         toolName: normalizedName,
-        reason: outcome === 'conflict' ? 'forced-delivery-conflict' : 'forced-delivery-tool',
+        reason: 'forced-delivery-tool',
       });
-      return outcome === 'success' || outcome === 'conflict';
+      return outcome === 'success';
     }
 
     if (
@@ -1045,6 +1050,8 @@ export function ToolCallSidePanel({
         totalCalls={displayTotalCalls}
         onFileClick={onFileClick}
         isPanelMinimized={isPanelMinimized}
+        outcome={displayToolCall.outcome}
+        failureReason={displayToolCall.failureReason}
       />
     );
 

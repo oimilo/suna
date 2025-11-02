@@ -39,6 +39,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+const DEBUG_PREVIEW = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
+const logPreviewDebug = (...args: unknown[]) => {
+  if (DEBUG_PREVIEW) {
+    console.debug('[workspace:preview]', ...args);
+  }
+};
+
 import {
   getLanguageFromFileName,
   getOperationType,
@@ -67,6 +74,8 @@ export function FileOperationToolView({
   name,
   project,
   isPanelMinimized = false,
+  outcome,
+  failureReason,
 }: ToolViewProps) {
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
@@ -115,6 +124,42 @@ export function FileOperationToolView({
   const processedFilePath = processFilePath(filePath);
   const fileName = getFileName(processedFilePath);
   const fileExtension = getFileExtension(fileName);
+
+  const derivedOutcome: 'pending' | 'success' | 'failure' | 'conflict' = outcome
+    ?? (isStreaming ? 'pending' : (isSuccess ? 'success' : 'failure'));
+
+  const isConflictOutcome = derivedOutcome === 'conflict' || failureReason === 'already_exists';
+  const isAlreadyExistsConflict = isConflictOutcome && failureReason === 'already_exists';
+  const isPendingOutcome = derivedOutcome === 'pending';
+  const effectiveSuccess = derivedOutcome === 'success' || isAlreadyExistsConflict;
+  const allowPreview = derivedOutcome === 'success' || isAlreadyExistsConflict;
+
+  const statusLabel = React.useMemo(() => {
+    if (isPendingOutcome) return 'Processando';
+    if (isConflictOutcome) return 'Conflito';
+    if (derivedOutcome === 'failure') return 'Falhou';
+    return 'Sucesso';
+  }, [derivedOutcome, isConflictOutcome, isPendingOutcome]);
+
+  const maxRetryAttempts = isAlreadyExistsConflict ? 2 : 5;
+
+  React.useEffect(() => {
+    if (isPendingOutcome) {
+      logPreviewDebug('awaiting-server', { fileName, outcome: derivedOutcome });
+    }
+  }, [isPendingOutcome, fileName, derivedOutcome]);
+
+  React.useEffect(() => {
+    if (iframeError) {
+      logPreviewDebug('iframe-error', { fileName, retryCount });
+    }
+  }, [iframeError, fileName, retryCount]);
+
+  React.useEffect(() => {
+    if (isAlreadyExistsConflict) {
+      logPreviewDebug('conflict-existing-file', { fileName });
+    }
+  }, [isAlreadyExistsConflict, fileName]);
 
   const isMarkdown = isFileType.markdown(fileExtension);
   const isHtml = isFileType.html(fileExtension);
@@ -282,14 +327,14 @@ export function FileOperationToolView({
   }, [isHtml, processedFilePath, projectSandboxUrl]);
 
   const proxiedHtmlPreviewUrl = React.useMemo(() => {
-    if (!isHtmlFile) return undefined;
+    if (!isHtmlFile || !allowPreview) return undefined;
     return constructProjectPreviewProxyUrl(projectId, previewPort, processedFilePath);
-  }, [isHtmlFile, projectId, previewPort, processedFilePath]);
+  }, [isHtmlFile, allowPreview, projectId, previewPort, processedFilePath]);
 
   const rawHtmlPreviewUrl = React.useMemo(() => {
-    if (!isHtmlFile) return undefined;
+    if (!isHtmlFile || !allowPreview) return undefined;
     return normalizedAutoPreviewUrl || proxiedHtmlPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
-  }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile]);
+  }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile, allowPreview]);
 
   const htmlPreviewUrl = React.useMemo(() => {
     if (!rawHtmlPreviewUrl) return undefined;
@@ -334,6 +379,14 @@ export function FileOperationToolView({
 
   // Initial load delay to give sandbox time to start - only if not minimized
   React.useEffect(() => {
+    if (!allowPreview) {
+      setIframeError(false);
+      setRetryCount(0);
+      setIsInitialLoad(false);
+      setIsRetrying(false);
+      return;
+    }
+
     if (isHtml && htmlPreviewUrl && isInitialLoad && !isPanelMinimized) {
       const timer = setTimeout(() => {
         setIsInitialLoad(false);
@@ -341,15 +394,18 @@ export function FileOperationToolView({
       
       return () => clearTimeout(timer);
     }
-  }, [isHtml, htmlPreviewUrl, isInitialLoad, isPanelMinimized]);
+  }, [allowPreview, isHtml, htmlPreviewUrl, isInitialLoad, isPanelMinimized]);
 
   // Auto-retry logic for iframe loading errors with progressive delays - only if not minimized
   React.useEffect(() => {
+    if (!allowPreview) {
+      return;
+    }
     if (!htmlPreviewUrl) {
       return;
     }
 
-    if (iframeError && retryCount < 5 && !isPanelMinimized) {
+    if (iframeError && retryCount < maxRetryAttempts && !isPanelMinimized) {
       setIsRetrying(true);
       // Progressive delays: 3s, 5s, 7s, 9s, 11s
       const delay = 3000 + (retryCount * 2000);
@@ -362,11 +418,11 @@ export function FileOperationToolView({
       }, delay);
       
       return () => clearTimeout(timer);
-    } else if (retryCount >= 5) {
+    } else if (retryCount >= maxRetryAttempts) {
       // Stop retrying after max attempts
       setIsRetrying(false);
     }
-  }, [iframeError, retryCount, htmlPreviewUrl, isPanelMinimized]);
+  }, [allowPreview, iframeError, retryCount, htmlPreviewUrl, isPanelMinimized, maxRetryAttempts]);
 
   // Reset error state when htmlPreviewUrl changes or when panel is expanded
   React.useEffect(() => {
@@ -376,7 +432,7 @@ export function FileOperationToolView({
       setIsInitialLoad(true);
       setIsRetrying(false);
     }
-  }, [htmlPreviewUrl, isPanelMinimized]);
+  }, [htmlPreviewUrl, isPanelMinimized, allowPreview]);
 
   if (!isStreaming && !processedFilePath && !fileContent) {
     return (
@@ -386,7 +442,7 @@ export function FileOperationToolView({
         toolContent={toolContent}
         assistantTimestamp={assistantTimestamp}
         toolTimestamp={toolTimestamp}
-        isSuccess={isSuccess}
+        isSuccess={effectiveSuccess}
         isStreaming={isStreaming}
       />
     );
@@ -399,6 +455,30 @@ export function FileOperationToolView({
           <div className="text-center">
             <FileIcon className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
             <p className="text-sm text-zinc-500 dark:text-zinc-400">Nenhum conteúdo para visualizar</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!allowPreview) {
+      const statusMessage = (() => {
+        if (isPendingOutcome) {
+          return 'Aguardando o servidor ficar disponível para exibir o preview...';
+        }
+        if (derivedOutcome === 'failure') {
+          if (failureReason === 'already_exists') {
+            return 'O arquivo já existe no workspace. Mantendo o preview anterior enquanto evitamos sobrescritas.';
+          }
+          return 'Não foi possível gerar a pré-visualização desta execução.';
+        }
+        return 'Pré-visualização indisponível para esta chamada de ferramenta.';
+      })();
+
+      return (
+        <div className="flex items-center justify-center h-full p-12">
+          <div className="text-center max-w-sm">
+            <FileIcon className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{statusMessage}</p>
           </div>
         </div>
       );
@@ -683,14 +763,14 @@ export function FileOperationToolView({
             <div className='flex items-center gap-2'>
               {!isStreaming && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                  {isSuccess ? (
+                  {derivedOutcome === 'success' ? (
                     <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                  ) : derivedOutcome === 'pending' ? (
+                    <Loader2 className="h-3.5 w-3.5 text-blue-500 opacity-80 animate-spin" />
                   ) : (
                     <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
                   )}
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {isSuccess ? 'Sucesso' : 'Falhou'}
-                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">{statusLabel}</span>
                 </div>
               )}
               {isHtmlFile && htmlPreviewUrl && !isStreaming && (

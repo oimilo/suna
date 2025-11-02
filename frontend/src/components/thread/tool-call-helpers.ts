@@ -12,6 +12,8 @@ export interface ToolCallInput {
     isSuccess?: boolean;
     timestamp?: string;
   };
+  outcome?: 'pending' | 'success' | 'failure' | 'conflict';
+  failureReason?: string | null;
   messages?: ApiMessageType[];
 }
 

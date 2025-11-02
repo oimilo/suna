@@ -15,6 +15,8 @@ export interface ToolViewProps {
   totalCalls?: number;
   onFileClick?: (filePath: string) => void;
   isPanelMinimized?: boolean;
+  outcome?: 'pending' | 'success' | 'failure' | 'conflict';
+  failureReason?: string | null;
 }
 
 export interface BrowserToolViewProps extends ToolViewProps {
