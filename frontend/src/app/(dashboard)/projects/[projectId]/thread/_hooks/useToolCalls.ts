@@ -298,23 +298,28 @@ export function useToolCalls(
     const { historicalToolPairs, messageIdToIndex } = buildHistoricalToolPairs();
     const signature = getToolCallsSignature(historicalToolPairs);
 
-    assistantMessageToToolIndex.current = messageIdToIndex;
-
-    let didUpdateToolCalls = false;
-    setToolCalls(prev => {
-      if (lastHistoricalSignatureRef.current === signature) {
-        return prev;
-      }
-      didUpdateToolCalls = true;
-      lastHistoricalSignatureRef.current = signature;
-      return historicalToolPairs;
+    logToolCallDebug('signature:computed', {
+      signature,
+      newLength: historicalToolPairs.length,
+      prevSignature: lastHistoricalSignatureRef.current,
+      messagesCount: messages.length,
     });
 
-    if (!didUpdateToolCalls) {
-      return;
+    assistantMessageToToolIndex.current = messageIdToIndex;
+
+    if (lastHistoricalSignatureRef.current !== signature) {
+      logToolCallDebug('signature:changed', {
+        previousLength: toolCalls.length,
+        newLength: historicalToolPairs.length,
+      });
+
+      setToolCalls(historicalToolPairs);
+      lastHistoricalSignatureRef.current = signature;
+    } else {
+      logToolCallDebug('signature:no-update');
     }
 
-    if (historicalToolPairs.length > 0) {
+    if (historicalToolPairs.length > 0 && lastHistoricalSignatureRef.current === signature) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
       } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
@@ -324,7 +329,14 @@ export function useToolCalls(
       // O painel agora só abre automaticamente quando o ToolCallSidePanel
       // detecta uma entrega relevante (arquivo principal, deploy, etc.)
     }
-  }, [buildHistoricalToolPairs, getToolCallsSignature, agentStatus, isSidePanelOpen]);
+  }, [
+    buildHistoricalToolPairs,
+    getToolCallsSignature,
+    agentStatus,
+    isSidePanelOpen,
+    toolCalls.length,
+    messages.length,
+  ]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
