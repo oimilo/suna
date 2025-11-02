@@ -286,10 +286,49 @@ export function FileOperationToolView({
     return constructProjectPreviewProxyUrl(projectId, previewPort, processedFilePath);
   }, [isHtmlFile, projectId, previewPort, processedFilePath]);
 
-  const htmlPreviewUrl = React.useMemo(() => {
+  const rawHtmlPreviewUrl = React.useMemo(() => {
     if (!isHtmlFile) return undefined;
     return normalizedAutoPreviewUrl || proxiedHtmlPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
   }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile]);
+
+  const htmlPreviewUrl = React.useMemo(() => {
+    if (!rawHtmlPreviewUrl) return undefined;
+    const trimmed = rawHtmlPreviewUrl.trim();
+    if (!trimmed) return undefined;
+
+    const lower = trimmed.toLowerCase();
+    const invalidSchemes = ['javascript:', 'data:', 'about:', 'blob:', 'chrome-extension:'];
+    if (invalidSchemes.some(prefix => lower.startsWith(prefix))) {
+      return undefined;
+    }
+
+    if (trimmed.startsWith('/workspace/') || trimmed.startsWith('workspace/')) {
+      return undefined;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('//')) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('/')) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('./') || trimmed.startsWith('../')) {
+      return undefined;
+    }
+
+    return undefined;
+  }, [rawHtmlPreviewUrl]);
+
+  const hasRejectedPreviewUrl = React.useMemo(
+    () => Boolean(rawHtmlPreviewUrl && !htmlPreviewUrl),
+    [rawHtmlPreviewUrl, htmlPreviewUrl],
+  );
 
   const FileIcon = getFileIcon(fileName);
 
@@ -306,6 +345,10 @@ export function FileOperationToolView({
 
   // Auto-retry logic for iframe loading errors with progressive delays - only if not minimized
   React.useEffect(() => {
+    if (!htmlPreviewUrl) {
+      return;
+    }
+
     if (iframeError && retryCount < 5 && !isPanelMinimized) {
       setIsRetrying(true);
       // Progressive delays: 3s, 5s, 7s, 9s, 11s
@@ -412,7 +455,7 @@ export function FileOperationToolView({
               <ExternalLink className="h-10 w-10 text-red-600 dark:text-red-400" />
             </div>
             <h3 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">
-              Não foi possível carregar o preview
+              Preview indisponível
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-md">
               O projeto está demorando mais que o esperado. Tente novamente.
@@ -498,6 +541,15 @@ export function FileOperationToolView({
       }
       return (
         <div className="flex flex-col h-[calc(100vh-16rem)]">
+          {hasRejectedPreviewUrl && (
+            <div className="px-4 py-3 bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-200 border-b border-amber-200 dark:border-amber-500/40 text-xs flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>
+                Link de preview fornecido pela ferramenta foi ignorado por não ser incorporável com segurança.
+                O conteúdo abaixo mostra o HTML bruto enquanto o proxy é configurado.
+              </span>
+            </div>
+          )}
           <iframe
             title={`Preview (inline) de ${fileName}`}
             className="flex-grow border-0 bg-white"

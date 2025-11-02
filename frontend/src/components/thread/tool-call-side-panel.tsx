@@ -22,7 +22,9 @@ import {
   MAIN_FILE_TOOL_NAMES,
   MAIN_FILE_SCORE_THRESHOLD,
   computeMainFileScore,
+  detectExistingFileConflict,
   detectMainFileIndex,
+  detectSuccessFlag,
   extractToolCallFileInfo,
   isMainFileName,
   logMainFileDebug,
@@ -130,12 +132,67 @@ export function ToolCallSidePanel({
 
   const getToolCallFileInfo = React.useCallback(extractToolCallFileInfo, []);
 
+  type ToolOutcome = 'pending' | 'success' | 'failure' | 'conflict';
+
+  const evaluateToolOutcome = React.useCallback((toolCall: ToolCallInput): ToolOutcome => {
+    const result = toolCall.toolResult;
+    const content = result?.content;
+
+    if (!result || !content || content === 'STREAMING') {
+      return 'pending';
+    }
+
+    const explicitFailure = result.isSuccess === false;
+    const parsedSuccess = detectSuccessFlag(content);
+    const existingConflict = detectExistingFileConflict(content);
+
+    let heuristicsFailure = false;
+    if (!explicitFailure && parsedSuccess !== false && !existingConflict) {
+      try {
+        const serialized = typeof content === 'string'
+          ? content.toLowerCase()
+          : JSON.stringify(content)?.toLowerCase() ?? '';
+        const withoutDiacritics = serialized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const failureHints = ['"error"', ' error', 'failed', 'failure', 'denied', 'nao foi possivel'];
+        heuristicsFailure = failureHints.some(hint => serialized.includes(hint) || withoutDiacritics.includes(hint));
+      } catch {
+        heuristicsFailure = false;
+      }
+    }
+
+    if (explicitFailure || parsedSuccess === false || heuristicsFailure) {
+      if (existingConflict) {
+        return 'conflict';
+      }
+      return 'failure';
+    }
+
+    return 'success';
+  }, []);
+
   // Detecta se é um momento de entrega relevante
   const isDeliveryMoment = React.useCallback((toolCall: ToolCallInput): boolean => {
     const rawName = toolCall.assistantCall?.name;
     if (!rawName) return false;
 
     const normalizedName = normalizeToolName(rawName);
+
+    const outcome = evaluateToolOutcome(toolCall);
+    if (outcome === 'pending') {
+      logMainFileDebug('delivery-check', {
+        toolName: normalizedName,
+        reason: 'pending-result',
+      });
+      return false;
+    }
+
+    if (outcome === 'failure') {
+      logMainFileDebug('delivery-check', {
+        toolName: normalizedName,
+        reason: 'tool-failure',
+      });
+      return false;
+    }
 
     if (MAIN_FILE_TOOL_NAMES.has(normalizedName)) {
       const { fileName, filePath } = getToolCallFileInfo(toolCall);
@@ -184,9 +241,9 @@ export function ToolCallSidePanel({
     if (normalizedName === 'deploy' || normalizedName === 'expose-port') {
       logMainFileDebug('delivery-check', {
         toolName: normalizedName,
-        reason: 'forced-delivery-tool',
+        reason: outcome === 'conflict' ? 'forced-delivery-conflict' : 'forced-delivery-tool',
       });
-      return true;
+      return outcome === 'success' || outcome === 'conflict';
     }
 
     if (
@@ -201,7 +258,7 @@ export function ToolCallSidePanel({
     }
 
     return false;
-  }, [getToolCallFileInfo, toolCalls]);
+  }, [evaluateToolOutcome, getToolCallFileInfo, toolCalls]);
 
   // Detecta o arquivo principal baseado no contexto do projeto
   const detectMainFile = React.useCallback((calls: ToolCallInput[]): number => detectMainFileIndex(calls), []);

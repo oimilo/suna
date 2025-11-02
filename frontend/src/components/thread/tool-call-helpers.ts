@@ -53,7 +53,7 @@ export const AUXILIARY_FILE_NAME_SET = new Set(
   AUXILIARY_FILE_NAMES.map(name => name.toLowerCase()),
 );
 
-const detectSuccessFlag = (raw: unknown): boolean | undefined => {
+export const detectSuccessFlag = (raw: unknown): boolean | undefined => {
   if (!raw) return undefined;
 
   const parseValue = (value: unknown): any => {
@@ -218,7 +218,7 @@ const extractFilePathFromStructuredContent = (
   return null;
 };
 
-const detectExistingFileConflict = (raw: unknown, depth = 0): boolean => {
+export const detectExistingFileConflict = (raw: unknown, depth = 0): boolean => {
   if (raw === null || raw === undefined || depth > MAX_NESTED_CONTENT_DEPTH) {
     return false;
   }
