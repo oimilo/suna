@@ -1,5 +1,5 @@
 import type { ApiMessageType } from '@/components/thread/types';
-import { extractFilePathsFromToolContent } from './tool-views/utils';
+import { extractFilePathsFromToolContent, normalizeContentToString } from './tool-views/utils';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -99,6 +99,156 @@ const detectSuccessFlag = (raw: unknown): boolean | undefined => {
 };
 
 const streamingFailureKeywords = ['already exists', 'permission denied', 'failed to', 'erro ao'];
+
+const MAX_NESTED_CONTENT_DEPTH = 6;
+
+const tryParseJson = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return value;
+  }
+
+  const startsWithJsonToken =
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'));
+
+  if (!startsWithJsonToken) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const extractFilePathFromStructuredContent = (
+  raw: unknown,
+  depth = 0,
+  visited = new Set<unknown>(),
+): string | null => {
+  if (raw === null || raw === undefined || depth > MAX_NESTED_CONTENT_DEPTH) {
+    return null;
+  }
+
+  if (typeof raw === 'string') {
+    const normalized = normalizeContentToString(raw) || raw;
+    const directMatch =
+      typeof normalized === 'string'
+        ? normalized.match(/("file_path"|"target_file"|file_path|target_file)\s*[:=]\s*["']([^"']+)["']/i)
+        : null;
+    if (directMatch && directMatch[2]) {
+      return directMatch[2].trim();
+    }
+
+    const parsed = tryParseJson(normalized);
+    if (parsed !== normalized) {
+      return extractFilePathFromStructuredContent(parsed, depth + 1, visited);
+    }
+
+    return null;
+  }
+
+  if (typeof raw !== 'object') {
+    return null;
+  }
+
+  if (visited.has(raw)) {
+    return null;
+  }
+  visited.add(raw);
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const nested = extractFilePathFromStructuredContent(item, depth + 1, visited);
+      if (nested) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  if (typeof candidate.file_path === 'string') {
+    return candidate.file_path.trim();
+  }
+  if (typeof candidate.target_file === 'string') {
+    return candidate.target_file.trim();
+  }
+  if (typeof candidate.path === 'string') {
+    return candidate.path.trim();
+  }
+
+  const nestedKeys = [
+    'arguments',
+    'tool_execution',
+    'parameters',
+    'result',
+    'content',
+    'payload',
+    'data',
+    'response',
+  ];
+
+  for (const key of nestedKeys) {
+    if (key in candidate) {
+      const nested = extractFilePathFromStructuredContent(
+        candidate[key],
+        depth + 1,
+        visited,
+      );
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  for (const value of Object.values(candidate)) {
+    const nested = extractFilePathFromStructuredContent(value, depth + 1, visited);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+};
+
+const detectExistingFileConflict = (raw: unknown, depth = 0): boolean => {
+  if (raw === null || raw === undefined || depth > MAX_NESTED_CONTENT_DEPTH) {
+    return false;
+  }
+
+  if (typeof raw === 'string') {
+    const normalized = normalizeContentToString(raw) || raw;
+    if (typeof normalized === 'string' && /already exists/i.test(normalized)) {
+      return true;
+    }
+
+    const parsed = tryParseJson(normalized);
+    if (parsed !== normalized) {
+      return detectExistingFileConflict(parsed, depth + 1);
+    }
+
+    return false;
+  }
+
+  if (typeof raw !== 'object') {
+    return false;
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.some(item => detectExistingFileConflict(item, depth + 1));
+  }
+
+  return Object.values(raw as Record<string, unknown>).some(value =>
+    detectExistingFileConflict(value, depth + 1),
+  );
+};
 
 export const MAIN_FILE_TOOL_NAMES = new Set([
   'create-file',
@@ -349,6 +499,19 @@ export const extractToolCallFileInfo = (
       };
     }
 
+    const structuredPath = extractFilePathFromStructuredContent(resultContent);
+    if (structuredPath) {
+      const derivedName =
+        structuredPath.split('/').pop() ||
+        structuredPath.split('\\').pop() ||
+        structuredPath;
+
+      return {
+        fileName: derivedName,
+        filePath: structuredPath,
+      };
+    }
+
     const fallbackName = extractFileNameFromContent(resultContent);
     if (fallbackName) {
       return { fileName: fallbackName, filePath: null };
@@ -417,6 +580,7 @@ export const detectMainFileIndex = (calls: ToolCallInput[]): number => {
       const explicitFailure = toolResult?.isSuccess === false;
       const parsedSuccess = detectSuccessFlag(resultContent);
       const isStreaming = resultContent === 'STREAMING';
+      const existingFileConflict = detectExistingFileConflict(resultContent);
 
       if (isStreaming) {
         logMainFileDebug('candidate-skip', {
@@ -428,14 +592,22 @@ export const detectMainFileIndex = (calls: ToolCallInput[]): number => {
       }
 
       if (explicitFailure || parsedSuccess === false) {
-        logMainFileDebug('candidate-skip', {
-          reason: 'failed-tool-call',
+        if (!existingFileConflict) {
+          logMainFileDebug('candidate-skip', {
+            reason: 'failed-tool-call',
+            index: candidate.idx,
+            toolName: candidate.normalizedName,
+            successFlag: parsedSuccess,
+            explicitFailure,
+          });
+          return false;
+        }
+
+        logMainFileDebug('candidate-override', {
+          reason: 'existing-file-conflict',
           index: candidate.idx,
           toolName: candidate.normalizedName,
-          successFlag: parsedSuccess,
-          explicitFailure,
         });
-        return false;
       }
 
       if (isExcludedFileName(candidate.fileName)) {
