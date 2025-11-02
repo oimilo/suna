@@ -155,9 +155,65 @@ export function FileOperationToolView({
   const previewPort = derivePreviewPort();
 
   const autoDetectedPreviewUrl = React.useMemo(() => {
-    const match = combinedContent.match(/https?:\/\/[^\s)\'"`]+/i);
-    if (!match) return undefined;
-    return match[0].replace(/[)>\'"`]+$/, '');
+    const matches = combinedContent.match(/https?:\/\/[^\s)\'"`]+/gi);
+    if (!matches) {
+      return undefined;
+    }
+
+    const sanitize = (candidate: string) => candidate.replace(/[)>\'"`]+$/, '');
+    const uniqueSanitized = Array.from(new Set(matches.map(sanitize)));
+
+    const parsedUrls = uniqueSanitized
+      .map((candidate) => {
+        try {
+          return { raw: candidate, parsed: new URL(candidate) };
+        } catch {
+          return null;
+        }
+      })
+      .filter((entry): entry is { raw: string; parsed: URL } => Boolean(entry));
+
+    const pickUrl = (
+      predicate: (parsed: URL) => boolean,
+    ): string | undefined => {
+      const match = parsedUrls.find(({ parsed }) => {
+        try {
+          return predicate(parsed);
+        } catch {
+          return false;
+        }
+      });
+      return match?.raw;
+    };
+
+    const isLikelyPreviewHost = (parsed: URL) => {
+      const { hostname, pathname } = parsed;
+      if (hostname === 'www.w3.org' && pathname === '/2000/svg') {
+        return false;
+      }
+      if (hostname.endsWith('.proxy.daytona.works')) {
+        return true;
+      }
+      if (hostname === 'prophet.build' || hostname === 'www.prophet.build') {
+        return pathname.startsWith('/api/preview/');
+      }
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        return true;
+      }
+      return false;
+    };
+
+    const preferredPreview = pickUrl(isLikelyPreviewHost);
+    if (preferredPreview) {
+      return preferredPreview;
+    }
+
+    const fallbackNonSvg = pickUrl((parsed) => parsed.hostname !== 'www.w3.org' && parsed.hostname !== 'w3.org');
+    if (fallbackNonSvg) {
+      return fallbackNonSvg;
+    }
+
+    return parsedUrls[0]?.raw;
   }, [combinedContent]);
 
   const normalizedAutoPreviewUrl = React.useMemo(() => {

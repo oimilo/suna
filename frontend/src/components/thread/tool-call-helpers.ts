@@ -427,6 +427,12 @@ export const extractFileNameFromContent = (rawContent: any): string | null => {
     return null;
   }
 
+  const structuredPath = extractFilePathFromStructuredContent(rawContent);
+  if (structuredPath) {
+    const fileName = structuredPath.split('/').pop() || structuredPath.split('\\').pop() || structuredPath;
+    return fileName;
+  }
+
   let content = '';
 
   if (typeof rawContent === 'string') {
