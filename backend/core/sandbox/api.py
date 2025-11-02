@@ -1,6 +1,6 @@
 import os
 import urllib.parse
-from typing import Optional, Tuple
+from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request
 from fastapi.responses import Response
@@ -316,76 +316,31 @@ async def _resolve_preview_base_url(project_id: str, port: int) -> str:
         logger.error(f"Failed to resolve preview URL for project {project_id} port {port}: {e}")
         raise HTTPException(status_code=502, detail="Failed to resolve preview URL")
 
-async def _forward_preview_request(
-    project_id: str,
-    port: int,
-    path: Optional[str],
-    request: Request,
-    append_trailing_slash: bool = False,
-) -> Response:
+@router.get("/preview/{project_id}/p/{port}")
+async def preview_root(project_id: str, port: int, request: Request):
     base_url = await _resolve_preview_base_url(project_id, port)
-    cleaned_path = (path or "").lstrip('/')
+    # Forward root path
+    forward_url = f"{base_url}/"
+    async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client:
+        upstream = await client.get(forward_url, headers={"User-Agent": request.headers.get("User-Agent", "")})
+        return Response(content=upstream.content, status_code=upstream.status_code, media_type=upstream.headers.get("content-type", "text/html"))
 
-    if cleaned_path:
-        forward_url = f"{base_url}/{cleaned_path}"
-    else:
-        forward_url = base_url
-        if append_trailing_slash and not forward_url.endswith('/'):
-            forward_url = f"{forward_url}/"
-
+@router.get("/preview/{project_id}/p/{port}/{path:path}")
+async def preview_proxy(project_id: str, port: int, path: str, request: Request):
+    base_url = await _resolve_preview_base_url(project_id, port)
+    # Preserve query string
     qs = ("?" + str(request.query_params)) if request.query_params else ""
-    forward_url = f"{forward_url}{qs}"
-
+    forward_url = f"{base_url}/{path}{qs}"
+    # Minimal header passthrough; avoid Host override
     headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "connection", "content-length"]}
     method = request.method.upper()
-
-    timeout = 20 if method in {"GET", "HEAD"} else 30
-
-    async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-        if method in {"GET", "HEAD"}:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+        if method == "GET" or method == "HEAD":
             upstream = await client.request(method, forward_url, headers=headers)
         else:
             body = await request.body()
             upstream = await client.request(method, forward_url, headers=headers, content=body)
-
-    media_type = upstream.headers.get("content-type", "application/octet-stream")
-    return Response(content=upstream.content, status_code=upstream.status_code, media_type=media_type)
-
-async def _get_preview_mapping_by_slug(slug: str) -> Tuple[str, int]:
-    client = await db.client
-    result = await client.table('sandbox_preview_links').select('project_id, port').eq('slug', slug).limit(1).execute()
-
-    if not result.data:
-        logger.error(f"Preview slug not found: {slug}")
-        raise HTTPException(status_code=404, detail="Preview link not found")
-
-    record = result.data[0]
-    project_id = record['project_id']
-    port = int(record['port']) if isinstance(record['port'], str) else record['port']
-
-    if project_id is None or port is None:
-        logger.error(f"Invalid preview slug mapping for slug {slug}: {record}")
-        raise HTTPException(status_code=500, detail="Invalid preview link configuration")
-
-    return project_id, int(port)
-
-@router.get("/preview/{project_id}/p/{port}")
-async def preview_root(project_id: str, port: int, request: Request):
-    return await _forward_preview_request(project_id, port, path=None, request=request, append_trailing_slash=True)
-
-@router.get("/preview/{project_id}/p/{port}/{path:path}")
-async def preview_proxy(project_id: str, port: int, path: str, request: Request):
-    return await _forward_preview_request(project_id, port, path=path, request=request)
-
-@router.get("/preview/slug/{slug}")
-async def preview_slug_root(slug: str, request: Request):
-    project_id, port = await _get_preview_mapping_by_slug(slug)
-    return await _forward_preview_request(project_id, port, path=None, request=request, append_trailing_slash=True)
-
-@router.get("/preview/slug/{slug}/{path:path}")
-async def preview_slug_proxy(slug: str, path: str, request: Request):
-    project_id, port = await _get_preview_mapping_by_slug(slug)
-    return await _forward_preview_request(project_id, port, path=path, request=request)
+    return Response(content=upstream.content, status_code=upstream.status_code, media_type=upstream.headers.get("content-type", "application/octet-stream"))
 
 @router.delete("/sandboxes/{sandbox_id}/files")
 async def delete_file(
