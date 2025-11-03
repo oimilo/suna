@@ -93,6 +93,7 @@ export function ToolCallSidePanel({
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
+  const internalIndexRef = React.useRef(0);
   const [navigationMode, setNavigationMode] = React.useState<'live' | 'manual'>('live');
   const toolCallSnapshotsRef = React.useRef<ToolCallSnapshot[]>([]);
   const toolCallSnapshotsLengthRef = React.useRef(0);
@@ -486,24 +487,29 @@ export function ToolCallSidePanel({
   const isSuccess = isStreaming ? true : getActualSuccess(displayToolCall);
 
   const internalNavigate = React.useCallback((newIndex: number, source: string = 'internal') => {
-    if (newIndex < 0 || newIndex >= totalCalls) return;
+    if (newIndex < 0 || newIndex >= totalCalls) {
+      return;
+    }
 
+    const previousIndex = internalIndexRef.current;
     const isNavigatingToLatest = newIndex === totalCalls - 1;
 
-    console.log(`[INTERNAL_NAV] ${source}: ${internalIndex} -> ${newIndex}, mode will be: ${isNavigatingToLatest ? 'live' : 'manual'}`);
+    console.log(
+      `[INTERNAL_NAV] ${source}: ${previousIndex} -> ${newIndex}, mode will be: ${isNavigatingToLatest ? 'live' : 'manual'}`,
+    );
 
+    internalIndexRef.current = newIndex;
     setInternalIndex(newIndex);
-
-    if (isNavigatingToLatest) {
-      setNavigationMode('live');
-    } else {
-      setNavigationMode('manual');
-    }
+    setNavigationMode(isNavigatingToLatest ? 'live' : 'manual');
 
     if (source === 'user_explicit') {
       onNavigate(newIndex);
     }
-  }, [internalIndex, totalCalls, onNavigate]);
+  }, [totalCalls, onNavigate]);
+
+  React.useEffect(() => {
+    internalIndexRef.current = internalIndex;
+  }, [internalIndex]);
 
   const isLiveMode = navigationMode === 'live';
   const showJumpToLive = navigationMode === 'manual' && agentStatus === 'running';

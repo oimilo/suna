@@ -328,6 +328,8 @@ class Configuration:
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
+    DAYTONA_DIRECT_SERVER_URL: Optional[str] = None
+    DAYTONA_PREVIEW_PROXY_BASE_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
     
     # Search and other API keys (all optional tools)

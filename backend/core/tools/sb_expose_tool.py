@@ -1,6 +1,7 @@
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
+from core.utils.config import config
 import asyncio
 import os
 from urllib.parse import urljoin, urlparse, urlunparse
@@ -118,6 +119,7 @@ class SandboxExposeTool(SandboxToolsBase):
 
     def _get_proxy_base_url(self) -> str:
         candidates = [
+            config.DAYTONA_PREVIEW_PROXY_BASE_URL,
             os.getenv("NEXT_PUBLIC_BACKEND_URL"),
             os.getenv("BACKEND_URL"),
             os.getenv("APP_BACKEND_URL"),

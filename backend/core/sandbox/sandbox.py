@@ -7,9 +7,14 @@ from core.utils.config import Configuration
 load_dotenv()
 
 # logger.debug("Initializing Daytona sandbox configuration")
+api_base_url = config.DAYTONA_DIRECT_SERVER_URL or config.DAYTONA_SERVER_URL
+
+if not api_base_url:
+    logger.warning("Daytona API base URL is not configured. Sandbox operations will be disabled.")
+
 daytona_config = DaytonaConfig(
     api_key=config.DAYTONA_API_KEY,
-    api_url=config.DAYTONA_SERVER_URL, 
+    api_url=api_base_url,
     target=config.DAYTONA_TARGET,
 )
 
