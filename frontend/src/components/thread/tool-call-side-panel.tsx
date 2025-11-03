@@ -55,8 +55,6 @@ interface ToolCallSidePanelProps {
   agentName?: string;
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
-  onRequestOpen?: () => void;
-  onMainFileDetected?: () => void;  // Callback quando arquivo principal é detectado
 }
 
 interface ToolCallSnapshot {
@@ -92,8 +90,6 @@ export function ToolCallSidePanel({
   agentName,
   onFileClick,
   disableInitialAnimation,
-  onRequestOpen,
-  onMainFileDetected,
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
@@ -105,9 +101,6 @@ export function ToolCallSidePanel({
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
   const [hasUserInteracted, setHasUserInteracted] = React.useState(false);
   const [isMaximized, setIsMaximized] = React.useState(false);
-  const autoOpenGuardRef = React.useRef<string | null>(null);
-  const lastRequestedOpenRef = React.useRef<string | null>(null);
-  const lastMainFileEventRef = React.useRef<string | null>(null);
 
   const isMobile = useIsMobile();
   
@@ -285,13 +278,6 @@ export function ToolCallSidePanel({
     return technicalOps.includes(name);
   };
 
-  const buildAutoOpenKey = React.useCallback(
-    (snapshot: ToolCallSnapshot | undefined, reason: 'main' | 'delivery'): string | null => {
-      if (!snapshot) return null;
-      return `${snapshot.id}:${reason}`;
-    },
-    []);
-
   const toolCallSnapshots = React.useMemo(() => {
     const previousSnapshots = toolCallSnapshotsRef.current;
     const prevLength = previousSnapshots.length;
@@ -344,14 +330,6 @@ export function ToolCallSidePanel({
     toolCallSnapshotsLengthRef.current = prevLength;
     return nextSnapshots;
   }, [toolCalls]);
-
-  React.useEffect(() => {
-    if (toolCallSnapshots.length === 0) {
-      autoOpenGuardRef.current = null;
-      lastRequestedOpenRef.current = null;
-      lastMainFileEventRef.current = null;
-    }
-  }, [toolCallSnapshots.length]);
 
   React.useEffect(() => {
     const previousLength = toolCallSnapshotsLengthRef.current;
@@ -424,135 +402,6 @@ export function ToolCallSidePanel({
       setMainDeliveryIndex(prev => (prev === -1 ? prev : -1));
     }
   }, [toolCalls, detectMainFile]);
-
-  // Auto-abertura inteligente e navegação para arquivo principal
-  React.useEffect(() => {
-    if (DEBUG_WORKSPACE) {
-      logWorkspaceDebug('auto-open:check', {
-        hasUserInteracted,
-        isLoading,
-        snapshotCount: toolCallSnapshots.length,
-        internalIndex,
-        currentIndex,
-        navigationMode,
-        isOpen,
-        isPanelMinimized,
-      });
-    }
-
-    if (hasUserInteracted || isLoading) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:skip-user-or-loading');
-      }
-      return;
-    }
-
-    if (!toolCallSnapshots.length) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:skip-no-snapshots');
-      }
-      return;
-    }
-
-    const snapshotCalls = toolCallSnapshots.map(snapshot => snapshot.toolCall);
-    const mainIdx = detectMainFile(snapshotCalls);
-
-    const deliveryIdx = mainIdx > -1
-      ? mainIdx
-      : toolCallSnapshots.findIndex(snapshot => isDeliveryMoment(snapshot.toolCall));
-
-    if (deliveryIdx < 0) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:skip-no-delivery');
-      }
-      return;
-    }
-
-    const latestSnapshot = toolCallSnapshots[deliveryIdx];
-    const reason: 'main' | 'delivery' = mainIdx > -1 ? 'main' : 'delivery';
-    const autoOpenKey = buildAutoOpenKey(latestSnapshot, reason);
-
-    if (DEBUG_WORKSPACE) {
-      logWorkspaceDebug('auto-open:evaluated', {
-        deliveryIdx,
-        mainIdx,
-        reason,
-        autoOpenKey,
-        guard: autoOpenGuardRef.current,
-        lastRequested: lastRequestedOpenRef.current,
-        lastMainEvent: lastMainFileEventRef.current,
-      });
-    }
-
-    if (!autoOpenKey || autoOpenGuardRef.current === autoOpenKey) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:skip-guard', { autoOpenKey });
-      }
-      return;
-    }
-
-    autoOpenGuardRef.current = autoOpenKey;
-
-    if (internalIndex !== deliveryIdx) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:set-internal-index', { from: internalIndex, to: deliveryIdx });
-      }
-      setInternalIndex(deliveryIdx);
-    }
-
-    if (currentIndex !== deliveryIdx) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:onNavigate', { from: currentIndex, to: deliveryIdx });
-      }
-      onNavigate(deliveryIdx);
-    }
-
-    if (deliveryIdx === toolCallSnapshots.length - 1 && navigationMode !== 'live') {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:set-mode-live');
-      }
-      setNavigationMode('live');
-    } else if (deliveryIdx !== toolCallSnapshots.length - 1 && navigationMode !== 'manual') {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:set-mode-manual');
-      }
-      setNavigationMode('manual');
-    }
-
-    const shouldRequestOpen = !isOpen || isPanelMinimized;
-    if (shouldRequestOpen && onRequestOpen && lastRequestedOpenRef.current !== autoOpenKey) {
-      if (DEBUG_WORKSPACE) {
-        logWorkspaceDebug('auto-open:request-open');
-      }
-      onRequestOpen();
-      lastRequestedOpenRef.current = autoOpenKey;
-    }
-
-    if (mainIdx > -1 && onMainFileDetected) {
-      if (lastMainFileEventRef.current !== autoOpenKey) {
-        if (DEBUG_WORKSPACE) {
-          logWorkspaceDebug('auto-open:onMainFileDetected');
-        }
-        onMainFileDetected();
-        lastMainFileEventRef.current = autoOpenKey;
-      }
-    }
-  }, [
-    toolCallSnapshots,
-    buildAutoOpenKey,
-    detectMainFile,
-    isDeliveryMoment,
-    hasUserInteracted,
-    isLoading,
-    internalIndex,
-    currentIndex,
-    navigationMode,
-    isOpen,
-    isPanelMinimized,
-    onNavigate,
-    onRequestOpen,
-    onMainFileDetected,
-  ]);
 
   const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
   const currentSnapshot = toolCallSnapshots[safeInternalIndex];
