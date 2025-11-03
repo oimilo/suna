@@ -20,6 +20,8 @@ Antes: Browser → Daytona Proxy (warning) → Sandbox
 Depois: Browser → Prophet API → Daytona SDK → Sandbox
 ```
 
+> **Importante:** a API do Daytona deve continuar sendo acessada diretamente pelo backend. Apenas as respostas de preview servidas ao navegador passam pelo proxy. Configure `DAYTONA_DIRECT_SERVER_URL` (ou `DAYTONA_SERVER_URL`) com o endpoint original do Daytona e utilize `DAYTONA_PREVIEW_PROXY_BASE_URL` apenas para reescrever os links exibidos no frontend.
+
 ## 📝 Checklist de Implementação
 
 ### Backend (`backend/agent/api.py`)
