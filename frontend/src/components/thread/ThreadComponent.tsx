@@ -261,23 +261,6 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     setHasMainFileDetected(false);
   }, []);
 
-  const handleSidePanelMaximize = useCallback(() => {
-    if (DEBUG_THREAD) {
-      logThreadDebug('action:maximize');
-    }
-    setIsPanelMinimized(prev => (prev ? false : prev));
-    setIsSidePanelOpen(prev => (prev ? prev : true));
-    setHasMainFileDetected(prev => (prev ? prev : true));
-  }, [setIsSidePanelOpen]);
-
-  const handleSidePanelRequestOpen = useCallback(() => {
-    if (DEBUG_THREAD) {
-      logThreadDebug('action:request-open');
-    }
-    setIsSidePanelOpen(true);
-    userClosedPanelRef.current = false;
-  }, [setIsSidePanelOpen, userClosedPanelRef]);
-
   const handleExpandToolPreview = useCallback(() => {
     setIsPanelMinimized(false);
     setIsSidePanelOpen(true);
@@ -759,8 +742,6 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         onSidePanelNavigate={handleSidePanelNavigate}
         onSidePanelClose={handleSidePanelClose}
         onSidePanelMinimize={handleSidePanelMinimize}
-        onSidePanelMaximize={handleSidePanelMaximize}
-        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -802,8 +783,6 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         onSidePanelNavigate={handleSidePanelNavigate}
         onSidePanelClose={handleSidePanelClose}
         onSidePanelMinimize={handleSidePanelMinimize}
-        onSidePanelMaximize={handleSidePanelMaximize}
-        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}

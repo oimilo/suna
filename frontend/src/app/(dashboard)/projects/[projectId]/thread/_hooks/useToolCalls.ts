@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ToolCallInput,
-  shouldAutoOpenForStreaming,
   normalizeToolName,
   detectExistingFileConflict,
 } from '@/components/thread/tool-call-helpers';
@@ -486,9 +485,7 @@ export function useToolCalls(
       } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
       }
-      // Removido: auto-abertura genérica do painel
-      // O painel agora só abre automaticamente quando o ToolCallSidePanel
-      // detecta uma entrega relevante (arquivo principal, deploy, etc.)
+      // Auto-open desativado: o painel permanece fechado até o usuário interagir
     }
   }, [
     buildHistoricalToolPairs,
@@ -667,45 +664,8 @@ export function useToolCalls(
         });
       }
       
-      const importantToolAutoOpen =
-        toolName === 'deploy' ||
-        toolName === 'expose-port' ||
-        toolName === 'create_credential_profile' ||
-        toolName === 'connect_credential_profile';
-
-      if (importantToolAutoOpen) {
-        setIsSidePanelOpen(true);
-        logToolCallDebug('auto-open', {
-          reason: 'streaming-important-tool',
-          toolName,
-        });
-      } else if (
-        (toolName === 'create-file' ||
-          toolName === 'full-file-rewrite' ||
-          toolName === 'edit-file' ||
-          toolName === 'create-slide' ||
-          toolName === 'validate-slide') &&
-        formattedContent
-      ) {
-        const decision = shouldAutoOpenForStreaming(toolName, formattedContent, {
-          index: toolCalls.length,
-          totalCalls: toolCalls.length + 1,
-        });
-
-        if (decision.shouldOpen) {
-          console.log('[STREAM] Main file detected via heurística:', decision.fileName, '- abrindo painel');
-          logToolCallDebug('auto-open', {
-            reason: 'streaming-main-file-heuristic',
-            fileName: decision.fileName,
-            filePath: decision.filePath,
-            score: decision.score,
-            toolName,
-          });
-          setIsSidePanelOpen(true);
-        } else if (decision.fileName) {
-          console.log('[STREAM] Heurística reprovou', decision.fileName, '- painel permanece fechado');
-        }
-      }
+      // Auto-open desativado: o painel só é aberto pelo usuário (ex.: clique no chat)
+      // Mantemos a atualização do índice interno para permitir navegação manual posterior.
     },
     [toolCalls.length],
   );
