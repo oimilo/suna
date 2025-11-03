@@ -24,7 +24,7 @@ import {
 } from '@/components/file-renderers/markdown-renderer';
 import { CsvRenderer } from '@/components/file-renderers/csv-renderer';
 import { cn } from '@/lib/utils';
-import { constructHtmlPreviewUrl, constructProjectPreviewProxyUrl } from '@/lib/utils/url';
+import { constructHtmlPreviewUrl, constructProjectPreviewProxyUrl, constructProjectPreviewFileUrl } from '@/lib/utils/url';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import {
@@ -315,10 +315,23 @@ export function FileOperationToolView({
     return constructProjectPreviewProxyUrl(projectId, previewPort, processedFilePath);
   }, [isHtmlFile, allowPreview, projectId, previewPort, processedFilePath]);
 
+  const directFileProxyUrl = React.useMemo(() => {
+    if (!isHtmlFile || !allowPreview) {
+      return undefined;
+    }
+    return constructProjectPreviewFileUrl(projectId, processedFilePath ?? undefined);
+  }, [isHtmlFile, allowPreview, projectId, processedFilePath]);
+
   const rawHtmlPreviewUrl = React.useMemo(() => {
     if (!isHtmlFile || !allowPreview) return undefined;
-    return proxiedHtmlPreviewUrl || normalizedAutoPreviewUrl || sandboxHtmlPreviewUrl || proxiedBaseHref;
-  }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, isHtmlFile, allowPreview]);
+    return (
+      proxiedHtmlPreviewUrl ||
+      normalizedAutoPreviewUrl ||
+      directFileProxyUrl ||
+      sandboxHtmlPreviewUrl ||
+      proxiedBaseHref
+    );
+  }, [normalizedAutoPreviewUrl, proxiedHtmlPreviewUrl, sandboxHtmlPreviewUrl, proxiedBaseHref, directFileProxyUrl, isHtmlFile, allowPreview]);
 
   const htmlPreviewUrl = React.useMemo(() => {
     if (!rawHtmlPreviewUrl) return undefined;
