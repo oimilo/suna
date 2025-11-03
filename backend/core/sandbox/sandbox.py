@@ -140,6 +140,12 @@ async def delete_sandbox(sandbox_id: str) -> bool:
         
         # Delete the sandbox
         await daytona.delete(sandbox)
+        try:
+            from core.sandbox.tool_base import SandboxToolsBase
+
+            SandboxToolsBase.clear_cached_sandbox_by_sandbox_id(sandbox_id)
+        except Exception as cache_err:
+            logger.warning(f"Failed to clear sandbox cache for {sandbox_id}: {cache_err}")
         
         logger.info(f"Successfully deleted sandbox {sandbox_id}")
         return True
