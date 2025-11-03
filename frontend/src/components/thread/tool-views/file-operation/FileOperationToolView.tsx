@@ -186,15 +186,96 @@ export function FileOperationToolView({
     const a = normalizeContentToString(assistantContent) || '';
     const t = normalizeContentToString(toolContent) || '';
     const s = `${a}\n${t}`;
-    // Ex.: "HTTP server available at: https://8080-xxxx.proxy.daytona.works"
-    const m1 = s.match(/https?:\/\/(\d{2,5})-/i);
-    if (m1 && m1[1]) return parseInt(m1[1], 10);
-    // Ex.: python3 -m http.server 8080
-    const m2 = s.match(/http\.server\s+(\d{2,5})/i);
-    if (m2 && m2[1]) return parseInt(m2[1], 10);
-    // Ex.: Port 3000/5173 citado em logs
-    const m3 = s.match(/port\s*(\d{2,5})/i);
-    if (m3 && m3[1]) return parseInt(m3[1], 10);
+
+    const parsePort = (value: string | number | null | undefined): number | null => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const numeric = typeof value === 'string' ? parseInt(value, 10) : value;
+      if (!Number.isFinite(numeric)) {
+        return null;
+      }
+      if (numeric < 1 || numeric > 65535) {
+        return null;
+      }
+      return numeric;
+    };
+
+    const matchFromRegex = (regex: RegExp): number | null => {
+      const matches = Array.from(s.matchAll(regex));
+      if (!matches.length) {
+        return null;
+      }
+      const last = matches[matches.length - 1];
+      return parsePort(last[1]);
+    };
+
+    // 1) Parameters passed to expose_port are the most reliable signal
+    const explicitExposePort = matchFromRegex(/<parameter[^>]*name=["']port["'][^>]*>(\d{2,5})<\/parameter>/gi);
+    if (explicitExposePort) {
+      return explicitExposePort;
+    }
+
+    // 2) Generic mentions such as port="8000" or port: 4173
+    const genericPortMention = matchFromRegex(/\bport\b[^0-9]{0,10}(\d{2,5})/gi);
+    if (genericPortMention) {
+      return genericPortMention;
+    }
+
+    // 3) URLs with explicit ports (e.g. http://localhost:8000)
+    const urlMatches = Array.from(s.matchAll(/https?:\/\/[\w.-]+(?::\d{2,5})?(?:[^\s)\'"`]*)?/gi));
+    const explicitUrlPorts: number[] = [];
+    const implicitUrlPorts: number[] = [];
+
+    for (const match of urlMatches) {
+      const rawUrl = match[0];
+      try {
+        const parsedUrl = new URL(rawUrl);
+        const fromPort = parsePort(parsedUrl.port);
+        if (fromPort) {
+          explicitUrlPorts.push(fromPort);
+        }
+
+        const hostMatch = parsedUrl.hostname.match(/^(\d{2,5})-[^.]+/);
+        if (hostMatch?.[1]) {
+          const hostPort = parsePort(hostMatch[1]);
+          if (hostPort) {
+            implicitUrlPorts.push(hostPort);
+          }
+        }
+
+        const pathMatch = parsedUrl.pathname.match(/\/p\/(\d{2,5})(?:\/|$)/i);
+        if (pathMatch?.[1]) {
+          const pathPort = parsePort(pathMatch[1]);
+          if (pathPort) {
+            implicitUrlPorts.push(pathPort);
+          }
+        }
+      } catch {
+        // Ignore invalid URLs
+      }
+    }
+
+    if (explicitUrlPorts.length) {
+      return explicitUrlPorts[explicitUrlPorts.length - 1];
+    }
+
+    if (implicitUrlPorts.length) {
+      return implicitUrlPorts[implicitUrlPorts.length - 1];
+    }
+
+    // 4) Legacy patterns like python3 -m http.server 8080
+    const httpServerPort = matchFromRegex(/http\.server\s+(\d{2,5})/i);
+    if (httpServerPort) {
+      return httpServerPort;
+    }
+
+    // 5) Final fallback to detect any remaining "running on 5173" style references
+    const fallbackPortMention = matchFromRegex(/\b(?:listen|listening|running|server)\b[^0-9]{0,15}(\d{2,5})/gi);
+    if (fallbackPortMention) {
+      return fallbackPortMention;
+    }
+
     return 8080;
   }, [assistantContent, toolContent]);
   const previewPort = derivePreviewPort();
@@ -263,11 +344,12 @@ export function FileOperationToolView({
 
   const normalizedAutoPreviewUrl = React.useMemo(() => {
     if (!autoDetectedPreviewUrl) return undefined;
-    if (!projectId || !previewPort || !projectSandboxUrl) return autoDetectedPreviewUrl;
+    if (!projectId) return autoDetectedPreviewUrl;
 
     try {
       const parsedAuto = new URL(autoDetectedPreviewUrl);
       const sandboxHost = (() => {
+        if (!projectSandboxUrl) return null;
         try {
           return new URL(projectSandboxUrl).host;
         } catch {
@@ -275,10 +357,25 @@ export function FileOperationToolView({
         }
       })();
 
+      const autoPort = parsedAuto.port ? parseInt(parsedAuto.port, 10) : undefined;
+      const hostLower = parsedAuto.hostname.toLowerCase();
+      const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(hostLower);
+
+      if (autoPort && isLocalHost) {
+        const proxiedLocal = constructProjectPreviewProxyUrl(
+          projectId,
+          autoPort,
+          parsedAuto.pathname,
+        );
+        if (proxiedLocal) {
+          return `${proxiedLocal}${parsedAuto.search || ''}${parsedAuto.hash || ''}`;
+        }
+      }
+
       if (sandboxHost && parsedAuto.host === sandboxHost) {
         const proxied = constructProjectPreviewProxyUrl(
           projectId,
-          previewPort,
+          autoPort ?? previewPort,
           parsedAuto.pathname,
         );
         if (proxied) {
