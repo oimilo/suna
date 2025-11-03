@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WebCrawlToolView({
   name = 'crawl-webpage',
@@ -257,30 +257,28 @@ export function WebCrawlToolView({
                       </div>
 
                       <div className="flex items-center gap-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  "opacity-70 group-hover:opacity-100 transition-all duration-200",
-                                  copiedContent && "opacity-100"
-                                )}
-                                onClick={copyContent}
-                              >
-                                {copiedContent ? (
-                                  <Check className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{copiedContent ? 'Copied!' : 'Copy content'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "opacity-70 group-hover:opacity-100 transition-all duration-200",
+                                copiedContent && "opacity-100"
+                              )}
+                              onClick={copyContent}
+                            >
+                              {copiedContent ? (
+                                <Check className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{copiedContent ? 'Copied!' : 'Copy content'}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
 

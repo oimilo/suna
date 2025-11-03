@@ -120,6 +120,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     error,
     initialLoadCompleted,
     messagesQuery,
+    projectQuery,
     agentRunsQuery,
   } = useThreadData(threadId, projectId);
 
@@ -139,6 +140,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     toggleSidePanel,
     handleSidePanelNavigate,
     userClosedPanelRef,
+    activeSandboxId,
   } = useToolCalls(messages, setLeftSidebarOpen, agentStatus);
 
   useEffect(() => {
@@ -268,7 +270,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   }, [setIsSidePanelOpen, userClosedPanelRef]);
 
   const handleOpenFileViewer = useCallback(
-    (filePath?: string, fileList?: string[]) => {
+    async (filePath?: string, fileList?: string[]) => {
       if (filePath) {
         setFileToView(filePath);
       }
@@ -279,6 +281,9 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     },
     [],
   );
+
+  const effectiveSandboxId =
+    activeSandboxId ?? sandboxId ?? (typeof project?.sandbox === 'string' ? project?.sandbox : project?.sandbox?.id ?? null);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -726,7 +731,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         projectName={projectName}
         projectId={project?.id || ''}
         project={project}
-        sandboxId={sandboxId}
+        sandboxId={effectiveSandboxId}
         isSidePanelOpen={isSidePanelOpen}
         onToggleSidePanel={toggleSidePanel}
         onViewFiles={handleOpenFileViewer}
@@ -765,7 +770,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         projectName={projectName}
         projectId={project?.id || ''}
         project={project}
-        sandboxId={sandboxId}
+        sandboxId={effectiveSandboxId}
         isSidePanelOpen={isSidePanelOpen}
         isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
@@ -804,7 +809,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
           handleOpenFileViewer={handleOpenFileViewer}
           readOnly={false}
           streamHookStatus={streamHookStatus}
-          sandboxId={sandboxId}
+          sandboxId={effectiveSandboxId}
           project={project}
           debugMode={debugMode}
           agentName={agent && agent.name}
@@ -849,7 +854,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
               onStopAgent={handleStopAgent}
               autoFocus={false}
               onFileBrowse={handleOpenFileViewer}
-              sandboxId={sandboxId || undefined}
+              sandboxId={effectiveSandboxId || undefined}
               messages={messages}
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}

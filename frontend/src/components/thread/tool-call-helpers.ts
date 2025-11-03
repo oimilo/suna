@@ -14,6 +14,7 @@ export interface ToolCallInput {
   };
   outcome?: 'pending' | 'success' | 'failure' | 'conflict';
   failureReason?: string | null;
+  sandboxId?: string | null;
   messages?: ApiMessageType[];
 }
 
@@ -98,6 +99,84 @@ export const detectSuccessFlag = (raw: unknown): boolean | undefined => {
   }
 
   return undefined;
+};
+
+const SANDBOX_ID_KEYS = new Set(['sandbox_id', 'sandboxid', 'workspace_id', 'workspaceid']);
+
+const extractSandboxIdFromStructuredContent = (
+  raw: unknown,
+  depth = 0,
+  visited = new Set<unknown>(),
+): string | null => {
+  if (raw === null || raw === undefined || depth > MAX_NESTED_CONTENT_DEPTH) {
+    return null;
+  }
+
+  if (typeof raw === 'string') {
+    const normalized = normalizeContentToString(raw) || raw;
+    const regex = /"?(sandbox_id|sandboxId|workspace_id|workspaceId)"?\s*[:=]\s*"([^"]+)"/i;
+    const directMatch = typeof normalized === 'string' ? normalized.match(regex) : null;
+    if (directMatch && directMatch[2]) {
+      return directMatch[2].trim();
+    }
+
+    const parsed = tryParseJson(normalized);
+    if (parsed !== normalized) {
+      return extractSandboxIdFromStructuredContent(parsed, depth + 1, visited);
+    }
+
+    return null;
+  }
+
+  if (typeof raw !== 'object') {
+    return null;
+  }
+
+  if (visited.has(raw)) {
+    return null;
+  }
+  visited.add(raw);
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const nested = extractSandboxIdFromStructuredContent(item, depth + 1, visited);
+      if (nested) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  for (const [key, value] of Object.entries(candidate)) {
+    if (SANDBOX_ID_KEYS.has(key.toLowerCase()) && typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  for (const value of Object.values(candidate)) {
+    const nested = extractSandboxIdFromStructuredContent(value, depth + 1, visited);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+};
+
+export const extractSandboxIdFromToolContent = (raw: unknown): string | null => {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+
+  if (typeof raw === 'string') {
+    const direct = extractSandboxIdFromStructuredContent(raw);
+    if (direct) {
+      return direct;
+    }
+  }
+
+  return extractSandboxIdFromStructuredContent(raw);
 };
 
 const streamingFailureKeywords = ['already exists', 'permission denied', 'failed to', 'erro ao'];

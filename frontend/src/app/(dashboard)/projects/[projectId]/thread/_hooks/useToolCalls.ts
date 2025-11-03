@@ -4,6 +4,7 @@ import {
   ToolCallInput,
   normalizeToolName,
   detectExistingFileConflict,
+  extractSandboxIdFromToolContent,
 } from '@/components/thread/tool-call-helpers';
 import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '../_types';
 import { safeJsonParse } from '@/components/thread/utils';
@@ -47,6 +48,7 @@ interface UseToolCallsReturn {
   toggleSidePanel: () => void;
   handleSidePanelNavigate: (newIndex: number) => void;
   userClosedPanelRef: React.MutableRefObject<boolean>;
+  activeSandboxId: string | null;
 }
 
 // Helper function to parse tool content from the new format
@@ -99,6 +101,7 @@ export function useToolCalls(
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [autoOpenedPanel, setAutoOpenedPanel] = useState(false);
   const [externalNavIndex, setExternalNavIndex] = useState<number | undefined>(undefined);
+  const [activeSandboxId, setActiveSandboxId] = useState<string | null>(null);
   const userClosedPanelRef = useRef(false);
   const userNavigatedRef = useRef(false); // Track if user manually navigated
   const lastHistoricalSignatureRef = useRef<string>('');
@@ -154,9 +157,11 @@ export function useToolCalls(
       if (resultMessage) {
         let toolName = 'unknown';
         let isSuccess = true;
+        const resultMetadata = safeJsonParse<any>(resultMessage.metadata, {});
         
         // First try to parse the new format from the tool message
         const toolContentParsed = parseToolContent(resultMessage.content);
+        let sandboxId: string | null = null;
         
         if (toolContentParsed) {
           // New format detected
@@ -166,6 +171,11 @@ export function useToolCalls(
           if (toolContentParsed.result && typeof toolContentParsed.result === 'object') {
             isSuccess = toolContentParsed.result.success !== false;
           }
+
+          sandboxId =
+            extractSandboxIdFromToolContent(toolContentParsed.result) ??
+            extractSandboxIdFromToolContent(toolContentParsed.parameters) ??
+            extractSandboxIdFromToolContent(toolContentParsed);
         } else {
           // Fall back to old format parsing
           try {
@@ -241,6 +251,12 @@ export function useToolCalls(
             isSuccess: isSuccess,
             timestamp: resultMessage.created_at,
           },
+          sandboxId:
+            sandboxId ??
+            extractSandboxIdFromToolContent(resultMetadata?.frontend_content?.tool_execution?.result?.output) ??
+            extractSandboxIdFromToolContent(resultMetadata?.frontend_content?.tool_execution?.result) ??
+            extractSandboxIdFromToolContent(resultMetadata) ??
+            extractSandboxIdFromToolContent(resultMessage.content),
         });
 
         // Map the assistant message ID to its tool index
@@ -479,6 +495,15 @@ export function useToolCalls(
       logToolCallDebug('signature:no-update');
     }
 
+    const latestSandbox = [...historicalToolPairs]
+      .map(pair => pair.sandboxId)
+      .filter((id): id is string => Boolean(id))
+      .pop() ?? null;
+
+    if (latestSandbox !== activeSandboxId) {
+      setActiveSandboxId(latestSandbox);
+    }
+
     if (historicalToolPairs.length > 0 && lastHistoricalSignatureRef.current === signature) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
@@ -494,6 +519,7 @@ export function useToolCalls(
     isSidePanelOpen,
     toolCalls.length,
     messages.length,
+    activeSandboxId,
   ]);
 
   // Reset user navigation flag when agent stops
@@ -686,6 +712,7 @@ export function useToolCalls(
     toggleSidePanel,
     handleSidePanelNavigate,
     userClosedPanelRef,
+    activeSandboxId,
   };
 }
 
