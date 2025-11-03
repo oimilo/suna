@@ -14,6 +14,9 @@ class SandboxToolsBase(Tool):
     
     # Class variable to track if sandbox URLs have been printed
     _urls_printed = False
+    _project_locks: Dict[str, asyncio.Lock] = {}
+    _project_cache: Dict[str, Dict[str, Any]] = {}
+    _sandbox_to_project: Dict[str, str] = {}
     
     def __init__(self, project_id: str, thread_manager: Optional[ThreadManager] = None):
         super().__init__()
@@ -30,7 +33,21 @@ class SandboxToolsBase(Tool):
         If the project does not yet have a sandbox, create it lazily and persist
         the metadata to the `projects` table so subsequent calls can reuse it.
         """
-        if self._sandbox is None:
+        if self._sandbox is not None:
+            return self._sandbox
+
+        if self._try_assign_cached_sandbox():
+            return self._sandbox
+
+        lock = self._get_project_lock(self.project_id)
+
+        async with lock:
+            if self._sandbox is not None:
+                return self._sandbox
+
+            if self._try_assign_cached_sandbox():
+                return self._sandbox
+
             try:
                 # Get database client
                 client = await self.thread_manager.db.client
@@ -91,11 +108,13 @@ class SandboxToolsBase(Tool):
                     self._sandbox_id = sandbox_id
                     self._sandbox_pass = sandbox_pass
                     self._sandbox = await get_or_start_sandbox(self._sandbox_id)
+                    self._cache_sandbox(self._sandbox_id, self._sandbox_pass, self._sandbox)
                 else:
                     # Use existing sandbox metadata
                     self._sandbox_id = sandbox_info['id']
                     self._sandbox_pass = sandbox_info.get('pass')
                     self._sandbox = await get_or_start_sandbox(self._sandbox_id)
+                    self._cache_sandbox(self._sandbox_id, self._sandbox_pass, self._sandbox)
 
             except Exception as e:
                 logger.error(f"Error retrieving/creating sandbox for project {self.project_id}: {str(e)}")
@@ -122,6 +141,56 @@ class SandboxToolsBase(Tool):
         cleaned_path = clean_path(path, self.workspace_path)
         logger.debug(f"Cleaned path: {path} -> {cleaned_path}")
         return cleaned_path
+
+    @classmethod
+    def _get_project_lock(cls, project_id: str) -> asyncio.Lock:
+        lock = cls._project_locks.get(project_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            cls._project_locks[project_id] = lock
+        return lock
+
+    def _try_assign_cached_sandbox(self) -> bool:
+        cached = self._project_cache.get(self.project_id)
+        if not cached:
+            return False
+
+        sandbox_obj = cached.get("sandbox")
+        sandbox_id = cached.get("sandbox_id")
+        sandbox_pass = cached.get("sandbox_pass")
+
+        if sandbox_obj and sandbox_id:
+            self._sandbox = sandbox_obj
+            self._sandbox_id = sandbox_id
+            self._sandbox_pass = sandbox_pass
+            return True
+
+        return False
+
+    def _cache_sandbox(self, sandbox_id: str, sandbox_pass: Optional[str], sandbox_obj: AsyncSandbox) -> None:
+        if not sandbox_id or sandbox_obj is None:
+            return
+        self.clear_cached_sandbox(self.project_id)
+        self._project_cache[self.project_id] = {
+            "sandbox_id": sandbox_id,
+            "sandbox_pass": sandbox_pass,
+            "sandbox": sandbox_obj,
+        }
+        self._sandbox_to_project[sandbox_id] = self.project_id
+
+    @classmethod
+    def clear_cached_sandbox(cls, project_id: str) -> None:
+        cached = cls._project_cache.pop(project_id, None)
+        if cached:
+            sandbox_id = cached.get("sandbox_id")
+            if sandbox_id:
+                cls._sandbox_to_project.pop(sandbox_id, None)
+
+    @classmethod
+    def clear_cached_sandbox_by_sandbox_id(cls, sandbox_id: str) -> None:
+        project_id = cls._sandbox_to_project.pop(sandbox_id, None)
+        if project_id:
+            cls._project_cache.pop(project_id, None)
 
     def _enrich_success_payload(self, data: Union[str, Dict[str, Any]]) -> Union[str, Dict[str, Any]]:
         sandbox_id = getattr(self, "_sandbox_id", None)
