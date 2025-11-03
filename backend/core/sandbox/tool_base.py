@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Dict, Any
 import uuid
 import asyncio
 
@@ -8,7 +8,6 @@ from daytona_sdk import AsyncSandbox
 from core.sandbox.sandbox import get_or_start_sandbox, create_sandbox, delete_sandbox
 from core.utils.logger import logger
 from core.utils.files_utils import clean_path
-from core.utils.config import config
 
 class SandboxToolsBase(Tool):
     """Base class for all sandbox tools that provides project-based sandbox access."""
@@ -123,3 +122,29 @@ class SandboxToolsBase(Tool):
         cleaned_path = clean_path(path, self.workspace_path)
         logger.debug(f"Cleaned path: {path} -> {cleaned_path}")
         return cleaned_path
+
+    def _enrich_success_payload(self, data: Union[str, Dict[str, Any]]) -> Union[str, Dict[str, Any]]:
+        sandbox_id = getattr(self, "_sandbox_id", None)
+        if not sandbox_id:
+            return data
+
+        workspace = self.workspace_path
+
+        if isinstance(data, str):
+            return {
+                "message": data,
+                "sandbox_id": sandbox_id,
+                "workspace": workspace,
+            }
+
+        if isinstance(data, dict):
+            enriched = dict(data)
+            enriched.setdefault("sandbox_id", sandbox_id)
+            enriched.setdefault("workspace", workspace)
+            return enriched
+
+        return data
+
+    def success_response(self, data: Union[str, Dict[str, Any]]):
+        enriched = self._enrich_success_payload(data)
+        return super().success_response(enriched)

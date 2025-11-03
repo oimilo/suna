@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { extractGetAppDetailsData, AppDetails } from './_utils';
 
@@ -164,18 +164,16 @@ export function GetAppDetailsToolView({
                             {app.name}
                           </h2>
                           {app.is_verified && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <div className="flex items-center">
-                                    <Sparkles className="h-4 w-4 text-muted-foreground opacity-60" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Verified integration</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <div className="flex items-center">
+                                  <Sparkles className="h-4 w-4 text-muted-foreground opacity-60" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Verified integration</p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 font-mono mb-2">

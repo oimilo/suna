@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WebScrapeToolView({
   name = 'scrape-webpage',
@@ -252,29 +252,27 @@ export function WebScrapeToolView({
                               </div>
                             </div>
 
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    className={cn(
-                                      "p-1.5 rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-200",
-                                      "opacity-0 group-hover:opacity-100",
-                                      isCopied && "opacity-100"
-                                    )}
-                                    onClick={() => copyFilePath(filePath)}
-                                  >
-                                    {isCopied ? (
-                                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                    ) : (
-                                      <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                                    )}
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{isCopied ? 'Copied!' : 'Copy file path'}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className={cn(
+                                    "p-1.5 rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-200",
+                                    "opacity-0 group-hover:opacity-100",
+                                    isCopied && "opacity-100"
+                                  )}
+                                  onClick={() => copyFilePath(filePath)}
+                                >
+                                  {isCopied ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{isCopied ? 'Copied!' : 'Copy file path'}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       );
