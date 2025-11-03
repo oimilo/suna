@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Code, Monitor, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/api';
+import { constructProjectPreviewFileUrl } from '@/lib/utils/url';
 
 interface HtmlRendererProps {
     content: string;
@@ -38,23 +39,26 @@ export function HtmlRenderer({
         return undefined;
     }, [content, project?.sandbox?.sandbox_url]);
 
-    // Get filename from the previewUrl
-    const fileName = useMemo(() => {
+    // Extract workspace-relative path from the preview URL when possible
+    const resolvedFilePath = useMemo(() => {
+        if (!previewUrl) {
+            return '';
+        }
+
         try {
-            // If it's an API URL, extract the filename from the path parameter
             if (previewUrl.includes('/api/sandboxes/')) {
-                const url = new URL(previewUrl);
-                const path = url.searchParams.get('path');
-                if (path) {
-                    return path.split('/').pop() || '';
+                const url = new URL(previewUrl, globalThis?.window?.location?.origin || 'http://localhost');
+                const rawPath = url.searchParams.get('path');
+                if (rawPath) {
+                    return decodeURIComponent(rawPath);
                 }
             }
 
-            // Otherwise just get the last part of the URL
-            return previewUrl.split('/').pop() || '';
-        } catch (e) {
-            console.error('Error extracting filename:', e);
-            return '';
+            const parsedUrl = new URL(previewUrl, globalThis?.window?.location?.origin || 'http://localhost');
+            return decodeURIComponent(parsedUrl.pathname || '');
+        } catch (error) {
+            console.error('[HtmlRenderer] Failed to resolve preview path:', error);
+            return previewUrl;
         }
     }, [previewUrl]);
 
@@ -63,26 +67,18 @@ export function HtmlRenderer({
         // Note: Project type uses 'id' not 'project_id'
         const projectId = (project as any)?.project_id || (project as any)?.id;
         
-        console.log('[HtmlRenderer] Computing preview URL:', {
-            hasProject: !!project,
-            projectId: projectId,
-            projectKeys: project ? Object.keys(project) : [],
-            fileName,
-            previewUrl,
-            blobHtmlUrl
-        });
-        if (projectId && fileName) {
-            // Clean the filename path
-            const cleanFileName = fileName.replace(/^\/workspace\//, '').replace(/^\//, '');
-            const proxyUrl = `/api/preview/${projectId}/${cleanFileName}`;
-            console.log('[HtmlRenderer] Using proxy URL:', proxyUrl);
-            return proxyUrl;
+        if (projectId && resolvedFilePath) {
+            const proxyUrl = constructProjectPreviewFileUrl(projectId, resolvedFilePath);
+            if (proxyUrl) {
+                console.log('[HtmlRenderer] Using proxy URL:', proxyUrl);
+                return proxyUrl;
+            }
         }
         
         // Fallback to blob URL if no project
         console.log('[HtmlRenderer] Falling back to:', blobHtmlUrl || previewUrl);
         return blobHtmlUrl || previewUrl;
-    }, [project, fileName, blobHtmlUrl, previewUrl]);
+    }, [project, resolvedFilePath, blobHtmlUrl, previewUrl]);
 
     // Auto-retry logic for 502 errors
     useEffect(() => {

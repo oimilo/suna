@@ -10,6 +10,7 @@ import { BinaryRenderer } from './binary-renderer';
 // Use the HtmlRenderer with proxy support from thread components
 import { HtmlRenderer } from '../thread/preview-renderers/html-renderer';
 import { CsvRenderer } from './csv-renderer';
+import { constructProjectPreviewFileUrl } from '@/lib/utils/url';
 
 export type FileType =
   | 'markdown'
@@ -170,10 +171,21 @@ export function FileRenderer({
   }, [isHtmlFile, content, project?.sandbox?.sandbox_url]);
 
   // Construct HTML file preview URL using proxy to avoid Daytona warning
-  const htmlPreviewUrl =
-    isHtmlFile && project && fileName
-      ? `/api/preview/${(project as any)?.project_id || (project as any)?.id}/${fileName.replace(/^\/workspace\//, '').replace(/^\//, '')}`
-      : blobHtmlUrl; // Use blob URL as fallback
+  const htmlPreviewUrl = React.useMemo(() => {
+    if (!isHtmlFile) {
+      return blobHtmlUrl;
+    }
+
+    const projectId = (project as any)?.project_id || (project as any)?.id;
+    if (projectId && fileName) {
+      const proxyUrl = constructProjectPreviewFileUrl(projectId, fileName);
+      if (proxyUrl) {
+        return proxyUrl;
+      }
+    }
+
+    return blobHtmlUrl;
+  }, [isHtmlFile, project, fileName, blobHtmlUrl]);
 
   // Clean up blob URL on unmount
   React.useEffect(() => {

@@ -18,6 +18,7 @@ import { AgentLoader } from './loader';
 import { parseXmlToolCalls, isNewXmlFormat, extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { parseToolResult } from '@/components/thread/tool-views/tool-result-parser';
 import { BRANDING } from '@/lib/branding';
+import { constructProjectPreviewProxyUrl } from '@/lib/utils/url';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import styles from '@/styles/toolcalls.module.css';
@@ -132,10 +133,42 @@ export function renderMarkdownContent(
             const projectId = (project as any)?.project_id || (project as any)?.id;
             if (!projectId) return text;
             // Matches: https://8080-xxxx.proxy.daytona.works[/path]
-            const re = /https?:\/\/(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works(\/[\w\-./%?=&#]*)?/g;
-            return text.replace(re, (_m, port: string, path: string | undefined) => {
-                const cleanPath = (path || '').replace(/^\/+/, '');
-                return `/api/preview/${projectId}/p/${port}${cleanPath ? '/' + cleanPath : ''}`;
+            const re = /https?:\/\/(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works([^\s]*)/gi;
+            return text.replace(re, (match, port: string, suffix: string | undefined) => {
+                const numericPort = Number(port);
+                if (!Number.isFinite(numericPort)) {
+                    return match;
+                }
+
+                const usableSuffix = suffix || '';
+                let pathPart = usableSuffix;
+                let queryPart = '';
+                let hashPart = '';
+
+                if (pathPart.includes('#')) {
+                    const [beforeHash, afterHash] = pathPart.split('#');
+                    pathPart = beforeHash ?? '';
+                    hashPart = afterHash ? `#${afterHash}` : '';
+                }
+
+                if (pathPart.includes('?')) {
+                    const [beforeQuery, afterQuery] = pathPart.split('?');
+                    pathPart = beforeQuery ?? '';
+                    queryPart = afterQuery ? `?${afterQuery}` : '';
+                }
+
+                const sanitizedPath = pathPart.replace(/^\/+/, '');
+                const proxied = constructProjectPreviewProxyUrl(
+                    projectId,
+                    numericPort,
+                    sanitizedPath ? `/${sanitizedPath}` : undefined,
+                );
+
+                if (!proxied) {
+                    return match;
+                }
+
+                return `${proxied.replace(/\/$/, '')}${queryPart}${hashPart}`;
             });
         } catch {
             return text;
@@ -145,6 +178,13 @@ export function renderMarkdownContent(
     // Apply rewrite before any parsing unless in debug mode
     if (!debugMode && typeof content === 'string') {
         content = rewriteDaytonaToProxy(content);
+        const baseUrl = BRANDING.url?.trim();
+        if (typeof content === 'string' && baseUrl && content.includes('/api/preview/')) {
+            const normalizedBase = baseUrl.startsWith('http')
+                ? baseUrl.replace(/\/$/, '')
+                : `https://${baseUrl.replace(/\/$/, '')}`;
+            content = content.replace(/(^|[\s(['"`>])\/api\/preview\//g, (_match, prefix) => `${prefix}${normalizedBase}/api/preview/`);
+        }
     }
     // If in debug mode, just display raw content in a pre tag
     if (debugMode) {
