@@ -3,7 +3,7 @@ from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 import asyncio
 import os
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 @tool_metadata(
     display_name="Port Exposure",
@@ -18,6 +18,8 @@ class SandboxExposeTool(SandboxToolsBase):
 
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
+
+    _DEFAULT_PROXY_BASE_URL = "https://www.prophet.build"
 
     @openapi_schema({
         "type": "function",
@@ -55,7 +57,7 @@ class SandboxExposeTool(SandboxToolsBase):
             original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
 
             # Build unique per-project proxy URL (backup logic)
-            proxy_url = f"{self._get_proxy_base_url()}/api/preview/{self.project_id}/p/{port}/"
+            proxy_url = self._build_proxy_url(self._get_proxy_base_url(), self.project_id, port)
 
             return self.success_response({
                 "url": original_url,
@@ -73,6 +75,47 @@ class SandboxExposeTool(SandboxToolsBase):
         except Exception as e:
             return self.fail_response(f"Error exposing port {port}: {str(e)}")
 
+    @classmethod
+    def _build_proxy_url(cls, base_url: str, project_id: str, port: int) -> str:
+        """Compose an absolute proxy URL for the exposed port."""
+        normalized_base = (base_url or "").strip() or cls._DEFAULT_PROXY_BASE_URL
+        # Ensure trailing slash so urljoin appends relative segments correctly
+        normalized_base = normalized_base.rstrip('/') + '/'
+        relative_path = f"api/preview/{project_id}/p/{port}/"
+        return urljoin(normalized_base, relative_path)
+
+    @classmethod
+    def _normalize_base_candidate(cls, raw_candidate: str | None) -> str | None:
+        if not raw_candidate:
+            return None
+
+        candidate = raw_candidate.strip()
+        if not candidate:
+            return None
+
+        if candidate.startswith("//"):
+            candidate = f"https:{candidate}"
+        elif "//" not in candidate:
+            candidate = f"https://{candidate.lstrip('/')}"
+
+        parsed = urlparse(candidate)
+        if not parsed.netloc:
+            return None
+
+        scheme = parsed.scheme or "https"
+        netloc = parsed.netloc
+
+        path = (parsed.path or "").rstrip('/')
+        if path.endswith('/api'):
+            path = path[:-4]
+        path = path.rstrip('/')
+
+        if path and not path.startswith('/'):
+            path = f"/{path}"
+
+        base_url = urlunparse((scheme, netloc, path, '', '', '')).rstrip('/')
+        return base_url or None
+
     def _get_proxy_base_url(self) -> str:
         candidates = [
             os.getenv("NEXT_PUBLIC_BACKEND_URL"),
@@ -83,28 +126,8 @@ class SandboxExposeTool(SandboxToolsBase):
         ]
 
         for raw_candidate in candidates:
-            if not raw_candidate:
-                continue
+            normalized = self._normalize_base_candidate(raw_candidate)
+            if normalized:
+                return normalized
 
-            candidate = raw_candidate.strip()
-            if not candidate:
-                continue
-
-            if not candidate.startswith("http://") and not candidate.startswith("https://"):
-                candidate = f"https://{candidate}"
-
-            parsed = urlparse(candidate)
-            if not parsed.netloc:
-                continue
-
-            base = f"{parsed.scheme or 'https'}://{parsed.netloc}"
-
-            path = parsed.path.rstrip('/') if parsed.path else ""
-            if path.endswith('/api'):
-                path = path[:-4]
-            if path:
-                base = f"{base}{path}"
-
-            return base.rstrip('/')
-
-        return "https://www.prophet.build"
+        return self._DEFAULT_PROXY_BASE_URL
