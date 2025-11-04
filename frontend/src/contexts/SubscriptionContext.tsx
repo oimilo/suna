@@ -79,13 +79,75 @@ export function useSharedSubscription() {
 }
 
 export function useSubscriptionData() {
-  const context = useSubscriptionContext();
+  const context = useContext(SubscriptionContext);
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+
+  const directSubscription = useSubscription(context ? false : isAuthenticated);
+  const directCreditBalance = useCreditBalance(context ? false : isAuthenticated);
+
+  const buildSubscriptionData = (
+    subscription: SubscriptionContextValue['subscriptionData'],
+    creditBalance: SubscriptionContextValue['creditBalance'],
+  ) => {
+    if (!subscription) {
+      return null;
+    }
+
+    const normalizedSubscription = {
+      ...subscription,
+      current_usage:
+        creditBalance?.lifetime_used ??
+        (subscription as any)?.current_usage ??
+        subscription.credits?.lifetime_used ??
+        0,
+      cost_limit:
+        subscription.tier?.credits ??
+        subscription.credits?.tier_credits ??
+        (subscription as any)?.cost_limit ??
+        0,
+      credit_balance:
+        creditBalance?.balance ??
+        subscription.credits?.balance ??
+        (subscription as any)?.credit_balance ??
+        0,
+      can_purchase_credits:
+        creditBalance?.can_purchase_credits ??
+        subscription.credits?.can_purchase_credits ??
+        (subscription as any)?.can_purchase_credits ??
+        false,
+      subscription: subscription.subscription
+        ? {
+            ...subscription.subscription,
+            cancel_at_period_end:
+              subscription.subscription.cancel_at_period_end ??
+              Boolean(subscription.subscription.cancel_at),
+          }
+        : null,
+    } as typeof subscription & {
+      current_usage: number;
+      cost_limit: number;
+      credit_balance: number;
+      can_purchase_credits: boolean;
+    };
+
+    return normalizedSubscription;
+  };
+
+  if (context) {
+    return {
+      data: buildSubscriptionData(context.subscriptionData, context.creditBalance),
+      isLoading: context.isLoading,
+      error: context.error,
+      refetch: context.refetch,
+    };
+  }
 
   return {
-    data: context.subscriptionData,
-    isLoading: context.isLoading,
-    error: context.error,
-    refetch: context.refetch,
+    data: buildSubscriptionData(directSubscription.data ?? null, directCreditBalance.data ?? null),
+    isLoading: directSubscription.isLoading || directCreditBalance.isLoading,
+    error: (directSubscription.error || directCreditBalance.error) as Error | null,
+    refetch: directSubscription.refetch,
   };
 }
 
