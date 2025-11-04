@@ -14,9 +14,7 @@ export interface ToolViewProps {
   currentIndex?: number;
   totalCalls?: number;
   onFileClick?: (filePath: string) => void;
-  isPanelMinimized?: boolean;
-  outcome?: 'pending' | 'success' | 'failure' | 'conflict';
-  failureReason?: string | null;
+  viewToggle?: React.ReactNode;
 }
 
 export interface BrowserToolViewProps extends ToolViewProps {

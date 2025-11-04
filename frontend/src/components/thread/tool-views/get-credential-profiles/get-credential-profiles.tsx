@@ -32,7 +32,7 @@ export function GetCredentialProfilesToolView({
 }: ToolViewProps) {
 
   const {
-    app_slug,
+    toolkit_slug,
     message,
     profiles,
     total_count,
@@ -59,28 +59,23 @@ export function GetCredentialProfilesToolView({
     };
   };
 
-  const getActiveStatus = (isActive: boolean) => {
-    return {
-      color: isActive 
-        ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
-        : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800',
-      text: isActive ? 'Active' : 'Inactive'
-    };
-  };
+
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground opacity-60" />
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+              <Users className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+            </div>
             <div>
-              <CardTitle className="text-sm font-medium text-foreground">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
-              {app_slug && (
+              {toolkit_slug && (
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  App: {app_slug}
+                  Toolkit: {toolkit_slug}
                 </p>
               )}
             </div>
@@ -114,7 +109,7 @@ export function GetCredentialProfilesToolView({
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
             title="Loading credential profiles"
-            filePath={app_slug ? `"${app_slug}"` : undefined}
+            filePath={toolkit_slug ? `"${toolkit_slug}"` : undefined}
             showProgress={true}
           />
         ) : profiles.length > 0 ? (
@@ -128,8 +123,8 @@ export function GetCredentialProfilesToolView({
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-muted/50 border flex items-center justify-center relative">
-                          <User className="w-6 h-6 text-muted-foreground" />
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 flex items-center justify-center relative">
+                          <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                           {profile.is_default && (
                             <div className="absolute -top-1 -right-1">
                               <div className="bg-yellow-500 rounded-full p-1">
@@ -154,7 +149,7 @@ export function GetCredentialProfilesToolView({
                             )}
                           </div>
                           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            {profile.app_name}
+                            {profile.toolkit_name}
                           </p>
                           {profile.profile_name !== profile.display_name && (
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
@@ -167,7 +162,6 @@ export function GetCredentialProfilesToolView({
                       <div className="flex items-center gap-2">
                         {(() => {
                           const connectionStatus = getConnectionStatus(profile.is_connected);
-                          const activeStatus = getActiveStatus(profile.is_active);
                           const ConnectionIcon = connectionStatus.icon;
                           
                           return (
@@ -178,12 +172,6 @@ export function GetCredentialProfilesToolView({
                               >
                                 <ConnectionIcon className="w-3 h-3" />
                                 {connectionStatus.text}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className={cn("text-xs font-medium", activeStatus.color)}
-                              >
-                                {activeStatus.text}
                               </Badge>
                             </>
                           );
@@ -201,11 +189,11 @@ export function GetCredentialProfilesToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Users className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
                 No profiles found
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {app_slug ? `No credential profiles found for "${app_slug}"` : 'No credential profiles available'}
+                {toolkit_slug ? `No credential profiles found for "${toolkit_slug}"` : 'No credential profiles available'}
               </p>
             </div>
           </div>

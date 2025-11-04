@@ -14,8 +14,9 @@ import {
 
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -66,7 +67,7 @@ const UnifiedDiffView: React.FC<{ lineDiff: LineDiff[] }> = ({ lineDiff }) => (
 );
 
 const SplitDiffView: React.FC<{ lineDiff: LineDiff[] }> = ({ lineDiff }) => (
-  <div className="bg-white dark:bg-zinc-950 font-mono text-sm overflow-x-auto">
+  <div className="bg-white dark:bg-zinc-950 font-mono text-sm overflow-x-auto -my-2">
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-b border-zinc-200 dark:border-zinc-800 text-xs">
@@ -218,36 +219,41 @@ export function StrReplaceToolView({
   const shouldShowError = !isStreaming && (!oldStr || !newStr) && (assistantContent || toolContent);
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileDiff className="h-4 w-4 text-muted-foreground opacity-60" />
-            <CardTitle className="text-sm font-medium text-foreground">
+            <div className="relative p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
+              <FileDiff className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            </div>
+            <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
               {toolTitle}
             </CardTitle>
           </div>
 
           {!isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+            <Badge
+              variant="secondary"
+              className={
+                actualIsSuccess
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
+              }
+            >
               {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              <span className="text-xs font-medium text-muted-foreground">
-                {actualIsSuccess ? 'Replacement completed' : 'Replacement failed'}
-              </span>
-            </div>
+              {actualIsSuccess ? 'Replacement completed' : 'Replacement failed'}
+            </Badge>
           )}
 
           {isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground opacity-60" />
-              <span className="text-xs font-medium text-muted-foreground">
-                Processing replacement
-              </span>
-            </div>
+            <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              Processing replacement
+            </Badge>
           )}
         </div>
       </CardHeader>
@@ -289,21 +295,23 @@ export function StrReplaceToolView({
                       </div>
                     </div>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => setExpanded(!expanded)}
-                        >
-                          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{expanded ? 'Collapse' : 'Expand'}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => setExpanded(!expanded)}
+                          >
+                            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{expanded ? 'Collapse' : 'Expand'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -332,6 +340,40 @@ export function StrReplaceToolView({
           </ScrollArea>
         )}
       </CardContent>
+
+      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+        <div className="h-full flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+          {!isStreaming && (
+            <div className="flex items-center gap-1">
+              {actualIsSuccess ? (
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mr-1" />
+              ) : (
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 mr-1" />
+              )}
+              <span>
+                {actualIsSuccess
+                  ? 'String replacement successful'
+                  : 'String replacement failed'}
+              </span>
+            </div>
+          )}
+
+          {isStreaming && (
+            <div className="flex items-center gap-1">
+              <CircleDashed className="h-3.5 w-3.5 text-blue-500 animate-spin mr-1" />
+              <span>Processing replacement...</span>
+            </div>
+          )}
+        </div>
+
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {actualToolTimestamp && !isStreaming
+            ? formatTimestamp(actualToolTimestamp)
+            : actualAssistantTimestamp
+              ? formatTimestamp(actualAssistantTimestamp)
+              : ''}
+        </div>
+      </div>
     </Card>
   );
 }

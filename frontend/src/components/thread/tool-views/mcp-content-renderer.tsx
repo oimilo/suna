@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import { ContentFormat, FormatDetectionResult } from './mcp-format-detector';
 import { MarkdownRenderer } from '@/components/file-renderers/markdown-renderer';
@@ -11,7 +10,7 @@ import {
   Search, Database, FileText, Link2, Key, AlertTriangle,
   Copy, Globe, FileCode, Table, BookOpen, ExternalLink
 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface MCPContentRendererProps {
@@ -137,21 +136,23 @@ function SearchResultsRenderer({ data, metadata }: { data: any; metadata?: any }
                     >
                       {result.url}
                     </a>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => navigator.clipboard?.writeText(result.url!)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Copy URL</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => navigator.clipboard?.writeText(result.url!)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy URL</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
 

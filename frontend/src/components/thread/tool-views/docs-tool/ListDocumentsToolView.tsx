@@ -20,8 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LoadingState } from '../shared/LoadingState';
 import { cn } from '@/lib/utils';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
-// Fallback: no-op modal if TipTapDocumentModal não estiver disponível neste fork
-const TipTapDocumentModal = ({ open, onOpenChange }: any) => null as any;
+import { TipTapDocumentModal } from '@/components/thread/tiptap-document-modal';
 import { 
   DocumentInfo, 
   extractDocsData,

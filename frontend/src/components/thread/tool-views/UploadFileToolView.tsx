@@ -51,7 +51,7 @@ function extractUploadData(assistantContent: any, toolContent: any): {
   uploadResult: UploadResult | null;
   rawContent: string | null;
 } {
-  const uploadData: UploadData = {
+  let uploadData: UploadData = {
     file_path: null,
     bucket_name: null,
     custom_filename: null,

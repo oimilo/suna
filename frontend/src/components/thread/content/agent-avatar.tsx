@@ -1,137 +1,108 @@
 'use client';
 
 import React from 'react';
+import { useAgent } from '@/hooks/react-query/agents/use-agents';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
-import { icons } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { MiloLogo } from '@/components/sidebar/brand-logo';
-import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
-import type { Agent } from '@/hooks/react-query/agents/utils';
 
 interface AgentAvatarProps {
-  agent?: Agent;
   agentId?: string;
+  size?: number;
+  className?: string;
   fallbackName?: string;
-  iconName?: string | null;
+  iconName?: string;
   iconColor?: string;
   backgroundColor?: string;
   agentName?: string;
+  imageUrl?: string;
   isSunaDefault?: boolean;
-  size?: number;
-  className?: string;
 }
 
-export const AgentAvatar: React.FC<AgentAvatarProps> = ({
-  agent: propAgent,
-  agentId,
-  fallbackName = 'Prophet',
-  iconName: propIconName,
-  iconColor: propIconColor,
-  backgroundColor: propBackgroundColor,
-  agentName: propAgentName,
-  isSunaDefault: propIsSunaDefault,
-  size = 16,
-  className = '',
+export const AgentAvatar: React.FC<AgentAvatarProps> = ({ 
+  agentId, 
+  size = 16, 
+  className = "", 
+  fallbackName = "Suna",
+  iconName,
+  iconColor,
+  backgroundColor,
+  agentName,
+  imageUrl,
+  isSunaDefault,
 }) => {
-  const cachedAgent = useAgentFromCache(!propAgent && agentId ? agentId : undefined);
-  const agent = propAgent || cachedAgent;
+  const { data: agent, isLoading } = useAgent(agentId || '');
 
-  const iconName = propIconName ?? agent?.icon_name;
-  const iconColor = propIconColor ?? agent?.icon_color ?? '#000000';
-  const backgroundColor = propBackgroundColor ?? agent?.icon_background ?? '#F3F4F6';
-  const agentName = propAgentName ?? agent?.name ?? fallbackName;
-  const isSuna = propIsSunaDefault ?? agent?.metadata?.is_suna_default;
-
-  const borderRadiusStyle = {
-    borderRadius: `${Math.min(size * 0.25, 16)}px`,
-  };
-
-  if (!agent && !propIconName && !propIsSunaDefault && agentId) {
+  if (isLoading && agentId) {
     return (
-      <div
-        className={cn('bg-muted animate-pulse border', className)}
-        style={{ width: size, height: size, ...borderRadiusStyle }}
+      <div 
+        className={`bg-muted animate-pulse rounded ${className}`}
+        style={{ width: size, height: size }}
       />
     );
   }
 
+  const resolvedIconName = agent?.icon_name || iconName;
+  const resolvedIconColor = agent?.icon_color || iconColor || '#000000';
+  const resolvedBackground = agent?.icon_background || backgroundColor || '#F3F4F6';
+  const resolvedImageUrl = agent?.profile_image_url || imageUrl;
+  const resolvedName = agent?.name || agentName || fallbackName;
+  const isSuna = agent?.metadata?.is_suna_default || isSunaDefault;
+
   if (isSuna) {
-    return (
-      <div
-        className={cn('flex items-center justify-center bg-muted border', className)}
-        style={{ width: size, height: size, ...borderRadiusStyle }}
-      >
-        <MiloLogo size={size * 0.6} />
-      </div>
-    );
+    return <KortixLogo size={size} />;
   }
 
-  const resolveIconName = (name?: string | null): string | null => {
-    if (!name) return null;
-    if ((icons as Record<string, unknown>)[name]) return name;
-    const camelCase = name
-      .split('-')
-      .map((part, index) =>
-        index === 0 ? part.charAt(0).toLowerCase() + part.slice(1) : part.charAt(0).toUpperCase() + part.slice(1)
-      )
-      .join('');
-    const pascalCase = camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
-    if ((icons as Record<string, unknown>)[pascalCase]) return name;
-    if ((icons as Record<string, unknown>)[camelCase]) return name;
-    return null;
-  };
-
-  const safeIconName = resolveIconName(iconName);
-
-  if (safeIconName) {
+  if (resolvedIconName) {
     return (
-      <div
-        className={cn('flex items-center justify-center transition-all border', className)}
-        style={{
-          width: size,
+      <div 
+        className={`flex items-center justify-center rounded ${className}`}
+        style={{ 
+          width: size, 
           height: size,
-          backgroundColor,
-          ...borderRadiusStyle,
+          backgroundColor: resolvedBackground,
         }}
-        title={agentName}
-        aria-label={agentName}
       >
-        <DynamicIcon name={safeIconName as any} size={size * 0.5} color={iconColor} />
+        <DynamicIcon 
+          name={resolvedIconName as any} 
+          size={size * 0.6} 
+          color={resolvedIconColor}
+        />
       </div>
     );
   }
 
-  return (
-    <div
-      className={cn('flex items-center justify-center bg-muted border', className)}
-      style={{ width: size, height: size, ...borderRadiusStyle }}
-      title={agentName}
-      aria-label={agentName}
-    >
-      <DynamicIcon name="bot" size={size * 0.5} color="#6B7280" />
-    </div>
-  );
+  if (resolvedImageUrl) {
+    return (
+      <img 
+        src={resolvedImageUrl} 
+        alt={resolvedName}
+        className={`rounded object-cover ${className}`}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  if (!agentId) {
+    return <KortixLogo size={size} />;
+  }
+
+  return <KortixLogo size={size} />;
 };
 
 interface AgentNameProps {
-  agent?: Agent;
   agentId?: string;
   fallback?: string;
 }
 
-export const AgentName: React.FC<AgentNameProps> = ({
-  agent: propAgent,
-  agentId,
-  fallback = 'Prophet',
+export const AgentName: React.FC<AgentNameProps> = ({ 
+  agentId, 
+  fallback = "Suna" 
 }) => {
-  const cachedAgent = useAgentFromCache(!propAgent && agentId ? agentId : undefined);
-  const agent = propAgent || cachedAgent;
+  const { data: agent, isLoading } = useAgent(agentId || '');
+
+  if (isLoading && agentId) {
+    return <span className="text-muted-foreground">Loading...</span>;
+  }
 
   return <span>{agent?.name || fallback}</span>;
-};
-
-export function hasCustomProfile(agent: { icon_name?: string | null }): boolean {
-  return !!agent.icon_name;
-}
-
-export default AgentAvatar;
+}; 

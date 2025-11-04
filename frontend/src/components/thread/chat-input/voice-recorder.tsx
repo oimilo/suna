@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,12 +8,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTranscription } from '@/hooks/react-query/transcription/use-transcription';
-import { useTranslations } from '@/hooks/use-translations';
 
 interface VoiceRecorderProps {
     onTranscription: (text: string) => void;
     disabled?: boolean;
-    isFocused?: boolean;
 }
 
 const MAX_RECORDING_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -21,9 +19,7 @@ const MAX_RECORDING_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     onTranscription,
     disabled = false,
-    isFocused = false,
 }) => {
-    const { t } = useTranslations();
     const [state, setState] = useState<'idle' | 'recording' | 'processing'>('idle');
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
@@ -33,12 +29,27 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
     const transcriptionMutation = useTranscription();
 
-    const cleanupStream = useCallback(() => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
+    // Auto-stop recording after 15 minutes
+    useEffect(() => {
+        if (state === 'recording') {
+            recordingStartTimeRef.current = Date.now();
+            maxTimeoutRef.current = setTimeout(() => {
+                stopRecording();
+            }, MAX_RECORDING_TIME);
+        } else {
+            recordingStartTimeRef.current = null;
+            if (maxTimeoutRef.current) {
+                clearTimeout(maxTimeoutRef.current);
+                maxTimeoutRef.current = null;
+            }
         }
-    }, []);
+
+        return () => {
+            if (maxTimeoutRef.current) {
+                clearTimeout(maxTimeoutRef.current);
+            }
+        };
+    }, [state]);
 
     const startRecording = async () => {
         try {
@@ -90,43 +101,27 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         }
     };
 
-    const stopRecording = useCallback(() => {
+    const stopRecording = () => {
         if (mediaRecorderRef.current && state === 'recording') {
             mediaRecorderRef.current.stop();
         }
-    }, [state]);
+    };
 
-    const cancelRecording = useCallback(() => {
+    const cancelRecording = () => {
         if (mediaRecorderRef.current && state === 'recording') {
             chunksRef.current = []; // Clear chunks to signal cancellation
             mediaRecorderRef.current.stop();
             cleanupStream();
             setState('idle');
         }
-    }, [cleanupStream, state]);
-    // Auto-stop recording after 15 minutes
-    useEffect(() => {
-        if (state === 'recording') {
-            recordingStartTimeRef.current = Date.now();
-            maxTimeoutRef.current = setTimeout(() => {
-                console.log('Auto-stopping recording after 15 minutes');
-                stopRecording();
-            }, MAX_RECORDING_TIME);
-        } else {
-            recordingStartTimeRef.current = null;
-            if (maxTimeoutRef.current) {
-                clearTimeout(maxTimeoutRef.current);
-                maxTimeoutRef.current = null;
-            }
+    };
+
+    const cleanupStream = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
         }
-
-        return () => {
-            if (maxTimeoutRef.current) {
-                clearTimeout(maxTimeoutRef.current);
-            }
-        };
-    }, [state, stopRecording]);
-
+    };
 
     const handleClick = () => {
         if (state === 'idle') {
@@ -176,7 +171,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                         onClick={handleClick}
                         onContextMenu={handleRightClick}
                         disabled={disabled || state === 'processing'}
-                        className={`h-8 px-2 py-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-all duration-300 ${getButtonClass()} ${!isFocused ? 'opacity-20' : 'opacity-100'}`}
+                        className={`h-8 px-2 py-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2 transition-colors ${getButtonClass()}`}
                     >
                         {getIcon()}
                     </Button>
@@ -184,10 +179,10 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                 <TooltipContent side="top" className="text-xs">
                     <p>
                         {state === 'recording' 
-                            ? t('chat.clickToStopRecording') 
+                            ? 'Click to stop recording' 
                             : state === 'processing' 
-                                ? t('chat.processing') 
-                                : t('chat.recordVoiceMessage')
+                                ? 'Processing...' 
+                                : 'Record voice message'
                         }
                     </p>
                 </TooltipContent>

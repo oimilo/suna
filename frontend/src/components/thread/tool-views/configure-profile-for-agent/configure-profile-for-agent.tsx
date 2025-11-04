@@ -69,14 +69,18 @@ export function ConfigureProfileForAgentToolView({
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-muted-foreground opacity-60" />
-            <CardTitle className="text-sm font-medium text-foreground">
-              {toolTitle}
-            </CardTitle>
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20">
+              <Settings className="w-5 h-5 text-violet-500 dark:text-violet-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                {toolTitle}
+              </CardTitle>
+            </div>
           </div>
 
           {!isStreaming && (
@@ -94,7 +98,7 @@ export function ConfigureProfileForAgentToolView({
               ) : (
                 <AlertTriangle className="h-3 w-3" />
               )}
-              {actualIsSuccess ? 'Configuração atualizada' : 'Falha na configuração'}
+              {actualIsSuccess ? 'Configuration updated' : 'Configuration failed'}
             </Badge>
           )}
         </div>
@@ -106,7 +110,7 @@ export function ConfigureProfileForAgentToolView({
             icon={Settings}
             iconColor="text-violet-500 dark:text-violet-400"
             bgColor="bg-gradient-to-b from-violet-100 to-violet-50 shadow-inner dark:from-violet-800/40 dark:to-violet-900/60 dark:shadow-violet-950/20"
-            title="Configurando perfil para agente"
+            title="Configuring profile for agent"
             filePath={display_name ? `"${display_name}"` : undefined}
             showProgress={true}
           />
@@ -123,7 +127,7 @@ export function ConfigureProfileForAgentToolView({
                       {display_name || 'Agent Profile'}
                     </h3>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Configuração atualizada com sucesso
+                      Configuration updated successfully
                     </p>
                   </div>
                 </div>
@@ -135,7 +139,7 @@ export function ConfigureProfileForAgentToolView({
                     {total_tools}
                   </div>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {total_tools === 1 ? 'Ferramenta Configurada' : 'Ferramentas Configuradas'}
+                    {total_tools === 1 ? 'Tool Configured' : 'Tools Configured'}
                   </p>
                 </div>
               </div>
@@ -145,13 +149,13 @@ export function ConfigureProfileForAgentToolView({
                   <div className="flex items-center gap-2">
                     <Wrench className="w-4 h-4 text-violet-500" />
                     <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                      Ferramentas Habilitadas
+                      Enabled Tools
                     </h3>
                     <Badge variant="outline" className="text-xs">
                       {enabled_tools.length}
                     </Badge>
                   </div>
-                  
+
                   <div className="space-y-2">
                     {enabled_tools.map((tool, index) => (
                       <div
@@ -166,8 +170,8 @@ export function ConfigureProfileForAgentToolView({
                             <p className="font-medium text-zinc-900 dark:text-zinc-100">
                               {formatToolName(tool)}
                             </p>
-                            <Badge 
-                              variant="secondary" 
+                            <Badge
+                              variant="secondary"
                               className="text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
                             >
                               <Tag className="w-2.5 h-2.5" />
@@ -189,15 +193,15 @@ export function ConfigureProfileForAgentToolView({
                   <div className="flex items-center gap-2">
                     <GitBranch className="w-4 h-4 text-blue-500" />
                     <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                      Informações da Versão
+                      Version Information
                     </h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                         <Package className="w-4 h-4" />
-                        <span>Nome da Versão</span>
+                        <span>Version Name</span>
                       </div>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 pl-6">
                         {version_name}
@@ -208,7 +212,7 @@ export function ConfigureProfileForAgentToolView({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                           <Hash className="w-4 h-4" />
-                          <span>ID da Versão</span>
+                          <span>Version ID</span>
                         </div>
                         <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400 pl-6 break-all">
                           {version_id}
@@ -226,11 +230,11 @@ export function ConfigureProfileForAgentToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Settings className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                Nenhuma configuração aplicada
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
+                No configuration applied
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Nenhuma ferramenta foi configurada para este perfil
+                No tools were configured for this profile
               </p>
             </div>
           </div>

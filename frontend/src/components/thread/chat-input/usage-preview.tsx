@@ -1,10 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, Coins, AlertCircle } from 'lucide-react';
+import { X, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLocalMode } from '@/lib/config';
 import { Button } from '@/components/ui/button';
-import { useCreditsStatus } from '@/hooks/react-query';
 
 export interface UsagePreviewProps {
     type: 'tokens' | 'upgrade';
@@ -29,42 +28,31 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     totalCount = 1,
     onIndicatorClick,
 }) => {
-    const { data: creditsData } = useCreditsStatus();
-    
     if (isLocalMode()) return null;
 
-    // Format credits display
-    const formatCredits = (credits: number) => {
-        return Math.floor(credits).toLocaleString('pt-BR');
+    const formatCurrency = (amount: number) => {
+        return `$${amount.toFixed(2)}`;
     };
 
     const getUsageDisplay = () => {
-        // Prefer credit_balance when available
-        if (creditsData) {
-            return (
-                <span className="text-xs">
-                    {formatCredits(creditsData.credit_balance)} créditos disponíveis
-                </span>
-            );
+        if (!subscriptionData) return 'Loading usage...';
+
+        const current = subscriptionData.current_usage || 0;
+        const limit = subscriptionData.cost_limit || 0;
+
+        if (limit === 0) return 'No usage limit set';
+
+        const isOverLimit = current > limit;
+        const usageText = `${formatCurrency(current)} / ${formatCurrency(limit)}`;
+
+        if (isOverLimit) {
+            return `${usageText} (over limit)`;
         }
-        // Fallback to subscription dollars -> credits
-        const used = subscriptionData?.current_usage ? subscriptionData.current_usage * 100 : 0;
-        const limit = subscriptionData?.cost_limit ? subscriptionData.cost_limit * 100 : 0;
-        const displayedUsed = Math.min(used, limit);
-        return (
-            <span className={cn(
-                "text-xs",
-                used >= limit && "text-red-600 dark:text-red-400"
-            )}>
-                {formatCredits(displayedUsed)} / {formatCredits(limit)} créditos
-            </span>
-        );
+
+        return usageText;
     };
 
     const isOverLimit = () => {
-        if (creditsData) {
-            return (creditsData.credit_balance || 0) <= 0;
-        }
         if (!subscriptionData) return false;
         const current = subscriptionData.current_usage || 0;
         const limit = subscriptionData.cost_limit || 0;
@@ -72,30 +60,43 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-2.5 px-3 py-1.5">
-            {/* Icon simples sem fundo */}
+        <div className="flex items-center gap-3">
+            {/* Icon */}
             <div className="flex-shrink-0">
-                {isOverLimit() ? (
-                    <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 opacity-80" />
-                ) : (
-                    <Coins className="h-4 w-4 text-amber-500 dark:text-amber-400 opacity-80" />
-                )}
+                <motion.div
+                    className={cn(
+                        "w-10 h-10 rounded-2xl flex items-center justify-center",
+                        isOverLimit()
+                            ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                            : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                    )}
+                >
+                    <Zap className={cn(
+                        "h-5 w-5",
+                        isOverLimit()
+                            ? "text-red-500 dark:text-red-400"
+                            : "text-blue-500 dark:text-blue-400"
+                    )} />
+                </motion.div>
             </div>
 
-            {/* Content compacto */}
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-                <span className={cn(
-                    "text-sm font-medium",
-                    isOverLimit() 
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-foreground"
-                )}>
-                    {isOverLimit() ? "Créditos esgotados" : "Créditos"}
-                </span>
-                <span className="text-black/20 dark:text-white/20">•</span>
-                <span className="text-xs text-muted-foreground">
-                    {getUsageDisplay()}
-                </span>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <motion.div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-sm font-medium text-foreground truncate">
+                        Upgrade for the best AI Models & more usage
+                    </h4>
+                </motion.div>
+
+                <motion.div className="flex items-center gap-2">
+                    <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        isOverLimit() ? "bg-red-500" : "bg-blue-500"
+                    )} />
+                    <span className="text-xs text-muted-foreground truncate">
+                        {getUsageDisplay()}
+                    </span>
+                </motion.div>
             </div>
 
             {/* Apple-style notification indicators - only for multiple notification types */}
@@ -123,15 +124,9 @@ export const UsagePreview: React.FC<UsagePreviewProps> = ({
                 </button>
             )}
 
-            <button 
-                className="p-1 flex-shrink-0 hover:bg-black/5 dark:hover:bg:white/5 rounded transition-colors" 
-                onClick={(e) => { 
-                    e.stopPropagation(); 
-                    onClose?.(); 
-                }}
-            >
-                <X className="h-3.5 w-3.5 opacity-50 hover:opacity-100 transition-opacity" />
-            </button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onClose?.(); }}>
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+            </Button>
         </div>
     );
 }; 

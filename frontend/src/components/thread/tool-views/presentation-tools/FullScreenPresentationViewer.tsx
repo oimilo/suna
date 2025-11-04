@@ -21,12 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
-import {
-  downloadPresentation,
-  DownloadFormat,
-  fetchSandboxJsonWithWarningBypass,
-  handleGoogleSlidesUpload,
-} from '../utils/presentation-utils';
+import { downloadPresentation, DownloadFormat, handleGoogleSlidesUpload } from '../utils/presentation-utils';
 
 interface SlideMetadata {
   title: string;
@@ -75,11 +70,9 @@ export function FullScreenPresentationViewer({
   // Create a stable refresh timestamp when metadata changes (like PresentationViewer)
   const refreshTimestamp = useMemo(() => metadata?.updated_at || Date.now(), [metadata?.updated_at]);
 
-  const slides = metadata && metadata.slides && typeof metadata.slides === 'object'
-    ? Object.entries(metadata.slides)
-        .map(([num, slide]) => ({ number: parseInt(num, 10), ...slide }))
-        .sort((a, b) => a.number - b.number)
-    : [];
+  const slides = metadata ? Object.entries(metadata.slides)
+    .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
+    .sort((a, b) => a.number - b.number) : [];
 
   const totalSlides = slides.length;
 
@@ -90,17 +83,8 @@ export function FullScreenPresentationViewer({
 
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    if (!presentationName || !sandboxUrl) {
-      setIsLoading(false);
-      setError(null);
-      setRetryAttempt(0);
-      if (backgroundRetryInterval) {
-        clearInterval(backgroundRetryInterval);
-        setBackgroundRetryInterval(null);
-      }
-      return;
-    }
-
+    if (!presentationName || !sandboxUrl) return;
+    
     setIsLoading(true);
     setError(null);
     setRetryAttempt(retryCount);
@@ -110,46 +94,34 @@ export function FullScreenPresentationViewer({
       const sanitizedPresentationName = sanitizeFilename(presentationName);
       
       const metadataUrl = constructHtmlPreviewUrl(
-        sandboxUrl,
-        `presentations/${sanitizedPresentationName}/metadata.json`,
+        sandboxUrl, 
+        `presentations/${sanitizedPresentationName}/metadata.json`
       );
-
-      if (!metadataUrl) {
-        console.error('FullScreenPresentationViewer: invalid metadata URL', {
-          sandboxUrl,
-          sanitizedPresentationName,
-        });
-        setError('Não foi possível carregar a apresentação (URL inválida).');
-        setIsLoading(false);
-        return;
-      }
       
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
-      const data = await fetchSandboxJsonWithWarningBypass<PresentationMetadata>(
-        urlWithCacheBust,
-        {
-          unexpectedContentHandler: (contentType) => {
-            console.warn(
-              'FullScreenPresentationViewer received unexpected content type:',
-              contentType,
-            );
-          },
-        },
-      );
-
-      setMetadata(data);
-      console.log('Successfully loaded presentation metadata:', data);
-      setIsLoading(false);
+      const response = await fetch(urlWithCacheBust, {
+        cache: 'no-cache',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       
-      // Clear background retry interval on success
-      if (backgroundRetryInterval) {
-        clearInterval(backgroundRetryInterval);
-        setBackgroundRetryInterval(null);
+      if (response.ok) {
+        const data = await response.json();
+        setMetadata(data);
+        console.log('Successfully loaded presentation metadata:', data);
+        setIsLoading(false);
+        
+        // Clear background retry interval on success
+        if (backgroundRetryInterval) {
+          clearInterval(backgroundRetryInterval);
+          setBackgroundRetryInterval(null);
+        }
+        
+        return; // Success, exit early
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
-      return; // Success, exit early
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
       
@@ -322,51 +294,41 @@ export function FullScreenPresentationViewer({
   // Memoized slide iframe component with proper scaling (matching PresentationViewer)
   const SlideIframe = useMemo(() => {
     const SlideIframeComponent = React.memo(({ slide }: { slide: SlideMetadata & { number: number } }) => {
-      const containerRef = React.useRef<HTMLDivElement | null>(null);
+      const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
       const [scale, setScale] = useState(1);
 
-      const updateScale = useCallback(() => {
-        const container = containerRef.current;
-        if (!container) {
-          return;
-        }
-
-        const containerWidth = container.offsetWidth;
-        const containerHeight = container.offsetHeight;
-        const scaleX = containerWidth / 1920;
-        const scaleY = containerHeight / 1080;
-        const newScale = Math.min(scaleX, scaleY);
-
-        setScale(prev => (Math.abs(newScale - prev) > 0.001 ? newScale : prev));
-      }, []);
-
       useEffect(() => {
-        const container = containerRef.current;
-        if (!container) {
-          return;
-        }
+        if (containerRef) {
+          const updateScale = () => {
+            const containerWidth = containerRef.offsetWidth;
+            const containerHeight = containerRef.offsetHeight;
+            
+            // Calculate scale to fit 1920x1080 into container while maintaining aspect ratio
+            const scaleX = containerWidth / 1920;
+            const scaleY = containerHeight / 1080;
+            const newScale = Math.min(scaleX, scaleY);
+            
+            // Only update if scale actually changed to prevent unnecessary re-renders
+            if (Math.abs(newScale - scale) > 0.001) {
+              setScale(newScale);
+            }
+          };
 
-        if (typeof ResizeObserver !== 'undefined') {
-          const resizeObserver = new ResizeObserver(() => {
-            updateScale();
-          });
+          // Use a debounced version for resize events to prevent excessive updates
+          let resizeTimeout: NodeJS.Timeout;
+          const debouncedUpdateScale = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(updateScale, 100);
+          };
 
-          resizeObserver.observe(container);
           updateScale();
-
-          window.addEventListener('resize', updateScale);
+          window.addEventListener('resize', debouncedUpdateScale);
           return () => {
-            resizeObserver.disconnect();
-            window.removeEventListener('resize', updateScale);
+            window.removeEventListener('resize', debouncedUpdateScale);
+            clearTimeout(resizeTimeout);
           };
         }
-
-        updateScale();
-        window.addEventListener('resize', updateScale);
-        return () => {
-          window.removeEventListener('resize', updateScale);
-        };
-      }, [updateScale]);
+      }, [containerRef, scale]);
 
       if (!sandboxUrl) {
         return (
@@ -386,7 +348,7 @@ export function FullScreenPresentationViewer({
       return (
         <div className="w-full h-full flex items-center justify-center bg-transparent">
           <div 
-            ref={containerRef}
+            ref={setContainerRef}
             className="relative bg-transparent rounded-lg overflow-hidden"
             style={{
               width: '100%',

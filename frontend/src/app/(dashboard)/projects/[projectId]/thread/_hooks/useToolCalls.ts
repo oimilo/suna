@@ -1,36 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  ToolCallInput,
-  normalizeToolName,
-  detectExistingFileConflict,
-  extractSandboxIdFromToolContent,
-} from '@/components/thread/tool-call-helpers';
+import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '../_types';
 import { safeJsonParse } from '@/components/thread/utils';
 import { ParsedContent } from '@/components/thread/types';
 import { extractToolName } from '@/components/thread/tool-views/xml-parser';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { extractAskData } from '@/components/thread/tool-views/ask-tool/_utils';
-
-const DEBUG_TOOLCALLS = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
-
-const logToolCallDebug = (...args: unknown[]) => {
-  if (DEBUG_TOOLCALLS) {
-    console.debug('[workspace:toolcalls]', ...args);
-  }
-};
-
-export const shouldFilterAskTool = (
-  toolName: string,
-  assistantContent: any,
-  toolContent: any,
-): boolean => {
-  if (toolName.toLowerCase() !== 'ask') {
-    return false;
-  }
-  const { attachments } = extractAskData(assistantContent, toolContent, true);
-  return !attachments || attachments.length === 0;
-};
 
 interface UseToolCallsReturn {
   toolCalls: ToolCallInput[];
@@ -48,7 +24,6 @@ interface UseToolCallsReturn {
   toggleSidePanel: () => void;
   handleSidePanelNavigate: (newIndex: number) => void;
   userClosedPanelRef: React.MutableRefObject<boolean>;
-  activeSandboxId: string | null;
 }
 
 // Helper function to parse tool content from the new format
@@ -91,31 +66,30 @@ function parseToolContent(content: any): {
   return null;
 }
 
+// Helper function to check if an ask tool should be filtered out (no attachments)
+function shouldFilterAskTool(toolName: string, assistantContent: any, toolContent: any): boolean {
+  if (toolName.toLowerCase() !== 'ask') {
+    return false; // Not an ask tool, don't filter
+  }
+  
+  const { attachments } = extractAskData(assistantContent, toolContent, true);
+  return !attachments || attachments.length === 0;
+}
+
 export function useToolCalls(
   messages: UnifiedMessage[],
   setLeftSidebarOpen: (open: boolean) => void,
-  agentStatus?: AgentStatus
+  agentStatus?: AgentStatus,
+  compact?: boolean
 ): UseToolCallsReturn {
   const [toolCalls, setToolCalls] = useState<ToolCallInput[]>([]);
   const [currentToolIndex, setCurrentToolIndex] = useState<number>(0);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [autoOpenedPanel, setAutoOpenedPanel] = useState(false);
   const [externalNavIndex, setExternalNavIndex] = useState<number | undefined>(undefined);
-  const [activeSandboxId, setActiveSandboxId] = useState<string | null>(null);
   const userClosedPanelRef = useRef(false);
   const userNavigatedRef = useRef(false); // Track if user manually navigated
-  const lastHistoricalSignatureRef = useRef<string>('');
-
-  useEffect(() => {
-    logToolCallDebug('state:update', {
-      toolCallCount: toolCalls.length,
-      currentToolIndex,
-      isSidePanelOpen,
-      autoOpenedPanel,
-      userClosedPanel: userClosedPanelRef.current,
-      userNavigated: userNavigatedRef.current,
-    });
-  }, [toolCalls, currentToolIndex, isSidePanelOpen, autoOpenedPanel]);
+  const isMobile = useIsMobile();
 
   const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prevIsOpen) => {
@@ -138,7 +112,7 @@ export function useToolCalls(
   // Create a map of assistant message IDs to their tool call indices for faster lookup
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
 
-  const buildHistoricalToolPairs = useCallback(() => {
+  useEffect(() => {
     const historicalToolPairs: ToolCallInput[] = [];
     const messageIdToIndex = new Map<string, number>();
     const assistantMessages = messages.filter(m => m.type === 'assistant' && m.message_id);
@@ -157,25 +131,18 @@ export function useToolCalls(
       if (resultMessage) {
         let toolName = 'unknown';
         let isSuccess = true;
-        const resultMetadata = safeJsonParse<any>(resultMessage.metadata, {});
         
         // First try to parse the new format from the tool message
         const toolContentParsed = parseToolContent(resultMessage.content);
-        let sandboxId: string | null = null;
         
         if (toolContentParsed) {
           // New format detected
-          toolName = normalizeToolName(toolContentParsed.toolName);
+          toolName = toolContentParsed.toolName.replace(/_/g, '-').toLowerCase();
           
           // Extract success status from the result
           if (toolContentParsed.result && typeof toolContentParsed.result === 'object') {
             isSuccess = toolContentParsed.result.success !== false;
           }
-
-          sandboxId =
-            extractSandboxIdFromToolContent(toolContentParsed.result) ??
-            extractSandboxIdFromToolContent(toolContentParsed.parameters) ??
-            extractSandboxIdFromToolContent(toolContentParsed);
         } else {
           // Fall back to old format parsing
           try {
@@ -201,7 +168,7 @@ export function useToolCalls(
               ) {
                 const firstToolCall = assistantContentParsed.tool_calls[0];
                 const rawName = firstToolCall.function?.name || firstToolCall.name || 'unknown';
-                toolName = normalizeToolName(rawName);
+                toolName = rawName.replace(/_/g, '-').toLowerCase();
               }
             }
           } catch { }
@@ -231,11 +198,9 @@ export function useToolCalls(
           } catch { }
         }
 
+        // Check if this ask tool should be filtered out
         if (shouldFilterAskTool(toolName, assistantMsg.content, resultMessage.content)) {
-          logToolCallDebug('ask-tool-filtered', {
-            assistantMessageId: assistantMsg.message_id,
-            reason: 'missing-attachments',
-          });
+          // Skip this tool call - don't add it to historicalToolPairs
           return;
         }
 
@@ -251,12 +216,6 @@ export function useToolCalls(
             isSuccess: isSuccess,
             timestamp: resultMessage.created_at,
           },
-          sandboxId:
-            sandboxId ??
-            extractSandboxIdFromToolContent(resultMetadata?.frontend_content?.tool_execution?.result?.output) ??
-            extractSandboxIdFromToolContent(resultMetadata?.frontend_content?.tool_execution?.result) ??
-            extractSandboxIdFromToolContent(resultMetadata) ??
-            extractSandboxIdFromToolContent(resultMessage.content),
         });
 
         // Map the assistant message ID to its tool index
@@ -266,261 +225,21 @@ export function useToolCalls(
       }
     });
 
-    const annotatedPairs = historicalToolPairs.map((pair): ToolCallInput => {
-      const outcome: ToolCallInput['outcome'] = (() => {
-        const resultContent = pair.toolResult?.content;
-        if (!pair.toolResult || resultContent === 'STREAMING') {
-          return 'pending';
-        }
-        if (pair.toolResult.isSuccess === false) {
-          return 'failure';
-        }
-        return 'success';
-      })();
-
-      const initialFailureReason = (() => {
-        if (outcome === 'failure') {
-          const inspected = pair.toolResult?.content ?? pair.assistantCall?.content;
-          if (detectExistingFileConflict(inspected)) {
-            return 'already_exists';
-          }
-          return 'unknown';
-        }
-        return null;
-      })();
-
-      return {
-        ...pair,
-        assistantCall: {
-          ...pair.assistantCall,
-          name: normalizeToolName(pair.assistantCall?.name ?? 'unknown'),
-        },
-        outcome,
-        failureReason: initialFailureReason,
-      };
-    });
-
-    const toolIndicesByName = new Map<string, number[]>();
-    annotatedPairs.forEach((pair, index) => {
-      const name = pair.assistantCall?.name ?? 'unknown';
-      const list = toolIndicesByName.get(name) ?? [];
-      list.push(index);
-      toolIndicesByName.set(name, list);
-    });
-
-    const pointerByTool = new Map<string, number>();
-    const sortedMessages = [...messages].sort((a, b) => {
-      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return aTime - bTime;
-    });
-
-    sortedMessages.forEach(message => {
-      if (message.type !== 'status') {
-        return;
-      }
-
-      const parsedContent = typeof message.content === 'string'
-        ? safeJsonParse<any>(message.content, {})
-        : (message.content ?? {});
-
-      if (!parsedContent || typeof parsedContent !== 'object') {
-        return;
-      }
-
-      const statusType = parsedContent.status_type;
-      const rawFunctionName = parsedContent.function_name || parsedContent.xml_tag_name;
-      const normalizedFunctionName = rawFunctionName ? normalizeToolName(rawFunctionName) : undefined;
-
-      if (statusType === 'tool_completed' || statusType === 'tool_failed') {
-        if (!normalizedFunctionName) {
-          return;
-        }
-        const indices = toolIndicesByName.get(normalizedFunctionName);
-        if (!indices || indices.length === 0) {
-          return;
-        }
-
-        const pointer = pointerByTool.get(normalizedFunctionName) ?? 0;
-        if (pointer >= indices.length) {
-          return;
-        }
-
-        const pairIndex = indices[pointer];
-        pointerByTool.set(normalizedFunctionName, pointer + 1);
-        const pair = annotatedPairs[pairIndex];
-        if (!pair) {
-          return;
-        }
-
-        if (statusType === 'tool_completed') {
-          pair.outcome = 'success';
-          pair.failureReason = null;
-        } else {
-          pair.outcome = 'failure';
-          if (!pair.failureReason || pair.failureReason === 'unknown') {
-            pair.failureReason = 'unknown';
-          }
-        }
-      }
-
-      if (statusType === 'finish') {
-        const conflicts = parsedContent.tool_conflicts;
-        if (Array.isArray(conflicts)) {
-          conflicts.forEach((conflict: any) => {
-            if (!conflict || typeof conflict !== 'object') {
-              return;
-            }
-            const conflictNameRaw = conflict.function_name || conflict.xml_tag_name;
-            const normalizedConflictName = conflictNameRaw ? normalizeToolName(conflictNameRaw) : undefined;
-            if (!normalizedConflictName) {
-              return;
-            }
-            const indices = toolIndicesByName.get(normalizedConflictName);
-            if (!indices || indices.length === 0) {
-              return;
-            }
-            const pointer = pointerByTool.get(normalizedConflictName);
-            const latestIndex = typeof pointer === 'number' && pointer > 0
-              ? indices[Math.min(pointer - 1, indices.length - 1)]
-              : indices[indices.length - 1];
-            const pair = annotatedPairs[latestIndex];
-            if (!pair) {
-              return;
-            }
-            pair.outcome = 'conflict' as ToolCallInput['outcome'];
-            pair.failureReason = conflict.reason || 'already_exists';
-          });
-        }
-
-        const failureSummary = parsedContent.tool_failure_summary;
-        if (Array.isArray(failureSummary)) {
-          failureSummary.forEach((entry: any) => {
-            if (!entry || typeof entry !== 'object') {
-              return;
-            }
-            const summaryNameRaw = entry.function_name || entry.xml_tag_name;
-            const normalizedSummaryName = summaryNameRaw ? normalizeToolName(summaryNameRaw) : undefined;
-            if (!normalizedSummaryName) {
-              return;
-            }
-            const indices = toolIndicesByName.get(normalizedSummaryName);
-            if (!indices || indices.length === 0) {
-              return;
-            }
-            const pointer = pointerByTool.get(normalizedSummaryName);
-            const latestIndex = typeof pointer === 'number' && pointer > 0
-              ? indices[Math.min(pointer - 1, indices.length - 1)]
-              : indices[indices.length - 1];
-            const pair = annotatedPairs[latestIndex];
-            if (!pair) {
-              return;
-            }
-            if (pair.outcome === 'failure' || pair.outcome === 'conflict') {
-              pair.failureReason = entry.last_reason || pair.failureReason || 'unknown';
-            }
-          });
-        }
-      }
-    });
-
-    return { historicalToolPairs: annotatedPairs, messageIdToIndex };
-  }, [messages]);
-
-  const getToolCallsSignature = useCallback((pairs: ToolCallInput[]) => {
-    if (pairs.length === 0) {
-      return 'empty';
-    }
-
-    const serializeSegment = (value: string | undefined): string => {
-      if (!value) {
-        return '∅';
-      }
-
-      const normalized = value.trim();
-      if (normalized.length <= 160) {
-        return normalized;
-      }
-
-      const start = normalized.slice(0, 80);
-      const end = normalized.slice(-40);
-      return `${start}…${end}`;
-    };
-
-    return pairs
-      .map(pair => {
-        const assistant = pair.assistantCall;
-        const toolResult = pair.toolResult;
-        const assistantContent = typeof assistant?.content === 'string'
-          ? assistant.content
-          : JSON.stringify(assistant?.content ?? '');
-        const toolResultContent = typeof toolResult?.content === 'string'
-          ? toolResult.content
-          : JSON.stringify(toolResult?.content ?? '');
-        return [
-          assistant?.name ?? 'unknown',
-          assistant?.timestamp ?? 'no-timestamp',
-          serializeSegment(assistantContent),
-          toolResult?.timestamp ?? 'no-result-ts',
-          serializeSegment(toolResultContent),
-          pair.outcome ?? 'pending',
-          pair.failureReason ?? '∅',
-        ].join('|');
-      })
-      .join('::');
-  }, []);
-
-  useEffect(() => {
-    const { historicalToolPairs, messageIdToIndex } = buildHistoricalToolPairs();
-    const signature = getToolCallsSignature(historicalToolPairs);
-
-    logToolCallDebug('signature:computed', {
-      signature,
-      newLength: historicalToolPairs.length,
-      prevSignature: lastHistoricalSignatureRef.current,
-      messagesCount: messages.length,
-    });
-
     assistantMessageToToolIndex.current = messageIdToIndex;
+    setToolCalls(historicalToolPairs);
 
-    if (lastHistoricalSignatureRef.current !== signature) {
-      logToolCallDebug('signature:changed', {
-        previousLength: toolCalls.length,
-        newLength: historicalToolPairs.length,
-      });
-
-      setToolCalls(historicalToolPairs);
-      lastHistoricalSignatureRef.current = signature;
-    } else {
-      logToolCallDebug('signature:no-update');
-    }
-
-    const latestSandbox = [...historicalToolPairs]
-      .map(pair => pair.sandboxId)
-      .filter((id): id is string => Boolean(id))
-      .pop() ?? null;
-
-    if (latestSandbox !== activeSandboxId) {
-      setActiveSandboxId(latestSandbox);
-    }
-
-    if (historicalToolPairs.length > 0 && lastHistoricalSignatureRef.current === signature) {
+    if (historicalToolPairs.length > 0) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
       } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
+      } else if (!isSidePanelOpen && !autoOpenedPanel && !userClosedPanelRef.current && !isMobile && !compact) {
+        setCurrentToolIndex(historicalToolPairs.length - 1);
+        setIsSidePanelOpen(true);
+        setAutoOpenedPanel(true);
       }
-      // Auto-open desativado: o painel permanece fechado até o usuário interagir
     }
-  }, [
-    buildHistoricalToolPairs,
-    getToolCallsSignature,
-    agentStatus,
-    isSidePanelOpen,
-    toolCalls.length,
-    messages.length,
-    activeSandboxId,
-  ]);
+  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
@@ -538,27 +257,17 @@ export function useToolCalls(
   const handleToolClick = useCallback((clickedAssistantMessageId: string | null, clickedToolName: string) => {
     if (!clickedAssistantMessageId) {
       console.warn("Clicked assistant message ID is null. Cannot open side panel.");
-      toast.warning("Não é possível visualizar detalhes: ID da mensagem do assistente está ausente.");
+      toast.warning("Cannot view details: Assistant message ID is missing.");
       return;
     }
 
     userClosedPanelRef.current = false;
     userNavigatedRef.current = true; // Mark that user manually navigated
 
-    console.log(
-      '[PAGE] Tool Click Triggered. Assistant Message ID:',
-      clickedAssistantMessageId,
-      'Tool Name:',
-      clickedToolName,
-    );
-
     // Use the pre-computed mapping for faster lookup
     const toolIndex = assistantMessageToToolIndex.current.get(clickedAssistantMessageId);
 
     if (toolIndex !== undefined) {
-      console.log(
-        `[PAGE] Found tool call at index ${toolIndex} for assistant message ${clickedAssistantMessageId}`,
-      );
       setExternalNavIndex(toolIndex);
       setCurrentToolIndex(toolIndex);
       setIsSidePanelOpen(true);
@@ -581,7 +290,6 @@ export function useToolCalls(
         
         // Check if we have a tool call at this index
         if (messageIndex !== -1 && messageIndex < toolCalls.length) {
-          console.log(`[PAGE] Using fallback: found tool at index ${messageIndex}`);
           setExternalNavIndex(messageIndex);
           setCurrentToolIndex(messageIndex);
           setIsSidePanelOpen(true);
@@ -590,11 +298,7 @@ export function useToolCalls(
         }
       }
       
-      toast.info('Não foi possível encontrar detalhes para esta chamada de ferramenta.');
-      logToolCallDebug('tool-click-miss', {
-        assistantMessageId: clickedAssistantMessageId,
-        toolName: clickedToolName,
-      });
+      toast.info('Could not find details for this tool call.');
     }
   }, [messages, toolCalls]);
 
@@ -604,9 +308,7 @@ export function useToolCalls(
 
       // Get the raw tool name and ensure it uses hyphens
       const rawToolName = toolCall.name || toolCall.xml_tag_name || 'Unknown Tool';
-      const toolName = normalizeToolName(rawToolName);
-
-      console.log('[STREAM] Received tool call:', toolName, '(raw:', rawToolName, ')');
+      const toolName = rawToolName.replace(/_/g, '-').toLowerCase();
 
       if (userClosedPanelRef.current) return;
 
@@ -655,8 +357,6 @@ export function useToolCalls(
           isSuccess: true,
           timestamp: new Date().toISOString(),
         },
-        outcome: 'pending',
-        failureReason: null,
       };
 
       setToolCalls((prev) => {
@@ -690,10 +390,11 @@ export function useToolCalls(
         });
       }
       
-      // Auto-open desativado: o painel só é aberto pelo usuário (ex.: clique no chat)
-      // Mantemos a atualização do índice interno para permitir navegação manual posterior.
+      if (!compact) {
+        setIsSidePanelOpen(true);
+      }
     },
-    [toolCalls.length],
+    [toolCalls.length, compact],
   );
 
   return {
@@ -712,7 +413,6 @@ export function useToolCalls(
     toggleSidePanel,
     handleSidePanelNavigate,
     userClosedPanelRef,
-    activeSandboxId,
   };
 }
 

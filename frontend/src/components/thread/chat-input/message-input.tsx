@@ -1,32 +1,19 @@
 import React, { forwardRef, useEffect, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Square, Loader2, ArrowUp, Settings2, Brain, Database, Zap, Plug2 } from 'lucide-react';
+import { Square, Loader2, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UploadedFile } from './chat-input';
 import { FileUploadHandler } from './file-upload-handler';
 import { VoiceRecorder } from './voice-recorder';
-// import { FixedModelDisplay } from './fixed-model-display';
-import { BRANDING } from '@/lib/branding';
-import { AgentSelector } from './agent-selector';
-import { ModelSelector } from './model-selector';
+import { UnifiedConfigMenu } from './unified-config-menu';
 import { canAccessModel, SubscriptionStatus } from './_use-model-selection';
 import { isLocalMode } from '@/lib/config';
-import { useFeatureFlag } from '@/lib/feature-flags';
 import { TooltipContent } from '@/components/ui/tooltip';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipProvider, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { BillingModal } from '@/components/billing/billing-modal';
-import ChatDropdown from './chat-dropdown';
 import { handleFiles } from './file-upload-handler';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
-type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface MessageInputProps {
   value: string;
@@ -62,17 +49,6 @@ interface MessageInputProps {
   enableAdvancedConfig?: boolean;
   hideAgentSelection?: boolean;
   isSunaAgent?: boolean;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  isFocused?: boolean;
-  // Tool preview props
-  toolCalls?: any[];
-  toolCallIndex?: number;
-  showToolPreview?: boolean;
-  onExpandToolPreview?: () => void;
-  // Projects page quick-config
-  onOpenIntegrations?: () => void;
-  onOpenAgentConfig?: (tab: AgentConfigTab) => void;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -112,37 +88,31 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       enableAdvancedConfig = false,
       hideAgentSelection = false,
       isSunaAgent,
-      onFocus,
-      onBlur,
-      isFocused = false,
-      toolCalls,
-      toolCallIndex,
-      showToolPreview,
-      onExpandToolPreview,
-      onOpenIntegrations,
-      onOpenAgentConfig,
     },
     ref,
   ) => {
     const [billingModalOpen, setBillingModalOpen] = useState(false);
-    const { enabled: customAgentsEnabled, loading: flagsLoading } = useFeatureFlag('custom_agents');
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+      setMounted(true);
+    }, []);
 
     useEffect(() => {
       const textarea = ref as React.RefObject<HTMLTextAreaElement>;
       if (!textarea.current) return;
 
       const adjustHeight = () => {
-        textarea.current!.style.height = 'auto';
-        const newHeight = Math.min(
-          Math.max(textarea.current!.scrollHeight, 24),
-          200,
-        );
-        textarea.current!.style.height = `${newHeight}px`;
+        const el = textarea.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.maxHeight = '200px';
+        el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
+
+        const newHeight = Math.min(el.scrollHeight, 200);
+        el.style.height = `${newHeight}px`;
       };
 
-      adjustHeight();
-
-      // Call it twice to ensure proper height calculation
       adjustHeight();
 
       window.addEventListener('resize', adjustHeight);
@@ -186,40 +156,27 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
     };
 
     const renderDropdown = () => {
-      if (isLoggedIn) {
-        const showAdvancedFeatures = enableAdvancedConfig || (customAgentsEnabled && !flagsLoading);
-
-        return (
-          <div className="flex items-center gap-2">
-            {showAdvancedFeatures && !hideAgentSelection && (
-              <AgentSelector
-                selectedAgentId={selectedAgentId}
-                onAgentSelect={onAgentSelect}
-                disabled={loading || (disabled && !isAgentRunning)}
-                isSunaAgent={isSunaAgent}
-                isFocused={isFocused}
-                toolCalls={toolCalls}
-                toolCallIndex={toolCallIndex}
-                showToolPreview={showToolPreview}
-                onExpandToolPreview={onExpandToolPreview}
-                onOpenAgentConfig={(tab) => onOpenAgentConfig?.(tab)}
-              />
-            )}
-            <ModelSelector
-              selectedModel={selectedModel}
-              onModelChange={onModelChange}
-              modelOptions={modelOptions}
-              canAccessModel={canAccessModel}
-              subscriptionStatus={subscriptionStatus}
-              refreshCustomModels={refreshCustomModels}
-              billingModalOpen={billingModalOpen}
-              setBillingModalOpen={setBillingModalOpen}
-              isFocused={isFocused}
-            />
-          </div>
-        );
+      const showAdvancedFeatures = isLoggedIn && enableAdvancedConfig;
+      // Don't render dropdown components until after hydration to prevent ID mismatches
+      if (!mounted) {
+        return <div className="flex items-center gap-2 h-8" />; // Placeholder with same height
       }
-      return <ChatDropdown isFocused={isFocused} />;
+      // Unified compact menu for both logged and non-logged (non-logged shows only models subset via menu trigger)
+      return (
+        <div className="flex items-center gap-2" data-tour="agent-selector">
+          <UnifiedConfigMenu
+            isLoggedIn={isLoggedIn}
+            selectedAgentId={!hideAgentSelection ? selectedAgentId : undefined}
+            onAgentSelect={!hideAgentSelection ? onAgentSelect : undefined}
+            selectedModel={selectedModel}
+            onModelChange={onModelChange}
+            modelOptions={modelOptions}
+            subscriptionStatus={subscriptionStatus}
+            canAccessModel={canAccessModel}
+            refreshCustomModels={refreshCustomModels}
+          />
+        </div>
+      );
     }
 
     return (
@@ -234,20 +191,16 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             onPaste={handlePaste}
             placeholder={placeholder}
             className={cn(
-              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[36px] max-h-[200px] overflow-y-auto resize-none transition-opacity duration-300',
+              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[36px] max-h-[200px] overflow-y-auto resize-none',
               isDraggingOver ? 'opacity-40' : '',
             )}
             disabled={loading || (disabled && !isAgentRunning)}
             rows={1}
-            onFocus={onFocus}
-            onBlur={onBlur}
           />
         </div>
 
 
-        <div className={cn(
-          "flex items-center justify-between mt-0 mb-1 px-2 transition-opacity duration-300"
-        )}>
+        <div className="flex items-center justify-between mt-0 mb-1 px-2">
           <div className="flex items-center gap-3">
             {!hideAttachments && (
               <FileUploadHandler
@@ -262,57 +215,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 setIsUploading={setIsUploading}
                 messages={messages}
                 isLoggedIn={isLoggedIn}
-                isFocused={isFocused}
               />
-            )}
-
-            {/* Quick Config dropup (projects chat input) */}
-            {isLoggedIn && selectedAgentId && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-8 w-8 rounded-lg hover:bg-muted/60 text-muted-foreground",
-                      !isFocused ? "opacity-40" : "opacity-100"
-                    )}
-                    title="Configurar agente"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" className="w-56">
-                  <DropdownMenuItem
-                    onClick={() => onOpenIntegrations ? onOpenIntegrations() : null}
-                    className="flex items-center gap-2"
-                  >
-                    <Plug2 className="h-4 w-4" />
-                    Integrações
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onOpenAgentConfig?.('instructions')}
-                    className="flex items-center gap-2"
-                  >
-                    <Brain className="h-4 w-4" />
-                    Instruções
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onOpenAgentConfig?.('knowledge')}
-                    className="flex items-center gap-2"
-                  >
-                    <Database className="h-4 w-4" />
-                    Conhecimento
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onOpenAgentConfig?.('triggers')}
-                    className="flex items-center gap-2"
-                  >
-                    <Zap className="h-4 w-4" />
-                    Gatilhos
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             )}
 
           </div>
@@ -324,7 +227,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                   <p role='button' className='text-sm text-amber-500 hidden sm:block cursor-pointer' onClick={() => setBillingModalOpen(true)}>Upgrade for more usage</p>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>The free tier is severely limited by the amount of usage. Upgrade to experience the full power of {BRANDING.name}.</p>
+                  <p>Your current plan has limited usage. Upgrade to experience the full power of Suna.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -341,7 +244,6 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             {isLoggedIn && <VoiceRecorder
               onTranscription={onTranscription}
               disabled={loading || (disabled && !isAgentRunning)}
-              isFocused={isFocused}
             />}
 
             <Button
@@ -349,12 +251,12 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
               onClick={isAgentRunning && onStopAgent ? onStopAgent : onSubmit}
               size="sm"
               className={cn(
-                'w-8 h-8 flex-shrink-0 self-end rounded-xl transition-all duration-300',
+                'w-8 h-8 flex-shrink-0 self-end rounded-xl',
                 (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||
                   loading ||
                   (disabled && !isAgentRunning)
                   ? 'opacity-50'
-                  : ''
+                  : '',
               )}
               disabled={
                 (!value.trim() && uploadedFiles.length === 0 && !isAgentRunning) ||

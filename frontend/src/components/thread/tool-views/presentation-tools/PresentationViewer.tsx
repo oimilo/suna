@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -30,11 +30,7 @@ import {
 } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { formatTimestamp, extractToolData, getToolTitle } from '../utils';
-import {
-  downloadPresentation,
-  fetchSandboxJsonWithWarningBypass,
-  handleGoogleSlidesUpload,
-} from '../utils/presentation-utils';
+import { downloadPresentation, handleGoogleSlidesUpload } from '../utils/presentation-utils';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import { LoadingState } from '../shared/LoadingState';
@@ -80,14 +76,12 @@ export function PresentationViewer({
   const [error, setError] = useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [hasScrolledToCurrentSlide, setHasScrolledToCurrentSlide] = useState(false);
-  const backgroundRetryRef = useRef<NodeJS.Timeout | null>(null);
+  const [backgroundRetryInterval, setBackgroundRetryInterval] = useState<NodeJS.Timeout | null>(null);
 
   const [visibleSlide, setVisibleSlide] = useState<number | null>(null);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [fullScreenInitialSlide, setFullScreenInitialSlide] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [refreshTimestamp, setRefreshTimestamp] = useState(() => Date.now());
-  const [isBackgroundRetryActive, setIsBackgroundRetryActive] = useState(false);
 
   // Extract presentation info from tool data
   const { toolResult } = extractToolData(toolContent);
@@ -141,22 +135,14 @@ export function PresentationViewer({
   const toolTitle = getToolTitle(name || 'presentation-viewer');
 
   // Helper function to sanitize filename (matching backend logic)
-  const sanitizeFilename = useCallback((name: string): string => {
+  const sanitizeFilename = (name: string): string => {
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
-  }, []);
+  };
 
   // Load metadata.json for the presentation with retry logic
-  const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    if (!extractedPresentationName || !project?.sandbox?.sandbox_url) {
-      setIsLoadingMetadata(false);
-      if (backgroundRetryRef.current) {
-        clearInterval(backgroundRetryRef.current);
-        backgroundRetryRef.current = null;
-      }
-      setIsBackgroundRetryActive(false);
-      return;
-    }
-
+  const loadMetadata = async (retryCount = 0, maxRetries = 5) => {
+    if (!extractedPresentationName || !project?.sandbox?.sandbox_url) return;
+    
     setIsLoadingMetadata(true);
     setError(null);
     setRetryAttempt(retryCount);
@@ -166,49 +152,38 @@ export function PresentationViewer({
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
       const metadataUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        `presentations/${sanitizedPresentationName}/metadata.json`,
+        project.sandbox.sandbox_url, 
+        `presentations/${sanitizedPresentationName}/metadata.json`
       );
-
-      if (!metadataUrl) {
-        console.error('Presentation metadata URL could not be constructed', {
-          sandboxUrl: project.sandbox.sandbox_url,
-          sanitizedPresentationName,
-        });
-        setError('Não foi possível carregar a apresentação (URL inválida).');
-        setIsLoadingMetadata(false);
-        return;
-      }
       
       // Add cache-busting parameter to ensure fresh data
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
-      const data = await fetchSandboxJsonWithWarningBypass<PresentationMetadata>(
-        urlWithCacheBust,
-        {
-          unexpectedContentHandler: (contentType) => {
-            console.warn(
-              'Presentation metadata fetch returned unexpected content type:',
-              contentType,
-            );
-          },
-        },
-      );
-
-      setMetadata(data);
-      console.log('Successfully loaded presentation metadata:', data);
-      setIsLoadingMetadata(false);
+      const response = await fetch(urlWithCacheBust, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       
-      // Clear background retry interval on success
-      if (backgroundRetryRef.current) {
-        clearInterval(backgroundRetryRef.current);
-        backgroundRetryRef.current = null;
+      if (response.ok) {
+        const data = await response.json();
+        setMetadata(data);
+        console.log('Successfully loaded presentation metadata:', data);
+        setIsLoadingMetadata(false);
+        
+        // Clear background retry interval on success
+        if (backgroundRetryInterval) {
+          clearInterval(backgroundRetryInterval);
+          setBackgroundRetryInterval(null);
+        }
+        
+        return; // Success, exit early
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      setIsBackgroundRetryActive(false);
-      
-      return; // Success, exit early
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
       
@@ -229,88 +204,51 @@ export function PresentationViewer({
       setIsLoadingMetadata(false);
       
       // Start background retry every 10 seconds
-      if (!backgroundRetryRef.current) {
-        backgroundRetryRef.current = setInterval(() => {
+      if (!backgroundRetryInterval) {
+        const interval = setInterval(() => {
           console.log('Background retry attempt...');
           loadMetadata(0, 2); // Fewer retries for background attempts
         }, 10000);
-        setIsBackgroundRetryActive(true);
+        setBackgroundRetryInterval(interval);
       }
     }
-  }, [extractedPresentationName, project?.sandbox?.sandbox_url, sanitizeFilename]);
+  };
 
   useEffect(() => {
-    if (backgroundRetryRef.current) {
-      clearInterval(backgroundRetryRef.current);
-      backgroundRetryRef.current = null;
-      setIsBackgroundRetryActive(false);
+    // Clear any existing background retry when dependencies change
+    if (backgroundRetryInterval) {
+      clearInterval(backgroundRetryInterval);
+      setBackgroundRetryInterval(null);
     }
     loadMetadata();
-  }, [loadMetadata, toolContent]);
+  }, [extractedPresentationName, project?.sandbox?.sandbox_url, toolContent]);
 
+  // Cleanup background retry interval on unmount
   useEffect(() => {
     return () => {
-      if (backgroundRetryRef.current) {
-        clearInterval(backgroundRetryRef.current);
-        backgroundRetryRef.current = null;
-        setIsBackgroundRetryActive(false);
+      if (backgroundRetryInterval) {
+        clearInterval(backgroundRetryInterval);
       }
     };
-  }, []);
-
-  useEffect(() => {
-    setRefreshTimestamp(Date.now());
-  }, [metadata]);
+  }, [backgroundRetryInterval]);
 
   // Reset scroll state when tool content changes (new tool call)
   useEffect(() => {
     setHasScrolledToCurrentSlide(false);
   }, [toolContent, currentSlideNumber]);
 
-  const slides = useMemo(() => {
-    if (!metadata || !metadata.slides || typeof metadata.slides !== 'object') {
-      return [];
-    }
-    return Object.entries(metadata.slides)
-      .map(([num, slide]) => ({ number: parseInt(num, 10), ...slide }))
-      .sort((a, b) => a.number - b.number);
-  }, [metadata]);
-
-  // Helper function to scroll to current slide
-  const scrollToCurrentSlide = useCallback((delay: number = 200) => {
-    if (!currentSlideNumber || !metadata) return;
-    
-    setTimeout(() => {
-      const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
-      
-      if (slideElement) {
-        slideElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-      } else {
-        // Fallback: try again after a short delay if the element is not yet available
-        setTimeout(() => {
-          const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
-          if (retryElement) {
-            retryElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        }, 500);
-      }
-    }, delay);
-  }, [currentSlideNumber, metadata]);
-
+  // Scroll to current slide when metadata loads or when tool content changes
   useEffect(() => {
     if (metadata && currentSlideNumber && !hasScrolledToCurrentSlide) {
+      // Wait longer for memoized components to render
       scrollToCurrentSlide(800);
       setHasScrolledToCurrentSlide(true);
     }
-  }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide, scrollToCurrentSlide]);
+  }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide]);
+
+  const slides = metadata ? Object.entries(metadata.slides)
+      .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
+    .sort((a, b) => a.number - b.number) : [];
 
   // Additional effect to scroll when slides are actually rendered
   useEffect(() => {
@@ -323,7 +261,7 @@ export function PresentationViewer({
 
       return () => clearTimeout(timer);
     }
-  }, [slides, currentSlideNumber, metadata, hasScrolledToCurrentSlide, scrollToCurrentSlide]);
+  }, [slides.length, currentSlideNumber, metadata, hasScrolledToCurrentSlide]);
 
   // Scroll-based slide detection with proper edge handling
   useEffect(() => {
@@ -399,52 +337,77 @@ export function PresentationViewer({
       }
     };
   }, [slides]);
+
+  // Helper function to scroll to current slide
+  const scrollToCurrentSlide = (delay: number = 200) => {
+    if (!currentSlideNumber || !metadata) return;
+    
+    setTimeout(() => {
+      const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
+      
+      if (slideElement) {
+        slideElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else {
+        // Fallback: try again after a longer delay if element not found yet
+        setTimeout(() => {
+          const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
+          if (retryElement) {
+            retryElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 500);
+      }
+    }, delay);
+  };
+
+  // Create a refresh timestamp when metadata changes
+  const refreshTimestamp = useMemo(() => Date.now(), [metadata]);
+
   // Memoized slide iframe component to prevent unnecessary re-renders
   const SlideIframe = useMemo(() => {
     const SlideIframeComponent = React.memo(({ slide }: { slide: SlideMetadata & { number: number } }) => {
-      const containerRef = useRef<HTMLDivElement | null>(null);
+      const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
       const [scale, setScale] = useState(1);
 
-      const updateScale = useCallback(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const containerWidth = container.offsetWidth;
-        const containerHeight = container.offsetHeight;
-
-        const scaleX = containerWidth / 1920;
-        const scaleY = containerHeight / 1080;
-        const newScale = Math.min(scaleX, scaleY);
-
-        setScale((prev) => (Math.abs(newScale - prev) > 0.001 ? newScale : prev));
-      }, []);
-
       useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
+        if (containerRef) {
+          const updateScale = () => {
+            const containerWidth = containerRef.offsetWidth;
+            const containerHeight = containerRef.offsetHeight;
+            
+            // Calculate scale to fit 1920x1080 into container while maintaining aspect ratio
+            const scaleX = containerWidth / 1920;
+            const scaleY = containerHeight / 1080;
+            const newScale = Math.min(scaleX, scaleY);
+            
+            // Only update if scale actually changed to prevent unnecessary re-renders
+            if (Math.abs(newScale - scale) > 0.001) {
+              setScale(newScale);
+            }
+          };
 
-        if (typeof ResizeObserver !== 'undefined') {
-          const resizeObserver = new ResizeObserver(() => {
-            updateScale();
-          });
+          // Use a debounced version for resize events to prevent excessive updates
+          let resizeTimeout: NodeJS.Timeout;
+          const debouncedUpdateScale = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(updateScale, 100);
+          };
 
-          resizeObserver.observe(container);
           updateScale();
-
-          window.addEventListener('resize', updateScale);
+          window.addEventListener('resize', debouncedUpdateScale);
           return () => {
-            resizeObserver.disconnect();
-            window.removeEventListener('resize', updateScale);
+            window.removeEventListener('resize', debouncedUpdateScale);
+            clearTimeout(resizeTimeout);
           };
         }
-
-        // Fallback if ResizeObserver is not supported
-        updateScale();
-        window.addEventListener('resize', updateScale);
-        return () => {
-          window.removeEventListener('resize', updateScale);
-        };
-      }, [updateScale]);
+      }, [containerRef, scale]);
 
       if (!project?.sandbox?.sandbox_url) {
         return (
@@ -464,7 +427,7 @@ export function PresentationViewer({
       return (
         <div className="w-full h-full flex items-center justify-center bg-transparent">
           <div 
-            ref={containerRef}
+            ref={setContainerRef}
             className="relative w-full h-full bg-background rounded-lg overflow-hidden"
             style={{
               containIntrinsicSize: '1920px 1080px',
@@ -660,7 +623,7 @@ export function PresentationViewer({
                 Attempted {retryAttempt + 1} times
               </p>
             )}
-            {isBackgroundRetryActive && !toolExecutionError && (
+            {backgroundRetryInterval && !toolExecutionError && (
               <p className="text-xs text-blue-500 dark:text-blue-400 mb-4 flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Retrying in background...

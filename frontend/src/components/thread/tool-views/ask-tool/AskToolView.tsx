@@ -4,6 +4,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  Clock,
   MessageSquare,
   Paperclip,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import {
 import { extractAskData } from './_utils';
 import { cn, truncateString } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileAttachment } from '../../file-attachment';
 
@@ -49,6 +51,8 @@ export function AskToolView({
     assistantTimestamp
   );
 
+
+
   const isImageFile = (filePath: string): boolean => {
     const filename = filePath.split('/').pop() || '';
     return filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) !== null;
@@ -56,7 +60,7 @@ export function AskToolView({
 
   const isPreviewableFile = (filePath: string): boolean => {
     const ext = filePath.split('.').pop()?.toLowerCase() || '';
-    return ext === 'html' || ext === 'htm' || ext === 'md' || ext === 'markdown' || ext === 'csv' || ext === 'tsv';
+    return ext === 'html' || ext === 'htm' || ext === 'md' || ext === 'markdown' || ext === 'csv' || ext === 'tsv' || ext === 'pdf' || ext === 'xlsx' || ext === 'xls';
   };
 
   const toolTitle = getToolTitle(name) || 'Ask User';
@@ -68,35 +72,43 @@ export function AskToolView({
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageCircleQuestion className="h-4 w-4 text-muted-foreground opacity-60" />
-            <CardTitle className="text-sm font-medium text-foreground">
-              {toolTitle}
-            </CardTitle>
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+              <MessageCircleQuestion className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                {toolTitle}
+              </CardTitle>
+            </div>
           </div>
 
           {!isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8"
+            <Badge
+              variant="secondary"
+              className={
+                actualIsSuccess
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
+              }
             >
               {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              <span className="text-xs font-medium text-muted-foreground">
-                {actualIsSuccess ? 'Sucesso' : 'Falhou'}
-              </span>
-            </div>
+              {actualIsSuccess ? 'Success' : 'Failed'}
+            </Badge>
           )}
 
           {isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground opacity-60" />
-              <span className="text-xs font-medium text-muted-foreground">Aguardando Resposta</span>
-            </div>
+            <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              Asking user
+            </Badge>
           )}
         </div>
       </CardHeader>
@@ -104,36 +116,11 @@ export function AskToolView({
       <CardContent className="p-0 flex-1 overflow-hidden relative">
         <ScrollArea className="h-full w-full">
           <div className="p-4 space-y-6">
-            {text && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <MessageCircleQuestion className="h-3.5 w-3.5 opacity-60" />
-                  Pergunta
-                </h3>
-                <div className="bg-black/[0.03] dark:bg-white/[0.04] border border-black/6 dark:border-white/8 rounded-lg p-4">
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{text}</p>
-                </div>
-                {isStreaming && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/10 dark:border-amber-400/10">
-                    <Loader2 className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-spin flex-shrink-0" />
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      Aguardando sua resposta no campo de input abaixo...
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-            
             {attachments && attachments.length > 0 ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Paperclip className="h-3.5 w-3.5 opacity-60" />
-                    Arquivos Anexados
-                  </h3>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                    <span className="text-xs font-medium text-muted-foreground">{attachments.length} arquivo{attachments.length !== 1 ? 's' : ''}</span>
-                  </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Paperclip className="h-4 w-4" />
+                  Files ({attachments.length})
                 </div>
 
                 <div className={cn(
@@ -207,23 +194,35 @@ export function AskToolView({
 
 
               </div>
-            ) : !text && !attachments ? (
+            ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8">
-                  <MessageSquare className="h-6 w-6 text-muted-foreground opacity-60" />
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-sm font-medium mb-1 text-foreground">
-                  Pergunta Enviada
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Question Asked
                 </h3>
-                <p className="text-xs text-muted-foreground">
-                  Nenhum arquivo anexado a esta pergunta
+                <p className="text-sm text-muted-foreground">
+                  No files attached to this question
                 </p>
               </div>
-            ) : null}
+            )}
           </div>
         </ScrollArea>
       </CardContent>
 
+      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+        <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <Badge className="h-6 py-0.5" variant="outline">
+            <MessageCircleQuestion className="h-3 w-3" />
+            User Interaction
+          </Badge>
+        </div>
+
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {actualAssistantTimestamp ? formatTimestamp(actualAssistantTimestamp) : ''}
+        </div>
+      </div>
     </Card>
   );
 } 

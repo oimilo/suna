@@ -207,10 +207,18 @@ export function DashboardContent() {
               {t('dashboard.greeting')}
             </p>
           </div>
-          <div className={cn(
-            "w-full mb-2 relative",
-            "max-w-full"
-          )}>
+          <div
+            className={cn(
+              "w-full mb-2 relative",
+              "max-w-full"
+            )}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setIsInputFocused(false);
+              }
+            }}
+          >
             {/* Blinking cursor when not focused */}
             {!isInputFocused && !inputValue && (
               <div className="absolute left-4 top-[1.375rem] h-6 w-0.5 bg-muted-foreground" 
@@ -228,8 +236,6 @@ export function DashboardContent() {
               selectedAgentId={selectedAgentId}
               onAgentSelect={setSelectedAgentId}
               enableAdvancedConfig={true}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
               autoFocus={false}
             />
           </div>

@@ -27,31 +27,7 @@ import {
   processUnicodeContent,
 } from '@/components/file-renderers/markdown-renderer';
 import { CsvRenderer } from '@/components/file-renderers/csv-renderer';
-// Fallback XLSX renderer (download only) to avoid missing dependency during build
-const XlsxRenderer: React.FC<{ content: string; filePath?: string | null; fileName: string; project?: any }>
-  = ({ content, fileName }) => {
-  const handleDownload = () => {
-    try {
-      const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Failed to download xlsx content', e);
-    }
-  };
-  return (
-    <div className="p-4 text-sm text-muted-foreground">
-      <p>Pré-visualização de XLSX não disponível. Você pode baixar o arquivo:</p>
-      <button className="mt-2 inline-flex items-center px-3 py-1 rounded border" onClick={handleDownload}>Baixar .xlsx</button>
-    </div>
-  );
-};
+import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
@@ -88,22 +64,40 @@ import { ToolViewProps } from '../types';
 import { GenericToolView } from '../GenericToolView';
 import { LoadingState } from '../shared/LoadingState';
 import { toast } from 'sonner';
-// Lightweight fallback diff view (side-by-side) to avoid external dep
+import ReactDiffViewer from 'react-diff-viewer-continued';
 
-const UnifiedDiffView: React.FC<{ oldCode: string; newCode: string }> = ({ oldCode, newCode }) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
-      <div className="rounded border bg-muted/30 overflow-auto">
-        <div className="px-3 py-1 text-xs text-muted-foreground border-b">Original</div>
-        <pre className="p-3 text-xs whitespace-pre-wrap font-mono">{oldCode}</pre>
-      </div>
-      <div className="rounded border bg-muted/30 overflow-auto">
-        <div className="px-3 py-1 text-xs text-muted-foreground border-b">Atual</div>
-        <pre className="p-3 text-xs whitespace-pre-wrap font-mono">{newCode}</pre>
-      </div>
-    </div>
-  );
-};
+const UnifiedDiffView: React.FC<{ oldCode: string; newCode: string }> = ({ oldCode, newCode }) => (
+  <ReactDiffViewer
+    oldValue={oldCode}
+    newValue={newCode}
+    splitView={false}
+    hideLineNumbers={true}
+    showDiffOnly={false}
+    useDarkTheme={document.documentElement.classList.contains('dark')}
+    styles={{
+      variables: {
+        dark: {
+          diffViewerColor: '#e2e8f0',
+          diffViewerBackground: '#09090b',
+          addedBackground: '#104a32',
+          addedColor: '#6ee7b7',
+          removedBackground: '#5c1a2e',
+          removedColor: '#fca5a5',
+        },
+      },
+      diffContainer: {
+        backgroundColor: 'var(--card)',
+        border: 'none',
+      },
+      diffRemoved: {
+        display: 'none',
+      },
+      line: {
+        fontFamily: 'monospace',
+      },
+    }}
+  />
+);
 
 const ErrorState: React.FC<{ message?: string }> = ({ message }) => (
   <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
@@ -187,7 +181,7 @@ export function FileEditToolView({
   const isMarkdown = isFileType.markdown(fileExtension);
   const isHtml = isFileType.html(fileExtension);
   const isCsv = isFileType.csv(fileExtension);
-  const isXlsx = isFileType.xlsx ? isFileType.xlsx(fileExtension) : fileExtension === 'xlsx';
+  const isXlsx = isFileType.xlsx(fileExtension);
 
   const language = getLanguageFromFileName(fileName);
   const hasHighlighting = hasLanguageHighlighting(language);
@@ -247,7 +241,11 @@ export function FileEditToolView({
     if (isMarkdown) {
       return (
         <div className="p-1 py-0 prose dark:prose-invert prose-zinc max-w-none">
-          <MarkdownRenderer content={processUnicodeContent(updatedContent)} />
+          <MarkdownRenderer
+            content={processUnicodeContent(updatedContent)}
+            project={project}
+            basePath={processedFilePath || undefined}
+          />
         </div>
       );
     }

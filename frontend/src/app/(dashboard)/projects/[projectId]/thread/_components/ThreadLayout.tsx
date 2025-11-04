@@ -5,8 +5,8 @@ import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';
 import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
 import { Project } from '@/lib/api';
 import { ApiMessageType, BillingData } from '../_types';
-import { ToolCallInput } from '@/components/thread/tool-call-helpers';
-import { useSidebarContext } from '@/contexts/sidebar-context';
+import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ThreadLayoutProps {
   children: React.ReactNode;
@@ -16,7 +16,6 @@ interface ThreadLayoutProps {
   project: Project | null;
   sandboxId: string | null;
   isSidePanelOpen: boolean;
-  isPanelMinimized?: boolean;
   onToggleSidePanel: () => void;
   onProjectRenamed?: (newName: string) => void;
   onViewFiles: (filePath?: string, filePathList?: string[]) => void;
@@ -31,7 +30,6 @@ interface ThreadLayoutProps {
   currentToolIndex: number;
   onSidePanelNavigate: (index: number) => void;
   onSidePanelClose: () => void;
-  onSidePanelMinimize?: () => void;
   renderAssistantMessage: (assistantContent?: string, toolContent?: string) => React.ReactNode;
   renderToolResult: (toolContent?: string, isSuccess?: boolean) => React.ReactNode;
   isLoading: boolean;
@@ -43,6 +41,7 @@ interface ThreadLayoutProps {
   initialLoadCompleted: boolean;
   agentName?: string;
   disableInitialAnimation?: boolean;
+  compact?: boolean;
 }
 
 export function ThreadLayout({
@@ -53,7 +52,6 @@ export function ThreadLayout({
   project,
   sandboxId,
   isSidePanelOpen,
-  isPanelMinimized = false,
   onToggleSidePanel,
   onProjectRenamed,
   onViewFiles,
@@ -68,7 +66,6 @@ export function ThreadLayout({
   currentToolIndex,
   onSidePanelNavigate,
   onSidePanelClose,
-  onSidePanelMinimize,
   renderAssistantMessage,
   renderToolResult,
   isLoading,
@@ -79,10 +76,77 @@ export function ThreadLayout({
   isMobile,
   initialLoadCompleted,
   agentName,
-  disableInitialAnimation = false
+  disableInitialAnimation = false,
+  compact = false
 }: ThreadLayoutProps) {
-  const { isPinned } = useSidebarContext();
+  const isActuallyMobile = useIsMobile();
   
+  // Compact mode for embedded use
+  if (compact) {
+    return (
+      <>
+        <div className="relative h-full">
+          {debugMode && (
+            <div className="absolute top-4 right-4 bg-amber-500 text-black text-xs px-2 py-1 rounded-md shadow-md z-50">
+              Debug Mode
+            </div>
+          )}
+
+          {/* Main content - always full width */}
+          <div className="flex flex-col h-full overflow-hidden">
+            {children}
+          </div>
+
+          {/* Tool Call Side Panel - Full replacement overlay for compact */}
+          {isSidePanelOpen && initialLoadCompleted && (
+            <div className="absolute inset-0 bg-background z-40">
+              <ToolCallSidePanel
+                isOpen={true}
+                onClose={onSidePanelClose}
+                toolCalls={toolCalls}
+                messages={messages}
+                externalNavigateToIndex={externalNavIndex}
+                agentStatus={agentStatus}
+                currentIndex={currentToolIndex}
+                onNavigate={onSidePanelNavigate}
+                project={project || undefined}
+                renderAssistantMessage={renderAssistantMessage}
+                renderToolResult={renderToolResult}
+                isLoading={!initialLoadCompleted || isLoading}
+                onFileClick={onViewFiles}
+                agentName={agentName}
+                disableInitialAnimation={disableInitialAnimation}
+                compact={true}
+              />
+            </div>
+          )}
+
+          {/* File Viewer Modal */}
+          {sandboxId && (
+            <FileViewerModal
+              open={fileViewerOpen}
+              onOpenChange={setFileViewerOpen}
+              sandboxId={sandboxId}
+              initialFilePath={fileToView}
+              project={project || undefined}
+              filePathList={filePathList}
+            />
+          )}
+
+          <BillingErrorAlert
+            message={billingData.message}
+            currentUsage={billingData.currentUsage}
+            limit={billingData.limit}
+            accountId={billingData.accountId}
+            onDismiss={onDismissBilling}
+            isOpen={showBillingAlert}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Full layout mode
   return (
     <div className="flex h-screen">
       {debugMode && (
@@ -92,16 +156,15 @@ export function ThreadLayout({
       )}
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isPanelMinimized))
-          ? 'mr-[60%]' // Deixa 60% para a área de trabalho quando não minimizado
+        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isActuallyMobile))
+          ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
           : ''
           }`}
       >
-        {/* Site Header com título e botões */}
         <SiteHeader
           threadId={threadId}
-          projectId={projectId}
           projectName={projectName}
+          projectId={projectId}
           onViewFiles={onViewFiles}
           onToggleSidePanel={onToggleSidePanel}
           onProjectRenamed={onProjectRenamed}
@@ -114,9 +177,7 @@ export function ThreadLayout({
 
       <ToolCallSidePanel
         isOpen={isSidePanelOpen && initialLoadCompleted}
-        isPanelMinimized={isPanelMinimized}
         onClose={onSidePanelClose}
-        onMinimize={onSidePanelMinimize}
         toolCalls={toolCalls}
         messages={messages}
         externalNavigateToIndex={externalNavIndex}

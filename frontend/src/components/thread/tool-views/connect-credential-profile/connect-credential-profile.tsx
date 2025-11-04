@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect } from 'react';
 import {
   Link2,
@@ -15,7 +14,6 @@ import {
 import { ToolViewProps } from '../types';
 import { formatTimestamp, getToolTitle } from '../utils';
 import { cn } from '@/lib/utils';
-import { formatDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +21,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
 import { Separator } from "@/components/ui/separator";
 import { extractConnectCredentialProfileData } from './_utils';
-// Removed Pipedream icon fetch; keeping fallback avatar
 
 export function ConnectCredentialProfileToolView({
   name = 'connect-credential-profile',
@@ -59,7 +56,7 @@ export function ConnectCredentialProfileToolView({
 
   const toolTitle = getToolTitle(name);
 
-  const logoUrl = undefined as unknown as string | undefined;
+  const logoUrl = undefined;
 
   // Update countdown timer
   useEffect(() => {
@@ -99,7 +96,19 @@ export function ConnectCredentialProfileToolView({
   }, [expires_at]);
 
   const formatExpiryTime = (dateString: string) => {
-    return formatDateTime(dateString);
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   const copyLink = async () => {
@@ -123,14 +132,18 @@ export function ConnectCredentialProfileToolView({
   const isExpired = expires_at && new Date(expires_at) <= new Date();
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-muted-foreground opacity-60" />
-            <CardTitle className="text-sm font-medium text-foreground">
-              {toolTitle}
-            </CardTitle>
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+              <Link2 className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                {toolTitle}
+              </CardTitle>
+            </div>
           </div>
 
           {!isStreaming && (
@@ -185,7 +198,7 @@ export function ConnectCredentialProfileToolView({
                         }}
                       />
                     ) : (
-                      <User className="h-4 w-4 text-muted-foreground opacity-60" />
+                      <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     )}
                   </div>
                   <div>
@@ -297,7 +310,7 @@ export function ConnectCredentialProfileToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Link2 className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
                 No connection link generated
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">

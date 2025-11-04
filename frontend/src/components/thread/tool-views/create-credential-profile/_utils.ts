@@ -4,19 +4,19 @@ export interface CredentialProfile {
   profile_id: string;
   profile_name: string;
   display_name: string;
-  app_slug: string;
-  app_name: string;
-  external_user_id: string;
+  toolkit_slug: string;
+  toolkit_name: string;
+  mcp_url: string;
+  redirect_url?: string;
   is_connected: boolean;
-  created_at: string;
+  auth_required?: boolean;
 }
 
 export interface CreateCredentialProfileData {
-  app_slug: string | null;
+  toolkit_slug: string | null;
   profile_name: string | null;
   display_name: string | null;
   message: string | null;
-  auth_url?: string | null;
   profile: CredentialProfile | null;
   success?: boolean;
   timestamp?: string;
@@ -37,7 +37,7 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
   const parsedContent = parseContent(content);
   
   if (!parsedContent || typeof parsedContent !== 'object') {
-    return { app_slug: null, profile_name: null, display_name: null, message: null, profile: null, success: undefined, timestamp: undefined };
+    return { toolkit_slug: null, profile_name: null, display_name: null, message: null, profile: null, success: undefined, timestamp: undefined };
   }
 
   if ('tool_execution' in parsedContent && typeof parsedContent.tool_execution === 'object') {
@@ -54,18 +54,10 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
     parsedOutput = parsedOutput || {};
 
     const extractedData = {
-      app_slug: args.app_slug || null,
+      toolkit_slug: args.toolkit_slug || null,
       profile_name: args.profile_name || null,
       display_name: args.display_name || null,
       message: parsedOutput.message || null,
-      auth_url: (
-        parsedOutput.auth_url ||
-        parsedOutput.auth_link ||
-        parsedOutput.authorization_url ||
-        parsedOutput.authUrl ||
-        parsedOutput.url ||
-        null
-      ),
       profile: parsedOutput.profile || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
@@ -76,18 +68,10 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
 
   if ('parameters' in parsedContent && 'output' in parsedContent) {
     const extractedData = {
-      app_slug: parsedContent.parameters?.app_slug || null,
+      toolkit_slug: parsedContent.parameters?.toolkit_slug || null,
       profile_name: parsedContent.parameters?.profile_name || null,
       display_name: parsedContent.parameters?.display_name || null,
       message: parsedContent.output?.message || null,
-      auth_url: (
-        parsedContent.output?.auth_url ||
-        parsedContent.output?.auth_link ||
-        parsedContent.output?.authorization_url ||
-        parsedContent.output?.authUrl ||
-        parsedContent.output?.url ||
-        null
-      ),
       profile: parsedContent.output?.profile || null,
       success: parsedContent.success,
       timestamp: undefined
@@ -100,7 +84,7 @@ const extractFromNewFormat = (content: any): CreateCredentialProfileData => {
     return extractFromNewFormat(parsedContent.content);
   }
 
-  return { app_slug: null, profile_name: null, display_name: null, message: null, profile: null, success: undefined, timestamp: undefined };
+  return { toolkit_slug: null, profile_name: null, display_name: null, message: null, profile: null, success: undefined, timestamp: undefined };
 };
 
 const extractFromLegacyFormat = (content: any): Omit<CreateCredentialProfileData, 'success' | 'timestamp'> => {
@@ -110,7 +94,7 @@ const extractFromLegacyFormat = (content: any): Omit<CreateCredentialProfileData
     const args = toolData.arguments || {};
 
     return {
-      app_slug: args.app_slug || null,
+      toolkit_slug: args.toolkit_slug || null,
       profile_name: args.profile_name || null,
       display_name: args.display_name || null,
       message: null,
@@ -119,7 +103,7 @@ const extractFromLegacyFormat = (content: any): Omit<CreateCredentialProfileData
   }
 
   return {
-    app_slug: null,
+    toolkit_slug: null,
     profile_name: null,
     display_name: null,
     message: null,
@@ -134,29 +118,22 @@ export function extractCreateCredentialProfileData(
   toolTimestamp?: string,
   assistantTimestamp?: string
 ): {
-  app_slug: string | null;
+  toolkit_slug: string | null;
   profile_name: string | null;
   display_name: string | null;
   message: string | null;
-  auth_url: string | null;
   profile: CredentialProfile | null;
   actualIsSuccess: boolean;
   actualToolTimestamp?: string;
   actualAssistantTimestamp?: string;
 } {
   let data: CreateCredentialProfileData;
-  const findUrl = (text: string | null): string | null => {
-    if (!text) return null;
-    const match = text.match(/https?:\/\/[^\s)]+/i);
-    return match ? match[0] : null;
-  };
   
   if (toolContent) {
     data = extractFromNewFormat(toolContent);
     if (data.success !== undefined || data.profile) {
       return {
         ...data,
-        auth_url: data.auth_url || findUrl(data.message || null),
         actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
         actualToolTimestamp: data.timestamp || toolTimestamp,
         actualAssistantTimestamp: assistantTimestamp
@@ -169,7 +146,6 @@ export function extractCreateCredentialProfileData(
     if (data.success !== undefined || data.profile) {
       return {
         ...data,
-        auth_url: data.auth_url || findUrl(data.message || null),
         actualIsSuccess: data.success !== undefined ? data.success : isSuccess,
         actualToolTimestamp: toolTimestamp,
         actualAssistantTimestamp: data.timestamp || assistantTimestamp
@@ -181,11 +157,10 @@ export function extractCreateCredentialProfileData(
   const assistantLegacy = extractFromLegacyFormat(assistantContent);
 
   const combinedData = {
-    app_slug: toolLegacy.app_slug || assistantLegacy.app_slug,
+    toolkit_slug: toolLegacy.toolkit_slug || assistantLegacy.toolkit_slug,
     profile_name: toolLegacy.profile_name || assistantLegacy.profile_name,
     display_name: toolLegacy.display_name || assistantLegacy.display_name,
     message: toolLegacy.message || assistantLegacy.message,
-    auth_url: findUrl((toolLegacy.message || assistantLegacy.message) as string | null),
     profile: toolLegacy.profile || assistantLegacy.profile,
     actualIsSuccess: isSuccess,
     actualToolTimestamp: toolTimestamp,

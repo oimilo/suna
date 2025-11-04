@@ -39,7 +39,7 @@ const handleLocalFiles = (
 
     return {
       name: normalizedName,
-      path: `/workspace/uploads/${normalizedName}`,
+      path: `/workspace/${normalizedName}`,
       size: file.size,
       type: file.type || 'application/octet-stream',
       localUrl: URL.createObjectURL(file)
@@ -60,7 +60,6 @@ const uploadFiles = async (
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>,
   messages: any[] = [], // Add messages parameter to check for existing files
   queryClient?: any, // Add queryClient parameter for cache invalidation
-  setPendingFiles?: React.Dispatch<React.SetStateAction<File[]>>, // Allow clearing pending files after upload
 ) => {
   try {
     setIsUploading(true);
@@ -75,8 +74,7 @@ const uploadFiles = async (
 
       // Normalize filename to NFC
       const normalizedName = normalizeFilenameToNFC(file.name);
-      // Always target /workspace/uploads on the sandbox
-      const uploadPath = `/workspace/uploads/${normalizedName}`;
+      const uploadPath = `/workspace/${normalizedName}`;
 
       // Check if this filename already exists in chat messages
       const isFileInChat = messages.some(message => {
@@ -108,56 +106,35 @@ const uploadFiles = async (
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status === 402 ? 'Pagamento Necessário' : response.statusText}`);
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
-
-      // Read server response to capture the actual stored path and filename
-      let serverJson: any = null;
-      try {
-        serverJson = await response.json();
-      } catch {
-        serverJson = null;
-      }
-
-      const returnedPath: string = (serverJson?.path as string) || uploadPath;
-      const finalFilename: string = (serverJson?.final_filename as string) || normalizedName;
 
       // If file was already in chat and we have queryClient, invalidate its cache
       if (isFileInChat && queryClient) {
-        console.log(`Invalidating cache for existing file: ${uploadPath}`);
-
         // Invalidate all content types for this file
         ['text', 'blob', 'json'].forEach(contentType => {
-          const queryKey = fileQueryKeys.content(sandboxId, returnedPath, contentType);
+          const queryKey = fileQueryKeys.content(sandboxId, uploadPath, contentType);
           queryClient.removeQueries({ queryKey });
         });
 
         // Also invalidate directory listing
-        const directoryPath = returnedPath.substring(0, returnedPath.lastIndexOf('/'));
+        const directoryPath = uploadPath.substring(0, uploadPath.lastIndexOf('/'));
         queryClient.invalidateQueries({
           queryKey: fileQueryKeys.directory(sandboxId, directoryPath),
         });
       }
 
       newUploadedFiles.push({
-        name: finalFilename,
-        path: returnedPath,
+        name: normalizedName,
+        path: uploadPath,
         size: file.size,
         type: file.type || 'application/octet-stream',
       });
 
-      if (serverJson?.renamed && finalFilename !== normalizedName) {
-        toast.success(`Arquivo enviado: ${finalFilename} (renomeado de ${normalizedName})`);
-      } else {
-        toast.success(`Arquivo enviado: ${finalFilename}`);
-      }
+      toast.success(`File uploaded: ${normalizedName}`);
     }
 
     setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
-
-    if (setPendingFiles) {
-      setPendingFiles([]);
-    }
   } catch (error) {
     console.error('File upload failed:', error);
     toast.error(
@@ -183,7 +160,7 @@ const handleFiles = async (
 ) => {
   if (sandboxId) {
     // If we have a sandboxId, upload files directly
-    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient, setPendingFiles);
+    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient);
   } else {
     // Otherwise, store files locally
     handleLocalFiles(files, setPendingFiles, setUploadedFiles);
@@ -201,7 +178,6 @@ interface FileUploadHandlerProps {
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>;
   messages?: any[]; // Add messages prop
   isLoggedIn?: boolean;
-  isFocused?: boolean;
 }
 
 export const FileUploadHandler = forwardRef<
@@ -220,7 +196,6 @@ export const FileUploadHandler = forwardRef<
       setIsUploading,
       messages = [],
       isLoggedIn = true,
-      isFocused = false,
     },
     ref,
   ) => {
@@ -229,8 +204,8 @@ export const FileUploadHandler = forwardRef<
     useEffect(() => {
       return () => {
         // Clean up any object URLs to avoid memory leaks
-        setUploadedFiles((prev) => {
-          prev.forEach((file) => {
+        setUploadedFiles(prev => {
+          prev.forEach(file => {
             if (file.localUrl) {
               URL.revokeObjectURL(file.localUrl);
             }
@@ -238,7 +213,7 @@ export const FileUploadHandler = forwardRef<
           return prev;
         });
       };
-    }, [setUploadedFiles]);
+    }, []);
 
     const handleFileUpload = () => {
       if (ref && 'current' in ref && ref.current) {
@@ -277,7 +252,7 @@ export const FileUploadHandler = forwardRef<
                   onClick={handleFileUpload}
                   variant="outline"
                   size="sm"
-                  className={`h-8 w-8 p-0 bg-transparent border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center justify-center transition-all duration-300 ${!isFocused ? 'opacity-20 border-transparent' : 'opacity-100 border-border'}`}
+                  className="h-8 px-3 py-2 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-2"
                   disabled={
                     !isLoggedIn || loading || (disabled && !isAgentRunning) || isUploading
                   }
@@ -287,11 +262,12 @@ export const FileUploadHandler = forwardRef<
                   ) : (
                     <Paperclip className="h-4 w-4" />
                   )}
+                  <span className="text-sm">Attach</span>
                 </Button>
               </span>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p>{isLoggedIn ? 'Anexar arquivos' : 'Faça login para anexar arquivos'}</p>
+              <p>{isLoggedIn ? 'Attach files' : 'Please login to attach files'}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import {
   Search,
@@ -26,6 +25,7 @@ import { LoadingState } from '../shared/LoadingState';
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { extractDiscoverMcpToolsData } from './_utils';
+import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 
 export function DiscoverMcpToolsForAgentToolView({
   name = 'discover-mcp-tools-for-agent',
@@ -59,8 +59,9 @@ export function DiscoverMcpToolsForAgentToolView({
   );
 
   const toolTitle = getToolTitle(name);
-  // Optional icon lookup (was a hook from composio). For now, fallback to Package icon.
-  const iconUrl: string | undefined = undefined;
+  const { data: iconData } = useComposioToolkitIcon(toolkit_slug || '', {
+    enabled: !!toolkit_slug
+  });
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
@@ -116,9 +117,9 @@ export function DiscoverMcpToolsForAgentToolView({
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-muted/50 border flex items-center justify-center overflow-hidden">
-                      {iconUrl ? (
+                      {iconData?.icon_url ? (
                         <img
-                          src={iconUrl}
+                          src={iconData.icon_url}
                           alt={`${toolkit_name} logo`}
                           className="w-8 h-8 object-cover rounded"
                           onError={(e) => {

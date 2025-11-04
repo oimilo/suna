@@ -7,10 +7,10 @@ import { CodeRenderer } from './code-renderer';
 import { PdfRenderer } from './pdf-renderer';
 import { ImageRenderer } from './image-renderer';
 import { BinaryRenderer } from './binary-renderer';
-// Use the HtmlRenderer with proxy support from thread components
-import { HtmlRenderer } from '../thread/preview-renderers/html-renderer';
+import { HtmlRenderer } from './html-renderer';
+import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CsvRenderer } from './csv-renderer';
-import { constructProjectPreviewFileUrl } from '@/lib/utils/url';
+import { XlsxRenderer } from './xlsx-renderer';
 
 export type FileType =
   | 'markdown'
@@ -19,21 +19,29 @@ export type FileType =
   | 'image'
   | 'text'
   | 'binary'
-  | 'csv';
+  | 'csv'
+  | 'xlsx';
+
+export interface FileRendererProject {
+  id?: string;
+  name?: string;
+  description?: string;
+  created_at?: string;
+  sandbox?: {
+    id?: string;
+    sandbox_url?: string;
+    vnc_preview?: string;
+    pass?: string;
+  };
+}
 
 interface FileRendererProps {
   content: string | null;
   binaryUrl: string | null;
   fileName: string;
+  filePath?: string;
   className?: string;
-  project?: {
-    project_id?: string;
-    sandbox?: {
-      sandbox_url?: string;
-      vnc_preview?: string;
-      pass?: string;
-    };
-  } | any;
+  project?: FileRendererProject;
   markdownRef?: React.RefObject<HTMLDivElement>;
   onDownload?: () => void;
   isDownloading?: boolean;
@@ -52,6 +60,7 @@ export function getFileTypeFromExtension(fileName: string): FileType {
     'html',
     'css',
     'json',
+    'doc',
     'py',
     'python',
     'java',
@@ -93,6 +102,7 @@ export function getFileTypeFromExtension(fileName: string): FileType {
   ];
   const pdfExtensions = ['pdf'];
   const csvExtensions = ['csv', 'tsv'];
+  const xlsxExtensions = ['xlsx', 'xls'];
   const textExtensions = ['txt', 'log', 'env', 'ini'];
 
   if (markdownExtensions.includes(extension)) {
@@ -105,6 +115,8 @@ export function getFileTypeFromExtension(fileName: string): FileType {
     return 'pdf';
   } else if (csvExtensions.includes(extension)) {
     return 'csv';
+  } else if (xlsxExtensions.includes(extension)) {
+    return 'xlsx';
   } else if (textExtensions.includes(extension)) {
     return 'text';
   } else {
@@ -151,6 +163,7 @@ export function FileRenderer({
   content,
   binaryUrl,
   fileName,
+  filePath,
   className,
   project,
   markdownRef,
@@ -160,34 +173,73 @@ export function FileRenderer({
   const fileType = getFileTypeFromExtension(fileName);
   const language = getLanguageFromExtension(fileName);
   const isHtmlFile = fileName.toLowerCase().endsWith('.html');
+  const isDocFile = fileName.toLowerCase().endsWith('.doc');
 
-  // Create blob URL for HTML content if needed
+  const tiptapHtmlContent = React.useMemo(() => {
+    if (isDocFile && content) {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.type === 'tiptap_document' && parsed.content) {
+          return parsed.content;
+        }
+      } catch {
+      }
+    }
+    return null;
+  }, [isDocFile, content]);
+
   const blobHtmlUrl = React.useMemo(() => {
     if (isHtmlFile && content && !project?.sandbox?.sandbox_url) {
       const blob = new Blob([content], { type: 'text/html' });
       return URL.createObjectURL(blob);
     }
+    // Also create blob URL for TipTap document HTML content
+    if (tiptapHtmlContent) {
+      const htmlWrapper = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              padding: 2rem; 
+              max-width: 900px; 
+              margin: 0 auto;
+              line-height: 1.6;
+            }
+            h1, h2, h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+            h3 { font-size: 1.25rem; }
+            p { margin: 1rem 0; }
+            ul, ol { margin: 1rem 0; padding-left: 2rem; }
+            code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 3px; }
+            pre { background: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+            blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 3px solid #ddd; color: #666; }
+            table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+            th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+            th { background-color: #f5f5f5; }
+            img { max-width: 100%; height: auto; }
+            a { color: #0066cc; }
+          </style>
+        </head>
+        <body>
+          ${tiptapHtmlContent}
+        </body>
+        </html>
+      `;
+      const blob = new Blob([htmlWrapper], { type: 'text/html' });
+      return URL.createObjectURL(blob);
+    }
     return undefined;
-  }, [isHtmlFile, content, project?.sandbox?.sandbox_url]);
+  }, [isHtmlFile, content, project?.sandbox?.sandbox_url, tiptapHtmlContent]);
 
-  // Construct HTML file preview URL using proxy to avoid Daytona warning
-  const htmlPreviewUrl = React.useMemo(() => {
-    if (!isHtmlFile) {
-      return blobHtmlUrl;
-    }
+  const htmlPreviewUrl =
+    isHtmlFile && project?.sandbox?.sandbox_url && (filePath || fileName)
+      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName)
+      : blobHtmlUrl;
 
-    const projectId = (project as any)?.project_id || (project as any)?.id;
-    if (projectId && fileName) {
-      const proxyUrl = constructProjectPreviewFileUrl(projectId, fileName);
-      if (proxyUrl) {
-        return proxyUrl;
-      }
-    }
-
-    return blobHtmlUrl;
-  }, [isHtmlFile, project, fileName, blobHtmlUrl]);
-
-  // Clean up blob URL on unmount
   React.useEffect(() => {
     return () => {
       if (blobHtmlUrl) {
@@ -205,15 +257,23 @@ export function FileRenderer({
       ) : fileType === 'pdf' && binaryUrl ? (
         <PdfRenderer url={binaryUrl} />
       ) : fileType === 'markdown' ? (
-        <MarkdownRenderer content={content || ''} ref={markdownRef} />
+        <MarkdownRenderer content={content || ''} ref={markdownRef} project={project} basePath={filePath} />
       ) : fileType === 'csv' ? (
         <CsvRenderer content={content || ''} />
-      ) : isHtmlFile ? (
+      ) : fileType === 'xlsx' ? (
+        <XlsxRenderer 
+          content={content}
+          filePath={filePath}
+          fileName={fileName}
+          project={project}
+          onDownload={onDownload}
+          isDownloading={isDownloading}
+        />
+      ) : isHtmlFile || tiptapHtmlContent ? (
         <HtmlRenderer
-          content={content || ''}
+          content={tiptapHtmlContent || content || ''}
           previewUrl={htmlPreviewUrl || ''}
           className="w-full h-full"
-          project={project}
         />
       ) : fileType === 'code' || fileType === 'text' ? (
         <CodeRenderer

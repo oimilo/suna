@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import {
   UserPlus,
@@ -16,14 +15,12 @@ import {
 import { ToolViewProps } from '../types';
 import { formatTimestamp, getToolTitle } from '../utils';
 import { cn } from '@/lib/utils';
-import { formatDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
 import { Separator } from "@/components/ui/separator";
 import { extractCreateCredentialProfileData, CredentialProfile } from './_utils';
-// Removed Pipedream icon fetch; logoUrl will be undefined and fallback avatar shown
 
 export function CreateCredentialProfileToolView({
   name = 'create-credential-profile',
@@ -36,11 +33,10 @@ export function CreateCredentialProfileToolView({
 }: ToolViewProps) {
 
   const {
-    app_slug,
+    toolkit_slug,
     profile_name,
     display_name,
     message,
-    auth_url,
     profile,
     actualIsSuccess,
     actualToolTimestamp,
@@ -55,10 +51,22 @@ export function CreateCredentialProfileToolView({
 
   const toolTitle = getToolTitle(name);
 
-  const logoUrl = undefined as unknown as string | undefined;
+  const logoUrl = undefined;
 
   const formatCreatedAt = (dateString: string) => {
-    return formatDateTime(dateString);
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   const getConnectionStatus = (isConnected: boolean) => {
@@ -67,18 +75,20 @@ export function CreateCredentialProfileToolView({
       color: isConnected 
         ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
         : 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800',
-      text: isConnected ? 'Conectado' : 'Não Conectado'
+      text: isConnected ? 'Connected' : 'Not Connected'
     };
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-muted-foreground opacity-60" />
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20">
+              <UserPlus className="w-5 h-5 text-green-500 dark:text-green-400" />
+            </div>
             <div>
-              <CardTitle className="text-sm font-medium text-foreground">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
             </div>
@@ -99,7 +109,7 @@ export function CreateCredentialProfileToolView({
               ) : (
                 <AlertTriangle className="h-3 w-3" />
               )}
-              {actualIsSuccess ? 'Perfil criado' : 'Falha na criação'}
+              {actualIsSuccess ? 'Profile created' : 'Creation failed'}
             </Badge>
           )}
         </div>
@@ -111,7 +121,7 @@ export function CreateCredentialProfileToolView({
             icon={UserPlus}
             iconColor="text-green-500 dark:text-green-400"
             bgColor="bg-gradient-to-b from-green-100 to-green-50 shadow-inner dark:from-green-800/40 dark:to-green-900/60 dark:shadow-green-950/20"
-            title="Criando perfil de credencial"
+            title="Creating credential profile"
             filePath={profile_name ? `"${profile_name}"` : undefined}
             showProgress={true}
           />
@@ -125,7 +135,7 @@ export function CreateCredentialProfileToolView({
                       {logoUrl ? (
                         <img
                           src={logoUrl}
-                          alt={`${profile.app_name} logo`}
+                          alt={`${profile.toolkit_name} logo`}
                           className="w-8 h-8 object-cover rounded"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -145,7 +155,7 @@ export function CreateCredentialProfileToolView({
                         {profile.display_name}
                       </h3>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {profile.app_name}
+                        {profile.toolkit_name}
                       </p>
                     </div>
                   </div>
@@ -169,31 +179,20 @@ export function CreateCredentialProfileToolView({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                       <BadgeIcon className="w-4 h-4" />
-                      <span>Nome do Perfil</span>
+                      <span>Profile Name</span>
                     </div>
                     <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 pl-6">
                       {profile.profile_name}
                     </p>
                   </div>
 
-                  {/* App Slug */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                      <Server className="w-4 h-4" />
-                      <span>App Slug</span>
+                      <Server className="w-4 h-4" /> 
+                      <span>Toolkit Slug</span>
                     </div>
                     <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 pl-6">
-                      {profile.app_slug}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>Criado em</span>
-                    </div>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 pl-6">
-                      {formatCreatedAt(profile.created_at)}
+                      {profile.toolkit_slug}
                     </p>
                   </div>
                 </div>
@@ -204,22 +203,11 @@ export function CreateCredentialProfileToolView({
                       <Settings className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                          Configuração Necessária
+                          Setup Required
                         </p>
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          Este perfil de credencial precisa ser conectado antes de poder ser usado. Siga o fluxo de autenticação para completar a configuração.
+                          This credential profile needs to be connected before it can be used. Follow the authentication flow to complete the setup.
                         </p>
-                        {auth_url && (
-                          <a
-                            href={auth_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex mt-3 items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          >
-                            <Link2 className="w-3 h-3" />
-                            Abrir link de autenticação
-                          </a>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -233,11 +221,11 @@ export function CreateCredentialProfileToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <UserPlus className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                Perfil não criado
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
+                Profile not created
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {app_slug ? `Falha ao criar perfil para "${app_slug}"` : 'Falha na criação do perfil de credencial'}
+                {toolkit_slug ? `Failed to create profile for "${toolkit_slug}"` : 'Credential profile creation failed'}
               </p>
             </div>
           </div>
