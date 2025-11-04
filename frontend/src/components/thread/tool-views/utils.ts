@@ -15,12 +15,16 @@ import {
 } from 'lucide-react';
 import { parseXmlToolCalls, isNewXmlFormat } from './xml-parser';
 import { parseToolResult, ParsedToolResult } from './tool-result-parser';
-import { formatDateTime } from '@/lib/date-utils';
 
 // Helper function to format timestamp
 export function formatTimestamp(isoString?: string): string {
   if (!isoString) return '';
-  return formatDateTime(isoString);
+  try {
+    const date = new Date(isoString);
+    return isNaN(date.getTime()) ? 'Invalid date' : date.toLocaleString();
+  } catch (e) {
+    return 'Invalid date';
+  }
 }
 
 // Get standardized tool title
@@ -30,38 +34,66 @@ export function getToolTitle(toolName: string): string {
 
   // Map of tool names to their display titles
   const toolTitles: Record<string, string> = {
-    'execute-command': 'Executar Comando',
-    'check-command-output': 'Verificar Saída do Comando',
-    'str-replace': 'Substituir String',
-    'create-file': 'Criar Arquivo',
-    'full-file-rewrite': 'Reescrever Arquivo',
-    'delete-file': 'Deletar Arquivo',
-    'web-search': 'Busca na Web',
-    'image-search': 'Busca de Imagens',
-    'crawl-webpage': 'Explorar Página Web',
-    'scrape-webpage': 'Extrair Dados da Web',
-    'browser-navigate': 'Navegar no Browser',
-    'browser-click': 'Clicar no Browser',
-    'browser-extract': 'Extrair do Browser',
-    'browser-fill': 'Preencher no Browser',
-    'browser-wait': 'Aguardar no Browser',
-    'see-image': 'Ver Imagem',
-    'ask': 'Aguardando Resposta',
-    'complete': 'Tarefa Concluída',
-    'execute-data-provider-call': 'Chamar Provedor de Dados',
-    'get-data-provider-endpoints': 'Obter Endpoints de Dados',
-    'search-mcp-servers': 'Buscar Servidores MCP',
-    'get-app-details': 'Obter Detalhes do App',
-    'create-credential-profile': 'Criar Perfil de Credenciais',
-    'connect-credential-profile': 'Conectar Perfil de Credenciais',
-    'check-profile-connection': 'Verificar Conexão do Perfil',
-    'configure-profile-for-agent': 'Configurar Perfil para Agente',
-    'get-credential-profiles': 'Obter Perfis de Credenciais',
-    'get-current-agent-config': 'Obter Configuração do Agente',
-    'deploy': 'Publicar',
+    'execute-command': 'Execute Command',
+    'check-command-output': 'Check Command Output',
+    'str-replace': 'String Replace',
+    'create-file': 'Create File',
+    'full-file-rewrite': 'Rewrite File',
+    'delete-file': 'Delete File',
+    'web-search': 'Web Search',
+    'crawl-webpage': 'Web Crawl',
+    'scrape-webpage': 'Web Scrape',
+    'browser-navigate-to': 'Browser Navigate',
+    'browser-act': 'Browser Action',
+    'browser-extract-content': 'Browser Extract',
+    'browser-screenshot': 'Browser Screenshot',
+    'see-image': 'View Image',
+    'ask': 'Ask',
+    'complete': 'Task Complete',
+    'execute-data-provider-call': 'Data Provider Call',
+    'get-data-provider-endpoints': 'Data Endpoints',
+    'search-mcp-servers': 'Search MCP Servers',
+    'get-app-details': 'Get App Details',
+    'create-credential-profile': 'Create Credential Profile',
+    'connect-credential-profile': 'Connect Credential Profile',
+    'check-profile-connection': 'Check Profile Connection',
+    'configure-profile-for-agent': 'Configure Profile For Agent',
+    'get-credential-profiles': 'Get Credential Profiles',
+    'get-current-agent-config': 'Get Current Agent Config',
+    'deploy': 'Deploy',
+    'create-presentation': 'Create Presentation',
+    'export-presentation': 'Export Presentation',
+    'create-presentation-outline': 'Create Presentation Outline',
+    'list-presentation-templates': 'List Presentation Templates',
+    'upload-file': 'Upload File',
+    
+    // Docs tools
+    'create-document': 'Create Document',
+    'update-document': 'Update Document',
+    'read-document': 'Read Document',
+    'list-documents': 'List Documents',
+    'delete-document': 'Delete Document',
+    'export-document': 'Export Document',
+    
+    // Agent Creation Tools
+    'create-new-agent': 'Create New Agent',
+    'search-mcp-servers-for-agent': 'Search MCP Servers for Agent',
+    'get-mcp-server-details': 'Get MCP Server Details',
+    'create-credential-profile-for-agent': 'Create Credential Profile for Agent',
+    'discover-mcp-tools-for-agent': 'Discover MCP Tools for Agent',
+    'configure-agent-integration': 'Configure Agent Integration',
+    'list-available-integrations': 'List Available Integrations',
+    'create-agent-workflow': 'Create Agent Workflow',
+    'list-agent-workflows': 'List Agent Workflows',
+    'activate-agent-workflow': 'Activate Agent Workflow',
+    'create-agent-scheduled-trigger': 'Create Scheduled Trigger',
+    'list-agent-scheduled-triggers': 'List Scheduled Triggers',
+    'delete-agent-workflow': 'Delete Agent Workflow',
+    'delete-agent-scheduled-trigger': 'Delete Scheduled Trigger',
+    'toggle-agent-scheduled-trigger': 'Toggle Scheduled Trigger',
 
-    'generic-tool': 'Ferramenta',
-    'default': 'Ferramenta',
+    'generic-tool': 'Tool',
+    'default': 'Tool',
   };
 
   // Return the mapped title or a formatted version of the name
@@ -70,9 +102,9 @@ export function getToolTitle(toolName: string): string {
   }
 
   // For browser tools not explicitly mapped
-  if (normalizedName.startsWith('browser-')) {
-    const operation = normalizedName.replace('browser-', '').replace(/-/g, ' ');
-    return 'Navegador ' + operation.charAt(0).toUpperCase() + operation.slice(1);
+  if (normalizedName.startsWith('browser_')) {
+    const operation = normalizedName.replace('browser_', '').replace(/_/g, ' ');
+    return 'Browser ' + operation.charAt(0).toUpperCase() + operation.slice(1);
   }
 
   // Format any other tool name
@@ -129,8 +161,6 @@ export function extractCommand(content: string | object | undefined | null): str
       }
     }
   }
-  
-  console.log('extractCommand: Could not extract command from content:', contentStr.substring(0, 200));
   return null;
 }
 
@@ -590,7 +620,7 @@ export function extractBrowserUrl(content: string | object | undefined | null): 
 export function extractBrowserOperation(toolName: string | undefined): string {
   if (!toolName) return 'Browser Operation';
 
-  const operation = toolName.replace('browser-', '').replace(/-/g, ' ');
+  const operation = toolName.replace('browser_', '').replace(/_/g, ' ');
   return operation.charAt(0).toUpperCase() + operation.slice(1);
 }
 
@@ -1225,12 +1255,10 @@ export function getToolComponent(toolName: string): string {
   // Map specific tool names to their respective components
   switch (normalizedName) {
     // Browser tools
-    case 'browser-navigate':
-    case 'browser-click':
-    case 'browser-extract':
-    case 'browser-fill':
-    case 'browser-wait':
-    case 'browser-screenshot':
+    case 'browser_navigate_to':
+    case 'browser_act':
+    case 'browser_extract_content':
+    case 'browser_screenshot':
       return 'BrowserToolView';
 
     // Command execution
@@ -1283,6 +1311,23 @@ export function getToolComponent(toolName: string): string {
     //Deploy
     case 'deploy':
       return 'DeployToolView';
+
+    // Upload operations
+    case 'upload-file':
+      return 'UploadFileToolView';
+    
+    // Docs operations
+    case 'create-document':
+    case 'update-document':
+    case 'read-document':
+    case 'list-documents':
+    case 'delete-document':
+    case 'export-document':
+      return 'DocsToolView';
+
+    // Port operations
+    case 'expose-port':
+      return 'ExposePortToolView';
 
     // Default
     default:
@@ -1553,204 +1598,6 @@ export const getFileIconAndColor = (filename: string) => {
   }
 };
 
-const CANDIDATE_PATH_KEYS = [
-  'file_path',
-  'target_file',
-  'path',
-  'slide_file',
-  'preview_url',
-  'output_path',
-];
-
-const MAX_PATH_EXTRACTION_DEPTH = 5;
-
-const normalizeWorkspacePath = (rawPath: string): string => {
-  if (!rawPath) return '';
-
-  let path = rawPath.trim();
-  if (!path) return '';
-
-  path = path.replace(/\\/g, '/');
-
-  if (path.startsWith('/workspace/')) {
-    path = path.slice('/workspace/'.length);
-  } else if (path.startsWith('workspace/')) {
-    path = path.slice('workspace/'.length);
-  }
-
-  if (path.startsWith('./')) {
-    path = path.slice(2);
-  }
-
-  if (path.startsWith('/')) {
-    path = path.slice(1);
-  }
-
-  const queryIndex = path.indexOf('?');
-  if (queryIndex !== -1) {
-    path = path.slice(0, queryIndex);
-  }
-
-  const hashIndex = path.indexOf('#');
-  if (hashIndex !== -1) {
-    path = path.slice(0, hashIndex);
-  }
-
-  return path;
-};
-
-const ensureSlideHtmlPath = (
-  presentationPath: string,
-  slideNumber: number | string,
-): string | null => {
-  const normalizedPresentation = normalizeWorkspacePath(presentationPath);
-  if (!normalizedPresentation) return null;
-
-  const parsedSlideNumber =
-    typeof slideNumber === 'number'
-      ? slideNumber
-      : parseInt(String(slideNumber), 10);
-
-  if (!Number.isFinite(parsedSlideNumber)) {
-    return null;
-  }
-
-  const padded = String(parsedSlideNumber).padStart(2, '0');
-  return `${normalizedPresentation.replace(/\/$/, '')}/slide_${padded}.html`;
-};
-
-const tryParseJsonDeep = (value: string, depth = 0): any => {
-  if (depth >= 3) return null;
-
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (typeof parsed === 'string') {
-      return tryParseJsonDeep(parsed, depth + 1) ?? parsed;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const collectPathsFromValue = (value: any, paths: Set<string>, depth = 0): void => {
-  if (depth > MAX_PATH_EXTRACTION_DEPTH || value == null) {
-    return;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = tryParseJsonDeep(value, depth);
-    if (parsed && typeof parsed !== 'string') {
-      collectPathsFromValue(parsed, paths, depth + 1);
-      return;
-    }
-
-    const regexes = [
-      /"slide_file"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g,
-      /"file_path"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g,
-      /"preview_url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g,
-      /"metadata_file"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g,
-    ];
-
-    for (const regex of regexes) {
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(value)) !== null) {
-        const normalized = normalizeWorkspacePath(match[1]);
-        if (normalized) {
-          paths.add(normalized);
-        }
-      }
-    }
-
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach(item => collectPathsFromValue(item, paths, depth + 1));
-    return;
-  }
-
-  if (typeof value === 'object') {
-    const candidate = value as Record<string, any>;
-
-    CANDIDATE_PATH_KEYS.forEach(key => {
-      const candidateValue = candidate[key];
-      if (typeof candidateValue === 'string') {
-        const normalized = normalizeWorkspacePath(candidateValue);
-        if (normalized) {
-          paths.add(normalized);
-        }
-      }
-    });
-
-    if (
-      typeof candidate.presentation_path === 'string' &&
-      candidate.slide_number !== undefined
-    ) {
-      const constructed = ensureSlideHtmlPath(
-        candidate.presentation_path,
-        candidate.slide_number,
-      );
-      if (constructed) {
-        paths.add(constructed);
-      }
-    }
-
-    Object.values(candidate).forEach(child => {
-      if (child && (typeof child === 'object' || typeof child === 'string')) {
-        collectPathsFromValue(child, paths, depth + 1);
-      }
-    });
-  }
-};
-
-const resolvePathsFromToolResult = (toolResult: ParsedToolResult): string[] => {
-  const paths = new Set<string>();
-
-  const args = toolResult.arguments ?? {};
-  CANDIDATE_PATH_KEYS.forEach(key => {
-    const candidateValue = args[key];
-    if (typeof candidateValue === 'string') {
-      const normalized = normalizeWorkspacePath(candidateValue);
-      if (normalized) {
-        paths.add(normalized);
-      }
-    }
-  });
-
-  if (typeof args.presentation_path === 'string' && args.slide_number !== undefined) {
-    const constructed = ensureSlideHtmlPath(
-      args.presentation_path,
-      args.slide_number,
-    );
-    if (constructed) {
-      paths.add(constructed);
-    }
-  }
-
-  if (toolResult.toolOutput !== undefined && toolResult.toolOutput !== null) {
-    collectPathsFromValue(toolResult.toolOutput, paths);
-  }
-
-  return Array.from(paths).filter(Boolean);
-};
-
-export const extractFilePathsFromToolContent = (content: any): string[] => {
-  const toolResult = parseToolResult(content);
-  if (!toolResult) {
-    return [];
-  }
-
-  return resolvePathsFromToolResult(toolResult);
-};
-
 /**
  * Extract tool data from content using the new parser with backwards compatibility
  */
@@ -1767,14 +1614,10 @@ export function extractToolData(content: any): {
   
   if (toolResult) {
     const args = toolResult.arguments || {};
-    const detectedPaths = resolvePathsFromToolResult(toolResult);
-    const normalizedFilePath =
-      detectedPaths[0] || null;
-
     return {
       toolResult,
       arguments: args,
-      filePath: normalizedFilePath,
+      filePath: args.file_path || args.path || null,
       fileContent: args.file_contents || args.content || null,
       command: args.command || null,
       url: args.url || null,

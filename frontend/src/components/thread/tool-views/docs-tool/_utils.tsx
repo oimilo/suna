@@ -1,32 +1,7 @@
 import React from 'react';
 import { extractToolData } from '../utils';
 import { useFileContentQuery } from '@/hooks/react-query/files/use-file-queries';
-// Fallback lightweight HTML editor/viewer to avoid heavy dependency during build
-type FallbackEditorProps = {
-  content: string;
-  readOnly?: boolean;
-  useStore?: boolean;
-  showWordCount?: boolean;
-  autoSave?: boolean;
-  minHeight?: string | number;
-  className?: string;
-  editorClassName?: string;
-};
-
-const Editor: React.FC<FallbackEditorProps> = ({
-  content,
-  className,
-  editorClassName,
-}) => {
-  return (
-    <div className={className}>
-      <div
-        className={editorClassName}
-        dangerouslySetInnerHTML={{ __html: String(content || '') }}
-      />
-    </div>
-  );
-};
+import { Editor } from '@/components/agents/docs-agent/editor';
 
 export interface DocMetadata {
   description?: string;

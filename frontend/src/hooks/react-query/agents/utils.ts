@@ -35,6 +35,7 @@ export type Agent = {
   tags?: string[];
   created_at: string;
   updated_at: string;
+  profile_image_url?: string;
   avatar?: string;
   avatar_color?: string;
   icon_name?: string | null;

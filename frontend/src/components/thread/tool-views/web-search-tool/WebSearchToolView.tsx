@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import {
   Search,
@@ -66,40 +65,47 @@ export function WebSearchToolView({
     const { url, title } = result;
 
     if (url.includes('news') || url.includes('article') || title.includes('News')) {
-      return { icon: FileText, label: 'Artigo' };
+      return { icon: FileText, label: 'Article' };
     } else if (url.includes('wiki')) {
       return { icon: BookOpen, label: 'Wiki' };
     } else if (url.includes('blog')) {
       return { icon: CalendarDays, label: 'Blog' };
     } else {
-      return { icon: Globe, label: 'Site' };
+      return { icon: Globe, label: 'Website' };
     }
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground opacity-60" />
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+              <Search className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+            </div>
             <div>
-              <CardTitle className="text-sm font-medium text-foreground">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
             </div>
           </div>
 
           {!isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+            <Badge
+              variant="secondary"
+              className={
+                actualIsSuccess
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
+              }
+            >
               {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                <CheckCircle className="h-3.5 w-3.5" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+                <AlertTriangle className="h-3.5 w-3.5" />
               )}
-              <span className="text-xs font-medium text-muted-foreground">
-                {actualIsSuccess ? 'Busca concluída' : 'Falha na busca'}
-              </span>
-            </div>
+              {actualIsSuccess ? 'Search completed successfully' : 'Search failed'}
+            </Badge>
           )}
         </div>
       </CardHeader>
@@ -110,18 +116,18 @@ export function WebSearchToolView({
             icon={Search}
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
-            title="Pesquisando na web"
+            title="Searching the web"
             filePath={query}
             showProgress={true}
           />
         ) : searchResults.length > 0 || answer ? (
           <ScrollArea className="h-full w-full">
-            <div className="p-4 pt-4 pb-0">
+            <div className="p-4 py-0 my-4">
               {images.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3 flex items-center">
                     <ImageIcon className="h-4 w-4 mr-2 opacity-70" />
-                    Imagens
+                    Images
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-1">
                     {images.slice(0, 6).map((image, idx) => (
@@ -152,7 +158,7 @@ export function WebSearchToolView({
                   </div>
                   {images.length > 6 && (
                     <Button variant="outline" size="sm" className="mt-2 text-xs">
-                      Ver mais {images.length - 6} imagens
+                      View {images.length - 6} more images
                     </Button>
                   )}
                 </div>
@@ -160,7 +166,7 @@ export function WebSearchToolView({
 
               {searchResults.length > 0 && (
                 <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-4 flex items-center justify-between">
-                  <span>Resultados da Busca ({searchResults.length})</span>
+                  <span>Search Results ({searchResults.length})</span>
                   <Badge variant="outline" className="text-xs font-normal">
                     <Clock className="h-3 w-3 mr-1.5 opacity-70" />
                     {new Date().toLocaleDateString()}
@@ -224,7 +230,7 @@ export function WebSearchToolView({
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{isExpanded ? 'Mostrar menos' : 'Mostrar mais'}</p>
+                                <p>{isExpanded ? 'Show less' : 'Show more'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider> */}
@@ -297,7 +303,7 @@ export function WebSearchToolView({
               <Search className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              Nenhum Resultado Encontrado
+              No Results Found
             </h3>
             <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
               <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
@@ -305,11 +311,30 @@ export function WebSearchToolView({
               </code>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Tente refinar sua busca para obter melhores resultados
+              Try refining your search query for better results
             </p>
           </div>
         )}
       </CardContent>
+
+      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+        <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          {!isStreaming && searchResults.length > 0 && (
+            <Badge variant="outline" className="h-6 py-0.5">
+              <Globe className="h-3 w-3" />
+              {searchResults.length} results
+            </Badge>
+          )}
+        </div>
+
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {actualToolTimestamp && !isStreaming
+            ? formatTimestamp(actualToolTimestamp)
+            : actualAssistantTimestamp
+              ? formatTimestamp(actualAssistantTimestamp)
+              : ''}
+        </div>
+      </div>
     </Card>
   );
 } 

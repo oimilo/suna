@@ -20,6 +20,10 @@ import {
   BookOpen,
   MessageCircleQuestion,
   CheckCircle2,
+  Table2,
+  ListTodo,
+  List,
+  Computer,
 } from 'lucide-react';
 
 // Flag to control whether tool result messages are rendered
@@ -79,22 +83,10 @@ export function safeJsonParse<T>(
 // Helper function to get an icon based on tool name
 export const getToolIcon = (toolName: string): ElementType => {
   switch (toolName?.toLowerCase()) {
-    case 'web-browser-takeover':
     case 'browser-navigate-to':
-    case 'browser-click-element':
-    case 'browser-input-text':
-    case 'browser-scroll-down':
-    case 'browser-scroll-up':
-    case 'browser-click-coordinates':
-    case 'browser-send-keys':
-    case 'browser-switch-tab':
-    case 'browser-go-back':
-    case 'browser-close-tab':
-    case 'browser-drag-drop':
-    case 'browser-get-dropdown-options':
-    case 'browser-select-dropdown-option':
-    case 'browser-scroll-to-text':
-    case 'browser-wait':
+    case 'browser-act':
+    case 'browser-extract-content':
+    case 'browser-screenshot':
       return Globe;
 
     // File operations
@@ -109,6 +101,12 @@ export const getToolIcon = (toolName: string): ElementType => {
     case 'edit-file':
       return FileEdit;
 
+    // Task operations
+    case 'create-tasks':
+      return List;
+    case 'update-tasks':
+      return ListTodo;
+
     // Shell commands
     case 'execute-command':
       return Terminal;
@@ -116,6 +114,10 @@ export const getToolIcon = (toolName: string): ElementType => {
       return Terminal;
     case 'terminate-command':
       return Terminal;
+
+    // Port operations
+    case 'expose-port':
+      return Computer;
 
     // Web operations
     case 'web-search':
@@ -132,6 +134,15 @@ export const getToolIcon = (toolName: string): ElementType => {
       return Network;
     case 'execute-data-provider-call':
       return Network;
+
+    // Sheets tools
+    case 'create-sheet':
+    case 'update-sheet':
+    case 'view-sheet':
+    case 'analyze-sheet':
+    case 'visualize-sheet':
+    case 'format-sheet':
+      return Table2;
 
     // Code operations
     case 'delete-file':
@@ -153,11 +164,6 @@ export const getToolIcon = (toolName: string): ElementType => {
     case 'complete':
       return CheckCircle2;
 
-    // MCP tools
-    case 'call-mcp-tool':
-      return PlugIcon;
-
-    // Default case
     default:
       if (toolName?.startsWith('mcp_')) {
         const parts = toolName.split('_');
@@ -178,9 +184,6 @@ export const getToolIcon = (toolName: string): ElementType => {
       }
       
       // Add logging for debugging unhandled tool types
-      console.log(
-        `[PAGE] Using default icon for unknown tool type: ${toolName}`,
-      );
       return Wrench; // Default icon for tools
   }
 };
@@ -194,7 +197,7 @@ export const extractPrimaryParam = (
 
   try {
     // Handle browser tools with a prefix check
-    if (toolName?.toLowerCase().startsWith('browser-')) {
+    if (toolName?.toLowerCase().startsWith('browser_')) {
       // Try to extract URL for navigation
       const urlMatch = content.match(/url=(?:"|')([^"|']+)(?:"|')/);
       if (urlMatch) return urlMatch[1];
@@ -246,9 +249,9 @@ export const extractPrimaryParam = (
         return match ? match[1].split('/').pop() || match[1] : null;
       case 'edit-file':
         // Try to match target_file attribute for edit-file
-        match = content.match(/target_file=(?:"|')([^"|']+)(?:"|')/);
+        match = content.match(/target_file=(?:"|')([^"|']+)(?:"|')/) || content.match(/<parameter\s+name=["']target_file["']>([^<]+)/i);
         // Return just the filename part
-        return match ? match[1].split('/').pop() || match[1] : null;
+        return match ? (match[1].split('/').pop() || match[1]).trim() : null;
 
       // Shell commands
       case 'execute-command':
@@ -293,131 +296,120 @@ export const extractPrimaryParam = (
 };
 
 const TOOL_DISPLAY_NAMES = new Map([
-  ['execute-command', 'Executando Comando'],
-  ['check-command-output', 'Verificando Saída do Comando'],
-  ['terminate-command', 'Terminando Comando'],
-  ['list-commands', 'Listando Comandos'],
+  ['execute-command', 'Executing Command'],
+  ['check-command-output', 'Checking Command Output'],
+  ['terminate-command', 'Terminating Command'],
+  ['list-commands', 'Listing Commands'],
   
-  ['create-file', 'Criando Arquivo'],
-  ['delete-file', 'Deletando Arquivo'],
-  ['full-file-rewrite', 'Reescrevendo Arquivo'],
-  ['str-replace', 'Editando Texto'],
-  ['str_replace', 'Editando Texto'],
-  ['edit_file', 'Edição de Arquivo IA'],
-  
-  ['browser-click-element', 'Clicando no Elemento'],
-  ['browser-close-tab', 'Fechando Aba'],
-  ['browser-drag-drop', 'Arrastando Elemento'],
-  ['browser-get-dropdown-options', 'Obtendo Opções'],
-  ['browser-go-back', 'Voltando'],
-  ['browser-input-text', 'Inserindo Texto'],
-  ['browser-navigate-to', 'Navegando para Página'],
-  ['browser-scroll-down', 'Rolando para Baixo'],
-  ['browser-scroll-to-text', 'Rolando até o Texto'],
-  ['browser-scroll-up', 'Rolando para Cima'],
-  ['browser-select-dropdown-option', 'Selecionando Opção'],
-  ['browser-click-coordinates', 'Clicando nas Coordenadas'],
-  ['browser-send-keys', 'Pressionando Teclas'],
-  ['browser-switch-tab', 'Mudando de Aba'],
-  ['browser-wait', 'Aguardando'],
+  ['create-file', 'Creating File'],
+  ['delete-file', 'Deleting File'],
+  ['full-file-rewrite', 'Rewriting File'],
+  ['str-replace', 'Editing Text'],
+  ['str_replace', 'Editing Text'],
+  ['edit_file', 'Editing File'],
+  ['edit-file', 'Editing File'],
+  ['upload-file', 'Uploading File'],
 
-  ['execute-data-provider-call', 'Chamando provedor de dados'],
-  ['execute_data-provider_call', 'Chamando provedor de dados'],
-  ['get-data-provider-endpoints', 'Obtendo endpoints'],
-  
-  ['deploy', 'Fazendo Deploy'],
-  ['ask', 'Aguardando Resposta'],
-  ['complete', 'Tarefa Concluída'],
-  ['crawl-webpage', 'Rastreando Website'],
-  ['expose-port', 'Expondo Porta'],
-  ['scrape-webpage', 'Extraindo Dados do Website'],
-  ['web-search', 'Pesquisando na Web'],
-  ['see-image', 'Visualizando Imagem'],
-  
-  ['call-mcp-tool', 'Ferramenta Externa'],
+  ['create-document', 'Creating Document'],
+  ['update-document', 'Updating Document'],
+  ['read-document', 'Reading Document'],
+  ['list-documents', 'Listing Documents'],
+  ['delete-document', 'Deleting Document'],
 
-  ['update-agent', 'Atualizando Agente'],
-  ['get-current-agent-config', 'Obtendo Config do Agente'],
-  ['search-mcp-servers', 'Pesquisando Servidores MCP'],
-  ['get-mcp-server-tools', 'Obtendo Ferramentas do Servidor MCP'],
-  ['configure-mcp-server', 'Configurando Servidor MCP'],
-  ['get-popular-mcp-servers', 'Obtendo Servidores MCP Populares'],
-  ['test-mcp-server-connection', 'Testando Conexão do Servidor MCP'],
+  ['create-tasks', 'Creating Tasks'],
+  ['update-tasks', 'Updating Tasks'],
+  
+  ['browser_navigate_to', 'Navigating to Page'],
+  ['browser_act', 'Performing Action'],
+  ['browser_extract_content', 'Extracting Content'],
+  ['browser_screenshot', 'Taking Screenshot'],
 
+  ['execute-data-provider-call', 'Calling data provider'],
+  ['execute_data-provider_call', 'Calling data provider'],
+  ['get-data-provider-endpoints', 'Getting endpoints'],
+  
+  ['deploy', 'Deploying'],
+  ['ask', 'Ask'],
+  ['create-tasks', 'Creating Tasks'],
+  ['update-tasks', 'Updating Tasks'],
+  ['complete', 'Completing Task'],
+  ['crawl-webpage', 'Crawling Website'],
+  ['expose-port', 'Exposing Port'],
+  ['scrape-webpage', 'Scraping Website'],
+  ['web-search', 'Searching Web'],
+  ['see-image', 'Viewing Image'],
+  ['create-presentation-outline', 'Creating Presentation Outline'],
+  ['create-presentation', 'Creating Presentation'],
+  ['present-presentation', 'Presenting'],
+
+  ['create-sheet', 'Creating Sheet'],
+  ['update-sheet', 'Updating Sheet'],
+  ['view-sheet', 'Viewing Sheet'],
+  ['analyze-sheet', 'Analyzing Sheet'],
+  ['visualize-sheet', 'Visualizing Sheet'],
+  ['format-sheet', 'Formatting Sheet'],
+  
+
+  ['update-agent', 'Updating Agent'],
+  ['get-current-agent-config', 'Getting Agent Config'],
+  ['search-mcp-servers', 'Searching MCP Servers'],
+  ['get-mcp-server-tools', 'Getting MCP Server Tools'],
+  ['configure-mcp-server', 'Configuring MCP Server'],
+  ['get-popular-mcp-servers', 'Getting Popular MCP Servers'],
+  ['test-mcp-server-connection', 'Testing MCP Server Connection'],
+
+  ['get-project-structure', 'Getting Project Structure'],
+  ['build-project', 'Building Project'],
 
   //V2
 
-  ['execute_command', 'Executando Comando'],
-  ['check_command_output', 'Verificando Saída do Comando'],
-  ['terminate_command', 'Terminando Comando'],
-  ['list_commands', 'Listando Comandos'],
+  ['execute_command', 'Executing Command'],
+  ['check_command_output', 'Checking Command Output'],
+  ['terminate_command', 'Terminating Command'],
+  ['list_commands', 'Listing Commands'],
   
-  ['create_file', 'Criando Arquivo'],
-  ['delete_file', 'Deletando Arquivo'],
-  ['full_file_rewrite', 'Reescrevendo Arquivo'],
-  ['str_replace', 'Editando Texto'],
-  ['edit_file', 'Edição de Arquivo IA'],
+  ['create_file', 'Creating File'],
+  ['delete_file', 'Deleting File'],
+  ['full_file_rewrite', 'Rewriting File'],
+  ['str_replace', 'Editing Text'],
+  ['edit_file', 'Editing File'],
   
-  ['browser_click_element', 'Clicando no Elemento'],
-  ['browser_close_tab', 'Fechando Aba'],
-  ['browser_drag_drop', 'Arrastando Elemento'],
-  ['browser_get_dropdown_options', 'Obtendo Opções'],
-  ['browser_go_back', 'Voltando'],
-  ['browser_input_text', 'Inserindo Texto'],
-  ['browser_navigate_to', 'Navegando para Página'],
-  ['browser_scroll_down', 'Rolando para Baixo'],
-  ['browser_scroll_to_text', 'Rolando até o Texto'],
-  ['browser_scroll_up', 'Rolando para Cima'],
-  ['browser_select_dropdown_option', 'Selecionando Opção'],
-  ['browser_click_coordinates', 'Clicando nas Coordenadas'],
-  ['browser_send_keys', 'Pressionando Teclas'],
-  ['browser_switch_tab', 'Mudando de Aba'],
-  ['browser_wait', 'Aguardando'],
+  ['browser_navigate_to', 'Navigating to Page'],
+  ['browser_act', 'Performing Action'],
+  ['browser_extract_content', 'Extracting Content'],
+  ['browser_screenshot', 'Taking Screenshot'],
 
-  ['execute_data_provider_call', 'Chamando provedor de dados'],
-  ['get_data_provider_endpoints', 'Obtendo endpoints'],
+  ['execute_data_provider_call', 'Calling data provider'],
+  ['get_data_provider_endpoints', 'Getting endpoints'],
   
-  ['deploy', 'Fazendo Deploy'],
-  ['ask', 'Aguardando Resposta'],
-  ['complete', 'Tarefa Concluída'],
-  ['crawl_webpage', 'Rastreando Website'],
-  ['expose_port', 'Expondo Porta'],
-  ['scrape_webpage', 'Extraindo Dados do Website'],
-  ['web_search', 'Pesquisando na Web'],
-  ['see_image', 'Visualizando Imagem'],
+  ['deploy', 'Deploying'],
+  ['ask', 'Ask'],
+  ['complete', 'Completing Task'],
+  ['crawl_webpage', 'Crawling Website'],
+  ['expose_port', 'Exposing Port'],
+  ['scrape_webpage', 'Scraping Website'],
+  ['web_search', 'Searching Web'],
+  ['see_image', 'Viewing Image'],
   
-  ['update_agent', 'Atualizando Agente'],
-  ['get_current_agent_config', 'Obtendo Config do Agente'],
-  ['search_mcp_servers', 'Pesquisando Servidores MCP'],
-  ['get_app_details', 'Detalhes do Servidor MCP'],
-  ['discover_user_mcp_servers', 'Descobrindo Ferramentas MCP'],
-  ['configure_profile_for_agent', 'Configurando Perfil de Credencial'],
+  ['update_agent', 'Updating Agent'],
+  ['get_current_agent_config', 'Getting Agent Config'],
+  ['search_mcp_servers', 'Searching MCP Servers'],
+  ['get_mcp_server_tools', 'Getting MCP Server Tools'],
+  ['configure_mcp_server', 'Configuring MCP Server'],
+  ['get_popular_mcp_servers', 'Getting Popular MCP Servers'],
+  ['test_mcp_server_connection', 'Testing MCP Server Connection'],
 
-  // Agent creation/integration (frontend display)
-  ['search-mcp-servers-for-agent', 'Pesquisando Servidores MCP'],
-  ['get-app-details', 'Detalhes do Servidor MCP'],
-  ['create-credential-profile-for-agent', 'Criando Perfil de Credencial'],
-  ['discover-user-mcp-servers', 'Descobrindo Ferramentas MCP'],
-  ['configure-profile-for-agent', 'Configurando Perfil de Credencial'],
-  ['create-agent-scheduled-trigger', 'Criando Agendamento'],
-  ['list-agent-scheduled-triggers', 'Listando Agendamentos'],
-  ['toggle-agent-scheduled-trigger', 'Alternando Agendamento'],
-  ['delete-agent-scheduled-trigger', 'Excluindo Agendamento'],
-  ['update-agent-config', 'Atualizando Config do Agente'],
-  ['create-new-agent', 'Criando Novo Agente'],
-  // underscore aliases
-  ['search_mcp_servers_for_agent', 'Pesquisando Servidores MCP'],
-  ['get_app_details', 'Detalhes do Servidor MCP'],
-  ['create_credential_profile_for_agent', 'Criando Perfil de Credencial'],
-  ['discover_user_mcp_servers', 'Descobrindo Ferramentas MCP'],
-  ['configure_profile_for_agent', 'Configurando Perfil de Credencial'],
-  ['create_agent_scheduled_trigger', 'Criando Agendamento'],
-  ['list_agent_scheduled_triggers', 'Listando Agendamentos'],
-  ['toggle_agent_scheduled_trigger', 'Alternando Agendamento'],
-  ['delete_agent_scheduled_trigger', 'Excluindo Agendamento'],
-  ['update_agent_config', 'Atualizando Config do Agente'],
-  ['create_new_agent', 'Criando Novo Agente'],
 
+  ['create-new-agent', 'Creating New Agent'],
+  ['search-mcp-servers-for-agent', 'Searching MCP Servers'],
+  ['create-credential-profile-for-agent', 'Creating Credential Profile'],
+  ['discover-mcp-tools-for-agent', 'Discovering MCP Tools'],
+  ['configure-agent-integration', 'Configuring Agent Integration'],
+  ['create-agent-workflow', 'Creating Agent Workflow'],
+  ['activate-agent-workflow', 'Activating Agent Workflow'],
+  ['create-agent-scheduled-trigger', 'Creating Scheduled Trigger'],
+  ['list-agent-workflows', 'Listing Agent Workflows'],
+  ['list-agent-scheduled-triggers', 'Listing Agent Scheduled Triggers'],
 ]);
 
 
@@ -495,3 +487,38 @@ export function getUserFriendlyToolName(toolName: string): string {
   }
   return TOOL_DISPLAY_NAMES.get(toolName) || toolName;
 }
+
+export const HIDE_STREAMING_XML_TAGS = new Set([
+  'create-tasks',
+  'execute-command',
+  'create-file',
+  'delete-file',
+  'full-file-rewrite',
+  'edit-file',
+  'str-replace',
+  'browser-click-element',
+  'browser-close-tab',
+  'browser-drag-drop',
+  'browser-get-dropdown-options',
+  'browser-go-back',
+  'browser-input-text',
+  'browser-navigate-to',
+  'browser-scroll-down',
+  'browser-scroll-to-text',
+  'browser-scroll-up',
+  'browser-select-dropdown-option',
+  'browser-send-keys',
+  'browser-switch-tab',
+  'browser-wait',
+  'deploy',
+  'ask',
+  'complete',
+  'crawl-webpage',
+  'web-search',
+  'see-image',
+  'execute_data_provider_call',
+  'execute_data_provider_endpoint',
+
+  'execute-data-provider-call',
+  'execute-data-provider-endpoint',
+]);

@@ -78,6 +78,17 @@ export function useSharedSubscription() {
   };
 }
 
+export function useSubscriptionData() {
+  const context = useSubscriptionContext();
+
+  return {
+    data: context.subscriptionData,
+    isLoading: context.isLoading,
+    error: context.error,
+    refetch: context.refetch,
+  };
+}
+
 export function useHasCredits(minimumCredits = 0) {
   const { creditBalance } = useSubscriptionContext();
 

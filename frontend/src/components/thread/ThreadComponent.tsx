@@ -3,16 +3,14 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BRANDING } from '@/lib/branding';
-import { BillingError } from '@/lib/api';
+import { BillingError, AgentRunLimitError, ProjectLimitError } from '@/lib/api';
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
-import { useSidebarSafe } from '@/hooks/use-sidebar-safe';
+import { useSidebar } from '@/components/ui/sidebar';
 import { useAgentStream } from '@/hooks/useAgentStream';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -24,12 +22,14 @@ import {
   useStartAgentMutation,
   useStopAgentMutation,
 } from '@/hooks/react-query/threads/use-agent-run';
-import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscriptions';
+import { useSharedSubscription } from '@/contexts/SubscriptionContext';
 import { SubscriptionStatus } from '@/components/thread/chat-input/_use-model-selection';
+
 import {
   UnifiedMessage,
+} from '@/components/thread/types';
+import {
   ApiMessageType,
-  ToolCallInput,
 } from '@/app/(dashboard)/projects/[projectId]/thread/_types';
 import {
   useThreadData,
@@ -37,35 +37,30 @@ import {
   useBilling,
   useKeyboardShortcuts,
 } from '@/app/(dashboard)/projects/[projectId]/thread/_hooks';
-import {
-  ThreadError,
-  UpgradeDialog,
-  ThreadLayout,
-} from '@/app/(dashboard)/projects/[projectId]/thread/_components';
-import { useVncPreloader } from '@/hooks/useVncPreloader';
-import { useThreadAgent, useAgents } from '@/hooks/react-query/agents/use-agents';
-import { useTranslations } from '@/hooks/use-translations';
-import { useSidebarContext } from '@/contexts/sidebar-context';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
-import { useProjectRealtime } from '@/hooks/useProjectRealtime';
-import { handleGoogleSlidesUpload } from '@/components/thread/tool-views/utils/presentation-utils';
+import { ThreadError, UpgradeDialog, ThreadLayout } from '@/app/(dashboard)/projects/[projectId]/thread/_components';
 
-const DEBUG_THREAD = process.env.NEXT_PUBLIC_WORKSPACE_DEBUG !== 'false';
-const logThreadDebug = (...args: unknown[]) => {
-  if (DEBUG_THREAD) {
-    console.debug('[workspace:thread]', ...args);
-  }
-};
+import {
+  useThreadAgent,
+  useAgents,
+} from '@/hooks/react-query/agents/use-agents';
+import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
+import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { useQueryClient } from '@tanstack/react-query';
+import { threadKeys } from '@/hooks/react-query/threads/keys';
+import { useProjectRealtime } from '@/hooks/useProjectRealtime';
+import { handleGoogleSlidesUpload } from './tool-views/utils/presentation-utils';
 
 interface ThreadComponentProps {
   projectId: string;
   threadId: string;
+  compact?: boolean;
+  configuredAgentId?: string; // When set, only allow selection of this specific agent
 }
 
-export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
+export function ThreadComponent({ projectId, threadId, compact = false, configuredAgentId }: ThreadComponentProps) {
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
-  const { t } = useTranslations();
+  const queryClient = useQueryClient();
 
   // State
   const [newMessage, setNewMessage] = useState('');
@@ -79,31 +74,34 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   const [debugMode, setDebugMode] = useState(false);
   const [initialPanelOpenAttempted, setInitialPanelOpenAttempted] =
     useState(false);
-  const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
-  const [userInitiatedRun, setUserInitiatedRun] = useState(false);
-  const [isPanelMinimized, setIsPanelMinimized] = useState(false);
-  const [hasMainFileDetected, setHasMainFileDetected] = useState(false);
-
-  // Refs
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const initialLayoutAppliedRef = useRef(false);
-  const lastStreamStartedRef = useRef<string | null>(null);
-
-  // Sidebar
-  const { state: leftSidebarState, setOpen: setLeftSidebarOpen } =
-    useSidebarSafe();
-  const { isPinned } = useSidebarContext();
-  const { data: agentsResponse } = useAgents();
-  const agents = useMemo(
-    () => agentsResponse?.agents ?? [],
-    [agentsResponse?.agents],
-  );
+  // Use Zustand store for agent selection persistence
   const {
     selectedAgentId,
     setSelectedAgent,
     initializeFromAgents,
+    getCurrentAgent,
+    isSunaAgent,
   } = useAgentSelection();
+
+  const { data: agentsResponse } = useAgents();
+  const agents = agentsResponse?.agents || [];
+  const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
+  const [userInitiatedRun, setUserInitiatedRun] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
+  const [agentLimitData, setAgentLimitData] = useState<{
+    runningCount: number;
+    runningThreadIds: string[];
+  } | null>(null);
+
+  // Refs - simplified for flex-column-reverse
+  const latestMessageRef = useRef<HTMLDivElement>(null);
+  const initialLayoutAppliedRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastStreamStartedRef = useRef<string | null>(null); // Track last runId we started streaming for
+
+  // Sidebar
+  const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
 
   // Custom hooks
   const {
@@ -119,6 +117,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     isLoading,
     error,
     initialLoadCompleted,
+    threadQuery,
     messagesQuery,
     projectQuery,
     agentRunsQuery,
@@ -140,36 +139,19 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     toggleSidePanel,
     handleSidePanelNavigate,
     userClosedPanelRef,
-    activeSandboxId,
-  } = useToolCalls(messages, setLeftSidebarOpen, agentStatus);
-
-  useEffect(() => {
-    if (!DEBUG_THREAD) return;
-    logThreadDebug('state:snapshot', {
-      isSidePanelOpen,
-      isPanelMinimized,
-      currentToolIndex,
-      autoOpenedPanel,
-      hasMainFileDetected,
-      toolCallCount: toolCalls.length,
-      userClosedPanel: userClosedPanelRef.current,
-    });
-  }, [
-    isSidePanelOpen,
-    isPanelMinimized,
-    currentToolIndex,
-    autoOpenedPanel,
-    hasMainFileDetected,
-    toolCalls.length,
-    userClosedPanelRef,
-  ]);
+  } = useToolCalls(messages, setLeftSidebarOpen, agentStatus, compact);
 
   const {
     showBillingAlert,
     setShowBillingAlert,
     billingData,
     setBillingData,
-  } = useBilling(project?.account_id, agentStatus, initialLoadCompleted);
+    checkBillingLimits,
+    billingStatusQuery,
+  } = useBilling(null, agentStatus, initialLoadCompleted);
+
+  // Real-time project updates (for sandbox creation)
+  useProjectRealtime(projectId);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -185,53 +167,55 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
   const stopAgentMutation = useStopAgentMutation();
   const { data: threadAgentData } = useThreadAgent(threadId);
   const agent = threadAgentData?.agent;
+  const workflowId = threadQuery.data?.metadata?.workflow_id;
 
   useEffect(() => {
-    if (agents.length > 0) {
-      initializeFromAgents(agents, threadAgentData?.agent?.agent_id);
-    }
-  }, [agents, threadAgentData?.agent?.agent_id, initializeFromAgents]);
+    queryClient.invalidateQueries({ queryKey: threadKeys.agentRuns(threadId) });
+    queryClient.invalidateQueries({ queryKey: threadKeys.messages(threadId) });
+  }, [threadId, queryClient]);
 
-  const { data: subscriptionData } = useSubscription();
-  const subscriptionStatus: SubscriptionStatus =
-    subscriptionData?.status === 'active' ? 'active' : 'no_subscription';
-
-  // Memoize project for VNC preloader to prevent re-preloading on every render
-  const memoizedProject = useMemo(() => project, [project]);
-
-  useVncPreloader(memoizedProject);
-  useProjectRealtime(projectId);
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-
+    
     if (urlParams.get('google_auth') === 'success') {
+      // Clean up the URL parameters first
       window.history.replaceState({}, '', window.location.pathname);
-      const uploadIntent = sessionStorage.getItem(
-        'google_slides_upload_intent',
-      );
-
+      
+      // Check if there was an intent to upload to Google Slides
+      const uploadIntent = sessionStorage.getItem('google_slides_upload_intent');
       if (uploadIntent) {
         sessionStorage.removeItem('google_slides_upload_intent');
+        
         try {
           const uploadData = JSON.parse(uploadIntent);
           const { presentation_path, sandbox_url } = uploadData;
+          
           if (presentation_path && sandbox_url) {
+            // Handle upload in async function
             (async () => {
-              const loadingToast = toast.loading(
-                'Google authentication successful! Uploading presentation...',
+              const uploadPromise = handleGoogleSlidesUpload(
+                sandbox_url,
+                presentation_path
               );
+              
+              // Show loading toast and handle upload
+              const loadingToast = toast.loading('Google authentication successful! Uploading presentation...');
+              
               try {
-                await handleGoogleSlidesUpload(sandbox_url, presentation_path);
+                await uploadPromise;
+                // Success toast is now handled universally by handleGoogleSlidesUpload
               } catch (error) {
                 console.error('Upload failed:', error);
+                // Error toast is also handled universally by handleGoogleSlidesUpload
               } finally {
+                // Always dismiss loading toast
                 toast.dismiss(loadingToast);
               }
             })();
           }
         } catch (error) {
           console.error('Error processing Google Slides upload from session:', error);
-          toast.success('Google authentication successful!');
+          // Error toast is handled universally by handleGoogleSlidesUpload, no need to duplicate
         }
       } else {
         toast.success('Google authentication successful!');
@@ -244,62 +228,59 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     }
   }, []);
 
-  const handleProjectRenamed = useCallback((newName: string) => {
-    // no-op placeholder for now
-  }, []);
-
-  const handleSidePanelClose = useCallback(() => {
-    setIsSidePanelOpen(false);
-    userClosedPanelRef.current = true;
-    setAutoOpenedPanel(true);
-    setIsPanelMinimized(false);
-  }, [setIsSidePanelOpen, setAutoOpenedPanel, setIsPanelMinimized, userClosedPanelRef]);
-
-  const handleSidePanelMinimize = useCallback(() => {
-    if (DEBUG_THREAD) {
-      logThreadDebug('action:minimize');
+  useEffect(() => {
+    if (agents.length > 0) {
+      // If configuredAgentId is provided, use it as the forced selection
+      // Otherwise, fall back to threadAgentId (existing behavior)
+      const threadAgentId = threadAgentData?.agent?.agent_id;
+      const agentIdToUse = configuredAgentId || threadAgentId;
+      
+      console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
+      
+      initializeFromAgents(agents, agentIdToUse);
+      
+      // If configuredAgentId is provided, force selection and override any existing selection
+      if (configuredAgentId && selectedAgentId !== configuredAgentId) {
+        console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
+        setSelectedAgent(configuredAgentId);
+      }
     }
-    setIsPanelMinimized(true);
-    setHasMainFileDetected(false);
-  }, []);
+  }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, selectedAgentId, setSelectedAgent]);
 
-  const handleExpandToolPreview = useCallback(() => {
-    setIsPanelMinimized(false);
-    setIsSidePanelOpen(true);
-    userClosedPanelRef.current = false;
-  }, [setIsSidePanelOpen, userClosedPanelRef]);
+  const { data: subscriptionData } = useSharedSubscription();
+  const subscriptionStatus: SubscriptionStatus =
+    subscriptionData?.status === 'active' ||
+    subscriptionData?.status === 'trialing'
+      ? 'active'
+      : 'no_subscription';
 
-  const handleOpenFileViewer = useCallback(
-    async (filePath?: string, fileList?: string[]) => {
-      if (filePath) {
-        setFileToView(filePath);
+  const handleProjectRenamed = useCallback((newName: string) => {}, []);
+
+  // Create restricted agent selection handler when configuredAgentId is provided
+  const handleAgentSelect = useCallback((agentId: string | undefined) => {
+    // If configuredAgentId is set, only allow selection of that specific agent
+    if (configuredAgentId) {
+      console.log(`[ThreadComponent] Configured agent mode: ${configuredAgentId}. Attempted selection: ${agentId}`);
+      if (agentId === configuredAgentId) {
+        setSelectedAgent(agentId);
+        console.log(`[ThreadComponent] Allowed selection of configured agent: ${agentId}`);
+      } else {
+        console.log(`[ThreadComponent] Blocked selection of non-configured agent: ${agentId}`);
       }
-      if (fileList) {
-        setFilePathList(fileList);
-      }
-      setFileViewerOpen(true);
-    },
-    [],
-  );
+      // Ignore attempts to select other agents
+      return;
+    }
+    
+    // Normal agent selection behavior
+    setSelectedAgent(agentId);
+  }, [configuredAgentId, setSelectedAgent]);
 
-  const effectiveSandboxId =
-    activeSandboxId ?? sandboxId ?? (typeof project?.sandbox === 'string' ? project?.sandbox : project?.sandbox?.id ?? null);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+  // scrollToBottom for flex-column-reverse layout
+  const scrollToBottom = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, []);
-
-  // Função para detectar se o usuário está próximo do final do scroll
-  const isNearBottom = useCallback(() => {
-    if (!messagesContainerRef.current) return true;
-    const { scrollTop, scrollHeight, clientHeight } =
-      messagesContainerRef.current;
-    return scrollHeight - scrollTop - clientHeight < 100;
-  }, []);
-
-  const handleUserScroll = useCallback(() => {
-    isNearBottom();
-  }, [isNearBottom]);
 
   const handleNewMessageFromStream = useCallback(
     (message: UnifiedMessage) => {
@@ -318,6 +299,21 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
             m.message_id === message.message_id ? message : m,
           );
         } else {
+          // If this is a user message, replace any optimistic user message with temp ID
+          if (message.type === 'user') {
+            const optimisticIndex = prev.findIndex(
+              (m) =>
+                m.type === 'user' &&
+                m.message_id?.startsWith('temp-') &&
+                m.content === message.content,
+            );
+            if (optimisticIndex !== -1) {
+              // Replace the optimistic message with the real one
+              return prev.map((m, index) =>
+                index === optimisticIndex ? message : m,
+              );
+            }
+          }
           return [...prev, message];
         }
       });
@@ -325,6 +321,13 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
       if (message.type === 'tool') {
         setAutoOpenedPanel(false);
       }
+
+      // Auto-scroll to bottom (top: 0 in flex-col-reverse) when new messages arrive
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
     },
     [setMessages, setAutoOpenedPanel],
   );
@@ -341,6 +344,8 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
           setAgentStatus('idle');
           setAgentRunId(null);
           setAutoOpenedPanel(false);
+
+          // No scroll needed with flex-column-reverse
           break;
         case 'connecting':
           setAgentStatus('connecting');
@@ -358,6 +363,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     const isExpected =
       lower.includes('not found') || lower.includes('agent run is not running');
 
+    // Downgrade log level for expected/benign cases (opening old conversations)
     if (isExpected) {
       console.info(`[PAGE] Stream skipped for inactive run: ${errorMessage}`);
       return;
@@ -373,6 +379,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     status: streamHookStatus,
     textContent: streamingTextContent,
     toolCall: streamingToolCall,
+    error: streamError,
     agentRunId: currentHookRunId,
     startStreaming,
     stopStreaming,
@@ -386,23 +393,6 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     threadId,
     setMessages,
     threadAgentData?.agent?.agent_id,
-  );
-
-  const toolViewAssistant = useCallback(
-    (assistantContent?: string) => assistantContent,
-    [],
-  );
-
-  const toolViewResult = useCallback(
-    (toolContent?: string) => toolContent,
-    [],
-  );
-
-  const handleAgentSelect = useCallback(
-    (agentId?: string) => {
-      setSelectedAgent(agentId);
-    },
-    [setSelectedAgent],
   );
 
   const handleSubmitMessage = useCallback(
@@ -426,7 +416,13 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
 
       setMessages((prev) => [...prev, optimisticUserMessage]);
       setNewMessage('');
-      scrollToBottom('smooth');
+
+      // Auto-scroll to bottom when user sends a message
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
 
       try {
         const messagePromise = addUserMessageMutation.mutateAsync({
@@ -460,14 +456,49 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
           console.error('Failed to start agent:', error);
 
           if (error instanceof BillingError) {
-            console.log('Caught BillingError:', error.detail);
             setBillingData({
               currentUsage: error.detail.currentUsage as number | undefined,
               limit: error.detail.limit as number | undefined,
               message:
                 error.detail.message ||
                 'Monthly usage limit reached. Please upgrade.',
-              accountId: project?.account_id || null,
+              accountId: null,
+            });
+            setShowBillingAlert(true);
+
+            setMessages((prev) =>
+              prev.filter(
+                (m) => m.message_id !== optimisticUserMessage.message_id,
+              ),
+            );
+            return;
+          }
+
+          if (error instanceof AgentRunLimitError) {
+            const { running_thread_ids, running_count } = error.detail;
+
+            setAgentLimitData({
+              runningCount: running_count,
+              runningThreadIds: running_thread_ids,
+            });
+            setShowAgentLimitDialog(true);
+
+            setMessages((prev) =>
+              prev.filter(
+                (m) => m.message_id !== optimisticUserMessage.message_id,
+              ),
+            );
+            return;
+          }
+
+          if (error instanceof ProjectLimitError) {
+            setBillingData({
+              currentUsage: error.detail.current_count as number,
+              limit: error.detail.limit as number,
+              message:
+                error.detail.message ||
+                `You've reached your project limit (${error.detail.current_count}/${error.detail.limit}). Please upgrade to create more projects.`,
+              accountId: null,
             });
             setShowBillingAlert(true);
 
@@ -485,13 +516,13 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         const agentResult = results[1].value;
         setUserInitiatedRun(true);
         setAgentRunId(agentResult.agent_run_id);
-
-        messagesQuery.refetch();
-        agentRunsQuery.refetch();
       } catch (err) {
         console.error('Error sending message or starting agent:', err);
-        if (!(err instanceof BillingError)) {
-          toast.error(err instanceof Error ? err.message : 'Operação falhou');
+        if (
+          !(err instanceof BillingError) &&
+          !(err instanceof AgentRunLimitError)
+        ) {
+          toast.error(err instanceof Error ? err.message : 'Operation failed');
         }
         setMessages((prev) =>
           prev.filter((m) => m.message_id !== optimisticUserMessage.message_id),
@@ -501,42 +532,96 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
       }
     },
     [
-      addUserMessageMutation,
-      agentRunsQuery,
-      messagesQuery,
-      project?.account_id,
-      scrollToBottom,
-      selectedAgentId,
-      setBillingData,
-      setMessages,
-      setShowBillingAlert,
-      startAgentMutation,
-      setAgentRunId,
       threadId,
+      project?.account_id,
+      addUserMessageMutation,
+      startAgentMutation,
+      setMessages,
+      setBillingData,
+      setShowBillingAlert,
+      setAgentRunId,
     ],
   );
 
   const handleStopAgent = useCallback(async () => {
-    if (!agentRunId) return;
-    try {
-      await stopAgentMutation.mutateAsync(agentRunId);
-      setAgentStatus('idle');
-      setAgentRunId(null);
-      setAutoOpenedPanel(false);
-      stopStreaming();
-    } catch (err) {
-      console.error('Failed to stop agent:', err);
-      toast.error('Falha ao parar o agente');
-    }
-  }, [
-    agentRunId,
-    setAgentRunId,
-    setAgentStatus,
-    setAutoOpenedPanel,
-    stopAgentMutation,
-    stopStreaming,
-  ]);
+    setAgentStatus('idle');
 
+    await stopStreaming();
+
+    if (agentRunId) {
+      try {
+        await stopAgentMutation.mutateAsync(agentRunId);
+      } catch (error) {
+        console.error('Error stopping agent:', error);
+      }
+    }
+  }, [stopStreaming, agentRunId, stopAgentMutation, setAgentStatus]);
+
+  const handleOpenFileViewer = useCallback(
+    (filePath?: string, filePathList?: string[]) => {
+      if (filePath) {
+        setFileToView(filePath);
+      } else {
+        setFileToView(null);
+      }
+      setFilePathList(filePathList);
+      setFileViewerOpen(true);
+    },
+    [],
+  );
+
+  const toolViewAssistant = useCallback(
+    (assistantContent?: string, toolContent?: string) => {
+      if (!assistantContent) return null;
+
+      return (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">
+            Assistant Message
+          </div>
+          <div className="rounded-md border bg-muted/50 p-3">
+            <div className="text-xs prose prose-xs dark:prose-invert chat-markdown max-w-none">
+              {assistantContent}
+            </div>
+          </div>
+        </div>
+      );
+    },
+    [],
+  );
+
+  const toolViewResult = useCallback(
+    (toolContent?: string, isSuccess?: boolean) => {
+      if (!toolContent) return null;
+
+      return (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <div className="text-xs font-medium text-muted-foreground">
+              Tool Result
+            </div>
+            <div
+              className={`px-2 py-0.5 rounded-full text-xs ${
+                isSuccess
+                  ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
+                  : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300'
+              }`}
+            >
+              {isSuccess ? 'Success' : 'Failed'}
+            </div>
+          </div>
+          <div className="rounded-md border bg-muted/50 p-3">
+            <div className="text-xs prose prose-xs dark:prose-invert chat-markdown max-w-none">
+              {toolContent}
+            </div>
+          </div>
+        </div>
+      );
+    },
+    [],
+  );
+
+  // Effects
   useEffect(() => {
     if (!initialLayoutAppliedRef.current) {
       setLeftSidebarOpen(false);
@@ -548,71 +633,45 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
 
-      if (toolCalls.length > 0) {
-        console.log(
-          '[INIT] ToolCalls existentes:',
-          toolCalls.map((tc, i) => ({
-            index: i,
-            name: tc.assistantCall?.name,
-            contentPreview:
-              typeof tc.assistantCall?.content === 'string'
-                ? tc.assistantCall.content.substring(0, 100)
-                : JSON.stringify(tc.assistantCall?.content).substring(0, 100),
-          })),
-        );
-      }
-    }
-  }, [initialPanelOpenAttempted, toolCalls, initialLoadCompleted]);
-
-  useEffect(() => {
-    if (hasMainFileDetected && isPanelMinimized) {
-      setIsPanelMinimized(false);
-    }
-  }, [hasMainFileDetected, isPanelMinimized]);
-
-  useEffect(() => {
-    if (initialLoadCompleted) {
-      if (messages.length > 0) {
-        const firstMessage = messages[0];
-        if ((firstMessage?.metadata as any)?.isTemplateMessage) {
-          console.log(
-            '[TEMPLATE] Template message detected, skipping auto-agent',
-          );
+      // Only auto-open on desktop, not mobile, and not in compact mode
+      if (!isMobile && !compact) {
+        if (toolCalls.length > 0) {
+          setIsSidePanelOpen(true);
+          setCurrentToolIndex(toolCalls.length - 1);
+        } else {
+          if (messages.length > 0) {
+            setIsSidePanelOpen(true);
+          }
         }
-
-        setTimeout(() => {
-          scrollToBottom('auto');
-        }, 100);
-      }
-
-      if ((project?.sandbox as any)?.isOnboardingProject) {
-        console.log(
-          '[TEMPLATE] Template project detected, files should be in sandbox',
-        );
       }
     }
   }, [
-    initialLoadCompleted,
-    messagesQuery,
-    projectId,
-    threadId,
-    project,
+    initialPanelOpenAttempted,
     messages,
-    scrollToBottom,
+    toolCalls,
+    initialLoadCompleted,
+    setIsSidePanelOpen,
+    setCurrentToolIndex,
+    isMobile,
+    compact,
   ]);
 
   useEffect(() => {
+    // Prevent duplicate streaming calls for the same runId
     if (agentRunId && lastStreamStartedRef.current === agentRunId) {
       return;
     }
 
+    // Start streaming if user initiated a run (don't wait for initialLoadCompleted for first-time users)
     if (agentRunId && agentRunId !== currentHookRunId && userInitiatedRun) {
+      console.log(`[ThreadComponent] Starting user-initiated stream for runId: ${agentRunId}`);
       startStreaming(agentRunId);
-      lastStreamStartedRef.current = agentRunId;
-      setUserInitiatedRun(false);
+      lastStreamStartedRef.current = agentRunId; // Track that we started this runId
+      setUserInitiatedRun(false); // Reset flag after starting
       return;
     }
 
+    // Only auto-start streaming on page load if we know the agent is currently running
     if (
       agentRunId &&
       agentRunId !== currentHookRunId &&
@@ -620,16 +679,17 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
       !userInitiatedRun &&
       agentStatus === 'running'
     ) {
+      console.log(`[ThreadComponent] Starting auto stream for runId: ${agentRunId}`);
       startStreaming(agentRunId);
-      lastStreamStartedRef.current = agentRunId;
+      lastStreamStartedRef.current = agentRunId; // Track that we started this runId
     }
   }, [
     agentRunId,
     startStreaming,
     currentHookRunId,
     initialLoadCompleted,
-    agentStatus,
     userInitiatedRun,
+    agentStatus,
   ]);
 
   useEffect(() => {
@@ -642,12 +702,20 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     ) {
       setAgentStatus('idle');
       setAgentRunId(null);
+      // Reset the stream tracking ref when stream completes
+      lastStreamStartedRef.current = null;
     }
   }, [streamHookStatus, agentStatus, setAgentStatus, setAgentRunId]);
 
+  // Reset stream tracking ref when threadId changes  
+  useEffect(() => {
+    lastStreamStartedRef.current = null;
+  }, [threadId]);
+
+  // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | ${BRANDING.company} ${BRANDING.name}`;
+      document.title = `${projectName} | Kortix Suna`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -655,16 +723,13 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by ${BRANDING.company} ${BRANDING.name}`,
+          `${projectName} - Interactive agent conversation powered by Kortix Suna`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute(
-          'content',
-          `${projectName} | ${BRANDING.company} ${BRANDING.name}`,
-        );
+        ogTitle.setAttribute('content', `${projectName} | Kortix Suna`);
       }
 
       const ogDescription = document.querySelector(
@@ -694,7 +759,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     ) {
       hasCheckedUpgradeDialog.current = true;
       const hasSeenUpgradeDialog = localStorage.getItem(
-        'kortix_upgrade_dialog_displayed',
+        'suna_upgrade_dialog_displayed',
       );
       const isFreeTier = subscriptionStatus === 'no_subscription';
       if (!hasSeenUpgradeDialog && isFreeTier && !isLocalMode()) {
@@ -705,7 +770,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
 
   const handleDismissUpgradeDialog = () => {
     setShowUpgradeDialog(false);
-    localStorage.setItem('kortix_upgrade_dialog_displayed', 'true');
+    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
   };
 
   useEffect(() => {
@@ -716,12 +781,42 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
 
   useEffect(() => {
     setIsSidePanelAnimating(true);
-    const timer = setTimeout(() => setIsSidePanelAnimating(false), 200);
+    const timer = setTimeout(() => setIsSidePanelAnimating(false), 200); // Match transition duration
     return () => clearTimeout(timer);
   }, [isSidePanelOpen]);
 
+  // Scroll detection for show/hide scroll-to-bottom button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!scrollContainerRef.current) return;
+
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      const scrollHeight = scrollContainerRef.current.scrollHeight;
+      const clientHeight = scrollContainerRef.current.clientHeight;
+      const threshold = 100;
+
+      // With flex-column-reverse, scrollTop becomes NEGATIVE when scrolling up
+      // Show button when scrollTop < -threshold (scrolled up enough from bottom)
+      const shouldShow = scrollTop < -threshold && scrollHeight > clientHeight;
+      setShowScrollToBottom(shouldShow);
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, {
+        passive: true,
+      });
+      // Check initial state
+      setTimeout(() => handleScroll(), 100);
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [messages, initialLoadCompleted]);
+
   if (!initialLoadCompleted || isLoading) {
-    return <ThreadSkeleton isSidePanelOpen={isSidePanelOpen} />;
+    return <ThreadSkeleton isSidePanelOpen={isSidePanelOpen} compact={compact} />;
   }
 
   if (error) {
@@ -731,7 +826,7 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         projectName={projectName}
         projectId={project?.id || ''}
         project={project}
-        sandboxId={effectiveSandboxId}
+        sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
         onToggleSidePanel={toggleSidePanel}
         onViewFiles={handleOpenFileViewer}
@@ -745,8 +840,11 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={handleSidePanelClose}
-        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelClose={() => {
+          setIsSidePanelOpen(false);
+          userClosedPanelRef.current = true;
+          setAutoOpenedPanel(true);
+        }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -763,6 +861,135 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
     );
   }
 
+  if (compact) {
+    return (
+      <>
+        <ThreadLayout
+          threadId={threadId}
+          projectName={projectName}
+          projectId={project?.id || ''}
+          project={project}
+          sandboxId={sandboxId}
+          isSidePanelOpen={isSidePanelOpen}
+          onToggleSidePanel={toggleSidePanel}
+          onProjectRenamed={handleProjectRenamed}
+          onViewFiles={handleOpenFileViewer}
+          fileViewerOpen={fileViewerOpen}
+          setFileViewerOpen={setFileViewerOpen}
+          fileToView={fileToView}
+          filePathList={filePathList}
+          toolCalls={toolCalls}
+          messages={messages as ApiMessageType[]}
+          externalNavIndex={externalNavIndex}
+          agentStatus={agentStatus}
+          currentToolIndex={currentToolIndex}
+          onSidePanelNavigate={handleSidePanelNavigate}
+          onSidePanelClose={() => {
+            setIsSidePanelOpen(false);
+            userClosedPanelRef.current = true;
+            setAutoOpenedPanel(true);
+          }}
+          renderAssistantMessage={toolViewAssistant}
+          renderToolResult={toolViewResult}
+          isLoading={!initialLoadCompleted || isLoading}
+          showBillingAlert={showBillingAlert}
+          billingData={billingData}
+          onDismissBilling={() => setShowBillingAlert(false)}
+          debugMode={debugMode}
+          isMobile={isMobile}
+          initialLoadCompleted={initialLoadCompleted}
+          agentName={agent && agent.name}
+          disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
+          compact={true}
+        >
+          {/* Thread Content - Scrollable */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col-reverse"
+          >
+            <div className="flex-shrink-0">
+              <ThreadContent
+                messages={messages}
+                streamingTextContent={streamingTextContent}
+                streamingToolCall={streamingToolCall}
+                agentStatus={agentStatus}
+                handleToolClick={handleToolClick}
+                handleOpenFileViewer={handleOpenFileViewer}
+                readOnly={false}
+                streamHookStatus={streamHookStatus}
+                sandboxId={sandboxId}
+                project={project}
+                debugMode={debugMode}
+                agentName={agent && agent.name}
+                agentAvatar={undefined}
+                agentMetadata={agent?.metadata}
+                agentData={agent}
+                scrollContainerRef={scrollContainerRef}
+                isPreviewMode={true}
+              />
+            </div>
+          </div>
+
+          {/* Compact Chat Input */}
+          <div className="flex-shrink-0 border-t border-border/20 bg-background p-4">
+            <ChatInput
+              value={newMessage}
+              onChange={setNewMessage}
+              onSubmit={handleSubmitMessage}
+              placeholder={`Describe what you need help with...`}
+              loading={isSending}
+              disabled={
+                isSending ||
+                agentStatus === 'running' ||
+                agentStatus === 'connecting'
+              }
+              isAgentRunning={
+                agentStatus === 'running' || agentStatus === 'connecting'
+              }
+              onStopAgent={handleStopAgent}
+              autoFocus={!isLoading}
+              enableAdvancedConfig={false}
+              onFileBrowse={handleOpenFileViewer}
+              sandboxId={sandboxId || undefined}
+              messages={messages}
+              agentName={agent && agent.name}
+              selectedAgentId={selectedAgentId}
+              onAgentSelect={handleAgentSelect}
+              hideAgentSelection={!!configuredAgentId}
+              toolCalls={toolCalls}
+              toolCallIndex={currentToolIndex}
+              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+              onExpandToolPreview={() => {
+                setIsSidePanelOpen(true);
+                userClosedPanelRef.current = false;
+              }}
+              defaultShowSnackbar="tokens"
+              showScrollToBottomIndicator={showScrollToBottom}
+              onScrollToBottom={scrollToBottom}
+            />
+          </div>
+        </ThreadLayout>
+
+        <UpgradeDialog
+          open={showUpgradeDialog}
+          onOpenChange={setShowUpgradeDialog}
+          onDismiss={handleDismissUpgradeDialog}
+        />
+
+        {agentLimitData && (
+          <AgentRunLimitDialog
+            open={showAgentLimitDialog}
+            onOpenChange={setShowAgentLimitDialog}
+            runningCount={agentLimitData.runningCount}
+            runningThreadIds={agentLimitData.runningThreadIds}
+            projectId={projectId}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Full layout version for dedicated thread pages
   return (
     <>
       <ThreadLayout
@@ -770,9 +997,8 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         projectName={projectName}
         projectId={project?.id || ''}
         project={project}
-        sandboxId={effectiveSandboxId}
+        sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
-        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onProjectRenamed={handleProjectRenamed}
         onViewFiles={handleOpenFileViewer}
@@ -786,8 +1012,11 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={handleSidePanelClose}
-        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelClose={() => {
+          setIsSidePanelOpen(false);
+          userClosedPanelRef.current = true;
+          setAutoOpenedPanel(true);
+        }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -809,39 +1038,37 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
           handleOpenFileViewer={handleOpenFileViewer}
           readOnly={false}
           streamHookStatus={streamHookStatus}
-          sandboxId={effectiveSandboxId}
+          sandboxId={sandboxId}
           project={project}
           debugMode={debugMode}
           agentName={agent && agent.name}
-          agentAvatar={agent && agent.avatar}
-          messagesEndRef={messagesEndRef}
-          onScroll={handleUserScroll}
+          agentAvatar={undefined}
+          agentMetadata={agent?.metadata}
+          agentData={agent}
+          scrollContainerRef={scrollContainerRef}
         />
 
         <div
           className={cn(
-            'fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent pt-8',
-            isSidePanelAnimating ? '' : 'transition-all duration-200 ease-in-out',
-            isPinned && !isMobile
-              ? 'left-64'
-              : leftSidebarState === 'expanded'
-                ? 'left-4 md:left-6'
-                : 'left-4',
-            isSidePanelOpen && !isPanelMinimized
-              ? isPinned && !isMobile
-                ? 'right-[50%]'
-                : 'right-[60%]'
+            'fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8',
+            isSidePanelAnimating
+              ? ''
+              : 'transition-all duration-200 ease-in-out',
+            leftSidebarState === 'expanded'
+              ? 'left-[72px] md:left-[256px]'
+              : 'left-[40px]',
+            isSidePanelOpen && !isMobile
+              ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]'
               : 'right-0',
             isMobile ? 'left-0 right-0' : '',
           )}
-          style={{ paddingBottom: '25px' }}
         >
-          <div className={cn('relative w-full mx-auto max-w-3xl px-4')}>
+          <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
             <ChatInput
               value={newMessage}
               onChange={setNewMessage}
               onSubmit={handleSubmitMessage}
-              placeholder={t('dashboard.inputPlaceholder')}
+              placeholder={`Describe what you need help with...`}
               loading={isSending}
               disabled={
                 isSending ||
@@ -852,18 +1079,25 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
                 agentStatus === 'running' || agentStatus === 'connecting'
               }
               onStopAgent={handleStopAgent}
-              autoFocus={false}
+              autoFocus={!isLoading}
+              enableAdvancedConfig={false}
               onFileBrowse={handleOpenFileViewer}
-              sandboxId={effectiveSandboxId || undefined}
+              sandboxId={sandboxId || undefined}
               messages={messages}
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}
               onAgentSelect={handleAgentSelect}
+              hideAgentSelection={!!configuredAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={isPanelMinimized && toolCalls.length > 0}
-              onExpandToolPreview={handleExpandToolPreview}
+              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+              onExpandToolPreview={() => {
+                setIsSidePanelOpen(true);
+                userClosedPanelRef.current = false;
+              }}
               defaultShowSnackbar="tokens"
+              showScrollToBottomIndicator={showScrollToBottom}
+              onScrollToBottom={scrollToBottom}
             />
           </div>
         </div>
@@ -874,6 +1108,16 @@ export function ThreadComponent({ projectId, threadId }: ThreadComponentProps) {
         onOpenChange={setShowUpgradeDialog}
         onDismiss={handleDismissUpgradeDialog}
       />
+
+      {agentLimitData && (
+        <AgentRunLimitDialog
+          open={showAgentLimitDialog}
+          onOpenChange={setShowAgentLimitDialog}
+          runningCount={agentLimitData.runningCount}
+          runningThreadIds={agentLimitData.runningThreadIds}
+          projectId={projectId}
+        />
+      )}
     </>
   );
 }

@@ -300,7 +300,15 @@ export function HeroSection() {
                 <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[200px] h-[100px] bg-purple-700/8 rounded-full blur-[70px]" />
                 
                 {/* Input com z-index maior */}
-                <div className="relative z-10">
+                <div
+                  className="relative z-10"
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      setIsInputFocused(false);
+                    }
+                  }}
+                >
                   <ChatInput
                     ref={chatInputRef}
                     onSubmit={handleChatInputSubmit}
@@ -313,8 +321,6 @@ export function HeroSection() {
                     selectedAgentId={selectedAgentId}
                     onAgentSelect={setSelectedAgentId}
                     autoFocus={false}
-                    onFocus={() => setIsInputFocused(true)}
-                    onBlur={() => setIsInputFocused(false)}
                   />
                 </div>
               </div>

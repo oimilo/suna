@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect } from 'react';
 import {
   Globe,
@@ -25,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WebScrapeToolView({
   name = 'scrape-webpage',
@@ -118,29 +117,37 @@ export function WebScrapeToolView({
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-muted-foreground opacity-60" />
+            <div className="relative p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
+              <Globe className="w-5 h-5 text-primary" />
+            </div>
+
             <div>
-              <CardTitle className="text-sm font-medium text-foreground">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
             </div>
           </div>
 
           {!isStreaming && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
+            <Badge
+              variant="secondary"
+              className={
+                actualIsSuccess
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
+              }
+            >
               {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 opacity-80" />
+                <CheckCircle className="h-3.5 w-3.5" />
               ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-red-500 opacity-80" />
+                <AlertTriangle className="h-3.5 w-3.5" />
               )}
-              <span className="text-xs font-medium text-muted-foreground">
-                {actualIsSuccess ? 'Extração concluída' : 'Extração falhou'}
-              </span>
-            </div>
+              {actualIsSuccess ? 'Scraping completed' : 'Scraping failed'}
+            </Badge>
           )}
         </div>
       </CardHeader>
@@ -159,21 +166,21 @@ export function WebScrapeToolView({
                 Analyzing and processing <span className="font-mono text-xs break-all">{domain}</span>
               </p>
               <Progress value={progress} className="w-full h-1" />
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">{progress}% concluído</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">{progress}% complete</p>
             </div>
           </div>
         ) : url ? (
           // Results State
           <ScrollArea className="h-full w-full">
-            <div className="p-4 pt-4 pb-0">
+            <div className="p-4 py-0 my-4">
               {/* Target URL Section */}
               <div className="space-y-3 mb-6">
-                <h3 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5 opacity-60" />
+                <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                  <Globe className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   Source URL
-                </h3>
+                </div>
                 <div className="group relative">
-                  <div className="flex items-center gap-3 p-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors rounded-lg border border-black/6 dark:border-white/8">
+                  <div className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors rounded-xl border border-zinc-200 dark:border-zinc-800">
                     {favicon && (
                       <img
                         src={favicon}
@@ -185,17 +192,19 @@ export function WebScrapeToolView({
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-mono text-xs text-foreground truncate">{truncateString(url, 70)}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 opacity-60">{domain}</p>
+                      <p className="font-mono text-sm text-zinc-900 dark:text-zinc-100 truncate">{truncateString(url, 70)}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{domain}</p>
                     </div>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-70 group-hover:opacity-100 transition-opacity"
+                      asChild
                     >
-                      <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
-                    </a>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        <ArrowUpRight className="w-4 h-4" />
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -203,13 +212,13 @@ export function WebScrapeToolView({
               {/* Results Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 opacity-60" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     Generated Files
-                  </h3>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                    <span className="text-xs font-medium text-muted-foreground">{files.length} file{files.length !== 1 ? 's' : ''}</span>
                   </div>
+                  <Badge variant="outline" className="gap-1">
+                    {files.length} file{files.length !== 1 ? 's' : ''}
+                  </Badge>
                 </div>
 
                 {/* File List */}
@@ -222,57 +231,60 @@ export function WebScrapeToolView({
                       return (
                         <div
                           key={idx}
-                          className="group relative bg-black/[0.02] dark:bg-white/[0.02] border border-black/6 dark:border-white/8 rounded-lg p-3 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                          className="group relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 hover:shadow-sm"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-md bg-emerald-500/10 dark:bg-emerald-400/10 flex-shrink-0">
-                              <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/10 flex items-center justify-center border border-green-500/20 flex-shrink-0">
+                              <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
                             </div>
 
-                            <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex-1 min-w-0 space-y-2">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                                  <span className="text-xs font-medium text-muted-foreground">JSON</span>
-                                </div>
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  JSON
+                                </Badge>
                                 {fileInfo.timestamp && (
-                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8">
-                                    <Calendar className="h-3 w-3 opacity-60" />
-                                    <span className="text-xs text-muted-foreground">{fileInfo.timestamp.replace('_', ' ')}</span>
-                                  </div>
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {fileInfo.timestamp.replace('_', ' ')}
+                                  </Badge>
                                 )}
                               </div>
 
                               <div className="space-y-1">
-                                <p className="font-mono text-xs text-foreground font-medium">
+                                <p className="font-mono text-sm text-zinc-900 dark:text-zinc-100 font-medium">
                                   {fileInfo.fileName}
                                 </p>
-                                <p className="font-mono text-xs text-muted-foreground opacity-60 truncate">
+                                <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400 truncate">
                                   {fileInfo.fullPath}
                                 </p>
                               </div>
                             </div>
 
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  className={cn(
-                                    "p-1.5 rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-200",
-                                    "opacity-0 group-hover:opacity-100",
-                                    isCopied && "opacity-100"
-                                  )}
-                                  onClick={() => copyFilePath(filePath)}
-                                >
-                                  {isCopied ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                                  )}
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{isCopied ? 'Copied!' : 'Copy file path'}</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                      "opacity-0 group-hover:opacity-100 transition-all duration-200",
+                                      isCopied && "opacity-100"
+                                    )}
+                                    onClick={() => copyFilePath(filePath)}
+                                  >
+                                    {isCopied ? (
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <Copy className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{isCopied ? 'Copied!' : 'Copy file path'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       );
@@ -301,6 +313,26 @@ export function WebScrapeToolView({
           </div>
         )}
       </CardContent>
+
+      {/* Footer */}
+      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
+        <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          {!isStreaming && files.length > 0 && (
+            <Badge className="h-6 py-0.5">
+              <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5" />
+              {files.length} file{files.length !== 1 ? 's' : ''} saved
+            </Badge>
+          )}
+        </div>
+
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {actualToolTimestamp && !isStreaming
+            ? formatTimestamp(actualToolTimestamp)
+            : actualAssistantTimestamp
+              ? formatTimestamp(actualAssistantTimestamp)
+              : ''}
+        </div>
+      </div>
     </Card>
   );
 }

@@ -13,7 +13,7 @@ export interface CustomMcp {
     headers?: Record<string, string>;
     profile_id?: string;
   };
-  enabled_tools: string[];
+  enabledTools: string[];
 }
 
 export interface AgentConfiguration {
@@ -36,62 +36,6 @@ export interface GetCurrentAgentConfigData {
   success?: boolean;
   timestamp?: string;
 }
-
-const normalizeCustomMcps = (customMcps?: any[]): CustomMcp[] => {
-  if (!Array.isArray(customMcps)) return [];
-
-  return customMcps.map((mcp) => {
-    const enabledTools =
-      Array.isArray(mcp?.enabled_tools) && mcp.enabled_tools.length > 0
-        ? mcp.enabled_tools
-        : Array.isArray(mcp?.enabledTools)
-          ? mcp.enabledTools
-          : [];
-
-    const config = mcp?.config ?? {};
-
-    return {
-      name: mcp?.name ?? 'Unknown MCP',
-      type: mcp?.type ?? 'unknown',
-      config: {
-        url: config?.url ?? config?.mcp_url ?? '',
-        headers: config?.headers,
-        profile_id: config?.profile_id ?? config?.profileId,
-      },
-      enabled_tools: enabledTools,
-    };
-  });
-};
-
-const normalizeAgentConfiguration = (
-  config: any,
-): AgentConfiguration | null => {
-  if (!config || typeof config !== 'object') {
-    return null;
-  }
-
-  const normalizedCustomMcps = normalizeCustomMcps(
-    config.custom_mcps ?? config.customMcps,
-  );
-
-  const configuredMcps =
-    config.configured_mcps ??
-    config.configuredMcps ??
-    config.configuredMCPs ??
-    [];
-
-  const agentpressTools =
-    config.agentpress_tools ??
-    config.agentpressTools ??
-    {};
-
-  return {
-    ...config,
-    agentpress_tools: agentpressTools,
-    configured_mcps: configuredMcps,
-    custom_mcps: normalizedCustomMcps,
-  } as AgentConfiguration;
-};
 
 const parseContent = (content: any): any => {
   if (typeof content === 'string') {
@@ -130,7 +74,7 @@ const extractFromNewFormat = (content: any): GetCurrentAgentConfigData => {
 
     const extractedData = {
       summary: parsedOutput.summary || null,
-      configuration: normalizeAgentConfiguration(parsedOutput.configuration),
+      configuration: parsedOutput.configuration || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
     };
@@ -141,7 +85,7 @@ const extractFromNewFormat = (content: any): GetCurrentAgentConfigData => {
   if ('parameters' in parsedContent && 'output' in parsedContent) {
     const extractedData = {
       summary: parsedContent.output?.summary || null,
-      configuration: normalizeAgentConfiguration(parsedContent.output?.configuration),
+      configuration: parsedContent.output?.configuration || null,
       success: parsedContent.success,
       timestamp: undefined
     };

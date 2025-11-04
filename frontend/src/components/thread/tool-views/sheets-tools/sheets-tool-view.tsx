@@ -8,26 +8,7 @@ import { CheckCircle, AlertTriangle, Download, FileSpreadsheet, Table, Grid, Tab
 import { cn } from '@/lib/utils';
 import { parseToolResult } from '../tool-result-parser';
 import { FileAttachment } from '../../file-attachment';
-
-const XlsxRenderer: React.FC<{ filePath?: string | null; fileName: string; project?: any; className?: string }>
-  = ({ fileName, className }) => {
-  const handleDownload = () => {
-    // Este fallback não tem conteúdo inline; instruir o usuário a usar o menu Download
-    alert('Use o menu de Download para baixar o arquivo XLSX.');
-  };
-  return (
-    <div className={className}>
-      <div className="p-4 text-sm text-muted-foreground">
-        Pré-visualização de XLSX não disponível. Você pode baixar o arquivo.
-        <div>
-          <button className="mt-2 inline-flex items-center px-3 py-1 rounded border" onClick={handleDownload}>
-            Baixar {fileName}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/AuthProvider';
 import { fetchFileContent } from '@/hooks/react-query/files/use-file-queries';
@@ -118,7 +99,7 @@ export function SheetsToolView({
       case 'visualize-sheet': return 'bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20';
       case 'format-sheet': return 'bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20';
     }
-  }, [toolName]);
+  }, [toolContent]);
 
   const getSheetIconColor = useCallback(() => {
     switch (toolName) {

@@ -1,18 +1,5 @@
 import React, { createContext, useContext } from 'react';
-// Fallback para ausência do hook original
-function usePresentationViewer() {
-  const [state, setState] = React.useState({
-    isOpen: false,
-    presentationName: '',
-    sandboxUrl: '',
-    initialSlide: 0,
-  });
-  const openPresentation = (presentationName: string, sandboxUrl: string, initialSlide = 0) => {
-    setState({ isOpen: true, presentationName, sandboxUrl, initialSlide });
-  };
-  const closePresentation = () => setState(s => ({ ...s, isOpen: false }));
-  return { viewerState: state, openPresentation, closePresentation } as const;
-}
+import { usePresentationViewer } from '@/hooks/use-presentation-viewer';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 
 interface PresentationViewerContextType {

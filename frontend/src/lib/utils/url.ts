@@ -113,3 +113,50 @@ export function constructProjectPreviewFileUrl(
 
   return `${base}/${encodedSegments.join('/')}`;
 }
+
+export function maskPreviewUrl(
+  projectId: string | undefined,
+  url: string | undefined,
+): string | undefined {
+  if (!projectId || !url) {
+    return url;
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+
+    const portMatch = hostname.match(/^(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works$/i);
+    if (portMatch) {
+      const port = Number(portMatch[1]);
+      if (Number.isFinite(port)) {
+        const proxied = constructProjectPreviewProxyUrl(
+          projectId,
+          port,
+          parsed.pathname,
+        );
+        if (proxied) {
+          return `${proxied}${parsed.search || ''}${parsed.hash || ''}`;
+        }
+      }
+    }
+
+    if (/\.proxy\.daytona\.works$/i.test(hostname)) {
+      const proxiedFile = constructProjectPreviewFileUrl(
+        projectId,
+        parsed.pathname,
+      );
+      if (proxiedFile) {
+        return `${proxiedFile}${parsed.search || ''}${parsed.hash || ''}`;
+      }
+    }
+
+    return url;
+  } catch {
+    return url;
+  }
+}

@@ -1,69 +1,34 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Settings, ChevronRight, Bot, Presentation, FileSpreadsheet, Search, Plus, User, Check, ChevronDown, CircleDashed, Maximize2, ChevronLeft } from 'lucide-react';
-import { BRANDING } from '@/lib/branding';
-import Image from 'next/image';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Settings, Bot, Search, Plus, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useTranslations } from '@/hooks/use-translations';
-import { useAgents, useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
+import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 
 import { useRouter } from 'next/navigation';
 import { cn, truncateString } from '@/lib/utils';
-import { BrandLogo } from '@/components/sidebar/brand-logo';
-
-interface PredefinedAgent {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: 'productivity' | 'creative' | 'development';
-}
-
-const PREDEFINED_AGENTS: PredefinedAgent[] = [
-  // {
-  //   id: 'slides',
-  //   name: 'Slides',
-  //   description: 'Create stunning presentations and slide decks',
-  //   icon: <Presentation className="h-4 w-4" />,
-  //   category: 'productivity'
-  // },
-  // {
-  //   id: 'sheets',
-  //   name: 'Sheets',
-  //   description: 'Spreadsheet and data analysis expert',
-  //   icon: <FileSpreadsheet className="h-4 w-4" />,
-  //   category: 'productivity'
-  // }
-];
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AgentSelectorProps {
   selectedAgentId?: string;
   onAgentSelect?: (agentId: string | undefined) => void;
   disabled?: boolean;
   isSunaAgent?: boolean;
-  isFocused?: boolean;
-  // Tool preview props
-  toolCalls?: any[];
-  toolCallIndex?: number;
-  showToolPreview?: boolean;
-  onExpandToolPreview?: () => void;
-  onOpenAgentConfig?: (tab: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers') => void;
+  compact?: boolean;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = ({
@@ -71,63 +36,39 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   onAgentSelect,
   disabled = false,
   isSunaAgent,
-  isFocused = false,
-  toolCalls = [],
-  toolCallIndex = 0,
-  showToolPreview = false,
-  onExpandToolPreview,
-  onOpenAgentConfig,
+  compact = false
 }) => {
-  const { t } = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-  const [isCreatingAgent, setIsCreatingAgent] = useState(false);
+  const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const { data: agentsResponse, isLoading: agentsLoading } = useAgents();
-  const agents = useMemo(
-    () => agentsResponse?.agents ?? [],
-    [agentsResponse?.agents],
-  );
-  const createNewAgentMutation = useCreateNewAgent();
-
-  // Debug: Log agents to see what we're getting
+  // Fix hydration mismatch by ensuring component only renders after mount
   useEffect(() => {
-    if (agents.length > 0) {
-      console.log('Available agents:', agents);
-      console.log('Prophet agent:', agents.find((a: any) => a.metadata?.is_suna_default));
-    }
-  }, [agents]);
+    setMounted(true);
+  }, []);
 
-  const allAgents = useMemo(
-    () => [
-      ...PREDEFINED_AGENTS.map((agent) => ({
-        ...agent,
-        type: 'predefined' as const,
-      })),
-      ...agents.map((agent: any) => ({
-        ...agent,
-        id: agent.agent_id,
-        type: 'custom' as const,
-        icon: agent.avatar || <Bot className="h-4 w-4" />,
-      })),
-    ],
-    [agents],
+  const { data: agentsResponse, isLoading: agentsLoading } = useAgents();
+  const agents = agentsResponse?.agents || [];
+
+  const allAgents = [
+    ...agents.map((agent: any) => ({
+      ...agent,
+      id: agent.agent_id,
+      type: 'custom' as const,
+      icon: <Bot className="h-4 w-4" />
+    }))
+  ];
+
+  const filteredAgents = allAgents.filter((agent) =>
+    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agent.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredAgents = useMemo(
-    () =>
-      allAgents.filter(
-        (agent) =>
-          agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          agent.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [allAgents, searchQuery],
-  );
-
-  const sortedFilteredAgents = useMemo(() => {
+  const sortedFilteredAgents = React.useMemo(() => {
     if (!selectedAgentId) {
       return filteredAgents;
     }
@@ -151,30 +92,26 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
 
   const getAgentDisplay = () => {
     const selectedAgent = allAgents.find(agent => agent.id === selectedAgentId);
-    
     if (selectedAgent) {
-      console.log('Selected agent found:', selectedAgent.name, 'with ID:', selectedAgent.id);
       const isSelectedAgentSuna = selectedAgent.metadata?.is_suna_default || false;
       return {
         name: selectedAgent.name,
-        icon: isSelectedAgentSuna ? <BrandLogo size={16} /> : selectedAgent.icon
+        icon: isSelectedAgentSuna ? <KortixLogo size={16} /> : selectedAgent.icon
       };
     }
     
     if (selectedAgentId !== undefined) {
-      console.warn('Agent with ID', selectedAgentId, 'not found, falling back to', BRANDING.name);
     }
     
     const defaultAgent = allAgents[0];
     const isDefaultAgentSuna = defaultAgent?.metadata?.is_suna_default || false;
     return {
-      name: defaultAgent?.name || BRANDING.name,
-      icon: isDefaultAgentSuna ? <BrandLogo size={16} /> : (defaultAgent?.icon || <BrandLogo size={16} />)
+      name: defaultAgent?.name || 'Suna',
+      icon: isDefaultAgentSuna ? <KortixLogo size={16} /> : (defaultAgent?.icon || <KortixLogo size={16} />)
     };
   };
 
   const handleAgentSelect = (agentId: string | undefined) => {
-    console.log('Agent selected:', agentId === undefined ? `${BRANDING.name} (default)` : agentId);
     onAgentSelect?.(agentId);
     setIsOpen(false);
   };
@@ -182,11 +119,6 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   const handleAgentSettings = (agentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen(false);
-    if (onOpenAgentConfig) {
-      onAgentSelect?.(agentId);
-      requestAnimationFrame(() => onOpenAgentConfig('integrations'));
-      return;
-    }
     router.push(`/agents/config/${agentId}`);
   };
 
@@ -217,28 +149,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   };
 
   const handleCreateAgent = useCallback(() => {
-    if (isCreatingAgent || createNewAgentMutation.isPending) {
-      return; // Prevent multiple clicks
-    }
-    
-    setIsCreatingAgent(true);
     setIsOpen(false);
-    
-    createNewAgentMutation.mutate(undefined, {
-      onSuccess: (newAgent) => {
-        onAgentSelect?.(newAgent.agent_id);
-        if (onOpenAgentConfig) {
-          requestAnimationFrame(() => onOpenAgentConfig('instructions'));
-        } else {
-          router.push(`/agents/config/${newAgent.agent_id}`);
-        }
-      },
-      onSettled: () => {
-        // Reset the debounce state after mutation completes (success or error)
-        setTimeout(() => setIsCreatingAgent(false), 1000);
-      }
-    });
-  }, [isCreatingAgent, createNewAgentMutation, onAgentSelect, onOpenAgentConfig, router]);
+    setShowNewAgentDialog(true);
+  }, []);
 
   const renderAgentItem = (agent: any, index: number) => {
     const isSelected = agent.id === selectedAgentId;
@@ -260,7 +173,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
             >
               <div className="flex-shrink-0">
                 {isThisAgentSuna ? (
-                  <BrandLogo size={16} />
+                  <KortixLogo size={16} />
                 ) : (
                   agent.icon
                 )}
@@ -303,38 +216,14 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   };
 
   const agentDisplay = getAgentDisplay();
-  
-  // Get current tool for display
-  const currentToolCall = toolCalls[toolCallIndex];
-  const hasTools = toolCalls.length > 0 && showToolPreview;
-  const isToolStreaming = currentToolCall?.toolResult?.content === 'STREAMING';
-  
-  const getToolStatus = (toolCall: any) => {
-    const content = toolCall?.toolResult?.content;
-    if (!content) return toolCall?.toolResult?.isSuccess ?? true;
-    if (content === 'STREAMING') return true;
-    
-    try {
-      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-      if (parsed?.content) {
-        const inner = typeof parsed.content === 'string' ? JSON.parse(parsed.content) : parsed.content;
-        if (inner?.tool_execution?.result?.success !== undefined) {
-          return inner.tool_execution.result.success;
-        }
-      }
-      return parsed?.tool_execution?.result?.success ?? 
-             parsed?.result?.success ?? 
-             parsed?.success ?? 
-             toolCall?.toolResult?.isSuccess ?? true;
-    } catch {
-      return toolCall?.toolResult?.isSuccess ?? true;
-    }
-  };
-  
-  const isToolSuccess = isToolStreaming ? true : getToolStatus(currentToolCall);
+
+  // Don't render dropdown until after hydration to prevent ID mismatches
+  if (!mounted) {
+    return <div className="h-8 px-2.5 py-1.5" />; // Placeholder with same height
+  }
 
   return (
-    <div className="flex items-center gap-2">
+    <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <TooltipProvider>
           <Tooltip>
@@ -344,22 +233,27 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-2.5 py-1.5 text-sm font-normal hover:bg-accent/40 transition-all duration-200 rounded-xl",
+                    compact 
+                      ? "px-2 py-1 text-xs hover:bg-accent/40 transition-all duration-200 rounded-lg"
+                      : "px-2.5 py-1.5 text-sm font-normal hover:bg-accent/40 transition-all duration-200 rounded-xl",
                     "focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:outline-none",
-                    isOpen && "bg-accent/40",
-                    !isFocused && !hasTools && "opacity-20"
+                    isOpen && "bg-accent/40"
                   )}
                   disabled={disabled}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="flex-shrink-0">
+                    <div className={cn("flex-shrink-0", compact && "scale-90")}>
                       {agentDisplay.icon}
                     </div>
-                    <span className="hidden sm:inline-block truncate max-w-[80px] font-normal">
+                    <span className={cn(
+                      compact 
+                        ? "truncate max-w-[100px] text-xs font-medium"
+                        : "hidden sm:inline-block truncate max-w-[120px] font-medium"
+                    )}>
                       {agentDisplay.name}
                     </span>
                     <ChevronDown 
-                      size={12} 
+                      size={compact ? 10 : 12} 
                       className={cn(
                         "opacity-50 transition-transform duration-200",
                         isOpen && "rotate-180"
@@ -370,26 +264,25 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{t('agents.select')}</p>
+              <p>Select Agent</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-
         <DropdownMenuContent
           align="end"
-          className="w-88 p-0 border-0 shadow-md bg-card/98 backdrop-blur-sm"
+          className="w-88 p-0 border-0 shadow-md bg-card/98 backdrop-blur-sm overflow-hidden h-[480px] flex flex-col"
           sideOffset={6}
           style={{
             borderRadius: '20px'
           }}
         >
-          <div className="p-4 pb-3">
+          <div className="flex-shrink-0 p-4 pb-3">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder={t('agents.searchAgents')}
+                placeholder="Search agents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchInputKeyDown}
@@ -401,9 +294,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               />
             </div>
           </div>
-
-          {/* Agent List */}
-          <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent px-1.5">
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent px-1.5">
             {agentsLoading ? (
               <div className="px-4 py-6 text-sm text-muted-foreground/70 text-center">
                 <div className="animate-pulse">Loading agents...</div>
@@ -415,14 +306,12 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                 <p className="text-xs mt-1 opacity-60">Try adjusting your search</p>
               </div>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 pb-2">
                 {sortedFilteredAgents.map((agent, index) => renderAgentItem(agent, index))}
               </div>
             )}
           </div>
-
-          {/* Footer Actions */}
-          <div className="p-4 pt-3 border-t border-border/40">
+          <div className="flex-shrink-0 p-4 pt-3 border-t border-border/40">
             <div className="flex items-center justify-center gap-3">
               <Button
                 variant="ghost"
@@ -431,75 +320,26 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                 className="text-xs flex items-center gap-2 rounded-xl hover:bg-accent/40 transition-all duration-200 text-muted-foreground hover:text-foreground px-4 py-2"
               >
                 <Search className="h-3.5 w-3.5" />
-                {t('agents.exploreAllAgents')}
+                Explore All Agents
               </Button>
-
               <div className="w-px h-4 bg-border/60" />
-
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCreateAgent}
-                disabled={isCreatingAgent || createNewAgentMutation.isPending}
-                className="text-xs flex items-center gap-2 rounded-xl hover:bg-accent/40 transition-all duration-200 text-muted-foreground hover:text-foreground px-4 py-2 disabled:opacity-50"
+                className="text-xs flex items-center gap-2 rounded-xl hover:bg-accent/40 transition-all duration-200 text-muted-foreground hover:text-foreground px-4 py-2"
               >
                 <Plus className="h-3.5 w-3.5" />
-                {isCreatingAgent || createNewAgentMutation.isPending ? t('agents.creating') : t('agents.createAgent')}
+                Create Agent
               </Button>
             </div>
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      
-      {/* Compact Tool Indicator */}
-      <AnimatePresence>
-        {hasTools && currentToolCall && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, x: -10 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, x: -10 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md",
-              "bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8",
-              "cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
-            )}
-            onClick={onExpandToolPreview}
-          >
-            {/* Tool Icon */}
-            {(() => {
-              const ToolIcon = getToolIcon(currentToolCall.assistantCall?.name || 'unknown');
-              return <ToolIcon className="h-3.5 w-3.5 text-muted-foreground opacity-60" />;
-            })()}
-            
-            {/* Tool Name */}
-            <span className="text-xs font-medium text-foreground truncate max-w-[100px]">
-              {getUserFriendlyToolName(currentToolCall.assistantCall?.name || 'Tool')}
-            </span>
-            
-            {/* Tool Count if multiple */}
-            {toolCalls.length > 1 && (
-              <span className="text-[10px] text-muted-foreground bg-black/[0.02] dark:bg-white/[0.03] px-1.5 py-0.5 rounded-full">
-                {toolCallIndex + 1}/{toolCalls.length}
-              </span>
-            )}
-            
-            {/* Status Indicator */}
-            {isToolStreaming ? (
-              <div className="flex items-center gap-1">
-                <CircleDashed className="h-2.5 w-2.5 animate-spin text-amber-500" />
-              </div>
-            ) : isToolSuccess ? (
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-            )}
-            
-            {/* Expand Button */}
-            <Maximize2 className="h-3 w-3 opacity-40 ml-1" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      <NewAgentDialog 
+        open={showNewAgentDialog} 
+        onOpenChange={setShowNewAgentDialog}
+      />
+    </>
   );
 }; 

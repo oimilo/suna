@@ -83,18 +83,25 @@ export function GetCurrentAgentConfigToolView({
   };
 
   const getTotalMcpToolsCount = (mcps: CustomMcp[]) => {
-    return mcps.reduce((total, mcp) => total + mcp.enabled_tools.length, 0);
+    return mcps.reduce((total, mcp) => {
+      const enabledTools = mcp.enabledTools || [];
+      return total + (Array.isArray(enabledTools) ? enabledTools.length : 0);
+    }, 0);
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-muted-foreground opacity-60" />
-            <CardTitle className="text-sm font-medium text-foreground">
-              {toolTitle}
-            </CardTitle>
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
+              <Settings className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                {toolTitle}
+              </CardTitle>
+            </div>
           </div>
 
           {!isStreaming && (
@@ -174,7 +181,7 @@ export function GetCurrentAgentConfigToolView({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
-                        <Wrench className="h-4 w-4 text-muted-foreground opacity-60" />
+                        <Wrench className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
                         <h4 className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -225,7 +232,7 @@ export function GetCurrentAgentConfigToolView({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/40 dark:to-orange-800/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center">
-                          <Plug className="h-4 w-4 text-muted-foreground opacity-60" />
+                          <Plug className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
                           <h4 className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -264,12 +271,12 @@ export function GetCurrentAgentConfigToolView({
                               </div>
                             </div>
                             <Badge variant="outline" className="text-xs">
-                              {mcp.enabled_tools.length} tools
+                              {mcp.enabledTools.length} tools
                             </Badge>
                           </div>
 
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {mcp.enabled_tools.map((tool, toolIndex) => (
+                            {mcp.enabledTools.map((tool, toolIndex) => (
                               <div key={toolIndex} className="flex items-center gap-1 p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded text-xs">
                                 <Zap className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                                 <span className="text-zinc-700 dark:text-zinc-300 truncate">
@@ -292,7 +299,7 @@ export function GetCurrentAgentConfigToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Settings className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
                 No configuration found
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">

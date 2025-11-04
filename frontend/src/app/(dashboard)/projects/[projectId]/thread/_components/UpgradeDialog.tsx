@@ -1,16 +1,7 @@
-import React from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 import { Brain, Clock, Crown, Sparkles, Zap } from 'lucide-react';
-import { BRANDING } from '@/lib/branding';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { UpgradeDialog as UnifiedUpgradeDialog } from '@/components/ui/upgrade-dialog';
+import { BillingModal } from '@/components/billing/billing-modal';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -19,28 +10,47 @@ interface UpgradeDialogProps {
 }
 
 export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogProps) {
-  const router = useRouter();
+  const [showBillingModal, setShowBillingModal] = useState(false);
 
   const handleUpgradeClick = () => {
-    router.push('/settings/billing');
+    // Close the upgrade dialog and open the billing modal
     onOpenChange(false);
-    localStorage.setItem('kortix_upgrade_dialog_displayed', 'true');
+    setShowBillingModal(true);
+    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
+  };
+
+  const handleBillingModalClose = (isOpen: boolean) => {
+    setShowBillingModal(isOpen);
+    if (!isOpen) {
+      // If billing modal is closed, we can consider the upgrade flow complete
+      onDismiss();
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onPointerDownOutside={(e) => e.preventDefault()} className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <Crown className="h-5 w-5 mr-2 text-primary" />
-            Unlock the Full {BRANDING.name} Experience
-          </DialogTitle>
-          <DialogDescription>
-            You're currently using {BRANDING.name}'s free tier with limited capabilities.
-            Upgrade now to access our most powerful AI model.
-          </DialogDescription>
-        </DialogHeader>
-
+    <>
+      <UnifiedUpgradeDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        icon={Crown}
+        title="Unlock the Full Suna Experience"
+        description="Upgrade to unlock Suna's full potential. Access our most powerful AI models and enhanced capabilities."
+        theme="primary"
+        size="sm"
+        preventOutsideClick={true}
+        actions={[
+          {
+            label: "Maybe Later",
+            onClick: onDismiss,
+            variant: "outline"
+          },
+          {
+            label: "Upgrade Now",
+            onClick: handleUpgradeClick,
+            icon: Sparkles
+          }
+        ]}
+      >
         <div className="py-4">
           <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Pro Benefits</h3>
 
@@ -76,17 +86,15 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
             </div>
           </div>
         </div>
+      </UnifiedUpgradeDialog>
 
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={onDismiss}>
-            Maybe Later
-          </Button>
-          <Button onClick={handleUpgradeClick}>
-            <Sparkles className="h-4 w-4" />
-            Upgrade Now
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Billing Modal */}
+      <BillingModal
+        open={showBillingModal}
+        onOpenChange={handleBillingModalClose}
+        returnUrl={typeof window !== 'undefined' ? window?.location?.href || '/' : '/'}
+        showUsageLimitAlert={true}
+      />
+    </>
   );
 } 

@@ -46,7 +46,7 @@ export function LoadingState({
     }
   }, [showProgress, autoProgress]);
   return (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-15rem)] overflow-hidden scrollbar-hide py-12 px-6">
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] overflow-hidden scrollbar-hide py-12 px-6">
       <div className="text-center w-full max-w-sm">
         <div className={cn("w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center", bgColor)}>
           <Icon className={cn("h-8 w-8", iconColor, Icon === Loader2 && "animate-spin")} />
@@ -68,7 +68,7 @@ export function LoadingState({
           <div className="space-y-3">
             <Progress value={Math.min(progress, 100)} className="w-full h-1" />
             <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-              <span>{progressText || 'Processando...'}</span>
+              <span>{progressText || 'Processing...'}</span>
               <span className="font-mono">{Math.round(Math.min(progress, 100))}%</span>
             </div>
           </div>

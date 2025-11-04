@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronDown, User, LogIn, Lock, Bot, Zap, Code, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,14 +8,19 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import Image from 'next/image'
-import { BRANDING } from '@/lib/branding'
 
-interface ChatDropdownProps {
-    isFocused?: boolean;
-}
-
-const ChatDropdown: React.FC<ChatDropdownProps> = ({ isFocused = false }) => {
+const ChatDropdown = () => {
     const [isOpen, setIsOpen] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    // Fix hydration mismatch by ensuring component only renders after mount
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!mounted) {
+        return <div className="h-8 px-3 py-2" /> // Placeholder with same height
+    }
 
     return (
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -23,14 +28,14 @@ const ChatDropdown: React.FC<ChatDropdownProps> = ({ isFocused = false }) => {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className={`px-3 py-2 text-sm font-medium hover:bg-accent transition-all duration-300 ${!isFocused ? 'opacity-20' : 'opacity-100'}`}
+                    className="px-3 py-2 text-sm font-medium hover:bg-accent"
                     style={{
                         borderRadius: '12px'
                     }}
                 >
                     <div className="flex items-center gap-2">
-                        <Image src="/prophet-symbol.svg" alt={BRANDING.name} width={16} height={16} className="h-4 w-4 dark:invert" />
-                        <span>{BRANDING.name}</span>
+                        <Image src="/kortix-symbol.svg" alt="Suna" width={16} height={16} className="h-4 w-4 dark:invert" />
+                        <span>Suna</span>
                         <ChevronDown size={14} className="opacity-50" />
                     </div>
                 </Button>
@@ -49,7 +54,7 @@ const ChatDropdown: React.FC<ChatDropdownProps> = ({ isFocused = false }) => {
                 >
                     <User size={18} />
                     <div className="flex flex-col">
-                        <span className="font-semibold text-sm">{BRANDING.name}</span>
+                        <span className="font-semibold text-sm">Suna</span>
                         <span className="text-xs text-muted-foreground">Default</span>
                     </div>
                 </DropdownMenuItem>

@@ -1,5 +1,5 @@
 import type { ApiMessageType } from '@/components/thread/types';
-import { extractFilePathsFromToolContent, normalizeContentToString } from './tool-views/utils';
+import { normalizeContentToString } from './tool-views/utils';
 
 export interface ToolCallInput {
   assistantCall: {
@@ -297,6 +297,66 @@ const extractFilePathFromStructuredContent = (
   }
 
   return null;
+};
+
+export const extractFilePathsFromToolContent = (rawContent: unknown): string[] => {
+  const collected = new Set<string>();
+
+  const addPath = (value: string | null | undefined) => {
+    if (value && value.trim()) {
+      collected.add(value.trim());
+    }
+  };
+
+  const normalized = normalizeContentToString(
+    rawContent as string | Record<string, unknown> | undefined | null,
+  );
+
+  const scanString = (input: string) => {
+    if (!input) {
+      return;
+    }
+
+    const regexes = [
+      /<parameter name="file_path">([^<]+)<\/parameter>/gi,
+      /<parameter name="target_file">([^<]+)<\/parameter>/gi,
+      /"file_path"\s*:\s*"([^"\n]+)"/gi,
+      /"target_file"\s*:\s*"([^"\n]+)"/gi,
+      /file_path["\s:=]+["']([^"']+)["']/gi,
+      /target_file["\s:=]+["']([^"']+)["']/gi,
+      /"?path"?\s*[:=]\s*"([^"\n]+)"/gi,
+    ];
+
+    for (const regex of regexes) {
+      regex.lastIndex = 0;
+      let match:
+        | RegExpExecArray
+        | null;
+      while ((match = regex.exec(input)) !== null) {
+        addPath(match[1]);
+      }
+    }
+  };
+
+  if (typeof normalized === 'string') {
+    scanString(normalized);
+
+    // Attempt to parse JSON payloads recursively
+    try {
+      const parsed = JSON.parse(normalized);
+      addPath(extractFilePathFromStructuredContent(parsed));
+    } catch {
+      // ignore
+    }
+  }
+
+  addPath(extractFilePathFromStructuredContent(rawContent));
+
+  if (!normalized && typeof rawContent === 'object' && rawContent !== null) {
+    addPath(extractFilePathFromStructuredContent(rawContent));
+  }
+
+  return Array.from(collected);
 };
 
 export const detectExistingFileConflict = (raw: unknown, depth = 0): boolean => {

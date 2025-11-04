@@ -37,7 +37,7 @@ function extractCheckCommandOutputData(
     let output: string | null = null;
     let status: string | null = null;
     let actualIsSuccess = isSuccess;
-    const actualTimestamp = toolTimestamp || assistantTimestamp;
+    let actualTimestamp = toolTimestamp || assistantTimestamp;
 
     // Parse content to extract data
     const parseContent = (content: any): any => {

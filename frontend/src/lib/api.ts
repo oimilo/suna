@@ -31,6 +31,28 @@ export class BillingError extends Error {
   }
 }
 
+export class AgentRunLimitError extends Error {
+  detail: { running_thread_ids: string[]; running_count: number; message?: string };
+
+  constructor(detail: { running_thread_ids: string[]; running_count: number; message?: string }) {
+    super(detail.message || 'Agent run limit reached');
+    this.name = 'AgentRunLimitError';
+    this.detail = detail;
+    Object.setPrototypeOf(this, AgentRunLimitError.prototype);
+  }
+}
+
+export class ProjectLimitError extends Error {
+  detail: { current_count: number; limit: number; message?: string };
+
+  constructor(detail: { current_count: number; limit: number; message?: string }) {
+    super(detail.message || 'Project limit reached');
+    this.name = 'ProjectLimitError';
+    this.detail = detail;
+    Object.setPrototypeOf(this, ProjectLimitError.prototype);
+  }
+}
+
 export class NoAccessTokenAvailableError extends Error {
   constructor(message?: string, options?: { cause?: Error }) {
     super(message || 'No access token available', options);

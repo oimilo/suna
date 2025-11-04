@@ -1,9 +1,8 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { ArrowDown, CircleDashed, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { CircleDashed, CheckCircle, AlertTriangle } from 'lucide-react';
 import { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/components/thread/types';
-import { AttachmentGroup } from '@/components/thread/attachment-group';
-import { useFilePreloader, FileCache } from '@/hooks/react-query/files';
+import { FileAttachmentGrid } from '@/components/thread/file-attachment';
+import { useFilePreloader } from '@/hooks/react-query/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api';
 import {
@@ -12,112 +11,82 @@ import {
     getUserFriendlyToolName,
     safeJsonParse,
 } from '@/components/thread/utils';
-import { formatMCPToolDisplayName } from '@/components/thread/tool-views/mcp-tool/_utils';
-import { BrandLogo } from '@/components/sidebar/brand-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { AgentLoader } from './loader';
-import { parseXmlToolCalls, isNewXmlFormat, extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
-import { parseToolResult } from '@/components/thread/tool-views/tool-result-parser';
-import { BRANDING } from '@/lib/branding';
-import { constructProjectPreviewProxyUrl } from '@/lib/utils/url';
+import { AgentAvatar, AgentName } from './agent-avatar';
+import { parseXmlToolCalls, isNewXmlFormat } from '@/components/thread/tool-views/xml-parser';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
-import styles from '@/styles/toolcalls.module.css';
+import { StreamingText } from './StreamingText';
+import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
+import { maskPreviewUrl } from '@/lib/utils/url';
 
-const HIDE_STREAMING_XML_TAGS = new Set([
-    'execute-command',
-    'create-file',
-    'delete-file',
-    'full-file-rewrite',
-    'edit-file',
-    'str-replace',
-    'browser-click-element',
-    'browser-close-tab',
-    'browser-drag-drop',
-    'browser-get-dropdown-options',
-    'browser-go-back',
-    'browser-input-text',
-    'browser-navigate-to',
-    'browser-scroll-down',
-    'browser-scroll-to-text',
-    'browser-scroll-up',
-    'browser-select-dropdown-option',
-    'browser-send-keys',
-    'browser-switch-tab',
-    'browser-wait',
-    'deploy',
-    'ask',
-    'complete',
-    'crawl-webpage',
-    'web-search',
-    'see-image',
-    'call-mcp-tool',
 
-    'execute_data_provider_call',
-    'execute_data_provider_endpoint',
-
-    'execute-data-provider-call',
-    'execute-data-provider-endpoint',
-]);
-
-function getEnhancedToolDisplayName(toolName: string, rawXml?: string): string {
-    if (toolName === 'call-mcp-tool' && rawXml) {
-        const toolNameMatch = rawXml.match(/tool_name="([^"]+)"/);
-        if (toolNameMatch) {
-            const fullToolName = toolNameMatch[1];
-            const parts = fullToolName.split('_');
-            if (parts.length >= 3 && fullToolName.startsWith('mcp_')) {
-                const serverName = parts[1];
-                const toolNamePart = parts.slice(2).join('_');
-                return formatMCPToolDisplayName(serverName, toolNamePart);
-            }
-        }
-    }
-    return getUserFriendlyToolName(toolName);
-}
-
-export function renderStandaloneAttachments(
-    attachments: string[],
-    fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void,
-    sandboxId?: string,
-    project?: Project,
-    alignRight: boolean = false
-) {
+// Helper function to render all attachments as standalone messages
+export function renderStandaloneAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project, alignRight: boolean = false) {
     if (!attachments || attachments.length === 0) return null;
 
-    const validAttachments = attachments
-        .map(attachment => (typeof attachment === 'string' ? attachment.trim() : ''))
-        .filter(attachment => attachment.length > 0);
-
+    // Filter out empty strings and check if we have any valid attachments
+    const validAttachments = attachments.filter(attachment => attachment && attachment.trim() !== '');
     if (validAttachments.length === 0) return null;
 
     return (
-        <div className={alignRight ? "w-full flex justify-end mt-3" : "w-full flex justify-start mt-3"}>
-            <AttachmentGroup
-                files={validAttachments}
+        <div className="w-full my-4">
+            <FileAttachmentGrid
+                attachments={validAttachments}
                 onFileClick={fileViewerHandler}
-                sandboxId={sandboxId}
                 showPreviews={true}
-                layout="grid"
-                collapsed={false}
+                sandboxId={sandboxId}
                 project={project}
-                standalone
+                standalone={true}
                 alignRight={alignRight}
             />
         </div>
     );
 }
 
-// Backwards-compatible helper retained for existing call sites
-export function renderAttachments(
-    attachments: string[],
-    fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void,
-    sandboxId?: string,
-    project?: Project
-) {
-    return renderStandaloneAttachments(attachments, fileViewerHandler, sandboxId, project, false);
+// Helper function for legacy compatibility (now just returns null since all files are standalone)
+export function renderAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project) {
+    // All attachments are now rendered as standalone, so this returns null
+    return null;
+}
+
+const URL_REGEX = /https?:\/\/[^\s<>'")]+/g;
+
+function maskSandboxLinks(text: string, project?: Project): string {
+    if (!text) {
+        return text;
+    }
+
+    const projectId = (project as any)?.project_id || (project as any)?.id;
+    if (!projectId) {
+        return text;
+    }
+
+    return text.replace(URL_REGEX, (url) => maskPreviewUrl(projectId, url) ?? url);
 }
 
 // Render Markdown content while preserving XML tags that should be displayed as tool calls
+function preprocessTextOnlyTools(content: string): string {
+    
+    // Handle new function calls format for text-only tools - extract text parameter content
+    // Complete XML format
+    content = content.replace(/<function_calls>\s*<invoke name="ask">\s*<parameter name="text">([\s\S]*?)<\/parameter>[\s\S]*?<\/invoke>\s*<\/function_calls>/gi, '$1');
+    content = content.replace(/<function_calls>\s*<invoke name="complete">\s*<parameter name="text">([\s\S]*?)<\/parameter>[\s\S]*?<\/invoke>\s*<\/function_calls>/gi, '$1');
+    content = content.replace(/<function_calls>\s*<invoke name="present_presentation">[\s\S]*?<parameter name="text">([\s\S]*?)<\/parameter>[\s\S]*?<\/invoke>\s*<\/function_calls>/gi, '$1');
+    
+    // Handle streaming/partial XML for message tools - extract text parameter content even if incomplete
+    content = content.replace(/<function_calls>\s*<invoke name="ask">\s*<parameter name="text">([\s\S]*?)$/gi, '$1');
+    content = content.replace(/<function_calls>\s*<invoke name="complete">\s*<parameter name="text">([\s\S]*?)$/gi, '$1');
+    content = content.replace(/<function_calls>\s*<invoke name="present_presentation">[\s\S]*?<parameter name="text">([\s\S]*?)$/gi, '$1');
+    
+    // Also handle old format for backward compatibility
+    content = content.replace(/<ask[^>]*>([\s\S]*?)<\/ask>/gi, '$1');
+    content = content.replace(/<complete[^>]*>([\s\S]*?)<\/complete>/gi, '$1');  
+    content = content.replace(/<present_presentation[^>]*>([\s\S]*?)<\/present_presentation>/gi, '$1');
+    return content;
+}
+
 export function renderMarkdownContent(
     content: string,
     handleToolClick: (assistantMessageId: string | null, toolName: string) => void,
@@ -127,65 +96,10 @@ export function renderMarkdownContent(
     project?: Project,
     debugMode?: boolean
 ) {
-    // Rewrite Daytona preview links to our project-scoped proxy
-    const rewriteDaytonaToProxy = (text: string): string => {
-        try {
-            const projectId = (project as any)?.project_id || (project as any)?.id;
-            if (!projectId) return text;
-            // Matches: https://8080-xxxx.proxy.daytona.works[/path]
-            const re = /https?:\/\/(\d{2,5})-[A-Za-z0-9-]+\.proxy\.daytona\.works([^\s]*)/gi;
-            return text.replace(re, (match, port: string, suffix: string | undefined) => {
-                const numericPort = Number(port);
-                if (!Number.isFinite(numericPort)) {
-                    return match;
-                }
-
-                const usableSuffix = suffix || '';
-                let pathPart = usableSuffix;
-                let queryPart = '';
-                let hashPart = '';
-
-                if (pathPart.includes('#')) {
-                    const [beforeHash, afterHash] = pathPart.split('#');
-                    pathPart = beforeHash ?? '';
-                    hashPart = afterHash ? `#${afterHash}` : '';
-                }
-
-                if (pathPart.includes('?')) {
-                    const [beforeQuery, afterQuery] = pathPart.split('?');
-                    pathPart = beforeQuery ?? '';
-                    queryPart = afterQuery ? `?${afterQuery}` : '';
-                }
-
-                const sanitizedPath = pathPart.replace(/^\/+/, '');
-                const proxied = constructProjectPreviewProxyUrl(
-                    projectId,
-                    numericPort,
-                    sanitizedPath ? `/${sanitizedPath}` : undefined,
-                );
-
-                if (!proxied) {
-                    return match;
-                }
-
-                return `${proxied.replace(/\/$/, '')}${queryPart}${hashPart}`;
-            });
-        } catch {
-            return text;
-        }
-    };
-
-    // Apply rewrite before any parsing unless in debug mode
-    if (!debugMode && typeof content === 'string') {
-        content = rewriteDaytonaToProxy(content);
-        const baseUrl = BRANDING.url?.trim();
-        if (typeof content === 'string' && baseUrl && content.includes('/api/preview/')) {
-            const normalizedBase = baseUrl.startsWith('http')
-                ? baseUrl.replace(/\/$/, '')
-                : `https://${baseUrl.replace(/\/$/, '')}`;
-            content = content.replace(/(^|[\s(['"`>])\/api\/preview\//g, (_match, prefix) => `${prefix}${normalizedBase}/api/preview/`);
-        }
-    }
+    // Preprocess content to convert text-only tools to natural text
+    content = preprocessTextOnlyTools(content);
+    content = maskSandboxLinks(content, project);
+    
     // If in debug mode, just display raw content in a pre tag
     if (debugMode) {
         return (
@@ -195,7 +109,6 @@ export function renderMarkdownContent(
         );
     }
 
-    // Check if content contains the new Cursor-style format
     if (isNewXmlFormat(content)) {
         const contentParts: React.ReactNode[] = [];
         let lastIndex = 0;
@@ -210,11 +123,7 @@ export function renderMarkdownContent(
                 const textBeforeBlock = content.substring(lastIndex, match.index);
                 if (textBeforeBlock.trim()) {
                     contentParts.push(
-                        <ComposioUrlDetector
-                            key={`md-${lastIndex}`}
-                            content={textBeforeBlock}
-                            className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
-                        />
+                        <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeBlock} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
                     );
                 }
             }
@@ -237,13 +146,20 @@ export function renderMarkdownContent(
                     // Render ask tool content with attachment UI
                     contentParts.push(
                         <div key={`ask-${match.index}-${index}`} className="space-y-3">
-                            <ComposioUrlDetector
-                                content={askText}
-                                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
-                            />
+                            <ComposioUrlDetector content={askText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
                             {renderAttachments(attachmentArray, fileViewerHandler, sandboxId, project)}
                         </div>
                     );
+                    
+                    // Also render standalone attachments outside the message
+                    const standaloneAttachments = renderStandaloneAttachments(attachmentArray, fileViewerHandler, sandboxId, project);
+                    if (standaloneAttachments) {
+                        contentParts.push(
+                            <div key={`ask-func-attachments-${match.index}-${index}`}>
+                                {standaloneAttachments}
+                            </div>
+                        );
+                    }
                 } else if (toolName === 'complete') {
                     // Handle complete tool specially - extract text and attachments
                     const completeText = toolCall.parameters.text || '';
@@ -256,13 +172,20 @@ export function renderMarkdownContent(
                     // Render complete tool content with attachment UI
                     contentParts.push(
                         <div key={`complete-${match.index}-${index}`} className="space-y-3">
-                            <ComposioUrlDetector
-                                content={completeText}
-                                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
-                            />
+                            <ComposioUrlDetector content={completeText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
                             {renderAttachments(attachmentArray, fileViewerHandler, sandboxId, project)}
                         </div>
                     );
+                    
+                    // Also render standalone attachments outside the message
+                    const standaloneAttachments = renderStandaloneAttachments(attachmentArray, fileViewerHandler, sandboxId, project);
+                    if (standaloneAttachments) {
+                        contentParts.push(
+                            <div key={`complete-func-attachments-${match.index}-${index}`}>
+                                {standaloneAttachments}
+                            </div>
+                        );
+                    }
                 } else {
                     const IconComponent = getToolIcon(toolName);
 
@@ -281,13 +204,13 @@ export function renderMarkdownContent(
                     contentParts.push(
                         <div
                             key={`tool-${match.index}-${index}`}
-                            className="my-2"
+                            className="my-1"
                         >
                             <button
                                 onClick={() => handleToolClick(messageId, toolName)}
-                                className={styles.toolcallContainer}
+                                className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
                             >
-                                <div className={styles.toolcallIcon}>
+                                <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
                                     <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                 </div>
                                 <span className="font-mono text-xs text-foreground">{getUserFriendlyToolName(toolName)}</span>
@@ -306,23 +229,12 @@ export function renderMarkdownContent(
             const remainingText = content.substring(lastIndex);
             if (remainingText.trim()) {
                 contentParts.push(
-                    <ComposioUrlDetector
-                        key={`md-${lastIndex}`}
-                        content={remainingText}
-                        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
-                    />
+                    <ComposioUrlDetector key={`md-${lastIndex}`} content={remainingText} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
                 );
             }
         }
 
-        return contentParts.length > 0
-            ? contentParts
-            : (
-                <ComposioUrlDetector
-                    content={content}
-                    className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
-                />
-            );
+        return contentParts.length > 0 ? contentParts : <ComposioUrlDetector content={content} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />;
     }
 
     // Fall back to old XML format handling
@@ -333,12 +245,7 @@ export function renderMarkdownContent(
 
     // If no XML tags found, just return the full content as markdown
     if (!content.match(xmlRegex)) {
-        return (
-            <ComposioUrlDetector
-                content={content}
-                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
-            />
-        );
+        return <ComposioUrlDetector content={content} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />;
     }
 
     while ((match = xmlRegex.exec(content)) !== null) {
@@ -346,11 +253,7 @@ export function renderMarkdownContent(
         if (match.index > lastIndex) {
             const textBeforeTag = content.substring(lastIndex, match.index);
             contentParts.push(
-                <ComposioUrlDetector
-                    key={`md-${lastIndex}`}
-                    content={textBeforeTag}
-                    className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words"
-                />
+                <ComposioUrlDetector key={`md-${lastIndex}`} content={textBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none inline-block mr-1 break-words" />
             );
         }
 
@@ -372,13 +275,20 @@ export function renderMarkdownContent(
             // Render <ask> tag content with attachment UI (using the helper)
             contentParts.push(
                 <div key={`ask-${match.index}`} className="space-y-3">
-                    <ComposioUrlDetector
-                        content={askContent}
-                        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
-                    />
+                    <ComposioUrlDetector content={askContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
                     {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
                 </div>
             );
+            
+            // Also render standalone attachments outside the message
+            const standaloneAttachments = renderStandaloneAttachments(attachments, fileViewerHandler, sandboxId, project);
+            if (standaloneAttachments) {
+                contentParts.push(
+                    <div key={`ask-attachments-${match.index}`}>
+                        {standaloneAttachments}
+                    </div>
+                );
+            }
         } else if (toolName === 'complete') {
             // Extract attachments from the XML attributes
             const attachmentsMatch = rawXml.match(/attachments=["']([^"']*)["']/i);
@@ -393,13 +303,20 @@ export function renderMarkdownContent(
             // Render <complete> tag content with attachment UI (using the helper)
             contentParts.push(
                 <div key={`complete-${match.index}`} className="space-y-3">
-                    <ComposioUrlDetector
-                        content={completeContent}
-                        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
-                    />
+                    <ComposioUrlDetector content={completeContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" />
                     {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
                 </div>
             );
+            
+            // Also render standalone attachments outside the message
+            const standaloneAttachments = renderStandaloneAttachments(attachments, fileViewerHandler, sandboxId, project);
+            if (standaloneAttachments) {
+                contentParts.push(
+                    <div key={`complete-attachments-${match.index}`}>
+                        {standaloneAttachments}
+                    </div>
+                );
+            }
         } else {
             const IconComponent = getToolIcon(toolName);
             const paramDisplay = extractPrimaryParam(toolName, rawXml);
@@ -412,9 +329,9 @@ export function renderMarkdownContent(
                 >
                     <button
                         onClick={() => handleToolClick(messageId, toolName)}
-                        className={styles.toolcallContainer}
+                        className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
                     >
-                        <div className={styles.toolcallIcon}>
+                        <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
                             <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                         </div>
                         <span className="font-mono text-xs text-foreground">{getUserFriendlyToolName(toolName)}</span>
@@ -429,11 +346,7 @@ export function renderMarkdownContent(
     // Add text after the last tag
     if (lastIndex < content.length) {
         contentParts.push(
-            <ComposioUrlDetector
-                key={`md-${lastIndex}`}
-                content={content.substring(lastIndex)}
-                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
-            />
+            <ComposioUrlDetector key={`md-${lastIndex}`} content={content.substring(lastIndex)} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" />
         );
     }
 
@@ -460,8 +373,10 @@ export interface ThreadContentProps {
     agentName?: string;
     agentAvatar?: React.ReactNode;
     emptyStateComponent?: React.ReactNode; // Add custom empty state component prop
-    messagesEndRef?: React.RefObject<HTMLDivElement>; // Allow parent to pass ref
-    onScroll?: () => void; // Allow parent to handle scroll
+    threadMetadata?: any; // Add thread metadata prop
+    scrollContainerRef?: React.RefObject<HTMLDivElement>; // Add scroll container ref prop
+    agentMetadata?: any; // Add agent metadata prop
+    agentData?: any; // Add full agent data prop
 }
 
 export const ThreadContent: React.FC<ThreadContentProps> = ({
@@ -481,80 +396,136 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     project,
     debugMode = false,
     isPreviewMode = false,
-    agentName = BRANDING.name,
-    agentAvatar = <BrandLogo size={16} />,
+    agentName = 'Suna',
+    agentAvatar = <KortixLogo size={16} />,
     emptyStateComponent,
-    messagesEndRef: parentMessagesEndRef,
-    onScroll: parentOnScroll,
+    threadMetadata,
+    scrollContainerRef,
+    agentMetadata,
+    agentData,
 }) => {
-    // Use parent refs if provided, otherwise create local ones
-    const localMessagesEndRef = useRef<HTMLDivElement>(null);
-    const messagesEndRef = parentMessagesEndRef || localMessagesEndRef;
-    
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
-    const [showScrollButton, setShowScrollButton] = useState(false);
-    const userHasScrolledRef = React.useRef(false);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [shouldJustifyToTop, setShouldJustifyToTop] = useState(false);
     const { session } = useAuth();
 
     // React Query file preloader
     const { preloadFiles } = useFilePreloader();
 
     const containerClassName = isPreviewMode
-        ? "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 px-6 py-4 pb-72"
-        : "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 px-6 py-4 pb-72 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
+        ? "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 py-4 pb-0"
+        : "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 py-4 pb-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
 
     // In playback mode, we use visibleMessages instead of messages
     const displayMessages = readOnly && visibleMessages ? visibleMessages : messages;
 
-    const latestStatus = [...displayMessages].reverse().find(msg => msg.type === 'status');
-    const latestStatusContent = latestStatus ? safeJsonParse<ParsedContent>(latestStatus.content, {}) : undefined;
-    const latestStatusType = latestStatusContent?.status_type;
-    const latestStatusText = typeof latestStatusContent?.message === 'string'
-        ? latestStatusContent.message.trim()
-        : undefined;
-    const terminalStatusTypes = new Set(['finish', 'tool_failed', 'thread_run_end', 'thread_run_error']);
-    const hasTerminalStatus = latestStatusType ? terminalStatusTypes.has(latestStatusType) : false;
-    const shouldShowToolFailureBanner = latestStatusType === 'tool_failed' && latestStatusText;
+    // Helper function to get agent info robustly
+    const getAgentInfo = useCallback(() => {
 
-    const handleScroll = () => {
-        if (!messagesContainerRef.current) return;
-        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-        const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
-        setShowScrollButton(isScrolledUp);
-        userHasScrolledRef.current = isScrolledUp;
-        
-        // Call parent's onScroll handler if provided
-        if (parentOnScroll) {
-            parentOnScroll();
+        // Check if this is a Suna default agent from metadata
+        const isSunaDefaultAgent = agentMetadata?.is_suna_default || false;
+
+        // Then check recent messages for agent info
+        const recentAssistantWithAgent = [...displayMessages].reverse().find(msg =>
+            msg.type === 'assistant' && msg.agents?.name
+        );
+
+        if (agentData && !isSunaDefaultAgent) {
+            const profileUrl = agentData.profile_image_url;
+            const avatar = profileUrl ? (
+                <img src={profileUrl} alt={agentData.name || agentName} className="h-5 w-5 rounded object-cover" />
+            ) : agentData.avatar ? (
+                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                    <span className="text-lg">{agentData.avatar}</span>
+                </div>
+            ) : (
+                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                    <KortixLogo size={16} />
+                </div>
+            );
+            return {
+                name: agentData.name || agentName,
+                avatar
+            };
         }
-    };
 
-    const scrollToBottom = useCallback(
-        (behavior: ScrollBehavior = 'smooth') => {
-            messagesEndRef.current?.scrollIntoView({ behavior });
-        },
-        [messagesEndRef],
-    );
+        if (recentAssistantWithAgent?.agents?.name) {
+            const isSunaAgent = recentAssistantWithAgent.agents.name === 'Suna' || isSunaDefaultAgent;
+            // Prefer profile image if available on the agent payload
+            const profileUrl = (recentAssistantWithAgent as any)?.agents?.profile_image_url;
+            const avatar = profileUrl && !isSunaDefaultAgent ? (
+                <img src={profileUrl} alt={recentAssistantWithAgent.agents.name} className="h-5 w-5 rounded object-cover" />
+            ) : !isSunaDefaultAgent ? (
+                <>
+                    {isSunaAgent ? (
+                        <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                            <KortixLogo size={16} />
+                        </div>
+                    ) : (
+                        <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                            <span className="text-lg">{recentAssistantWithAgent.agents.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                    <KortixLogo size={16} />
+                </div>
+            );
+            return {
+                name: recentAssistantWithAgent.agents.name,
+                avatar
+            };
+        }
 
-    // Auto-scroll to bottom on new content when user hasn't scrolled up
-    React.useEffect(() => {
-        if (!messagesContainerRef.current) return;
-        if (userHasScrolledRef.current) return; // respect manual scroll up
-        // Defer to allow DOM to paint before scrolling
-        const timer = setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 0);
-        return () => clearTimeout(timer);
-    }, [
-        displayMessages,
-        streamingTextContent,
-        streamingText,
-        currentToolCall,
-        agentStatus,
-        readOnly,
-        messagesEndRef,
-    ]);
+        // Fallback: if this is a Suna default agent, always show KortixLogo
+        if (isSunaDefaultAgent) {
+            return {
+                name: agentName || 'Suna',
+                avatar: (
+                    <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
+                        <KortixLogo size={16} />
+                    </div>
+                )
+            };
+        }
+
+        return {
+            name: agentName || 'Suna',
+            avatar: agentAvatar
+        };
+    }, [threadMetadata, displayMessages, agentName, agentAvatar, agentMetadata, agentData]);
+
+    // Simplified scroll handler - flex-column-reverse handles positioning
+    const handleScroll = useCallback(() => {
+        // No scroll logic needed with flex-column-reverse
+    }, []);
+
+    // No scroll-to-bottom needed with flex-column-reverse
+
+    // No auto-scroll needed with flex-column-reverse - CSS handles it
+
+    // Smart justify-content based on content height
+    useEffect(() => {
+        const checkContentHeight = () => {
+            const container = (scrollContainerRef || messagesContainerRef).current;
+            const content = contentRef.current;
+            if (!container || !content) return;
+
+            const containerHeight = container.clientHeight;
+            const contentHeight = content.scrollHeight;
+            setShouldJustifyToTop(contentHeight <= containerHeight);
+        };
+
+        checkContentHeight();
+        const resizeObserver = new ResizeObserver(checkContentHeight);
+        if (contentRef.current) resizeObserver.observe(contentRef.current);
+        const containerRef = (scrollContainerRef || messagesContainerRef).current;
+        if (containerRef) resizeObserver.observe(containerRef);
+
+        return () => resizeObserver.disconnect();
+    }, [displayMessages, streamingTextContent, agentStatus, scrollContainerRef]);
 
     // Preload all message attachments when messages change or sandboxId is provided
     React.useEffect(() => {
@@ -604,13 +575,13 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                     )}
                 </div>
             ) : (
-                // Render scrollable content container
+                // Render scrollable content container with column-reverse (or just content when external scrolling)
                 <div
-                    ref={messagesContainerRef}
-                    className={containerClassName}
-                    onScroll={handleScroll}
+                    ref={scrollContainerRef || messagesContainerRef}
+                    className={scrollContainerRef ? `${containerClassName} flex flex-col-reverse ${shouldJustifyToTop ? 'justify-end min-h-full' : ''}` : 'py-4 pb-0'}
+                    onScroll={scrollContainerRef ? handleScroll : undefined}
                 >
-                    <div className="mx-auto max-w-3xl px-4 min-w-0">
+                    <div ref={contentRef} className="mx-auto min-w-0 w-full max-w-3xl px-4 md:px-6">
                         <div className="space-y-8 min-w-0">
                             {(() => {
 
@@ -720,8 +691,13 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                 // Use merged groups instead of original grouped messages
                                 const finalGroupedMessages = mergedGroups;
 
-                                // Handle streaming content - only add to existing group or create new one if needed
-                                if (streamingTextContent) {
+                                
+                                // Helper function to add streaming content to groups
+                                const appendStreamingContent = (content: string, isPlayback: boolean = false) => {
+                                    const messageId = isPlayback ? 'playbackStreamingText' : 'streamingTextContent';
+                                    const metadata = isPlayback ? 'playbackStreamingText' : 'streamingTextContent';
+                                    const keySuffix = isPlayback ? 'playback-streaming' : 'streaming';
+                                    
                                     const lastGroup = finalGroupedMessages.at(-1);
                                     if (!lastGroup || lastGroup.type === 'user') {
                                         // Create new assistant group for streaming content
@@ -729,35 +705,45 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         finalGroupedMessages.push({
                                             type: 'assistant_group',
                                             messages: [{
-                                                content: streamingTextContent,
+                                                content,
                                                 type: 'assistant',
-                                                message_id: 'streamingTextContent',
-                                                metadata: 'streamingTextContent',
+                                                message_id: messageId,
+                                                metadata,
                                                 created_at: new Date().toISOString(),
                                                 updated_at: new Date().toISOString(),
                                                 is_llm_message: true,
-                                                thread_id: 'streamingTextContent',
+                                                thread_id: messageId,
                                                 sequence: Infinity,
                                             }],
-                                            key: `assistant-group-${assistantGroupCounter}-streaming`
+                                            key: `assistant-group-${assistantGroupCounter}-${keySuffix}`
                                         });
                                     } else if (lastGroup.type === 'assistant_group') {
                                         // Only add streaming content if it's not already represented in the last message
                                         const lastMessage = lastGroup.messages[lastGroup.messages.length - 1];
-                                        if (lastMessage.message_id !== 'streamingTextContent') {
+                                        if (lastMessage.message_id !== messageId) {
                                             lastGroup.messages.push({
-                                                content: streamingTextContent,
+                                                content,
                                                 type: 'assistant',
-                                                message_id: 'streamingTextContent',
-                                                metadata: 'streamingTextContent',
+                                                message_id: messageId,
+                                                metadata,
                                                 created_at: new Date().toISOString(),
                                                 updated_at: new Date().toISOString(),
                                                 is_llm_message: true,
-                                                thread_id: 'streamingTextContent',
+                                                thread_id: messageId,
                                                 sequence: Infinity,
                                             });
                                         }
                                     }
+                                };
+
+                                // Handle streaming content - only add to existing group or create new one if needed
+                                if (streamingTextContent) {
+                                    appendStreamingContent(streamingTextContent, false);
+                                }
+
+                                // Handle playback mode streaming text
+                                if (readOnly && streamingText && isStreamingText) {
+                                    appendStreamingContent(streamingText, true);
                                 }
 
                                 return finalGroupedMessages.map((group, groupIndex) => {
@@ -766,13 +752,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         const messageContent = (() => {
                                             try {
                                                 const parsed = safeJsonParse<ParsedContent>(message.content, { content: message.content });
-                                                const raw = (parsed as any)?.content ?? message.content;
-                                                return typeof raw === 'string' ? raw : JSON.stringify(raw);
+                                                return parsed.content || message.content;
                                             } catch {
-                                                return typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+                                                return message.content;
                                             }
                                         })();
-
 
                                         // In debug mode, display raw message content
                                         if (debugMode) {
@@ -798,68 +782,49 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                         // Remove attachment info from the message content
                                         const cleanContent = messageContent.replace(/\[Uploaded File: .*?\]/g, '').trim();
+                                        const maskedCleanContent = maskSandboxLinks(cleanContent, project);
 
                                         return (
-                                            <div key={group.key} className="flex justify-end">
-                                                <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
-                                                    <div className="space-y-3 min-w-0 flex-1">
-                                                    {cleanContent && (
-                                                        <ComposioUrlDetector
-                                                            content={cleanContent}
-                                                            className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
-                                                        />
-                                                    )}
+                                            <div key={group.key} className="space-y-3">
+                                                {/* All file attachments rendered outside message bubble */}
+                                                {renderStandaloneAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project, true)}
+                                                
+                                                <div className="flex justify-end">
+                                                    <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
+                                                        <div className="space-y-3 min-w-0 flex-1">
+                                                            {maskedCleanContent && (
+                                                                <ComposioUrlDetector content={maskedCleanContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                            )}
 
-                                                        {/* Use the helper function to render user attachments */}
-                                                        {renderStandaloneAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project, true)}
+                                                            {/* Use the helper function to render regular (non-spreadsheet) attachments */}
+                                                            {renderAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project)}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         );
                                     } else if (group.type === 'assistant_group') {
+                                        // Get agent_id from the first assistant message in this group
+                                        const firstAssistantMsg = group.messages.find(m => m.type === 'assistant');
+                                        const groupAgentId = firstAssistantMsg?.agent_id;
+                                        
                                         return (
                                             <div key={group.key} ref={groupIndex === groupedMessages.length - 1 ? latestMessageRef : null}>
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center">
                                                         <div className="rounded-md flex items-center justify-center relative">
-                                                            {(() => {
-                                                                const firstAssistantWithAgent = group.messages.find(msg =>
-                                                                    msg.type === 'assistant' && (msg.agents?.avatar || msg.agents?.avatar_color)
-                                                                );
-
-                                                                const isProphetAgent = firstAssistantWithAgent?.agents?.name === BRANDING.name;
-
-                                                                if (firstAssistantWithAgent?.agents?.avatar) {
-                                                                    const avatar = firstAssistantWithAgent.agents.avatar;
-                                                                    return (
-                                                                        <>
-                                                                            {isProphetAgent ? (
-                                                                                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                                                                                    <BrandLogo size={16} />
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div
-                                                                                    className="h-5 w-5 flex items-center justify-center rounded text-xs"
-                                                                                >
-                                                                                    <span className="text-lg">{avatar}</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </>
-                                                                    );
-                                                                }
-                                                                return <BrandLogo size={16} />;
-                                                            })()}
+                                                            {groupAgentId ? (
+                                                                <AgentAvatar agentId={groupAgentId} size={20} className="h-5 w-5" />
+                                                            ) : (
+                                                                getAgentInfo().avatar
+                                                            )}
                                                         </div>
                                                         <p className='ml-2 text-sm text-muted-foreground'>
-                                                            {(() => {
-                                                                const firstAssistantWithAgent = group.messages.find(msg =>
-                                                                    msg.type === 'assistant' && msg.agents?.name
-                                                                );
-                                                                if (firstAssistantWithAgent?.agents?.name) {
-                                                                    return firstAssistantWithAgent.agents.name;
-                                                                }
-                                                                return BRANDING.name;
-                                                            })()}
+                                                            {groupAgentId ? (
+                                                                <AgentName agentId={groupAgentId} fallback={getAgentInfo().name} />
+                                                            ) : (
+                                                                getAgentInfo().name
+                                                            )}
                                                         </p>
                                                     </div>
 
@@ -916,23 +881,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                         if (!parsedContent.content) return;
 
-                                                                        // Garantir string segura para React
-                                                                        const assistantContentStr = (() => {
-                                                                            try {
-                                                                                const raw = (parsedContent as any).content;
-                                                                                if (typeof raw === 'string') return raw;
-                                                                                return JSON.stringify(raw ?? '');
-                                                                            } catch {
-                                                                                try {
-                                                                                    return String((parsedContent as any).content ?? '');
-                                                                                } catch {
-                                                                                    return '';
-                                                                                }
-                                                                            }
-                                                                        })();
-
                                                                         const renderedContent = renderMarkdownContent(
-                                                                            assistantContentStr,
+                                                                            parsedContent.content,
                                                                             handleToolClick,
                                                                             message.message_id,
                                                                             handleOpenFileViewer,
@@ -957,7 +907,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                             })()}
 
                                                             {groupIndex === finalGroupedMessages.length - 1 && !readOnly && (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && (
-                                                                <div className="mt-2">
+                                                                <div className="mt-4">
                                                                     {(() => {
                                                                         // In debug mode, show raw streaming content
                                                                         if (debugMode && streamingTextContent) {
@@ -968,11 +918,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                             );
                                                                         }
 
+                                                                        // Preprocess content first to remove text-only tool tags
+                                                                        const textToRender = preprocessTextOnlyTools(streamingTextContent || '');
+                                                                        
                                                                         let detectedTag: string | null = null;
                                                                         let tagStartIndex = -1;
-                                                                        if (streamingTextContent) {
+                                                                        if (textToRender) {
                                                                             // First check for new format
-                                                                            const functionCallsIndex = streamingTextContent.indexOf('<function_calls>');
+                                                                            const functionCallsIndex = textToRender.indexOf('<function_calls>');
                                                                             if (functionCallsIndex !== -1) {
                                                                                 detectedTag = 'function_calls';
                                                                                 tagStartIndex = functionCallsIndex;
@@ -980,50 +933,41 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                 // Fall back to old format detection
                                                                                 for (const tag of HIDE_STREAMING_XML_TAGS) {
                                                                                     const openingTagPattern = `<${tag}`;
-                                                                                    const index = streamingTextContent.indexOf(openingTagPattern);
+                                                                                    const index = textToRender.indexOf(openingTagPattern);
                                                                                     if (index !== -1) {
                                                                                         detectedTag = tag;
                                                                                         tagStartIndex = index;
                                                                                         break;
                                                                                     }
                                                                                 }
-                                                                                // Fuzzy detection for partial/incomplete tags (backup behavior)
-                                                                                if (!detectedTag) {
-                                                                                    const fuzzyMatch = /<\s*(?:funct|function|invok|invoke|param|tool|call|ask|compl|execut|browser|sb_|mcp|data_|web|xml)/i.exec(streamingTextContent);
-                                                                                    if (fuzzyMatch) {
-                                                                                        detectedTag = 'partial';
-                                                                                        tagStartIndex = fuzzyMatch.index;
-                                                                                    } else {
-                                                                                        // If there is a '<' near the end without a closing '>' yet, treat as start of a tag
-                                                                                        const lastLt = streamingTextContent.lastIndexOf('<');
-                                                                                        if (lastLt !== -1 && streamingTextContent.indexOf('>', lastLt) === -1) {
-                                                                                            detectedTag = 'partial';
-                                                                                            tagStartIndex = lastLt;
-                                                                                        }
-                                                                                    }
-                                                                                }
                                                                             }
                                                                         }
+                                                                        const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
+                                                                        const maskedTextBeforeTag = maskSandboxLinks(textBeforeTag, project);
+                                                                        const showCursor =
+                                                                          (streamHookStatus ===
+                                                                            'streaming' ||
+                                                                            streamHookStatus ===
+                                                                              'connecting') &&
+                                                                          !detectedTag;
 
-
-                                                                        // Debounce curto para evitar flicker de tags parciais
-                                                                        const textToRender = streamingTextContent || '';
-                                                                        const textBeforeTag = detectedTag ? textToRender.substring(0, Math.max(0, tagStartIndex)) : textToRender;
-                                                                        // Sanitiza caracteres de controle preservando TAB(\t), LF(\n) e CR(\r)
-                                                                        const sanitizedTextBeforeTag = textBeforeTag.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
-                                                                        const showCursor = (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && !detectedTag;
+                                                                        // Show minimal processing indicator when agent is active but no streaming text after preprocessing
+                                                                        if (!textToRender && (streamHookStatus === 'streaming' || streamHookStatus === 'connecting')) {
+                                                                            return (
+                                                                                <div className="flex items-center gap-1 py-1 ">
+                                                                                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-pulse duration-1000" />
+                                                                                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-pulse duration-1000 delay-150" />
+                                                                                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-pulse duration-1000 delay-300" />
+                                                                                </div>
+                                                                            );
+                                                                        }
 
                                                                         return (
                                                                             <>
-                                                                                {sanitizedTextBeforeTag && (
-                                                                                    <ComposioUrlDetector
-                                                                                        content={sanitizedTextBeforeTag}
-                                                                                        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none whitespace-pre-wrap [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
-                                                                                    />
-                                                                                )}
-                                                                                {showCursor && (
-                                                                                    <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse" />
-                                                                                )}
+                                                                                <StreamingText 
+                                                                                    content={maskedTextBeforeTag} 
+                                                                                    className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
+                                                                                />
 
                                                                                 {detectedTag && (
                                                                                     <ShowToolStream
@@ -1034,8 +978,6 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         startTime={Date.now()}
                                                                                     />
                                                                                 )}
-
-
                                                                             </>
                                                                         );
                                                                     })()}
@@ -1044,13 +986,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                             {/* For playback mode, show streaming text and tool calls */}
                                                             {readOnly && groupIndex === finalGroupedMessages.length - 1 && isStreamingText && (
-                                                                <div className="mt-2">
+                                                                <div className="mt-4">
                                                                     {(() => {
+                                                                        // Preprocess content first to remove text-only tool tags
+                                                                        const textToRender = preprocessTextOnlyTools(streamingText || '');
+                                                                        
                                                                         let detectedTag: string | null = null;
                                                                         let tagStartIndex = -1;
-                                                                        if (streamingText) {
+                                                                        if (textToRender) {
                                                                             // First check for new format
-                                                                            const functionCallsIndex = streamingText.indexOf('<function_calls>');
+                                                                            const functionCallsIndex = textToRender.indexOf('<function_calls>');
                                                                             if (functionCallsIndex !== -1) {
                                                                                 detectedTag = 'function_calls';
                                                                                 tagStartIndex = functionCallsIndex;
@@ -1058,32 +1003,17 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                 // Fall back to old format detection
                                                                                 for (const tag of HIDE_STREAMING_XML_TAGS) {
                                                                                     const openingTagPattern = `<${tag}`;
-                                                                                    const index = streamingText.indexOf(openingTagPattern);
+                                                                                    const index = textToRender.indexOf(openingTagPattern);
                                                                                     if (index !== -1) {
                                                                                         detectedTag = tag;
                                                                                         tagStartIndex = index;
                                                                                         break;
                                                                                     }
                                                                                 }
-                                                                                // Fuzzy detection for partial/incomplete tags (backup behavior)
-                                                                                if (!detectedTag) {
-                                                                                    const fuzzyMatch = /<\s*(?:funct|function|invok|invoke|param|tool|call|ask|compl|execut|browser|sb_|mcp|data_|web|xml)/i.exec(streamingText);
-                                                                                    if (fuzzyMatch) {
-                                                                                        detectedTag = 'partial';
-                                                                                        tagStartIndex = fuzzyMatch.index;
-                                                                                    } else {
-                                                                                        const lastLt = streamingText.lastIndexOf('<');
-                                                                                        if (lastLt !== -1 && streamingText.indexOf('>', lastLt) === -1) {
-                                                                                            detectedTag = 'partial';
-                                                                                            tagStartIndex = lastLt;
-                                                                                        }
-                                                                                    }
-                                                                                }
                                                                             }
                                                                         }
-
-                                                                        const textToRender = streamingText || '';
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
+                                                                        const maskedTextBeforeTag = maskSandboxLinks(textBeforeTag, project);
                                                                         const showCursor = isStreamingText && !detectedTag;
 
                                                                         return (
@@ -1092,18 +1022,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                 {debugMode && streamingText ? (
                                                                                     <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto p-2 border border-border rounded-md bg-muted/30">
                                                                                         {streamingText}
+                                                                                        {showCursor && (
+                                                                                            <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse duration-1000" />
+                                                                                        )}
                                                                                     </pre>
                                                                                 ) : (
                                                                                     <>
-                                                                                        {textBeforeTag && (
-                                                                                            <ComposioUrlDetector
-                                                                                                content={textBeforeTag}
-                                                                                                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
-                                                                                            />
-                                                                                        )}
-                                                                                        {showCursor && (
-                                                                                            <span className="inline-block h-4 w-0.5 bg-primary ml-0.5 -mb-1 animate-pulse" />
-                                                                                        )}
+                                                                                        <StreamingText 
+                                                                                            content={maskedTextBeforeTag} 
+                                                                                            className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere"
+                                                                                        />
 
                                                                                         {detectedTag && (
                                                                                             <ShowToolStream
@@ -1132,16 +1060,17 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                             })()}
                             {((agentStatus === 'running' || agentStatus === 'connecting') && !streamingTextContent &&
                                 !readOnly &&
-                                (messages.length === 0 || messages[messages.length - 1].type === 'user') &&
-                                !hasTerminalStatus) && (
+                                (messages.length === 0 || messages[messages.length - 1].type === 'user')) && (
                                     <div ref={latestMessageRef} className='w-full h-22 rounded'>
                                         <div className="flex flex-col gap-2">
                                             {/* Logo positioned above the loader */}
                                             <div className="flex items-center">
                                                 <div className="rounded-md flex items-center justify-center">
-                                                    {agentAvatar}
+                                                    {getAgentInfo().avatar}
                                                 </div>
-                                                <p className='ml-2 text-sm text-muted-foreground'>{agentName || BRANDING.name}</p>
+                                                <p className='ml-2 text-sm text-muted-foreground'>
+                                                    {getAgentInfo().name}
+                                                </p>
                                             </div>
 
                                             {/* Loader content */}
@@ -1151,38 +1080,26 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         </div>
                                     </div>
                                 )}
-
-                            {shouldShowToolFailureBanner && (
-                                <div ref={latestMessageRef} className="flex justify-start">
-                                    <div className="flex max-w-[85%] items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                                        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                        <span>{latestStatusText}</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* For playback mode - Show tool call animation if active */}
                             {readOnly && currentToolCall && (
                                 <div ref={latestMessageRef}>
                                     <div className="flex flex-col gap-2">
                                         {/* Logo positioned above the tool call */}
                                         <div className="flex justify-start">
                                             <div className="rounded-md flex items-center justify-center">
-                                                {agentAvatar}
+                                                {getAgentInfo().avatar}
                                             </div>
-                                            <p className='ml-2 text-sm text-muted-foreground'>{agentName || BRANDING.name}</p>
+                                            <p className='ml-2 text-sm text-muted-foreground'>
+                                                {getAgentInfo().name}
+                                            </p>
                                         </div>
 
                                         {/* Tool call content */}
                                         <div className="space-y-2">
-                                            <div className="inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium text-primary bg-primary/10 rounded-md border border-primary/20 relative overflow-hidden">
-                                                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/15 to-primary/5 animate-pulse"></div>
-                                                <div className="relative z-10 flex items-center gap-1.5">
-                                                    <CircleDashed className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-spin animation-duration-2000" />
-                                                    <span className="font-mono text-xs text-primary">
-                                                        {currentToolCall.name || 'Using Tool'}
-                                                    </span>
-                                                </div>
+                                            <div className="animate-shimmer inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium text-primary bg-primary/10 rounded-md border border-primary/20">
+                                                <CircleDashed className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-spin animation-duration-2000" />
+                                                <span className="font-mono text-xs text-primary">
+                                                    {currentToolCall.name || 'Using Tool'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1196,39 +1113,31 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         {/* Logo positioned above the streaming indicator */}
                                         <div className="flex justify-start">
                                             <div className="rounded-md flex items-center justify-center">
-                                                {agentAvatar}
+                                                {getAgentInfo().avatar}
                                             </div>
-                                            <p className='ml-2 text-sm text-muted-foreground'>{agentName || BRANDING.name}</p>
+                                            <p className='ml-2 text-sm text-muted-foreground'>
+                                                {getAgentInfo().name}
+                                            </p>
                                         </div>
 
                                         {/* Streaming indicator content */}
                                         <div className="max-w-[90%] px-4 py-3 text-sm">
                                             <div className="flex items-center gap-1.5 py-1">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse" />
-                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse delay-150" />
-                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse delay-300" />
+                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse duration-1000" />
+                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse duration-1000 delay-150" />
+                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse duration-1000 delay-300" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             )}
+                            <div className="!h-48" />
                         </div>
                     </div>
-                    <div ref={messagesEndRef} className="h-1" />
                 </div>
             )}
 
-            {/* Scroll to bottom button */}
-            {showScrollButton && (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="fixed bottom-20 right-6 z-10 h-8 w-8 rounded-full shadow-md"
-                    onClick={() => scrollToBottom('smooth')}
-                >
-                    <ArrowDown className="h-4 w-4" />
-                </Button>
-            )}
+            {/* No scroll button needed with flex-column-reverse */}
         </>
     );
 };

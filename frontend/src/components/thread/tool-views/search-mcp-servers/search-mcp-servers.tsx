@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Image from 'next/image';
 import {
   Search,
   CheckCircle,
@@ -36,7 +35,6 @@ export function SearchMcpServersToolView({
   isStreaming = false,
 }: ToolViewProps) {
   const [expandedResults, setExpandedResults] = useState<Record<number, boolean>>({});
-  const [failedLogos, setFailedLogos] = useState<Record<string, boolean>>({});
 
   const {
     query,
@@ -55,45 +53,43 @@ export function SearchMcpServersToolView({
 
   const toolTitle = getToolTitle(name);
 
-  const getAuthTypeColor = (authType: string) => {
-    switch (authType?.toLowerCase()) {
-      case 'oauth':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800';
-      case 'api_key':
-        return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
-      case 'none':
-        return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800';
-      default:
-        return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800';
+  const getAuthSchemeColor = (authSchemes: string[]) => {
+    if (authSchemes?.includes('OAUTH2')) {
+      return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800';
+    } else if (authSchemes?.includes('API_KEY')) {
+      return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
+    } else if (authSchemes?.includes('BEARER_TOKEN')) {
+      return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800';
+    } else {
+      return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800';
     }
   };
 
-  const getAuthTypeIcon = (authType: string) => {
-    switch (authType?.toLowerCase()) {
-      case 'oauth':
-        return ShieldCheck;
-      case 'api_key':
-        return Shield;
-      default:
-        return Shield;
+  const getAuthSchemeIcon = (authSchemes: string[]) => {
+    if (authSchemes?.includes('OAUTH2')) {
+      return ShieldCheck;
+    } else {
+      return Shield;
     }
   };
 
-  const toggleExpanded = (index: number) => {
-    setExpandedResults(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+  const getPrimaryAuthScheme = (authSchemes: string[]) => {
+    if (authSchemes?.includes('OAUTH2')) return 'OAuth2';
+    if (authSchemes?.includes('API_KEY')) return 'API Key';
+    if (authSchemes?.includes('BEARER_TOKEN')) return 'Bearer Token';
+    return authSchemes?.[0] || 'Unknown';
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
-      <CardHeader className="px-4 py-3 bg-black/[0.01] dark:bg-white/[0.01] backdrop-blur-sm border-b border-black/6 dark:border-white/8">
+    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
+      <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground opacity-60" />
+            <div className="relative p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
+              <Search className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            </div>
             <div>
-              <CardTitle className="text-sm font-medium text-foreground">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
             </div>
@@ -134,8 +130,9 @@ export function SearchMcpServersToolView({
           <ScrollArea className="h-full w-full">
             <div className="p-4 space-y-3">
               {results.map((result: McpServerResult, index: number) => {
-                const AuthIcon = getAuthTypeIcon(result.auth_type);
+                const AuthIcon = getAuthSchemeIcon(result.auth_schemes);
                 const isExpanded = expandedResults[index];
+                const hasOAuth = result.auth_schemes?.includes('OAUTH2');
                 
                 return (
                   <div
@@ -145,28 +142,27 @@ export function SearchMcpServersToolView({
                     <div className="flex items-start gap-3">
                       <div className="relative flex-shrink-0">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted/50 border flex items-center justify-center">
-                          {(() => {
-                            const logoKey = result.app_slug || result.name || String(index);
-                            if (result.logo_url && !failedLogos[logoKey]) {
-                              return (
-                                <Image
-                                  src={result.logo_url}
-                                  alt={`${result.name} logo`}
-                                  width={32}
-                                  height={32}
-                                  className="w-8 h-8 object-cover"
-                                  onError={() => {
-                                    setFailedLogos((prev) => ({ ...prev, [logoKey]: true }));
-                                  }}
-                                />
-                              );
-                            }
-                            return <Server className="w-6 h-6 text-zinc-400" />;
-                          })()}
+                          {result.logo_url ? (
+                            <img
+                              src={result.logo_url}
+                              alt={`${result.name} logo`}
+                              className="w-8 h-8 object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-zinc-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg></div>`;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Server className="w-6 h-6 text-zinc-400" />
+                          )}
                         </div>
-                        {result.is_verified && (
+                        {hasOAuth && (
                           <div className="absolute -top-1 -right-1">
-                            <div className="bg-blue-500 rounded-full p-1">
+                            <div className="bg-emerald-500 rounded-full p-1">
                               <Verified className="w-3 h-3 text-white" />
                             </div>
                           </div>
@@ -180,32 +176,32 @@ export function SearchMcpServersToolView({
                               <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                                 {result.name}
                               </h3>
-                              {result.is_verified && (
+                              {hasOAuth && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger>
                                       <div className="flex items-center">
-                                        <Sparkles className="w-4 h-4 text-blue-500" />
+                                        <Sparkles className="w-4 h-4 text-emerald-500" />
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Verified integration</p>
+                                      <p>OAuth2 supported</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
                             </div>
                             <p className="text-sm text-zinc-600 dark:text-zinc-400 font-mono">
-                              {result.app_slug}
+                              {result.toolkit_slug}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className={cn("text-xs font-medium", getAuthTypeColor(result.auth_type))}
+                              className={cn("text-xs font-medium", getAuthSchemeColor(result.auth_schemes))}
                             >
                               <AuthIcon className="w-3 h-3 " />
-                              {result.auth_type?.replace('_', ' ') || 'Unknown'}
+                              {getPrimaryAuthScheme(result.auth_schemes)}
                             </Badge>
                           </div>
                         </div>
@@ -216,17 +212,6 @@ export function SearchMcpServersToolView({
                         </p>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {result.url && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                                onClick={() => window.open(result.url!, '_blank')}
-                              >
-                                <ExternalLink className="w-3 h-3 " />
-                                View
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -242,7 +227,7 @@ export function SearchMcpServersToolView({
               <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Search className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
+              <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-2">
                 No MCP servers found
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
