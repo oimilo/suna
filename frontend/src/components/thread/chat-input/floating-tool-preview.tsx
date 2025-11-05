@@ -88,8 +88,6 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
     }
   }, [isVisible]);
 
-  if (!currentToolCall || totalCalls === 0) return null;
-
   const toolName = currentToolCall.assistantCall?.name || 'Tool Call';
   const CurrentToolIcon = getToolIcon(toolName);
   const isStreaming = currentToolCall.toolResult?.content === 'STREAMING';
@@ -100,6 +98,8 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
     setInternalIndex(next);
     onNavigate?.(next);
   }, [totalCalls, onNavigate]);
+
+  if (!currentToolCall || totalCalls === 0) return null;
 
   const handleClick = () => {
     setIsExpanding(true);

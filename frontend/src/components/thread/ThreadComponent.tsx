@@ -3,6 +3,7 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -102,6 +103,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
+  const shouldReserveSidebarSpace = useMemo(() => {
+    if (isMobile) {
+      return leftSidebarState === 'expanded';
+    }
+    return true;
+  }, [isMobile, leftSidebarState]);
 
   // Custom hooks
   const {
@@ -1058,7 +1065,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           className={cn(
             'flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out',
             !isMobile && (!isSidePanelOpen || isPanelMinimized)
-              ? leftSidebarState === 'expanded'
+              ? shouldReserveSidebarSpace
                 ? 'px-[72px] md:px-[256px]'
                 : 'px-[40px]'
               : ''
@@ -1092,7 +1099,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               : 'transition-all duration-200 ease-in-out',
             isMobile
               ? 'left-0 right-0'
-              : leftSidebarState === 'expanded'
+              : shouldReserveSidebarSpace
                 ? 'left-[72px] right-[72px] md:left-[256px] md:right-[256px]'
                 : 'left-[24px] right-[48px]',
             isSidePanelOpen && !isPanelMinimized && !isMobile

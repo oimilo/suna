@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { HoverSidebar } from '@/components/sidebar/hover-sidebar';
 import { useSidebarContext } from '@/contexts/sidebar-context';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarLeft } from '@/components/sidebar/sidebar-left';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
 import { MaintenanceAlert } from '@/components/maintenance-alert';
@@ -111,12 +111,8 @@ export default function DashboardLayoutContent({
           onOpenChange={setIsPinned}
           defaultOpen={isPinned}
         >
-          <HoverSidebar />
-          <div
-            className={`min-h-screen transition-all duration-200 ${
-              isPinned ? 'pl-64' : 'pl-0'
-            }`}
-          >
+          <SidebarLeft variant="sidebar" side="left" />
+          <div className="min-h-screen transition-all duration-200 pl-0 md:pl-64">
             {mantenanceBanner}
             {children}
           </div>
