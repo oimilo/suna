@@ -7,7 +7,6 @@ import { SidebarLeft } from '@/components/sidebar/sidebar-left';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
 import { MaintenanceAlert } from '@/components/maintenance-alert';
-import { useAccounts } from '@/hooks/use-accounts';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -18,11 +17,7 @@ import { StatusOverlay } from '@/components/ui/status-overlay';
 import type { IMaintenanceNotice } from '@/lib/edge-flags';
 import { MaintenanceNotice } from './maintenance-notice';
 import { MaintenanceBanner } from './maintenance-banner';
-import { 
-  WelcomeAnnouncement,
-  OnboardingTour,
-  OnboardingDevControls
-} from '@/components/onboarding';
+import { OnboardingProvider, OnboardingDevControls } from '@/components/onboarding';
 import { AnnouncementDialog } from '@/components/ui/announcement-dialog';
 
 interface DashboardLayoutContentProps {
@@ -36,8 +31,6 @@ export default function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   // const [showPricingAlert, setShowPricingAlert] = useState(false)
   const [showMaintenanceAlert, setShowMaintenanceAlert] = useState(false);
-  const { data: accounts } = useAccounts();
-  const personalAccount = accounts?.find((account) => account.personal_account);
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const { data: healthData, isLoading: isCheckingHealth, error: healthError } = useApiHealth();
@@ -106,40 +99,37 @@ export default function DashboardLayoutContent({
   return (
     <SubscriptionProvider>
       <DeleteOperationProvider>
-        <SidebarProvider
-          open={isPinned}
-          onOpenChange={setIsPinned}
-          defaultOpen={isPinned}
-        >
-          <SidebarLeft variant="sidebar" side="left" />
-          <SidebarInset className="min-h-screen transition-all duration-200">
-            {mantenanceBanner}
-            {children}
-          </SidebarInset>
-        </SidebarProvider>
+        <OnboardingProvider>
+          <SidebarProvider
+            open={isPinned}
+            onOpenChange={setIsPinned}
+            defaultOpen={isPinned}
+          >
+            <SidebarLeft variant="sidebar" side="left" />
+            <SidebarInset className="min-h-screen transition-all duration-200">
+              {mantenanceBanner}
+              {children}
+            </SidebarInset>
+          </SidebarProvider>
 
-        {/* <PricingAlert 
-        open={showPricingAlert} 
-        onOpenChange={setShowPricingAlert}
-        closeable={false}
-        accountId={personalAccount?.account_id}
-        /> */}
+          {/* <PricingAlert 
+          open={showPricingAlert} 
+          onOpenChange={setShowPricingAlert}
+          closeable={false}
+          accountId={personalAccount?.account_id}
+          /> */}
 
-        <MaintenanceAlert
-          open={showMaintenanceAlert}
-          onOpenChange={setShowMaintenanceAlert}
-          closeable={true}
-        />
+          <MaintenanceAlert
+            open={showMaintenanceAlert}
+            onOpenChange={setShowMaintenanceAlert}
+            closeable={true}
+          />
 
-        {/* Status overlay for deletion operations */}
-        <StatusOverlay />
-        
-        {/* Onboarding components */}
-        <WelcomeAnnouncement />
-        <OnboardingTour />
-        {/* <OnboardingFloatingButton /> */}
-        {/** <OnboardingDevControls /> */}
-        <AnnouncementDialog />
+          {/* Status overlay for deletion operations */}
+          <StatusOverlay />
+          <AnnouncementDialog />
+          <OnboardingDevControls />
+        </OnboardingProvider>
       </DeleteOperationProvider>
     </SubscriptionProvider>
   );
