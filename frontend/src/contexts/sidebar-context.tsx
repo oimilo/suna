@@ -12,9 +12,12 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isPinned, setIsPinnedState] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('sidebar:pinned') === 'true';
+      const stored = localStorage.getItem('sidebar:pinned');
+      if (stored !== null) {
+        return stored === 'true';
+      }
     }
-    return false;
+    return true;
   });
 
   const setIsPinned = (pinned: boolean) => {
