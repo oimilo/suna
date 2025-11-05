@@ -188,6 +188,7 @@ export function ThreadLayout({
         isPanelMinimized={isPanelMinimized}
         onClose={onSidePanelClose}
         onMinimize={onSidePanelMinimize}
+        onMaximize={onSidePanelMaximize}
         toolCalls={toolCalls}
         messages={messages}
         externalNavigateToIndex={externalNavIndex}

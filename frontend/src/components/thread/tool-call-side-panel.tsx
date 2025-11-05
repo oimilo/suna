@@ -6,7 +6,7 @@ import React from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Radio, Maximize2, Minimize2, Copy, Check, Globe, Wrench } from 'lucide-react';
+import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Radio, Minimize2, Copy, Check, Globe, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { HealthCheckedVncIframe } from './HealthCheckedVncIframe';
 import { BrowserHeader } from './tool-views/BrowserToolView';
+import { WindowControls } from './window-controls';
 
 import {
   Drawer,
@@ -44,6 +45,7 @@ interface ToolCallSidePanelProps {
   isPanelMinimized?: boolean;
   onClose: () => void;
   onMinimize?: () => void;
+  onMaximize?: () => void;
   toolCalls: ToolCallInput[];
   currentIndex: number;
   onNavigate: (newIndex: number) => void;
@@ -144,12 +146,16 @@ interface PanelHeaderProps {
   showMinimize?: boolean;
   hasToolResult?: boolean;
   layoutId?: string;
+  onMaximize?: () => void;
+  isMaximized?: boolean;
 }
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   agentName,
   onClose,
   onMinimize,
+  onMaximize,
+  isMaximized = false,
   isStreaming = false,
   variant = 'desktop',
   showMinimize = false,
@@ -187,6 +193,15 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {showMinimize && (
+              <WindowControls
+                variant="macos"
+                onMinimize={onMinimize ?? onClose}
+                onMaximize={onMaximize}
+                isMaximized={isMaximized}
+                className="ml-1"
+              />
+            )}
             <motion.div layoutId="tool-icon" className="ml-2">
               <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                 {title}
@@ -201,15 +216,17 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
                 <span>Running</span>
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-            onClick={onMinimize ?? onClose}
-              className="h-8 w-8"
-              title="Minimize to floating preview"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
+            {!showMinimize && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </motion.div>
@@ -220,6 +237,15 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
     <div className="pt-4 pl-4 pr-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {showMinimize && (
+            <WindowControls
+              variant="macos"
+              onMinimize={onMinimize ?? onClose}
+              onMaximize={onMaximize}
+              isMaximized={isMaximized}
+              className="ml-1"
+            />
+          )}
           <div className="ml-2">
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
               {title}
@@ -233,15 +259,17 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
               <span>Running</span>
             </Badge>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={showMinimize && onMinimize ? onMinimize : onClose}
-            className="h-8 w-8"
-            title={showMinimize ? "Minimize to floating preview" : "Close"}
-          >
-            {showMinimize ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
-          </Button>
+          {showMinimize ? null : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -253,6 +281,7 @@ export function ToolCallSidePanel({
   isPanelMinimized = false,
   onClose,
   onMinimize,
+  onMaximize,
   toolCalls,
   currentIndex,
   onNavigate,
@@ -273,6 +302,7 @@ export function ToolCallSidePanel({
   const [toolCallSnapshots, setToolCallSnapshots] = React.useState<ToolCallSnapshot[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
   const [showViewToggle, setShowViewToggle] = React.useState(false);
+  const [isMaximized, setIsMaximized] = React.useState(false);
 
   // Add copy functionality state
   const [isCopyingContent, setIsCopyingContent] = React.useState(false);
@@ -287,6 +317,13 @@ export function ToolCallSidePanel({
 
   const isMobile = useIsMobile();
   const { isOpen: isDocumentModalOpen } = useDocumentModalStore();
+  let isPinned = false;
+  try {
+    const sidebarContext = useSidebarContext();
+    isPinned = sidebarContext.isPinned;
+  } catch {
+    isPinned = false;
+  }
 
   const sandbox = project?.sandbox;
   
@@ -368,16 +405,34 @@ export function ToolCallSidePanel({
   }, [toolCallSnapshots, internalIndex, isBrowserTool, agentStatus]);
 
   const handleClose = React.useCallback(() => {
+    setIsMaximized(false);
     onClose();
   }, [onClose]);
 
   const handleMinimize = React.useCallback(() => {
+    setIsMaximized(false);
     if (onMinimize) {
       onMinimize();
     } else {
       onClose();
     }
   }, [onMinimize, onClose]);
+
+  const handleMaximizeToggle = React.useCallback(() => {
+    setIsMaximized((prev) => {
+      const next = !prev;
+      if (next) {
+        onMaximize?.();
+      }
+      return next;
+    });
+  }, [onMaximize]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setIsMaximized(false);
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     const newSnapshots = toolCalls.map((toolCall, index) => ({
@@ -743,6 +798,8 @@ export function ToolCallSidePanel({
                   agentName={agentName}
                   onClose={handleClose}
                   onMinimize={handleMinimize}
+                  onMaximize={handleMaximizeToggle}
+                  isMaximized={isMaximized}
                   showMinimize={!!onMinimize}
                 />
                 <div className="flex-1 p-4 overflow-auto">
@@ -770,6 +827,8 @@ export function ToolCallSidePanel({
               agentName={agentName}
               onClose={handleClose}
               onMinimize={handleMinimize}
+              onMaximize={handleMaximizeToggle}
+              isMaximized={isMaximized}
               showMinimize={!!onMinimize}
             />
           )}
@@ -807,6 +866,8 @@ export function ToolCallSidePanel({
                 agentName={agentName}
                 onClose={handleClose}
                 onMinimize={handleMinimize}
+                onMaximize={handleMaximizeToggle}
+                isMaximized={isMaximized}
                 isStreaming={true}
                 showMinimize={!!onMinimize}
               />
@@ -849,6 +910,8 @@ export function ToolCallSidePanel({
               agentName={agentName}
               onClose={handleClose}
               onMinimize={handleMinimize}
+              onMaximize={handleMaximizeToggle}
+              isMaximized={isMaximized}
               showMinimize={!!onMinimize}
             />
           )}
@@ -893,6 +956,8 @@ export function ToolCallSidePanel({
             hasToolResult={!!displayToolCall.toolResult?.content}
             layoutId={CONTENT_LAYOUT_ID}
             showMinimize={!!onMinimize}
+            onMaximize={handleMaximizeToggle}
+            isMaximized={isMaximized}
           />
         )}
 
@@ -1011,13 +1076,32 @@ export function ToolCallSidePanel({
               damping: 35
             }
           }}
-          className={compact 
-            ? "m-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] border rounded-3xl flex flex-col z-30"
-            : "fixed top-2 right-2 bottom-4 border rounded-3xl flex flex-col z-30 w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]"
-          }
-          style={{
-            overflow: 'hidden',
-          }}
+          className={cn(
+            'border border-black/6 dark:border-white/8 rounded-3xl flex flex-col z-30 shadow-lg dark:shadow-none',
+            compact
+              ? 'm-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]'
+              : 'fixed',
+            !compact && !isMaximized && !isMobile && 'top-2 right-2 bottom-4 w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]',
+            !compact && !isMaximized && isMobile && 'top-2 right-2 bottom-4 left-4'
+          )}
+          style={React.useMemo(() => {
+            if (compact) {
+              return { overflow: 'hidden' } as React.CSSProperties;
+            }
+
+            if (isMaximized && !isMobile) {
+              const sidebarWidth = isPinned ? 272 : 88;
+              return {
+                overflow: 'hidden',
+                top: 16,
+                right: 16,
+                bottom: 16,
+                left: sidebarWidth,
+              } as React.CSSProperties;
+            }
+
+            return { overflow: 'hidden' } as React.CSSProperties;
+          }, [compact, isMaximized, isPinned, isMobile])}
         >
           <div className="flex-1 flex flex-col overflow-hidden bg-card">
             {renderContent()}
