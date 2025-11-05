@@ -1,4 +1,4 @@
--- Admin users table mirroring Suna production setup
+-- Admin users table mirroring Prophet production setup
 
 CREATE TABLE IF NOT EXISTS admin_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

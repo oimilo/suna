@@ -39,7 +39,7 @@ BEGIN
                 v_initial_credits,
                 v_initial_credits,
                 'tier_grant',
-                'Welcome to Suna! Free tier initial credits'
+                'Welcome to Prophet! Free tier initial credits'
             ) RETURNING id INTO v_transaction_id;
             
             RAISE LOG 'Created free tier credits for new user %: % credits', NEW.id, v_initial_credits;
@@ -89,14 +89,14 @@ BEGIN
             type,
             description,
             created_at
-        ) VALUES (
-            account_record.id,
-            v_initial_credits,
-            v_initial_credits,
-            'tier_grant',
-            'Free tier initial credits (backfilled)',
-            account_record.created_at
-        );
+            ) VALUES (
+                account_record.id,
+                v_initial_credits,
+                v_initial_credits,
+                'tier_grant',
+                'Prophet free tier initial credits (backfilled)',
+                account_record.created_at
+            );
         
         v_created_count := v_created_count + 1;
     END LOOP;
