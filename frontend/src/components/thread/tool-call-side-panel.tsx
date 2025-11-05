@@ -1078,30 +1078,24 @@ export function ToolCallSidePanel({
           }}
           className={cn(
             'border border-black/6 dark:border-white/8 rounded-3xl flex flex-col z-30 shadow-lg dark:shadow-none',
-            compact
-              ? 'm-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]'
-              : 'fixed',
+            compact ? 'm-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]'
+                    : 'fixed',
             !compact && !isMaximized && !isMobile && 'top-2 right-2 bottom-4 w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]',
             !compact && !isMaximized && isMobile && 'top-2 right-2 bottom-4 left-4'
           )}
-          style={React.useMemo(() => {
-            if (compact) {
-              return { overflow: 'hidden' } as React.CSSProperties;
-            }
+          style={(() => {
+            const style: React.CSSProperties = { overflow: 'hidden' };
 
-            if (isMaximized && !isMobile) {
+            if (!compact && isMaximized && !isMobile) {
               const sidebarWidth = isPinned ? 272 : 88;
-              return {
-                overflow: 'hidden',
-                top: 16,
-                right: 16,
-                bottom: 16,
-                left: sidebarWidth,
-              } as React.CSSProperties;
+              style.top = 16;
+              style.right = 16;
+              style.bottom = 16;
+              style.left = sidebarWidth;
             }
 
-            return { overflow: 'hidden' } as React.CSSProperties;
-          }, [compact, isMaximized, isPinned, isMobile])}
+            return style;
+          })()}
         >
           <div className="flex-1 flex flex-col overflow-hidden bg-card">
             {renderContent()}
