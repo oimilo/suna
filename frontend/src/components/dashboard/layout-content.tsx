@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSidebarContext } from '@/contexts/sidebar-context';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarLeft } from '@/components/sidebar/sidebar-left';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
@@ -112,10 +112,10 @@ export default function DashboardLayoutContent({
           defaultOpen={isPinned}
         >
           <SidebarLeft variant="sidebar" side="left" />
-          <div className="min-h-screen transition-all duration-200 pl-0 md:pl-64">
+          <SidebarInset className="min-h-screen transition-all duration-200">
             {mantenanceBanner}
             {children}
-          </div>
+          </SidebarInset>
         </SidebarProvider>
 
         {/* <PricingAlert 
