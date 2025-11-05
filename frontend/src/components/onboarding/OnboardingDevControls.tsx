@@ -1,191 +1,110 @@
 'use client';
 
-import { useOnboardingStore } from '@/hooks/use-onboarding-store';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { RotateCcw, FastForward, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
+import { useTransition } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useOnboarding } from '@/hooks/use-onboarding';
+import { onboardingSteps } from './onboarding-config';
+import { resetUserContext } from './shared/context';
+import { useAuth } from '@/components/AuthProvider';
+
+const SHOULD_RENDER = process.env.NODE_ENV !== 'production';
 
 export function OnboardingDevControls() {
-  const [isVisible, setIsVisible] = useState(true);
-  const {
-    hasSeenWelcome,
-    hasCompletedTour,
-    hasCreatedFirstProject,
-    hasRunFirstCommand,
-    tourStep,
-    checklistSteps,
-    devMode,
-    setDevMode,
-    resetOnboarding,
-    skipOnboarding,
-    setHasSeenWelcome,
-    setHasCompletedTour,
-    setTourStep
-  } = useOnboardingStore();
+  const { startOnboarding, resetOnboarding, hasCompletedOnboarding, isOpen } = useOnboarding();
+  const { supabase, user } = useAuth();
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  // Only show in development
-  if (process.env.NODE_ENV === 'production' && !devMode) {
+  if (!SHOULD_RENDER) {
     return null;
   }
 
-  if (!isVisible) {
-    return (
-      <div className="fixed bottom-4 left-4 z-50">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setIsVisible(true)}
-          className="gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Dev Controls
-        </Button>
-      </div>
-    );
-  }
+  const clearLocalState = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('onboarding_completed');
+        window.localStorage.removeItem('onboarding_project_id');
+      }
+    } catch (error) {
+      console.warn('[OnboardingDevControls] Falha ao limpar localStorage', error);
+    }
+  };
+
+  const handleStart = () => {
+    resetOnboarding();
+    resetUserContext();
+    clearLocalState();
+    startOnboarding(onboardingSteps);
+    setMessage('Onboarding reiniciado');
+  };
+
+  const handleResetLocal = () => {
+    resetOnboarding();
+    resetUserContext();
+    clearLocalState();
+    setMessage('Estado local limpo');
+  };
+
+  const handleFullReset = () => {
+    startTransition(async () => {
+      resetOnboarding();
+      resetUserContext();
+      clearLocalState();
+
+      if (supabase && user) {
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              onboarding_completed: null,
+              onboarding_completed_at: null,
+              onboarding_project_id: null,
+            },
+          });
+          setMessage('Estado global resetado (Supabase + local)');
+        } catch (error) {
+          console.error('[OnboardingDevControls] Erro ao atualizar metadados', error);
+          setMessage('Falha ao limpar metadados no Supabase');
+        }
+      } else {
+        setMessage('Estado local limpo (sem Supabase)');
+      }
+    });
+  };
 
   return (
-    <Card className="fixed bottom-4 left-4 z-50 w-80 shadow-lg">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Onboarding Dev Controls</CardTitle>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsVisible(false)}
-          >
-            <EyeOff className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Quick Actions */}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={resetOnboarding}
-            className="flex-1 gap-2"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Reset
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={skipOnboarding}
-            className="flex-1 gap-2"
-          >
-            <FastForward className="h-3 w-3" />
-            Skip All
-          </Button>
-        </div>
-
-        {/* Status */}
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span>Viu boas-vindas:</span>
-            <Badge variant={hasSeenWelcome ? "default" : "secondary"}>
-              {hasSeenWelcome ? "Sim" : "Não"}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Completou tour:</span>
-            <Badge variant={hasCompletedTour ? "default" : "secondary"}>
-              {hasCompletedTour ? "Sim" : "Não"}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Tour step:</span>
-            <Badge variant="outline">{tourStep}</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Primeiro projeto:</span>
-            <Badge variant={hasCreatedFirstProject ? "default" : "secondary"}>
-              {hasCreatedFirstProject ? "Sim" : "Não"}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Primeiro comando:</span>
-            <Badge variant={hasRunFirstCommand ? "default" : "secondary"}>
-              {hasRunFirstCommand ? "Sim" : "Não"}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Checklist Progress */}
-        <div className="space-y-1">
-          <p className="text-xs font-medium">Checklist Progress:</p>
-          <div className="space-y-1">
-            {checklistSteps.map(step => (
-              <div key={step.id} className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={step.completed}
-                  readOnly
-                  className="h-3 w-3"
-                />
-                <span className={step.completed ? 'line-through opacity-60' : ''}>
-                  {step.title}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Manual Controls */}
-        <div className="space-y-2 border-t pt-2">
-          <p className="text-xs font-medium">Manual Controls:</p>
-          <div className="space-y-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setHasSeenWelcome(!hasSeenWelcome)}
-              className="w-full text-xs"
-            >
-              Toggle Welcome: {hasSeenWelcome ? 'ON' : 'OFF'}
+    <div className="fixed bottom-4 right-4 z-[60]">
+      <Card className="w-80 shadow-lg border-dashed border-primary/40 bg-background/95 backdrop-blur">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center justify-between">
+            Onboarding Dev Controls
+            <Badge variant="outline">DEV</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="grid grid-cols-1 gap-2">
+            <Button size="sm" variant="default" onClick={handleStart}>
+              Reabrir onboarding
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setHasCompletedTour(!hasCompletedTour)}
-              className="w-full text-xs"
-            >
-              Toggle Tour: {hasCompletedTour ? 'ON' : 'OFF'}
+            <Button size="sm" variant="secondary" onClick={handleResetLocal}>
+              Limpar estado local
             </Button>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setTourStep(Math.max(0, tourStep - 1))}
-                className="flex-1 text-xs"
-              >
-                Tour -1
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setTourStep(tourStep + 1)}
-                className="flex-1 text-xs"
-              >
-                Tour +1
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={handleFullReset} disabled={isPending}>
+              {isPending ? 'Resetando…' : 'Reset total (Supabase)'}
+            </Button>
           </div>
-        </div>
 
-        {/* Dev Mode Toggle */}
-        <div className="flex items-center justify-between border-t pt-2">
-          <span className="text-xs">Dev Mode</span>
-          <Switch
-            checked={devMode}
-            onCheckedChange={setDevMode}
-          />
-        </div>
-      </CardContent>
-    </Card>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Aberto: {isOpen ? 'sim' : 'não'}</div>
+            <div>Concluído: {hasCompletedOnboarding ? 'sim' : 'não'}</div>
+          </div>
+
+          {message && <div className="text-xs text-foreground/80">{message}</div>}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+

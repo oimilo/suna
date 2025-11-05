@@ -472,7 +472,7 @@ class ModelRegistry:
     
     def resolve_model_id(self, model_id: str) -> Optional[str]:
         model = self.get(model_id)
-        return model.id if model else None
+        return model.full_id if model else None
     
     
     def get_aliases(self, model_id: str) -> List[str]:
