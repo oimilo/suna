@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { HoverSidebar } from '@/components/sidebar/hover-sidebar';
 import { useSidebarContext } from '@/contexts/sidebar-context';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 // import { PricingAlert } from "@/components/billing/pricing-alert"
 import { MaintenanceAlert } from '@/components/maintenance-alert';
@@ -40,7 +41,7 @@ export default function DashboardLayoutContent({
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const { data: healthData, isLoading: isCheckingHealth, error: healthError } = useApiHealth();
-  const { isPinned } = useSidebarContext();
+  const { isPinned, setIsPinned } = useSidebarContext();
 
   useEffect(() => {
     // setShowPricingAlert(false)
@@ -105,7 +106,11 @@ export default function DashboardLayoutContent({
   return (
     <SubscriptionProvider>
       <DeleteOperationProvider>
-        <>
+        <SidebarProvider
+          open={isPinned}
+          onOpenChange={setIsPinned}
+          defaultOpen={isPinned}
+        >
           <HoverSidebar />
           <div
             className={`min-h-screen transition-all duration-200 ${
@@ -115,7 +120,7 @@ export default function DashboardLayoutContent({
             {mantenanceBanner}
             {children}
           </div>
-        </>
+        </SidebarProvider>
 
         {/* <PricingAlert 
         open={showPricingAlert} 

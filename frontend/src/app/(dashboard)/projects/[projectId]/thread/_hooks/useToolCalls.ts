@@ -78,7 +78,7 @@ function shouldFilterAskTool(toolName: string, assistantContent: any, toolConten
 
 export function useToolCalls(
   messages: UnifiedMessage[],
-  setLeftSidebarOpen: (open: boolean) => void,
+  _setLeftSidebarOpen?: (open: boolean) => void,
   agentStatus?: AgentStatus,
   compact?: boolean
 ): UseToolCallsReturn {
@@ -97,12 +97,9 @@ export function useToolCalls(
       if (!newState) {
         userClosedPanelRef.current = true;
       }
-      if (newState) {
-        setLeftSidebarOpen(false);
-      }
       return newState;
     });
-  }, [setLeftSidebarOpen]);
+  }, []);
 
   const handleSidePanelNavigate = useCallback((newIndex: number) => {
     setCurrentToolIndex(newIndex);

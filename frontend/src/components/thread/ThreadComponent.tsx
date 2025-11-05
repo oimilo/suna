@@ -96,7 +96,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   // Refs - simplified for flex-column-reverse
   const latestMessageRef = useRef<HTMLDivElement>(null);
-  const initialLayoutAppliedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastStreamStartedRef = useRef<string | null>(null); // Track last runId we started streaming for
 
@@ -623,13 +622,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   // Effects
   useEffect(() => {
-    if (!initialLayoutAppliedRef.current) {
-      setLeftSidebarOpen(false);
-      initialLayoutAppliedRef.current = true;
-    }
-  }, [setLeftSidebarOpen]);
-
-  useEffect(() => {
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
 
@@ -1029,24 +1021,35 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentName={agent && agent.name}
         disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
       >
-        <ThreadContent
-          messages={messages}
-          streamingTextContent={streamingTextContent}
-          streamingToolCall={streamingToolCall}
-          agentStatus={agentStatus}
-          handleToolClick={handleToolClick}
-          handleOpenFileViewer={handleOpenFileViewer}
-          readOnly={false}
-          streamHookStatus={streamHookStatus}
-          sandboxId={sandboxId}
-          project={project}
-          debugMode={debugMode}
-          agentName={agent && agent.name}
-          agentAvatar={undefined}
-          agentMetadata={agent?.metadata}
-          agentData={agent}
-          scrollContainerRef={scrollContainerRef}
-        />
+        <div
+          className={cn(
+            'flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out',
+            !isMobile && !isSidePanelOpen
+              ? leftSidebarState === 'expanded'
+                ? 'px-[72px] md:px-[256px]'
+                : 'px-[40px]'
+              : ''
+          )}
+        >
+          <ThreadContent
+            messages={messages}
+            streamingTextContent={streamingTextContent}
+            streamingToolCall={streamingToolCall}
+            agentStatus={agentStatus}
+            handleToolClick={handleToolClick}
+            handleOpenFileViewer={handleOpenFileViewer}
+            readOnly={false}
+            streamHookStatus={streamHookStatus}
+            sandboxId={sandboxId}
+            project={project}
+            debugMode={debugMode}
+            agentName={agent && agent.name}
+            agentAvatar={undefined}
+            agentMetadata={agent?.metadata}
+            agentData={agent}
+            scrollContainerRef={scrollContainerRef}
+          />
+        </div>
 
         <div
           className={cn(
@@ -1054,13 +1057,14 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             isSidePanelAnimating
               ? ''
               : 'transition-all duration-200 ease-in-out',
-            leftSidebarState === 'expanded'
-              ? 'left-[72px] md:left-[256px]'
-              : 'left-[40px]',
+            isMobile
+              ? 'left-0 right-0'
+              : leftSidebarState === 'expanded'
+                ? 'left-[72px] right-[72px] md:left-[256px] md:right-[256px]'
+                : 'left-[24px] right-[48px]',
             isSidePanelOpen && !isMobile
               ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]'
-              : 'right-0',
-            isMobile ? 'left-0 right-0' : '',
+              : '',
           )}
         >
           <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>

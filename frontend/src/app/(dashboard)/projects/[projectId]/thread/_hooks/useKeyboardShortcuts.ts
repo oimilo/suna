@@ -4,7 +4,7 @@ interface UseKeyboardShortcutsProps {
   isSidePanelOpen: boolean;
   setIsSidePanelOpen: (open: boolean) => void;
   leftSidebarState: string;
-  setLeftSidebarOpen: (open: boolean) => void;
+  setLeftSidebarOpen?: (open: boolean) => void;
   userClosedPanelRef: React.MutableRefObject<boolean>;
 }
 
@@ -24,12 +24,14 @@ export function useKeyboardShortcuts({
           userClosedPanelRef.current = true;
         } else {
           setIsSidePanelOpen(true);
-          setLeftSidebarOpen(false);
         }
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
         event.preventDefault();
+        if (!setLeftSidebarOpen) {
+          return;
+        }
         if (leftSidebarState === 'expanded') {
           setLeftSidebarOpen(false);
         } else {
