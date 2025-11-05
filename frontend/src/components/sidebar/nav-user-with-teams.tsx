@@ -10,11 +10,16 @@ import {
   ChevronsUpDown,
   Command,
   LogOut,
-  Plus,
   Settings,
   AudioWaveform,
   Zap,
   KeyRound,
+  Bot,
+  BookOpen,
+  Plug,
+  Sun,
+  Moon,
+  Plus,
 } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
 import NewTeamForm from '@/components/basejump/new-team-form';
@@ -46,6 +51,8 @@ import {
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
 import { isLocalMode } from '@/lib/config';
+import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 
 export function NavUserWithTeams({
   user,
@@ -57,9 +64,11 @@ export function NavUserWithTeams({
   };
 }) {
   const router = useRouter();
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
   const { data: accounts } = useAccounts();
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
+  const isCollapsed = state === 'collapsed';
+  const { theme, setTheme } = useTheme();
   
 
   // Prepare personal account and team accounts
@@ -164,26 +173,31 @@ export function NavUserWithTeams({
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                className={cn(
+                  'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
+                  isCollapsed && '!h-12 !w-12 !rounded-2xl !p-0 justify-center'
+                )}
               >
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className={cn('h-8 w-8 rounded-lg', isCollapsed && 'h-10 w-10 rounded-2xl')}>
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg">
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
-                </div>
-                <ChevronsUpDown className="ml-auto size-4" />
+                {!isCollapsed && (
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate text-xs">{user.email}</span>
+                  </div>
+                )}
+                {!isCollapsed && <ChevronsUpDown className="ml-auto size-4" />}
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-              side={isMobile ? 'bottom' : 'top'}
-              align="start"
-              sideOffset={4}
+              side={isMobile ? 'bottom' : isCollapsed ? 'right' : 'top'}
+              align={isCollapsed ? 'start' : 'start'}
+              sideOffset={isCollapsed ? 8 : 4}
             >
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1.5 py-1.5 text-left text-sm">
@@ -197,8 +211,50 @@ export function NavUserWithTeams({
                     <span className="truncate font-medium">{user.name}</span>
                     <span className="truncate text-xs">{user.email}</span>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setTheme(theme === 'light' ? 'dark' : 'light');
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                    title="Alternar tema"
+                    aria-label="Alternar tema"
+                  >
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  </button>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href="/agents" className="flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    Agentes
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/automations" className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Automações
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/knowledge" className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Base de Conhecimento
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/credentials" className="flex items-center gap-2">
+                    <Plug className="h-4 w-4" />
+                    Credenciais
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
               <DropdownMenuSeparator />
 
               {/* Teams Section - Only show if user has teams */}
@@ -264,18 +320,6 @@ export function NavUserWithTeams({
                   <Link href="/settings">
                     <Settings className="h-4 w-4" />
                     Configurações
-                  </Link>
-                </DropdownMenuItem>
-                {isLocalMode() && <DropdownMenuItem asChild>
-                  <Link href="/settings/env-manager">
-                    <KeyRound className="h-4 w-4" />
-                    Gerenciador .Env Local
-                  </Link>
-                </DropdownMenuItem>}
-                <DropdownMenuItem asChild>
-                  <Link href="/automations">
-                    <Zap className="h-4 w-4" />
-                    Automações
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>

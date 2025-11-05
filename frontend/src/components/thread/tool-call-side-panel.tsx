@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { HealthCheckedVncIframe } from './HealthCheckedVncIframe';
 import { BrowserHeader } from './tool-views/BrowserToolView';
 import { WindowControls } from './window-controls';
+import { useSidebarContext } from '@/contexts/sidebar-context';
 
 import {
   Drawer,

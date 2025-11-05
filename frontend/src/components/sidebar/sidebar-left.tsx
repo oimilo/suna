@@ -2,44 +2,21 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Plug, ChevronRight, Zap, Sun, Moon, BookOpen } from 'lucide-react';
-
-import { NavAgents } from '@/components/sidebar/nav-agents';
+import { Menu, Plus, Calendar, Bot, Zap, BookOpen, Plug } from 'lucide-react';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
 import { BrandLogo } from '@/components/sidebar/brand-logo';
-import { NavAutomations } from '@/components/sidebar/nav-automations';
-import { NavTasks } from '@/components/sidebar/nav-tasks';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -49,10 +26,8 @@ import {
 } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { useFeatureFlags } from '@/lib/feature-flags';
-import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
-import { useTheme } from 'next-themes';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NavThreads } from './nav-threads';
 
 export function SidebarLeft({
   ...props
@@ -69,13 +44,15 @@ export function SidebarLeft({
     avatar: '',
   });
 
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const { flags, loading: flagsLoading } = useFeatureFlags(['custom_agents', 'agent_marketplace']);
-  const customAgentsEnabled = flags.custom_agents;
-  const createNewAgentMutation = useCreateNewAgent();
-  const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<'tarefas' | 'favoritos' | 'agendado'>('tarefas');
+  const scheduledEmptyState = (
+    <>
+      <Calendar className="mx-auto mb-2 h-8 w-8 opacity-20" />
+      <p>Nenhuma automação agendada</p>
+      <p className="mt-1 text-xs text-muted-foreground">Automação iniciada por trigger aparece aqui</p>
+    </>
+  );
+  const isCollapsed = state === 'collapsed';
 
   
   useEffect(() => {
@@ -114,206 +91,129 @@ export function SidebarLeft({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state, setOpen]);
-
-
-  const handleCreateNewAgent = () => {
-    createNewAgentMutation.mutate();
-  };
-
   return (
     <Sidebar
       collapsible="icon"
       className="border-r-0 bg-background/95 backdrop-blur-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
       {...props}
     >
-      <SidebarHeader className="px-2 py-2">
-        <div className="flex h-[40px] items-center px-1 relative">
-          <Link href="/dashboard">
-            <BrandLogo />
-          </Link>
-          {state !== 'collapsed' && (
-            <div className="ml-2 transition-all duration-200 ease-in-out whitespace-nowrap">
-            </div>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            {state !== 'collapsed' && (
+      <SidebarHeader className={cn('px-2 py-2', isCollapsed && 'px-0 py-4')}>
+        {isCollapsed ? (
+          <div className="flex w-full flex-col items-center gap-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarTrigger className="h-9 w-9 rounded-2xl border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm hover:bg-accent hover:text-accent-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>Expandir barra lateral (CMD+B)</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : (
+          <div className="relative flex h-[40px] items-center px-1">
+            <Link href="/dashboard">
+              <BrandLogo />
+            </Link>
+            <div className="ml-auto flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <SidebarTrigger className="h-8 w-8" />
                 </TooltipTrigger>
                 <TooltipContent>Alternar barra lateral (CMD+B)</TooltipContent>
               </Tooltip>
-            )}
-            {state !== 'collapsed' && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent"
-                    title="Alternar tema"
-                    aria-label="Alternar tema"
-                  >
-                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Alternar tema</TooltipContent>
-              </Tooltip>
-            )}
-            {isMobile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setOpenMobile(true)}
-                    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent"
-                  >
-                    <Menu className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Abrir menu</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      </SidebarHeader>
-      <SidebarContent className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <SidebarGroup>
-          <Link href="/dashboard">
-            <SidebarMenuButton 
-              className={cn({
-                'bg-accent text-accent-foreground font-medium': pathname === '/dashboard',
-              })}
-              data-tour="new-chat-button"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="flex items-center justify-between w-full">
-                Nova Tarefa
-              </span>
-            </SidebarMenuButton>
-          </Link>
-          {!flagsLoading && customAgentsEnabled && (
-            <SidebarMenu>
-              <Collapsible
-                defaultOpen={pathname?.includes('/agents')}
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      tooltip="Agents"
+              {isMobile && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setOpenMobile(true)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
                     >
-                      <Bot className="h-4 w-4 mr-1" />
-                      <span>Agentes</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton className={cn('pl-3', {
-                          'bg-accent text-accent-foreground font-medium': pathname === '/agents' && searchParams.get('tab') === 'marketplace',
-                        })} asChild>
-                          <Link href="/agents?tab=marketplace">
-                            <span>Explorar</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton className={cn('pl-3', {
-                          'bg-accent text-accent-foreground font-medium': pathname === '/agents' && (searchParams.get('tab') === 'my-agents' || searchParams.get('tab') === null),
-                        })} asChild>
-                          <Link href="/agents?tab=my-agents">
-                            <span>Meus Agentes</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton 
-                          onClick={() => setShowNewAgentDialog(true)}
-                          className="cursor-pointer pl-3"
-                        >
-                          <span>Novo Agente</span>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            </SidebarMenu>
-          )}
-          {!flagsLoading && customAgentsEnabled && (
-            <>
-              <Link href="/automations">
-                <SidebarMenuButton className={cn({
-                  'bg-accent text-accent-foreground font-medium': pathname === '/automations',
-                })}>
-                  <Zap className="h-4 w-4 mr-1" />
-                  <span className="flex items-center justify-between w-full">
-                    Automações
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-              <Link href="/knowledge">
-                <SidebarMenuButton className={cn({
-                  'bg-accent text-accent-foreground font-medium': pathname === '/knowledge',
-                })}>
-                  <BookOpen className="h-4 w-4 mr-1" />
-                  <span className="flex items-center justify-between w-full">
-                    Base de Conhecimento
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-              <Link href="/settings/credentials">
-                <SidebarMenuButton className={cn({
-                  'bg-accent text-accent-foreground font-medium': pathname === '/settings/credentials',
-                })}>
-                  <Plug className="h-4 w-4 mr-1" />
-                  <span className="flex items-center justify-between w-full">
-                    Credenciais
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-            </>
-          )}
-        </SidebarGroup>
-        
-        {/* Agentes/Projetos anteriores */}
-        <NavAgents />
-        
-        {/* Seção de Tarefas */}
-        <NavTasks />
-        
-        {/* Seção de Automações */}
-        <NavAutomations />
-      </SidebarContent>
-      <SidebarFooter>
-        {state === 'collapsed' && (
-          <div className="mt-2 flex justify-center">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <SidebarTrigger className="h-8 w-8" />
-              </TooltipTrigger>
-              <TooltipContent>Expandir barra lateral (CMD+B)</TooltipContent>
-            </Tooltip>
+                      <Menu className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Abrir menu</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         )}
+      </SidebarHeader>
+      <SidebarContent
+        className={cn(
+          '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:\'none\'] [scrollbar-width:\'none\']',
+          isCollapsed && 'items-center gap-4 px-0 pt-2'
+        )}
+      >
+        {!isCollapsed && (
+          <div className="px-3 pb-4">
+            <Link
+              href="/dashboard"
+              className="mb-4 flex h-10 items-center justify-between rounded-2xl border border-border/60 bg-background/90 px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Nova tarefa
+              </span>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                ⌘K
+              </span>
+            </Link>
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 rounded-xl border border-border/60 bg-background/80 p-1 text-xs">
+                <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+                <TabsTrigger value="favoritos">Favoritos</TabsTrigger>
+                <TabsTrigger value="agendado">Agendado</TabsTrigger>
+              </TabsList>
+              <TabsContent value="tarefas" className="mt-4 space-y-2">
+                <NavThreads excludeTriggerThreads />
+              </TabsContent>
+              <TabsContent value="favoritos" className="mt-4 space-y-2">
+                <NavThreads showOnlyFavorites excludeTriggerThreads />
+              </TabsContent>
+              <TabsContent value="agendado" className="mt-4 space-y-2">
+                <NavThreads showOnlyTriggerThreads emptyState={scheduledEmptyState} />
+              </TabsContent>
+            </Tabs>
+
+            <SidebarMenu className="mt-6 space-y-1">
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/agents" className="flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    <span>Agentes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/automations" className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    <span>Automações</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/knowledge" className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>Base de Conhecimento</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/settings/credentials" className="flex items-center gap-2">
+                    <Plug className="h-4 w-4" />
+                    <span>Credenciais</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+        )}
+      </SidebarContent>
+      <SidebarFooter className={cn('mt-auto', isCollapsed && 'items-center gap-4 px-0 pb-4 pt-0')}>
         <NavUserWithTeams user={user} />
       </SidebarFooter>
       <SidebarRail />
-      <AlertDialog open={showNewAgentDialog} onOpenChange={setShowNewAgentDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Criar Novo Agente</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso criará um novo agente com nome e descrição padrão.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCreateNewAgent}>Criar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Sidebar>
   );
 }
