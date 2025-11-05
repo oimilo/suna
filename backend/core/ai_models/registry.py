@@ -439,6 +439,8 @@ class ModelRegistry:
     
     def register(self, model: Model) -> None:
         self._models[model.id] = model
+        # Ensure callers can look up using provider-prefixed identifiers
+        self._aliases[model.full_id] = model.id
         for alias in model.aliases:
             self._aliases[alias] = model.id
     
