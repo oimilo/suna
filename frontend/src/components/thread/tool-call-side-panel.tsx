@@ -41,7 +41,9 @@ export interface ToolCallInput {
 
 interface ToolCallSidePanelProps {
   isOpen: boolean;
+  isPanelMinimized?: boolean;
   onClose: () => void;
+  onMinimize?: () => void;
   toolCalls: ToolCallInput[];
   currentIndex: number;
   onNavigate: (newIndex: number) => void;
@@ -62,6 +64,7 @@ interface ToolCallSidePanelProps {
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
   compact?: boolean;
+  onRequestOpen?: () => void;
 }
 
 interface ToolCallSnapshot {
@@ -135,6 +138,7 @@ const getComputerTitle = (agentName?: string): string => {
 interface PanelHeaderProps {
   agentName?: string;
   onClose: () => void;
+  onMinimize?: () => void;
   isStreaming?: boolean;
   variant?: 'drawer' | 'desktop' | 'motion';
   showMinimize?: boolean;
@@ -145,6 +149,7 @@ interface PanelHeaderProps {
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   agentName,
   onClose,
+  onMinimize,
   isStreaming = false,
   variant = 'desktop',
   showMinimize = false,
@@ -163,7 +168,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={onMinimize ?? onClose}
             className="h-8 w-8"
             title="Minimize to floating preview"
           >
@@ -199,7 +204,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onClose}
+            onClick={onMinimize ?? onClose}
               className="h-8 w-8"
               title="Minimize to floating preview"
             >
@@ -231,7 +236,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={showMinimize && onMinimize ? onMinimize : onClose}
             className="h-8 w-8"
             title={showMinimize ? "Minimize to floating preview" : "Close"}
           >
@@ -245,7 +250,9 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
 
 export function ToolCallSidePanel({
   isOpen,
+  isPanelMinimized = false,
   onClose,
+  onMinimize,
   toolCalls,
   currentIndex,
   onNavigate,
@@ -258,6 +265,7 @@ export function ToolCallSidePanel({
   onFileClick,
   disableInitialAnimation,
   compact = false,
+  onRequestOpen,
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
@@ -362,6 +370,14 @@ export function ToolCallSidePanel({
   const handleClose = React.useCallback(() => {
     onClose();
   }, [onClose]);
+
+  const handleMinimize = React.useCallback(() => {
+    if (onMinimize) {
+      onMinimize();
+    } else {
+      onClose();
+    }
+  }, [onMinimize, onClose]);
 
   React.useEffect(() => {
     const newSnapshots = toolCalls.map((toolCall, index) => ({
@@ -689,7 +705,7 @@ export function ToolCallSidePanel({
     return () => clearInterval(interval);
   }, [isStreaming]);
 
-  if (!isOpen) {
+  if (!isOpen || isPanelMinimized) {
     return null;
   }
 
@@ -726,7 +742,8 @@ export function ToolCallSidePanel({
                 <PanelHeader 
                   agentName={agentName}
                   onClose={handleClose}
-                  showMinimize={true}
+                  onMinimize={handleMinimize}
+                  showMinimize={!!onMinimize}
                 />
                 <div className="flex-1 p-4 overflow-auto">
                   <div className="space-y-4">
@@ -752,6 +769,8 @@ export function ToolCallSidePanel({
             <PanelHeader 
               agentName={agentName}
               onClose={handleClose}
+              onMinimize={handleMinimize}
+              showMinimize={!!onMinimize}
             />
           )}
           <div className="flex flex-col items-center justify-center flex-1 p-8">
@@ -787,7 +806,9 @@ export function ToolCallSidePanel({
               <PanelHeader 
                 agentName={agentName}
                 onClose={handleClose}
+                onMinimize={handleMinimize}
                 isStreaming={true}
+                showMinimize={!!onMinimize}
               />
             )}
             {isMobile && (
@@ -827,6 +848,8 @@ export function ToolCallSidePanel({
             <PanelHeader 
               agentName={agentName}
               onClose={handleClose}
+              onMinimize={handleMinimize}
+              showMinimize={!!onMinimize}
             />
           )}
           <div className="flex-1 p-4 overflow-auto">
@@ -864,10 +887,12 @@ export function ToolCallSidePanel({
           <PanelHeader 
             agentName={agentName}
             onClose={handleClose}
+            onMinimize={handleMinimize}
             isStreaming={isStreaming}
             variant="motion"
             hasToolResult={!!displayToolCall.toolResult?.content}
             layoutId={CONTENT_LAYOUT_ID}
+            showMinimize={!!onMinimize}
           />
         )}
 

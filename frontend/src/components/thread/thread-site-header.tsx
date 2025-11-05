@@ -229,21 +229,23 @@ export function SiteHeader({
 
 
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onToggleSidePanel}
-                  className="h-9 w-9 cursor-pointer"
-                >
-                  <Monitor className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                <p>Toggle Computer Preview (CMD+I)</p>
-              </TooltipContent>
-            </Tooltip>
+            {isMobile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggleSidePanel}
+                    className="h-9 w-9 cursor-pointer"
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Toggle Computer Preview (CMD+I)</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </TooltipProvider>
         </div>
       </header>

@@ -86,6 +86,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const { data: agentsResponse } = useAgents();
   const agents = agentsResponse?.agents || [];
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
+  const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [userInitiatedRun, setUserInitiatedRun] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
@@ -160,6 +161,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     setLeftSidebarOpen,
     userClosedPanelRef,
   });
+
+  useEffect(() => {
+    if (!isSidePanelOpen && isPanelMinimized) {
+      setIsPanelMinimized(false);
+    }
+  }, [isSidePanelOpen, isPanelMinimized]);
 
   const addUserMessageMutation = useAddUserMessageMutation();
   const startAgentMutation = useStartAgentMutation();
@@ -569,6 +576,35 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     [],
   );
 
+  const handleSidePanelClose = useCallback(() => {
+    setIsSidePanelOpen(false);
+    userClosedPanelRef.current = true;
+    setAutoOpenedPanel(true);
+    setIsPanelMinimized(false);
+  }, [setIsSidePanelOpen, userClosedPanelRef, setAutoOpenedPanel]);
+
+  const handleSidePanelMinimize = useCallback(() => {
+    setIsPanelMinimized(true);
+  }, []);
+
+  const handleSidePanelMaximize = useCallback(() => {
+    setIsPanelMinimized(false);
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, [setIsSidePanelOpen, userClosedPanelRef]);
+
+  const handleSidePanelRequestOpen = useCallback(() => {
+    setIsPanelMinimized(false);
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, [setIsSidePanelOpen, userClosedPanelRef]);
+
+  const handleExpandToolPreview = useCallback(() => {
+    setIsPanelMinimized(false);
+    setIsSidePanelOpen(true);
+    userClosedPanelRef.current = false;
+  }, [setIsSidePanelOpen, userClosedPanelRef]);
+
   const toolViewAssistant = useCallback(
     (assistantContent?: string, toolContent?: string) => {
       if (!assistantContent) return null;
@@ -820,6 +856,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
+        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onViewFiles={handleOpenFileViewer}
         fileViewerOpen={fileViewerOpen}
@@ -832,11 +869,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={() => {
-          setIsSidePanelOpen(false);
-          userClosedPanelRef.current = true;
-          setAutoOpenedPanel(true);
-        }}
+        onSidePanelClose={handleSidePanelClose}
+        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelMaximize={handleSidePanelMaximize}
+        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -950,11 +986,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               hideAgentSelection={!!configuredAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
-              onExpandToolPreview={() => {
-                setIsSidePanelOpen(true);
-                userClosedPanelRef.current = false;
-              }}
+              showToolPreview={isPanelMinimized && toolCalls.length > 0}
+              onExpandToolPreview={handleExpandToolPreview}
               defaultShowSnackbar="tokens"
               showScrollToBottomIndicator={showScrollToBottom}
               onScrollToBottom={scrollToBottom}
@@ -991,6 +1024,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
+        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onProjectRenamed={handleProjectRenamed}
         onViewFiles={handleOpenFileViewer}
@@ -1004,11 +1038,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={() => {
-          setIsSidePanelOpen(false);
-          userClosedPanelRef.current = true;
-          setAutoOpenedPanel(true);
-        }}
+        onSidePanelClose={handleSidePanelClose}
+        onSidePanelMinimize={handleSidePanelMinimize}
+        onSidePanelMaximize={handleSidePanelMaximize}
+        onSidePanelRequestOpen={handleSidePanelRequestOpen}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -1024,7 +1057,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         <div
           className={cn(
             'flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out',
-            !isMobile && !isSidePanelOpen
+            !isMobile && (!isSidePanelOpen || isPanelMinimized)
               ? leftSidebarState === 'expanded'
                 ? 'px-[72px] md:px-[256px]'
                 : 'px-[40px]'
@@ -1053,7 +1086,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
         <div
           className={cn(
-            'fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8',
+            'fixed bottom-[15px] z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8 pb-[5px]',
             isSidePanelAnimating
               ? ''
               : 'transition-all duration-200 ease-in-out',
@@ -1062,7 +1095,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               : leftSidebarState === 'expanded'
                 ? 'left-[72px] right-[72px] md:left-[256px] md:right-[256px]'
                 : 'left-[24px] right-[48px]',
-            isSidePanelOpen && !isMobile
+            isSidePanelOpen && !isPanelMinimized && !isMobile
               ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]'
               : '',
           )}
@@ -1094,11 +1127,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               hideAgentSelection={!!configuredAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
-              onExpandToolPreview={() => {
-                setIsSidePanelOpen(true);
-                userClosedPanelRef.current = false;
-              }}
+              showToolPreview={isPanelMinimized && toolCalls.length > 0}
+              onExpandToolPreview={handleExpandToolPreview}
               defaultShowSnackbar="tokens"
               showScrollToBottomIndicator={showScrollToBottom}
               onScrollToBottom={scrollToBottom}
