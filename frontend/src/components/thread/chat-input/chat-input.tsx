@@ -18,7 +18,6 @@ import { useModelSelection } from './_use-model-selection-new';
 import { useFileDelete } from '@/hooks/react-query/files';
 import { useQueryClient } from '@tanstack/react-query';
 import { ToolCallInput } from './floating-tool-preview';
-import { ChatSnack } from './chat-snack';
 import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -333,19 +332,6 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     return (
       <div className="mx-auto w-full max-w-4xl relative">
         <div className="relative">
-          <ChatSnack
-            toolCalls={toolCalls}
-            toolCallIndex={toolCallIndex}
-            onExpandToolPreview={onExpandToolPreview}
-            agentName={agentName}
-            showToolPreview={showToolPreview}
-            showUsagePreview={showSnackbar}
-            subscriptionData={subscriptionData}
-            onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
-            onOpenUpgrade={() => setBillingModalOpen(true)}
-            isVisible={showToolPreview || !!showSnackbar}
-          />
-
           {/* Scroll to bottom button */}
           {showScrollToBottomIndicator && onScrollToBottom && (
             <button
@@ -423,6 +409,15 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   selectedAgentId={selectedAgentId}
                   onAgentSelect={onAgentSelect}
                   hideAgentSelection={hideAgentSelection}
+                  toolCalls={toolCalls}
+                  toolCallIndex={toolCallIndex}
+                  showToolPreview={showToolPreview}
+                  onExpandToolPreview={onExpandToolPreview}
+                  showUsagePreview={showSnackbar}
+                  subscriptionData={subscriptionData}
+                  onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
+                  onOpenUpgrade={() => setBillingModalOpen(true)}
+                  agentName={agentName}
                 />
               </CardContent>
             </div>

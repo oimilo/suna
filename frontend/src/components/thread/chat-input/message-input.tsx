@@ -14,6 +14,9 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipProvider, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { BillingModal } from '@/components/billing/billing-modal';
 import { handleFiles } from './file-upload-handler';
+import { ChatSnack } from './chat-snack';
+import type { ToolCallInput } from './floating-tool-preview';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MessageInputProps {
   value: string;
@@ -49,6 +52,15 @@ interface MessageInputProps {
   enableAdvancedConfig?: boolean;
   hideAgentSelection?: boolean;
   isSunaAgent?: boolean;
+  toolCalls?: ToolCallInput[];
+  toolCallIndex?: number;
+  showToolPreview?: boolean;
+  onExpandToolPreview?: () => void;
+  showUsagePreview?: 'tokens' | 'upgrade' | false;
+  subscriptionData?: any;
+  onCloseUsage?: () => void;
+  onOpenUpgrade?: () => void;
+  agentName?: string;
 }
 
 export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
@@ -88,11 +100,21 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       enableAdvancedConfig = false,
       hideAgentSelection = false,
       isSunaAgent,
+      toolCalls,
+      toolCallIndex = 0,
+      showToolPreview = false,
+      onExpandToolPreview,
+      showUsagePreview = false,
+      subscriptionData,
+      onCloseUsage,
+      onOpenUpgrade,
+      agentName,
     },
     ref,
   ) => {
     const [billingModalOpen, setBillingModalOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
       setMounted(true);
@@ -179,6 +201,8 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       );
     }
 
+    const isSnackVisible = (!!showToolPreview || !!showUsagePreview) && !isMobile;
+
     return (
       <div className="relative flex flex-col w-full h-full gap-2 justify-between">
 
@@ -200,7 +224,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
         </div>
 
 
-        <div className="flex items-center justify-between mt-0 mb-1 px-2">
+        <div className="flex items-center justify-between mt-0 mb-1 px-2 gap-3">
           <div className="flex items-center gap-3">
             {!hideAttachments && (
               <FileUploadHandler
@@ -217,7 +241,6 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 isLoggedIn={isLoggedIn}
               />
             )}
-
           </div>
 
           {/* {subscriptionStatus === 'no_subscription' && !isLocalMode() &&
@@ -235,6 +258,23 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
 
           <div className='flex items-center gap-2'>
             {renderDropdown()}
+
+            {isSnackVisible && (
+              <div className="w-[210px] pointer-events-auto">
+                <ChatSnack
+                  toolCalls={toolCalls}
+                  toolCallIndex={toolCallIndex}
+                  onExpandToolPreview={onExpandToolPreview}
+                  agentName={agentName}
+                  showToolPreview={showToolPreview}
+                  showUsagePreview={showUsagePreview}
+                  subscriptionData={subscriptionData}
+                  onCloseUsage={onCloseUsage}
+                  onOpenUpgrade={onOpenUpgrade}
+                  isVisible={isSnackVisible}
+                />
+              </div>
+            )}
             <BillingModal
               open={billingModalOpen}
               onOpenChange={setBillingModalOpen}
