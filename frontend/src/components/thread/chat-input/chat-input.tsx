@@ -83,6 +83,8 @@ export interface UploadedFile {
   size: number;
   type: string;
   localUrl?: string;
+  originalName?: string;
+  legacyPaths?: string[];
 }
 
 
@@ -295,9 +297,19 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       }
 
       // Check if file is referenced in existing chat messages before deleting from server
-      const isFileUsedInChat = messages.some(message => {
+      const isFileUsedInChat = messages.some((message) => {
         const content = typeof message.content === 'string' ? message.content : '';
-        return content.includes(`[Uploaded File: ${fileToRemove.path}]`);
+        if (content.includes(`[Uploaded File: ${fileToRemove.path}]`)) {
+          return true;
+        }
+
+        if (fileToRemove.legacyPaths && fileToRemove.legacyPaths.length > 0) {
+          return fileToRemove.legacyPaths.some((legacyPath) =>
+            content.includes(`[Uploaded File: ${legacyPath}]`),
+          );
+        }
+
+        return false;
       });
 
       // Only delete from server if file is not referenced in chat history

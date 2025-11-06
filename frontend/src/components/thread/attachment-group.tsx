@@ -20,6 +20,8 @@ interface UploadedFile {
     size: number;
     type: string;
     localUrl?: string;
+    originalName?: string;
+    legacyPaths?: string[];
 }
 
 interface AttachmentGroupProps {

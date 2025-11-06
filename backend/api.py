@@ -156,7 +156,12 @@ def _add_origin(origins_list, origin_val):
         pass
 
 # Define allowed origins based on environment and deployment URLs
-allowed_origins = ["https://www.suna.so", "https://suna.so"]
+allowed_origins = [
+    "https://prophet.build",
+    "https://www.prophet.build",
+    "https://www.suna.so",
+    "https://suna.so",
+]
 allow_origin_regex = None
 
 # Include deployment/site URLs from env
@@ -170,9 +175,11 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
+    allowed_origins.append("https://staging.prophet.build")
+    allowed_origins.append("https://staging.prophet.so")
     allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
-    allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
+    allow_origin_regex = r"https://(prophet|suna)-.*-prjcts\.vercel\.app"
 
 # Allow localhost access in production for master login operations
 if config.ENV_MODE == EnvMode.PRODUCTION:
