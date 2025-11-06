@@ -1,20 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CheckCircle2, ArrowRight, Sparkles, Zap, Crown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Sparkles, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { allAgents } from '../shared/data';
-import { IconRenderer } from '../shared/icon-renderer';
 import { userContext } from '../shared/context';
+import { personaLabels } from '../shared/persona-options';
 
 export const CompletionStep = () => {
-  // Get the configured agents from global context
-  const selectedAgentIds = userContext.selectedAgents || [];
-
-  const completedAgents = allAgents.filter(agent =>
-    selectedAgentIds.includes(agent.id)
-  );
+  const persona = userContext.persona ?? {};
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)] relative overflow-hidden">
@@ -88,9 +81,7 @@ export const CompletionStep = () => {
         >
 
           <h1 className="text-4xl md:text-5xl font-medium bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent leading-tight">
-            Your AI Workforce
-            <br />
-            is Ready to Dominate!
+            Seu workspace Prophet está pronto
           </h1>
 
           <motion.p
@@ -99,10 +90,50 @@ export const CompletionStep = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
-            AI Workforce
-            are now configured, trained, and ready to revolutionize your workflow
+            Geramos um projeto inicial sob medida com base nas escolhas acima. Você pode ajustar tudo
+            assim que chegar ao dashboard.
           </motion.p>
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.1, duration: 0.45 }}
+          className="flex flex-wrap items-center justify-center gap-3"
+        >
+          {persona.goal && (
+            <Badge variant="secondary">Objetivo: {personaLabels.goal[persona.goal] ?? persona.goal}</Badge>
+          )}
+          {persona.focus && (
+            <Badge variant="secondary">Foco: {personaLabels.focus[persona.focus] ?? persona.focus}</Badge>
+          )}
+          {persona.tone && (
+            <Badge variant="secondary">Tom: {personaLabels.tone[persona.tone] ?? persona.tone}</Badge>
+          )}
+        </motion.div>
+
+        {persona.interests && persona.interests.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3, duration: 0.45 }}
+            className="text-sm text-muted-foreground"
+          >
+            <span className="font-medium text-foreground">Integrações de interesse:</span>{' '}
+            {persona.interests.join(', ')}
+          </motion.div>
+        )}
+
+        {persona.profile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.45, duration: 0.45 }}
+            className="text-sm text-primary/80"
+          >
+            Template aplicado: {persona.profile.replace(/-/g, ' ')}
+          </motion.div>
+        )}
 
       </motion.div>
     </div>

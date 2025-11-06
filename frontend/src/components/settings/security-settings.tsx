@@ -42,7 +42,7 @@ export default function SecuritySettings() {
 
   return (
     <div className="space-y-6">
-      {/* Password Reset Section com Design Suna */}
+      {/* Password Reset Section com Design Prophet */}
       <div className="space-y-4">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.03]">
@@ -80,7 +80,7 @@ export default function SecuritySettings() {
         </div>
       </div>
 
-      {/* Login Sessions Section com Design Suna */}
+      {/* Login Sessions Section com Design Prophet */}
       <div className="space-y-4">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.03]">

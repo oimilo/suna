@@ -70,7 +70,7 @@ export function DashboardContent() {
     : null;
   const displayName = selectedAgent?.name || BRANDING.name;
   const agentAvatar = selectedAgent?.avatar;
-  const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
+  const isProphetAgent = selectedAgent?.metadata?.is_suna_default || false;
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
 

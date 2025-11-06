@@ -116,15 +116,15 @@ const TemplateBadge: React.FC<{ isPublic?: boolean }> = ({ isPublic }) => {
   );
 };
 
-const AgentBadges: React.FC<{ agent: AgentData, isSunaAgent: boolean }> = ({ agent, isSunaAgent }) => (
+const AgentBadges: React.FC<{ agent: AgentData, isProphetAgent: boolean }> = ({ agent, isProphetAgent }) => (
   <div className="flex gap-1.5">
-    {!isSunaAgent && agent.current_version && (
+    {!isProphetAgent && agent.current_version && (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs">
         <GitBranch className="h-3 w-3 opacity-60" />
         {agent.current_version.version_name}
       </span>
     )}
-    {!isSunaAgent && agent.is_public && (
+    {!isProphetAgent && agent.is_public && (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 text-xs font-medium">
         <Globe className="h-3 w-3 opacity-60" />
         Published
@@ -356,8 +356,8 @@ const TemplateActions: React.FC<{
   </div>
 );
 
-const CardAvatar: React.FC<{ avatar: string; color: string; isSunaAgent?: boolean }> = ({ avatar, color, isSunaAgent = false }) => {
-  if (isSunaAgent) {
+const CardAvatar: React.FC<{ avatar: string; color: string; isProphetAgent?: boolean }> = ({ avatar, color, isProphetAgent = false }) => {
+  if (isProphetAgent) {
     return (
       <div className="h-10 w-10 bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 flex items-center justify-center rounded-lg">
         <BrandLogo size={20} />
@@ -406,7 +406,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 }) => {
   const { avatar, color } = styling;
   
-  const isSunaAgent = mode === 'agent' && (data as AgentData).metadata?.is_suna_default === true;
+  const isProphetAgent = mode === 'agent' && (data as AgentData).metadata?.is_suna_default === true;
   
   const isAgentClickable = mode === 'agent' && onCustomize;
   const cardClassName = `group relative bg-black/[0.02] dark:bg-white/[0.03] rounded-lg overflow-hidden transition-all duration-200 border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-black/8 dark:hover:border-white/10 ${isAgentClickable ? 'cursor-pointer' : ''} flex flex-col min-h-[220px]`;
@@ -418,7 +418,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       case 'template':
         return <TemplateBadge isPublic={(data as TemplateData).is_public} />;
       case 'agent':
-        return <AgentBadges agent={data as AgentData} isSunaAgent={isSunaAgent} />;
+        return <AgentBadges agent={data as AgentData} isProphetAgent={isProphetAgent} />;
       default:
         return null;
     }
@@ -450,11 +450,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         />;
       case 'agent':
         const agentData = data as AgentData;
-        const isSuna = agentData.metadata?.is_suna_default;
+        const isProphet = agentData.metadata?.is_suna_default;
         const isDefaultAgent = agentData.is_default;
         
         // Mostra botão desabilitado para agentes padrão do sistema
-        if (isDefaultAgent || isSuna) {
+        if (isDefaultAgent || isProphet) {
           return (
             <div className="relative group/button">
               <Button
@@ -475,7 +475,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         }
         
         // Mostra botão normal para outros agentes
-        const showPublish = !isSuna && onPublish && !agentData.is_public;
+        const showPublish = !isProphet && onPublish && !agentData.is_public;
         
         if (showPublish) {
           return (
@@ -524,7 +524,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       <div className="p-4 flex flex-col flex-1">
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          <CardAvatar avatar={avatar} color={color} isSunaAgent={isSunaAgent} />
+          <CardAvatar avatar={avatar} color={color} isProphetAgent={isProphetAgent} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold tracking-tight truncate">

@@ -53,7 +53,7 @@ All branding is centralized in `/frontend/src/lib/branding.ts`. You can customiz
 - `NEXT_PUBLIC_APP_DESCRIPTION` - App description for metadata
 - `NEXT_PUBLIC_APP_URL` - Your application URL
 - `NEXT_PUBLIC_COMPANY_NAME` - Your company/organization name
-- `NEXT_PUBLIC_TEAM_NAME` - Team name for credits (default: "Kortix Team")
+- `NEXT_PUBLIC_TEAM_NAME` - Team name for credits (default: "Milo Team")
 
 ### Contact Information
 - `NEXT_PUBLIC_SUPPORT_EMAIL` - Support email address

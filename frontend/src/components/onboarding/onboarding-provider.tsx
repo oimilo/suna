@@ -24,23 +24,29 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const createTemplateProject = useCreateTemplateProjectSimple();
 
   const resolveProfileType = () => {
-    // TODO: refinar mapeamento assim que definirmos as combinações de passos do onboarding
-    const selectedAgents = userContext.selectedAgents ?? [];
+    const persona = userContext.persona;
 
-    if (selectedAgents.includes('lead-generator')) {
-      return 'ecommerce';
+    if (persona?.profile) {
+      return persona.profile;
     }
 
-    if (selectedAgents.includes('meeting-researcher')) {
-      return 'analytics';
-    }
-
-    if (selectedAgents.includes('presentation-creator')) {
-      return 'content-visual';
-    }
-
-    if (userContext.primaryGoals?.some((goal) => goal.toLowerCase().includes('automation'))) {
-      return 'automation';
+    if (persona?.goal && persona?.focus) {
+      const fallback = `${persona.goal}:${persona.focus}`;
+      switch (fallback) {
+        case 'launch-presence:sales-funnel':
+        case 'sell-online:web-experience':
+        case 'sell-online:sales-funnel':
+          return 'ecommerce';
+        case 'understand-data:analysis':
+        case 'understand-data:sales-funnel':
+        case 'understand-data:web-experience':
+          return 'analytics';
+        case 'automate-ops:automation':
+        case 'automate-ops:sales-funnel':
+          return 'automation';
+        default:
+          return 'website-general';
+      }
     }
 
     return 'website-general';
@@ -80,12 +86,13 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         projectResult = await createTemplateProject.mutateAsync({
           userId: user.id,
           profileType: resolveProfileType(),
+          persona: userContext.persona,
           onboardingAnswers: {
             userType: userContext.userType,
             companySize: userContext.companySize,
             role: userContext.role,
             primaryGoals: userContext.primaryGoals,
-            selectedAgents: userContext.selectedAgents,
+            persona: userContext.persona,
           },
         });
 

@@ -60,7 +60,7 @@ async function installProphetForAllUsers() {
             account_id: account.account_id,
             name: 'Prophet',
             description: 'Your AI-powered development assistant',
-            system_prompt: `You are Prophet, an AI assistant created by Suna to help with software development tasks.
+            system_prompt: `You are Prophet, an AI assistant created by Milo to help with software development tasks.
 
 You have access to powerful tools for:
 - Reading and writing files

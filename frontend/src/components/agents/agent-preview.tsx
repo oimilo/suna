@@ -68,7 +68,7 @@ export const AgentPreview = ({
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
 
   // Commented out since header is not being displayed
-  // const isSunaAgent = agentMetadata?.is_suna_default || false;
+  // const isProphetAgent = agentMetadata?.is_suna_default || false;
   // const restrictions = agentMetadata?.restrictions || {};
   // const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false);
 
@@ -93,7 +93,7 @@ export const AgentPreview = ({
   
   // Commented out since header is not being displayed
   // const handleNameChange = (value: string) => {
-  //   if (!isNameEditable && isSunaAgent) {
+  //   if (!isNameEditable && isProphetAgent) {
   //     toast.error("Nome não pode ser editado", {
   //       description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
   //     });
@@ -379,7 +379,7 @@ export const AgentPreview = ({
       {/* Header with avatar, name, and preview badge commented out for cleaner UI
       <div className="flex-shrink-0 flex items-center justify-between p-8">
         <div className="flex items-center gap-3">
-          {!isSunaAgent && onStyleChange ? (
+          {!isProphetAgent && onStyleChange ? (
             <StylePicker
               currentEmoji={avatar}
               currentColor={color}
@@ -393,7 +393,7 @@ export const AgentPreview = ({
                 <div className="text-lg font-medium">{avatar}</div>
               </div>
             </StylePicker>
-          ) : isSunaAgent ? (
+          ) : isProphetAgent ? (
             <div className="h-10 w-10 bg-background rounded-lg bg-muted border border flex items-center justify-center">
               <BrandLogo size={16} />
             </div>
@@ -408,11 +408,11 @@ export const AgentPreview = ({
           <div>
             {onFieldChange ? (
               <EditableText
-                value={isSunaAgent ? "Prophet" : agent.name}
+                value={isProphetAgent ? "Prophet" : agent.name}
                 onSave={handleNameChange}
                 className={cn(
                   "text-base font-semibold bg-transparent text-foreground placeholder:text-muted-foreground",
-                  !isNameEditable && isSunaAgent && "cursor-not-allowed opacity-75"
+                  !isNameEditable && isProphetAgent && "cursor-not-allowed opacity-75"
                 )}
                 placeholder="Nome do agente..."
                 disabled={!isNameEditable}

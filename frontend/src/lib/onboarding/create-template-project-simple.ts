@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/client';
 export interface CreateTemplateProjectParams {
   userId: string;
   profileType: string;
+  persona?: {
+    goal?: string;
+    focus?: string;
+    tone?: string;
+    profile?: string;
+    interests?: string[];
+  };
   onboardingAnswers?: Record<string, any>;
 }
 
@@ -22,9 +29,10 @@ export interface CreateTemplateProjectResult {
 export async function createTemplateProject({
   userId,
   profileType,
+  persona,
   onboardingAnswers
 }: CreateTemplateProjectParams): Promise<CreateTemplateProjectResult> {
-  console.log('🚀 [TEMPLATE SIMPLE] Iniciando criação:', { userId, profileType });
+  console.log('🚀 [TEMPLATE SIMPLE] Iniciando criação:', { userId, profileType, persona });
   
   const template = getTemplateForProfile(profileType);
   
@@ -45,6 +53,7 @@ export async function createTemplateProject({
       isOnboardingProject: true,
       templateId: template.id,
       profileType,
+      persona,
       onboardingAnswers,
       projectName: template.name
     }));

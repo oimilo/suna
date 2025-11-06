@@ -50,13 +50,13 @@ export function AgentHeader({
   onTabChange,
 }: AgentHeaderProps) {
   const { t } = usePtTranslations();
-  const isSunaAgent = agentMetadata?.is_suna_default || false;
-  console.log('isSunaAgent', isSunaAgent);
+  const isProphetAgent = agentMetadata?.is_suna_default || false;
+  console.log('isProphetAgent', isProphetAgent);
   const restrictions = agentMetadata?.restrictions || {};
   const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false);
   
   const handleNameChange = (value: string) => {
-    if (!isNameEditable && isSunaAgent) {
+    if (!isNameEditable && isProphetAgent) {
       toast.error("Nome não pode ser editado", {
         description: `O nome do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
       });

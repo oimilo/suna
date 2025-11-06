@@ -8,14 +8,14 @@ interface AgentToolsConfigurationProps {
   tools: Record<string, { enabled: boolean; description: string }>;
   onToolsChange: (tools: Record<string, { enabled: boolean; description: string }>) => void;
   disabled?: boolean;
-  isSunaAgent?: boolean;
+  isProphetAgent?: boolean;
 }
 
-export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false, isSunaAgent = false }: AgentToolsConfigurationProps) => {
+export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false, isProphetAgent = false }: AgentToolsConfigurationProps) => {
   const searchQuery: string = ''; // Removed search for now since it's not being used
 
   const handleToolToggle = (toolName: string, enabled: boolean) => {
-    if (disabled && isSunaAgent) {
+    if (disabled && isProphetAgent) {
       toast.error("Ferramentas não podem ser modificadas", {
         description: `As ferramentas padrão do ${BRANDING.name} são gerenciadas centralmente e não podem ser alteradas.`,
       });

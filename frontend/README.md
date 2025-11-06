@@ -1,4 +1,4 @@
-# Suna Frontend
+# Prophet Frontend
 
 ## Quick Setup
 

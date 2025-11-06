@@ -4,7 +4,10 @@ import { UserContext } from './types';
 export let userContext: UserContext = {
   name: '',
   primaryGoals: [],
-  selectedAgents: []
+  selectedAgents: [],
+  persona: {
+    interests: [],
+  }
 };
 
 export const updateUserContext = (updates: Partial<UserContext>) => {
@@ -15,7 +18,10 @@ export const resetUserContext = () => {
   userContext = {
     name: '',
     primaryGoals: [],
-    selectedAgents: []
+    selectedAgents: [],
+    persona: {
+      interests: [],
+    }
   };
 };
 

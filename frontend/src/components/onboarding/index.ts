@@ -11,12 +11,11 @@ export { NewOnboardingPage } from './new-onboarding-page';
 export { CEOIntroStep } from './steps/ceo-intro-step';
 export { UserTypeStep } from './steps/user-type-step';
 export { SmartContextStep } from './steps/smart-context-step';
-export { WorkforceSelectionStep } from './steps/workforce-selection-step';
+export { PersonalitySelectionStep } from './steps/personality-selection-step';
 export { TeamInvitationStep } from './steps/team-invitation-step';
 export { CompletionStep as NewCompletionStep } from './steps/completion-step';
 
 // Agent configuration
-export { MultiAgentConfigurationStep } from './agent-config/multi-agent-configuration';
 export { AgentConfiguration } from './agent-config/agent-configuration';
 
 // Shared components

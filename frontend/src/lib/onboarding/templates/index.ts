@@ -22,20 +22,19 @@ export type { Template, OnboardingTemplate, TemplateMessage, TemplateFile } from
 
 // Function to get a template based on profile type
 export function getTemplateForProfile(profileType: string): Template | undefined {
-  // Novo mapeamento mais intuitivo baseado nos perfis reformulados
-  const profileToTemplateMap: Record<string, string> = {
-    // Novos perfis diretos
-    'website-showcase': 'landing-page',      // Landing Page Designer → Landing Page
-    'website-general': 'landing-page',       // Web Developer → Landing Page
-    'ecommerce': 'ecommerce-cart',          // E-commerce Specialist → E-commerce
-    'content-visual': 'blog-markdown',       // Content Creator → Blog
-    'content-technical': 'api-nodejs',       // Technical Writer → API (documentação)
-    'game': 'game-termo',                   // Game Developer → Game
-    'analytics': 'dashboard-analytics',      // Data Analyst → Dashboard
-    'automation': 'automation-workflow',     // Automation Engineer → Automation
-    'developer': 'api-nodejs',              // Full Stack Developer → API
-    
-    // Fallback para perfis antigos (compatibilidade)
+  const modernPersonaMap: Record<string, string> = {
+    'website-showcase': 'landing-page',
+    'website-general': 'landing-page',
+    'ecommerce': 'ecommerce-cart',
+    'analytics': 'dashboard-analytics',
+    'automation': 'automation-workflow',
+    'content-visual': 'blog-markdown',
+    'content-technical': 'api-nodejs',
+    'developer': 'api-nodejs',
+  };
+
+  // Compatibilidade com perfis antigos que ainda podem existir em metadados prévios
+  const legacyPersonaMap: Record<string, string> = {
     'visual-aesthetic-interactive': 'game-termo',
     'visual-aesthetic-automated': 'blog-markdown',
     'visual-pragmatic-interactive': 'landing-page',
@@ -52,6 +51,11 @@ export function getTemplateForProfile(profileType: string): Template | undefined
     'data-analyst': 'dashboard-analytics',
     'content-creator': 'blog-markdown',
     'gamer': 'game-termo'
+  };
+
+  const profileToTemplateMap: Record<string, string> = {
+    ...legacyPersonaMap,
+    ...modernPersonaMap,
   };
 
   const templateId = profileToTemplateMap[profileType] || 'landing-page';
