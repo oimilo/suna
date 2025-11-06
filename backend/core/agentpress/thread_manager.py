@@ -3,15 +3,8 @@ Simplified conversation thread management system for AgentPress.
 """
 
 import asyncio
-import copy
 import json
-import time
 from typing import List, Dict, Any, Optional, Type, Union, AsyncGenerator, Literal, cast
-
-import anyio
-import httpcore
-import httpx
-
 from core.services.llm import make_llm_api_call, LLMError
 from core.agentpress.prompt_caching import apply_anthropic_caching_strategy, validate_cache_blocks
 from core.agentpress.tool import Tool
@@ -35,7 +28,6 @@ class ThreadManager:
     def __init__(self, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
-        self._runtime_state: Dict[str, Dict[str, Any]] = {}
         
         self.trace = trace
         if not self.trace:
@@ -48,88 +40,6 @@ class ThreadManager:
             trace=self.trace,
             agent_config=self.agent_config
         )
-
-    # ------------------------------------------------------------------
-    # Runtime state utilities
-    # ------------------------------------------------------------------
-    def _ensure_runtime_bucket(self, thread_id: str) -> Dict[str, Any]:
-        return self._runtime_state.setdefault(thread_id, {})
-
-    def set_runtime_value(self, thread_id: str, key: str, value: Any) -> None:
-        if not thread_id or not key:
-            return
-        bucket = self._ensure_runtime_bucket(thread_id)
-        bucket[key] = copy.deepcopy(value)
-
-    def get_runtime_value(self, thread_id: str, key: str, default: Any = None) -> Any:
-        if not thread_id or not key:
-            return default
-        bucket = self._runtime_state.get(thread_id)
-        if not bucket:
-            return default
-        value = bucket.get(key, default)
-        return copy.deepcopy(value)
-
-    def clear_runtime_value(self, thread_id: str, key: str) -> None:
-        if not thread_id or not key:
-            return
-        bucket = self._runtime_state.get(thread_id)
-        if not bucket or key not in bucket:
-            return
-        del bucket[key]
-        if not bucket:
-            self._runtime_state.pop(thread_id, None)
-
-    # ------------------------------------------------------------------
-    # Composio session management
-    # ------------------------------------------------------------------
-    _COMPOSIO_SESSION_KEY = "__composio_session__"
-
-    def set_composio_session(self, thread_id: str, session_info: Dict[str, Any]) -> None:
-        if not thread_id or not isinstance(session_info, dict):
-            return
-
-        session_id = session_info.get("id") or session_info.get("session_id")
-        if not session_id:
-            logger.debug("Composio session missing id; skipping runtime store")
-            return
-
-        now_ts = time.time()
-        ttl_seconds = session_info.get("ttl") or session_info.get("expires_in")
-        expires_at_ts: Optional[float] = None
-        try:
-            if ttl_seconds:
-                expires_at_ts = now_ts + float(ttl_seconds)
-        except (TypeError, ValueError):
-            expires_at_ts = None
-
-        record = {
-            "session": copy.deepcopy(session_info),
-            "stored_at": now_ts,
-            "expires_at": expires_at_ts,
-        }
-        self.set_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY, record)
-        logger.debug(f"Stored Composio session for thread {thread_id}: {session_id}")
-
-    def get_composio_session(self, thread_id: str) -> Optional[Dict[str, Any]]:
-        record = self.get_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
-        if not record:
-            return None
-
-        expires_at = record.get("expires_at")
-        if isinstance(expires_at, (int, float)) and expires_at <= time.time():
-            logger.debug(f"Composio session expired for thread {thread_id}; purging")
-            self.clear_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
-            return None
-
-        session = record.get("session")
-        return copy.deepcopy(session) if isinstance(session, dict) else None
-
-    def clear_composio_session(self, thread_id: str) -> None:
-        cleared = self.get_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
-        self.clear_runtime_value(thread_id, self._COMPOSIO_SESSION_KEY)
-        if cleared:
-            logger.debug(f"Cleared Composio session cache for thread {thread_id}")
 
     def add_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
         """Add a tool to the ThreadManager."""
@@ -191,86 +101,29 @@ class ThreadManager:
         if agent_version_id:
             data_to_insert['agent_version_id'] = agent_version_id
 
-        max_attempts = 3
-        for attempt in range(1, max_attempts + 1):
-            try:
-                result = await client.table('messages').insert(data_to_insert).execute()
+        try:
+            result = await client.table('messages').insert(data_to_insert).execute()
 
-                if result.data and len(result.data) > 0 and 'message_id' in result.data[0]:
-                    saved_message = result.data[0]
-                    
-                    if type == "llm_response_end" and isinstance(content, dict):
-                        await self._handle_billing(thread_id, content, saved_message)
-                    
-                    return saved_message
-                else:
-                    logger.error(f"Insert operation failed for thread {thread_id}")
-                    return None
-            except (httpx.WriteError, httpx.ConnectError, httpx.RemoteProtocolError,
-                    httpx.ReadError, httpx.ReadTimeout, httpx.TimeoutException,
-                    httpcore.WriteError, httpcore.RemoteProtocolError,
-                    anyio.BrokenResourceError) as e:
-                if attempt >= max_attempts:
-                    logger.error(
-                        f"Failed to add message to thread {thread_id} after {attempt} attempts: {e}",
-                        exc_info=True
-                    )
-                    raise
-
-                backoff_seconds = min(2 ** (attempt - 1) * 0.5, 5.0)
-                logger.warning(
-                    f"Transient error adding message to thread {thread_id} (attempt {attempt}/{max_attempts}): {e}. "
-                    f"Retrying in {backoff_seconds:.2f}s"
-                )
-                await asyncio.sleep(backoff_seconds)
-            except Exception as e:
-                logger.error(f"Failed to add message to thread {thread_id}: {str(e)}", exc_info=True)
-                raise
+            if result.data and len(result.data) > 0 and 'message_id' in result.data[0]:
+                saved_message = result.data[0]
+                
+                if type == "llm_response_end" and isinstance(content, dict):
+                    await self._handle_billing(thread_id, content, saved_message)
+                
+                return saved_message
+            else:
+                logger.error(f"Insert operation failed for thread {thread_id}")
+                return None
+        except Exception as e:
+            logger.error(f"Failed to add message to thread {thread_id}: {str(e)}", exc_info=True)
+            raise
 
     async def _handle_billing(self, thread_id: str, content: dict, saved_message: dict):
         try:
-            if isinstance(saved_message, str):
-                try:
-                    saved_message = json.loads(saved_message)
-                except json.JSONDecodeError:
-                    logger.warning("Billing handler received stringified saved_message; proceeding without message_id")
-                    saved_message = {}
-
-            if isinstance(content, str):
-                try:
-                    content = json.loads(content)
-                except json.JSONDecodeError:
-                    message_id = saved_message.get('message_id') if isinstance(saved_message, dict) else None
-                    logger.error(
-                        f"Error handling billing: unable to parse llm_response_end content for message {message_id}"
-                    )
-                    return
-
             llm_response_id = content.get("llm_response_id", "unknown")
             logger.info(f"💰 Processing billing for LLM response: {llm_response_id}")
             
-            usage = content.get("usage") or {}
-            if isinstance(usage, str):
-                parsed_usage = None
-                try:
-                    parsed_usage = json.loads(usage)
-                except json.JSONDecodeError:
-                    try:
-                        import ast
-                        parsed_usage = ast.literal_eval(usage)
-                    except (ValueError, SyntaxError):
-                        parsed_usage = None
-                if parsed_usage and isinstance(parsed_usage, dict):
-                    usage = parsed_usage
-                else:
-                    logger.error(
-                        f"Error handling billing: unable to parse usage payload for response {llm_response_id}"
-                    )
-                    return
-
-            if not isinstance(usage, dict):
-                logger.error(f"Error handling billing: usage payload not a dict for response {llm_response_id}")
-                return
+            usage = content.get("usage", {})
             
             prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
             completion_tokens = int(usage.get("completion_tokens", 0) or 0)
@@ -279,10 +132,8 @@ class ThreadManager:
             
             cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
             if cache_read_tokens == 0:
-                prompt_details = usage.get("prompt_tokens_details") or {}
-                if not isinstance(prompt_details, dict):
-                    prompt_details = {}
-                cache_read_tokens = int(prompt_details.get("cached_tokens", 0) or 0)
+                # safely handle prompt_tokens_details that might be None
+                cache_read_tokens = int((usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0)
             
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
             model = content.get("model")
@@ -309,14 +160,10 @@ class ThreadManager:
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
                     model=model or "unknown",
-                    message_id=saved_message.get('message_id'),
+                    message_id=saved_message['message_id'],
                     cache_read_tokens=cache_read_tokens,
                     cache_creation_tokens=cache_creation_tokens
                 )
-                
-                if not isinstance(deduct_result, dict):
-                    logger.error(f"Billing integration returned unexpected response type: {type(deduct_result)} for user {user_id}")
-                    return
                 
                 if deduct_result.get('success'):
                     logger.info(f"Successfully deducted ${deduct_result.get('cost', 0):.6f}")
@@ -405,6 +252,7 @@ class ThreadManager:
         max_xml_tool_calls: int = 0,
         generation: Optional[StatefulGenerationClient] = None,
         latest_user_message_content: Optional[str] = None,
+        cancellation_event: Optional[asyncio.Event] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
@@ -432,7 +280,8 @@ class ThreadManager:
             result = await self._execute_run(
                 thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
                 tool_choice, config, stream,
-                generation, auto_continue_state, temporary_message, latest_user_message_content
+                generation, auto_continue_state, temporary_message, latest_user_message_content,
+                cancellation_event
             )
             
             # If result is an error dict, convert it to a generator that yields the error
@@ -446,7 +295,7 @@ class ThreadManager:
             thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
             tool_choice, config, stream,
             generation, auto_continue_state, temporary_message,
-            native_max_auto_continues, latest_user_message_content
+            native_max_auto_continues, latest_user_message_content, cancellation_event
         )
 
     async def _execute_run(
@@ -454,7 +303,7 @@ class ThreadManager:
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
         config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None,
-        latest_user_message_content: Optional[str] = None
+        latest_user_message_content: Optional[str] = None, cancellation_event: Optional[asyncio.Event] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
         
@@ -468,10 +317,6 @@ class ThreadManager:
             ENABLE_CONTEXT_MANAGER = True   # Set to False to disable context compression
             ENABLE_PROMPT_CACHING = True    # Set to False to disable prompt caching
             # ==================================
-            LARGE_TOOL_RESULT_TOKEN_THRESHOLD = 6000
-            LARGE_TOOL_RESULT_CHAR_THRESHOLD = 50000
-            
-            context_manager = None
             
             # Fast path: Check stored token count + new message tokens
             skip_fetch = False
@@ -597,44 +442,6 @@ class ThreadManager:
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']
                 messages.append({"role": "assistant", "content": partial_content})
 
-            # Detect oversized tool payloads to avoid relying solely on the fast-path estimate
-            if ENABLE_CONTEXT_MANAGER and skip_fetch:
-                context_manager = context_manager or ContextManager()
-                large_tool_detected = False
-                for msg in messages:
-                    if context_manager.is_tool_result_message(msg):
-                        msg_for_tokens = {
-                            "role": msg.get("role", "assistant"),
-                            "content": msg.get("content", "")
-                        }
-                        tool_tokens = None
-                        try:
-                            tool_tokens = token_counter(model=llm_model, messages=[msg_for_tokens])
-                        except Exception as token_error:
-                            logger.debug(f"Token counting failed for tool result: {token_error}")
-                        content = msg.get("content", "")
-                        if isinstance(content, str):
-                            content_length = len(content)
-                        else:
-                            try:
-                                content_length = len(json.dumps(content))
-                            except Exception:
-                                content_length = 0
-                        if (
-                            (tool_tokens and tool_tokens >= LARGE_TOOL_RESULT_TOKEN_THRESHOLD)
-                            or content_length >= LARGE_TOOL_RESULT_CHAR_THRESHOLD
-                        ):
-                            large_tool_detected = True
-                            logger.info(
-                                f"📦 Large tool payload detected "
-                                f"(tokens: {tool_tokens or 'unknown'}, size: {content_length} chars); forcing context compression."
-                            )
-                            break
-                if large_tool_detected:
-                    skip_fetch = False
-                    need_compression = True
-                    estimated_total_tokens = None
-
             # Apply context compression (only if needed based on fast path check)
             if ENABLE_CONTEXT_MANAGER:
                 if skip_fetch:
@@ -643,7 +450,7 @@ class ThreadManager:
                 elif need_compression:
                     # We know we're over threshold, compress now
                     logger.info(f"Applying context compression on {len(messages)} messages")
-                    context_manager = context_manager or ContextManager()
+                    context_manager = ContextManager()
                     compressed_messages = await context_manager.compress_messages(
                         messages, llm_model, max_tokens=llm_max_tokens, 
                         actual_total_tokens=estimated_total_tokens,  # Use estimated from fast check!
@@ -655,7 +462,7 @@ class ThreadManager:
                 else:
                     # First turn or no fast path data: Run compression check
                     logger.debug(f"Running compression check on {len(messages)} messages")
-                    context_manager = context_manager or ContextManager()
+                    context_manager = ContextManager()
                     compressed_messages = await context_manager.compress_messages(
                         messages, llm_model, max_tokens=llm_max_tokens, 
                         actual_total_tokens=None,
@@ -746,7 +553,7 @@ class ThreadManager:
                     cast(AsyncGenerator, llm_response), thread_id, prepared_messages,
                     llm_model, config, True,
                     auto_continue_state['count'], auto_continue_state['continuous_state'],
-                    generation, estimated_total_tokens
+                    generation, estimated_total_tokens, cancellation_event
                 )
             else:
                 return self.response_processor.process_non_streaming_response(
@@ -763,7 +570,8 @@ class ThreadManager:
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
         config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]],
-        native_max_auto_continues: int, latest_user_message_content: Optional[str] = None
+        native_max_auto_continues: int, latest_user_message_content: Optional[str] = None,
+        cancellation_event: Optional[asyncio.Event] = None
     ) -> AsyncGenerator:
         """Generator that handles auto-continue logic."""
         logger.debug(f"Starting auto-continue generator, max: {native_max_auto_continues}")
@@ -778,12 +586,18 @@ class ThreadManager:
             auto_continue_state['active'] = False  # Reset for this iteration
             
             try:
+                # Check for cancellation before continuing
+                if cancellation_event and cancellation_event.is_set():
+                    logger.info(f"Cancellation signal received in auto-continue generator for thread {thread_id}")
+                    break
+                
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
                     tool_choice, config, stream,
                     generation, auto_continue_state,
                     temporary_message if auto_continue_state['count'] == 0 else None,
-                    latest_user_message_content if auto_continue_state['count'] == 0 else None
+                    latest_user_message_content if auto_continue_state['count'] == 0 else None,
+                    cancellation_event
                 )
 
                 # Handle error responses
@@ -794,6 +608,11 @@ class ThreadManager:
                 # Process streaming response
                 if hasattr(response_gen, '__aiter__'):
                     async for chunk in cast(AsyncGenerator, response_gen):
+                        # Check for cancellation
+                        if cancellation_event and cancellation_event.is_set():
+                            logger.info(f"Cancellation signal received while processing stream in auto-continue for thread {thread_id}")
+                            break
+                        
                         # Check for auto-continue triggers
                         should_continue = self._check_auto_continue_trigger(
                             chunk, auto_continue_state, native_max_auto_continues
@@ -847,50 +666,9 @@ class ThreadManager:
                 content = json.loads(chunk.get('content', '{}')) if isinstance(chunk.get('content'), str) else chunk.get('content', {})
                 finish_reason = content.get('finish_reason')
                 tools_executed = content.get('tools_executed', False)
-
-                tool_conflicts = content.get('tool_conflicts', []) or []
-                if isinstance(tool_conflicts, list):
-                    for entry in tool_conflicts:
-                        if not isinstance(entry, dict):
-                            continue
-                        function_name = entry.get('function_name')
-                        reason = entry.get('reason')
-                        try:
-                            consecutive_failures = int(entry.get('consecutive_failures', 0) or 0)
-                        except (TypeError, ValueError):
-                            consecutive_failures = 0
-                        if function_name in {'create_file'} and reason == 'already_exists':
-                            logger.debug("Stopping auto-continue due to create_file conflict (already exists)")
-                            auto_continue_state['active'] = False
-                            return False
-
-                failure_summary = content.get('tool_failure_summary', []) or []
-                if isinstance(failure_summary, list):
-                    for entry in failure_summary:
-                        if not isinstance(entry, dict):
-                            continue
-                        function_name = entry.get('function_name')
-                        try:
-                            consecutive_failures = int(entry.get('consecutive_failures', 0) or 0)
-                        except (TypeError, ValueError):
-                            consecutive_failures = 0
-                        last_reason = entry.get('last_reason')
-                        if function_name in {'create_file'}:
-                            if last_reason == 'already_exists' and consecutive_failures >= 1:
-                                logger.debug("Stopping auto-continue due to create_file already-existing conflict (summary)")
-                                auto_continue_state['active'] = False
-                                return False
-                            if consecutive_failures >= 2:
-                                logger.debug("Stopping auto-continue due to repeated create_file failures")
-                                auto_continue_state['active'] = False
-                                return False
                 
                 # Trigger auto-continue for: native tool calls, length limit, or XML tools executed
                 if finish_reason == 'tool_calls' or tools_executed:
-                    if content.get('tools_all_failed'):
-                        logger.debug("Skipping auto-continue because all tools failed in the last run")
-                        auto_continue_state['active'] = False
-                        return False
                     if native_max_auto_continues > 0:
                         logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                         auto_continue_state['active'] = True

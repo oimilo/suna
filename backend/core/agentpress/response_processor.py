@@ -236,6 +236,7 @@ class ResponseProcessor:
         continuous_state: Optional[Dict[str, Any]] = None,
         generation = None,
         estimated_total_tokens: Optional[int] = None,
+        cancellation_event: Optional[asyncio.Event] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process a streaming LLM response, handling tool calls and execution.
         
@@ -254,6 +255,10 @@ class ResponseProcessor:
         """
         logger.info(f"Starting streaming response processing for thread {thread_id}")
         
+        # Initialize cancellation event if not provided
+        if cancellation_event is None:
+            cancellation_event = asyncio.Event()
+        
         # Initialize from continuous state if provided (for auto-continue)
         continuous_state = continuous_state or {}
         accumulated_content = continuous_state.get('accumulated_content', "")
@@ -268,30 +273,6 @@ class ResponseProcessor:
         should_auto_continue = False
         last_assistant_message_object = None # Store the final saved assistant message object
         tool_result_message_objects = {} # tool_index -> full saved message object
-        tool_outcomes: List[Dict[str, Any]] = []
-
-        recent_tool_failures_state = continuous_state.get('recent_tool_failures')
-        if isinstance(recent_tool_failures_state, dict):
-            recent_tool_failures_state = {
-                key: dict(value) if isinstance(value, dict) else {"count": 0, "last_reason": None}
-                for key, value in recent_tool_failures_state.items()
-            }
-        else:
-            recent_tool_failures_state = {}
-
-        def classify_tool_failure(output: Optional[str]) -> str:
-            if not output:
-                return "unknown"
-            lowered = output.lower()
-            if "already exists" in lowered:
-                return "already_exists"
-            if "permission denied" in lowered:
-                return "permission_denied"
-            if "no such file or directory" in lowered:
-                return "missing_target"
-            if "file not found" in lowered:
-                return "missing_target"
-            return "generic_failure"
         has_printed_thinking_prefix = False # Flag for printing thinking prefix only once
         agent_should_terminate = False # Flag to track if a terminating tool has been executed
         complete_native_tool_calls = [] # Initialize early for use in assistant_response_end
@@ -346,6 +327,12 @@ class ResponseProcessor:
 
             chunk_count = 0
             async for chunk in llm_response:
+                # Check for cancellation before processing each chunk
+                if cancellation_event.is_set():
+                    logger.info(f"Cancellation signal received for thread {thread_id} - stopping LLM stream processing")
+                    finish_reason = "cancelled"
+                    break
+                
                 chunk_count += 1
                 
                 # Track timing
@@ -514,32 +501,10 @@ class ResponseProcessor:
                                 tool_index += 1
 
                 if finish_reason == "xml_tool_limit_reached":
-                    logger.info("XML tool limit reached - draining remaining stream to capture usage data")
-                    self.trace.event(name="xml_tool_limit_draining_stream", level="DEFAULT", status_message=(f"XML tool limit reached - draining remaining stream to capture usage data"))
-                    
-                    # Continue reading stream to capture the final usage chunk (critical for billing)
-                    # Don't process content/tools, just extract usage data
-                    try:
-                        async for remaining_chunk in llm_response:
-                            chunk_count += 1
-                            # Update timing
-                            last_chunk_time = datetime.now(timezone.utc).timestamp()
-                            
-                            # Capture usage chunk if present
-                            if hasattr(remaining_chunk, 'usage') and remaining_chunk.usage and final_llm_response is None:
-                                final_llm_response = remaining_chunk
-                                logger.info(f"✅ Captured usage data after tool limit: {remaining_chunk.usage}")
-                                break  # Got what we needed, can stop now
-                            
-                            # Also check for finish_reason in case it wasn't set yet
-                            if hasattr(remaining_chunk, 'choices') and remaining_chunk.choices:
-                                if hasattr(remaining_chunk.choices[0], 'finish_reason') and remaining_chunk.choices[0].finish_reason:
-                                    if not finish_reason or finish_reason == "xml_tool_limit_reached":
-                                        finish_reason = remaining_chunk.choices[0].finish_reason
-                    except Exception as drain_error:
-                        logger.warning(f"Error draining stream after tool limit: {drain_error}")
-                    
-                    logger.info(f"Stream drained. Final chunk count: {chunk_count}")
+                    logger.info("XML tool limit reached - stopping immediately without draining stream")
+                    self.trace.event(name="xml_tool_limit_reached_immediate_stop", level="DEFAULT", status_message=(f"XML tool limit reached - stopping immediately to prevent further LLM token generation"))
+                    # Immediately break from the loop to stop consuming chunks
+                    # This prevents the LLM from continuing to generate tokens in the background
                     break
 
             logger.info(f"Stream complete. Total chunks: {chunk_count}")
@@ -568,60 +533,54 @@ class ResponseProcessor:
                 for execution in pending_tool_executions:
                     tool_idx = execution.get("tool_index", -1)
                     context = execution["context"]
-                    context.function_name = context.tool_call.get("function_name", context.function_name)
                     tool_name = context.function_name
-
+                    
                     if tool_idx in yielded_tool_indices:
-                        # logger.debug(f"Status for tool index {tool_idx} already yielded.")
-                        try:
-                            if execution["task"].done():
-                                result = execution["task"].result()
-                                context.result = result
-                                context.function_name = context.tool_call.get("function_name", context.function_name)
-                                tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
-
-                                if tool_name in ['ask', 'complete', 'present_presentation']:
-                                    logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
-                                    self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
-                                    agent_should_terminate = True
-
-                            else:
+                         # logger.debug(f"Status for tool index {tool_idx} already yielded.")
+                         try:
+                             if execution["task"].done():
+                                 result = execution["task"].result()
+                                 context.result = result
+                                 tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
+                                 
+                                 if tool_name in ['ask', 'complete', 'present_presentation']:
+                                     logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
+                                     self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
+                                     agent_should_terminate = True
+                                     
+                             else:
                                 logger.warning(f"Task for tool index {tool_idx} not done after wait.")
                                 self.trace.event(name="task_for_tool_index_not_done_after_wait", level="WARNING", status_message=(f"Task for tool index {tool_idx} not done after wait."))
-                        except Exception as e:
-                            logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
-                            self.trace.event(name="error_getting_result_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result for pending tool execution {tool_idx}: {str(e)}"))
-                            context.error = e
-                            error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                            if error_msg_obj:
-                                yield format_for_yield(error_msg_obj)
-                        continue
+                         except Exception as e:
+                             logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
+                             self.trace.event(name="error_getting_result_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result for pending tool execution {tool_idx}: {str(e)}"))
+                             context.error = e
+                             error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
+                             if error_msg_obj: yield format_for_yield(error_msg_obj)
+                         continue
 
                     try:
                         if execution["task"].done():
                             result = execution["task"].result()
                             context.result = result
-                            context.function_name = context.tool_call.get("function_name", context.function_name)
                             tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
-
+                            
                             if tool_name in ['ask', 'complete', 'present_presentation']:
                                 logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
                                 self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
                                 agent_should_terminate = True
-
+                                
                             completed_msg_obj = await self._yield_and_save_tool_completed(
                                 context, None, thread_id, thread_run_id
                             )
-                            if completed_msg_obj:
-                                yield format_for_yield(completed_msg_obj)
+                            if completed_msg_obj: yield format_for_yield(completed_msg_obj)
                             yielded_tool_indices.add(tool_idx)
                     except Exception as e:
                         logger.error(f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}")
                         self.trace.event(name="error_getting_result_yielding_status_for_pending_tool_execution", level="ERROR", status_message=(f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}"))
                         context.error = e
                         error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                        if error_msg_obj:
-                            yield format_for_yield(error_msg_obj)
+                        if error_msg_obj: yield format_for_yield(error_msg_obj)
                         yielded_tool_indices.add(tool_idx)
 
 
@@ -637,7 +596,9 @@ class ResponseProcessor:
 
             should_auto_continue = (can_auto_continue and finish_reason == 'length')
 
-            if accumulated_content and not should_auto_continue:
+            # Don't save partial response if user stopped (cancelled)
+            # But do save for other early stops like XML limit reached
+            if accumulated_content and not should_auto_continue and finish_reason != "cancelled":
                 # ... (Truncate accumulated_content logic) ...
                 if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls and xml_chunks_buffer:
                     last_xml_chunk = xml_chunks_buffer[-1]
@@ -741,9 +702,6 @@ class ResponseProcessor:
 
 
                 tool_results_map = {} # tool_index -> (tool_call, result, context)
-                tools_executed_this_run = False
-                tools_succeeded_this_run = False
-                tools_failed_this_run = False
 
                 # Populate from buffer if executed on stream
                 if config.execute_on_stream and tool_results_buffer:
@@ -752,39 +710,6 @@ class ResponseProcessor:
                     for tool_call, result, tool_idx, context in tool_results_buffer:
                         if last_assistant_message_object: context.assistant_message_id = last_assistant_message_object['message_id']
                         tool_results_map[tool_idx] = (tool_call, result, context)
-                        tools_executed_this_run = True
-                        if hasattr(result, 'success'):
-                            if result.success:
-                                tools_succeeded_this_run = True
-                            else:
-                                tools_failed_this_run = True
-                        else:
-                            tools_failed_this_run = True
-
-                        # Record outcome for failure tracking / conflict detection
-                        function_name = (
-                            context.function_name
-                            or context.xml_tag_name
-                            or (context.tool_call or {}).get('function_name')
-                            or (context.tool_call or {}).get('name')
-                            or (tool_call or {}).get('function_name')
-                            or (tool_call or {}).get('name')
-                            or 'unknown'
-                        )
-
-                        success_flag = bool(getattr(result, 'success', False))
-                        outcome_record = {
-                            "function_name": function_name,
-                            "success": success_flag,
-                        }
-
-                        output_value = getattr(result, 'output', None)
-                        if not success_flag:
-                            reason = classify_tool_failure(output_value if isinstance(output_value, str) else None)
-                            outcome_record["reason"] = reason
-                            if isinstance(output_value, str) and output_value:
-                                outcome_record["output_excerpt"] = output_value[:300]
-                        tool_outcomes.append(outcome_record)
 
                 # Or execute now if not streamed
                 elif final_tool_calls_to_process and not config.execute_on_stream:
@@ -812,26 +737,7 @@ class ResponseProcessor:
                                tool_data.get('parsing_details')
                            )
                            context.result = res
-                           outcome_record = {
-                               "function_name": context.function_name or context.xml_tag_name or "unknown",
-                               "success": bool(getattr(res, 'success', False)),
-                               "output": getattr(res, 'output', None),
-                           }
-                           if not outcome_record["success"]:
-                               reason = classify_tool_failure(outcome_record["output"])
-                               outcome_record["reason"] = reason
-                               if isinstance(outcome_record["output"], str):
-                                   outcome_record["output_excerpt"] = outcome_record["output"][:300]
-                           tool_outcomes.append(outcome_record)
                            tool_results_map[current_tool_idx] = (tc, res, context)
-                           tools_executed_this_run = True
-                           if hasattr(res, 'success'):
-                               if res.success:
-                                   tools_succeeded_this_run = True
-                               else:
-                                   tools_failed_this_run = True
-                           else:
-                               tools_failed_this_run = True
                        else:
                            logger.warning(f"Could not map result for tool index {current_tool_idx}")
                            self.trace.event(name="could_not_map_result_for_tool_index", level="WARNING", status_message=(f"Could not map result for tool index {current_tool_idx}"))
@@ -878,77 +784,12 @@ class ResponseProcessor:
                              # Optionally yield error status for saving failure?
 
             # --- Final Finish Status ---
-            latest_failure_summary: Dict[str, Dict[str, Any]] = {}
-            conflict_map: Dict[str, Dict[str, Any]] = {}
-
-            updated_recent_failures = {
-                name: dict(info)
-                for name, info in recent_tool_failures_state.items()
-                if isinstance(info, dict) and int(info.get("count", 0)) > 0
-            }
-
-            for outcome in tool_outcomes:
-                name = outcome.get("function_name") or "unknown"
-                if outcome.get("success"):
-                    updated_recent_failures.pop(name, None)
-                    latest_failure_summary.pop(name, None)
-                    continue
-
-                reason = outcome.get("reason", "generic_failure")
-                excerpt = outcome.get("output_excerpt")
-                if excerpt is None and isinstance(outcome.get("output"), str):
-                    excerpt = outcome["output"][:300]
-
-                previous_entry = updated_recent_failures.get(name) or recent_tool_failures_state.get(name) or {}
-                prev_count = int(previous_entry.get("count", 0))
-                consecutive_failures = prev_count + 1
-
-                updated_recent_failures[name] = {
-                    "count": consecutive_failures,
-                    "last_reason": reason,
-                    "last_output": excerpt,
-                }
-
-                summary_payload = {
-                    "function_name": name,
-                    "consecutive_failures": consecutive_failures,
-                    "last_reason": reason,
-                }
-                if excerpt:
-                    summary_payload["last_output_excerpt"] = excerpt
-                latest_failure_summary[name] = summary_payload
-
-                if reason == "already_exists":
-                    conflict_map[name] = {
-                        "function_name": name,
-                        "reason": reason,
-                        "consecutive_failures": consecutive_failures,
-                    }
-
-            if updated_recent_failures:
-                continuous_state['recent_tool_failures'] = updated_recent_failures
-            elif 'recent_tool_failures' in continuous_state:
-                continuous_state.pop('recent_tool_failures', None)
-
-            failure_summaries = list(latest_failure_summary.values())
-            conflict_entries = list(conflict_map.values())
-
             if finish_reason and finish_reason != "xml_tool_limit_reached":
                 finish_content = {"status_type": "finish", "finish_reason": finish_reason}
                 # Add metadata to indicate tools were detected (for auto-continue detection)
                 # Check if tools were actually detected during this run
                 if xml_tool_call_count > 0 or len(complete_native_tool_calls) > 0:
                     finish_content["tools_executed"] = True
-                    if tools_succeeded_this_run:
-                        finish_content["tools_succeeded"] = True
-                    if tools_failed_this_run:
-                        finish_content["tools_failed"] = True
-                    if tools_failed_this_run and not tools_succeeded_this_run and tools_executed_this_run:
-                        finish_content["tools_all_failed"] = True
-                    if failure_summaries:
-                        finish_content["tool_failure_summary"] = failure_summaries
-                    if conflict_entries:
-                        finish_content["tool_conflicts"] = conflict_entries
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id, type="status", content=finish_content, 
                     is_llm_message=False, metadata={"thread_run_id": thread_run_id}
@@ -1106,6 +947,36 @@ class ResponseProcessor:
         finally:
             # IMPORTANT: Finally block runs even when stream is stopped (GeneratorExit)
             # We MUST NOT yield here - just save to DB silently for billing/usage tracking
+            
+            # Phase 3: Resource Cleanup - Cancel pending tasks and close generator
+            try:
+                # Cancel all pending tool execution tasks when stopping
+                if pending_tool_executions:
+                    logger.info(f"Cancelling {len(pending_tool_executions)} pending tool executions due to stop/cancellation")
+                    for execution in pending_tool_executions:
+                        task = execution.get("task")
+                        if task and not task.done():
+                            try:
+                                task.cancel()
+                            except Exception as cancel_err:
+                                logger.warning(f"Error cancelling tool execution task: {cancel_err}")
+                
+                # Try to close the LLM response generator if it supports aclose()
+                # This helps stop the underlying HTTP connection from continuing
+                if hasattr(llm_response, 'aclose'):
+                    try:
+                        await llm_response.aclose()
+                        logger.debug(f"Closed LLM response generator for thread {thread_id}")
+                    except Exception as close_err:
+                        logger.debug(f"Error closing LLM response generator (may not support aclose): {close_err}")
+                elif hasattr(llm_response, 'close'):
+                    try:
+                        llm_response.close()
+                        logger.debug(f"Closed LLM response generator (sync close) for thread {thread_id}")
+                    except Exception as close_err:
+                        logger.debug(f"Error closing LLM response generator (sync): {close_err}")
+            except Exception as cleanup_err:
+                logger.warning(f"Error during resource cleanup: {cleanup_err}")
             
             if not llm_response_end_saved and last_assistant_message_object:
                 try:
@@ -1631,26 +1502,8 @@ class ResponseProcessor:
             available_functions = self.tool_registry.get_available_functions()
             # logger.debug(f"📋 Available functions: {list(available_functions.keys())}")
 
-            # Look up the function by name (with alias resolution fallback)
+            # Look up the function by name
             tool_fn = available_functions.get(function_name)
-            resolved_function_name = function_name
-            if not tool_fn:
-                resolved = self._resolve_tool_function(function_name, available_functions)
-                if resolved:
-                    resolved_function_name, tool_fn = resolved
-                    original_name = function_name
-                    function_name = resolved_function_name
-                    tool_call.setdefault("requested_function_name", original_name)
-                    tool_call["function_name"] = resolved_function_name
-                    logger.info(
-                        f"🔁 Resolved tool alias '{original_name}' → '{resolved_function_name}'"
-                    )
-                    self.trace.event(
-                        name="resolved_tool_alias",
-                        level="DEFAULT",
-                        status_message=(f"Resolved tool alias '{original_name}' to '{resolved_function_name}'")
-                    )
-
             if not tool_fn:
                 logger.error(f"❌ Tool function '{function_name}' not found in registry")
                 # logger.error(f"❌ Available functions: {list(available_functions.keys())}")
@@ -1717,64 +1570,6 @@ class ResponseProcessor:
             logger.error(f"❌ Full traceback:", exc_info=True)
             span.end(status_message="critical_error", output=str(e), level="ERROR")
             return ToolResult(success=False, output=f"Critical error executing tool: {str(e)}")
-
-    def _normalize_tool_function_name(self, name: Optional[str]) -> str:
-        """Normalize tool names for flexible matching (case and delimiter agnostic)."""
-        if not name:
-            return ""
-        normalized = str(name).strip().lower()
-        for delimiter in ("-", " ", ".", "/", ":"):
-            normalized = normalized.replace(delimiter, "_")
-        while "__" in normalized:
-            normalized = normalized.replace("__", "_")
-        return normalized.strip("_")
-
-    def _resolve_tool_function(
-        self,
-        requested_name: str,
-        available_functions: Dict[str, Callable]
-    ) -> Optional[Tuple[str, Callable]]:
-        """Resolve legacy/alias tool names to registered functions."""
-        if not requested_name:
-            return None
-
-        normalized_map: Dict[str, Tuple[str, Callable]] = {}
-        for registered_name, func in available_functions.items():
-            normalized = self._normalize_tool_function_name(registered_name)
-            if normalized and normalized not in normalized_map:
-                normalized_map[normalized] = (registered_name, func)
-
-        requested_normalized = self._normalize_tool_function_name(requested_name)
-        if requested_normalized in normalized_map:
-            return normalized_map[requested_normalized]
-
-        segments = [segment for segment in requested_normalized.split("_") if segment]
-        candidate_keys = []
-        for drop in range(1, min(len(segments), 4)):
-            candidate = "_".join(segments[drop:])
-            if candidate:
-                candidate_keys.append(candidate)
-
-        if len(segments) >= 2 and segments[1] in {"get", "list", "fetch", "retrieve", "search"}:
-            candidate = "_".join([segments[0]] + segments[2:])
-            if candidate:
-                candidate_keys.append(candidate)
-            candidate = "_".join(segments[2:])
-            if candidate:
-                candidate_keys.append(candidate)
-
-        for candidate in candidate_keys:
-            if candidate in normalized_map:
-                return normalized_map[candidate]
-
-        best_match: Optional[Tuple[str, Callable]] = None
-        best_length = -1
-        for normalized_name, value in normalized_map.items():
-            if requested_normalized.endswith(normalized_name) and len(normalized_name) > best_length:
-                best_match = value
-                best_length = len(normalized_name)
-
-        return best_match
 
     async def _execute_tools(
         self,
@@ -2136,21 +1931,6 @@ class ResponseProcessor:
 
             # If the message was saved, modify it in-memory for the frontend before returning
             if message_obj:
-                tool_message_id = message_obj.get("message_id")
-                if tool_message_id:
-                    # Attach message_id back onto both views so the LLM/front-end can fetch full content later
-                    structured_result_for_llm["tool_execution"]["message_id"] = tool_message_id
-                    structured_result_for_frontend["tool_execution"]["message_id"] = tool_message_id
-                    result_message_for_llm["content"] = json.dumps(structured_result_for_llm)
-
-                    try:
-                        client = await self.db.client
-                        await client.table('messages').update({
-                            'content': result_message_for_llm
-                        }).eq('message_id', tool_message_id).execute()
-                    except Exception as update_error:
-                        logger.warning(f"Failed to backfill message content with message_id {tool_message_id}: {update_error}")
-
                 # The frontend expects the rich content in the 'content' field.
                 # The DB has the rich content in metadata.frontend_content.
                 # Let's reconstruct the message for yielding.
@@ -2212,10 +1992,7 @@ class ResponseProcessor:
             except Exception:
                 # If parsing fails, keep the original string
                 pass
-        truncated_for_llm = False
-        if for_llm:
-            output, truncated_for_llm = self._summarize_output_for_llm(output, tool_call)
-        requested_function_name = tool_call.get("requested_function_name")
+
         structured_result_v1 = {
             "tool_execution": {
                 "function_name": function_name,
@@ -2229,102 +2006,8 @@ class ResponseProcessor:
                 },
             }
         } 
-        if truncated_for_llm:
-            structured_result_v1["tool_execution"]["result"]["truncated_for_llm"] = True
-
-        if requested_function_name and requested_function_name != function_name:
-            structured_result_v1["tool_execution"]["requested_function_name"] = requested_function_name
             
         return structured_result_v1
-    
-    def _summarize_output_for_llm(self, output: Any, tool_call: Dict[str, Any]) -> Tuple[Any, bool]:
-        """Reduce oversized tool outputs before they go back into the LLM context."""
-        truncated = False
-        try:
-            if isinstance(output, dict):
-                tools_payload = output.get("tools")
-                if isinstance(tools_payload, list) and tools_payload:
-                    total_tools = len(tools_payload)
-                    serialized_size = None
-                    try:
-                        serialized_size = len(json.dumps(tools_payload))
-                    except Exception:
-                        serialized_size = None
-                    if total_tools > 50 or (serialized_size and serialized_size > 50000):
-                        truncated = True
-                        sample_count = min(total_tools, 20)
-                        sample_tools: List[Dict[str, Any]] = []
-                        for tool in tools_payload[:sample_count]:
-                            if not isinstance(tool, dict):
-                                continue
-                            name = tool.get("name")
-                            description = (tool.get("description") or "") if isinstance(tool.get("description"), str) else ""
-                            description = description[:240]
-                            input_schema = tool.get("inputSchema") if isinstance(tool.get("inputSchema"), dict) else {}
-                            required_keys: List[str] = []
-                            optional_inputs_count = 0
-                            if isinstance(input_schema, dict):
-                                required_keys = list(input_schema.get("required", []) or [])
-                                properties = input_schema.get("properties", {}) or {}
-                                if isinstance(properties, dict):
-                                    optional_inputs_count = max(len(properties) - len(required_keys), 0)
-                            sample_tools.append({
-                                "name": name,
-                                "description": description,
-                                "required_inputs": required_keys,
-                                "optional_inputs_count": optional_inputs_count
-                            })
-                        prefix_counts: Dict[str, int] = {}
-                        for tool in tools_payload:
-                            if not isinstance(tool, dict):
-                                continue
-                            tool_name = tool.get("name", "")
-                            prefix = tool_name.split("_", 1)[0] if tool_name else "unknown"
-                            prefix_counts[prefix] = prefix_counts.get(prefix, 0) + 1
-                        top_prefixes = sorted(prefix_counts.items(), key=lambda item: item[1], reverse=True)[:10]
-                        profile_info = output.get("profile_info") if isinstance(output.get("profile_info"), dict) else None
-                        summary: Dict[str, Any] = {
-                            "type": "mcp_tool_catalog_summary",
-                            "function_name": tool_call.get("function_name"),
-                            "total_tools": total_tools,
-                            "sample_count": sample_count,
-                            "sample_tools": sample_tools,
-                            "remaining_tools": max(total_tools - sample_count, 0),
-                            "top_prefix_counts": [{"prefix": prefix, "count": count} for prefix, count in top_prefixes],
-                            "truncated": True,
-                            "guidance": (
-                                "All discovered tools are registered as callable functions via the tool schemas. "
-                                "Use those schemas directly when planning tool calls and run the expand_message tool "
-                                "with this message_id if you need the full JSON payload."
-                            )
-                        }
-                        if profile_info:
-                            summary["profile_info"] = profile_info
-                        if output.get("message"):
-                            summary["discovery_message"] = output.get("message")
-                        return summary, truncated
-            if isinstance(output, list):
-                if len(output) > 50:
-                    truncated = True
-                    sample_items = output[:25]
-                    return ({
-                        "summary": "Output list truncated for LLM context to stay within token limits.",
-                        "sample_items": sample_items,
-                        "total_items": len(output),
-                        "remaining_items": len(output) - len(sample_items),
-                        "truncated": True,
-                        "guidance": "Use expand_message with this message_id to retrieve the full list when required."
-                    }, truncated)
-            if isinstance(output, str):
-                if len(output) > 6000:
-                    truncated = True
-                    return (
-                        output[:6000] + "... (truncated for LLM context; call expand_message with this message_id to view the complete content.)",
-                        truncated
-                    )
-        except Exception as e:
-            logger.debug(f"Could not summarize tool output: {e}")
-        return output, truncated
 
     def _create_tool_context(self, tool_call: Dict[str, Any], tool_index: int, assistant_message_id: Optional[str] = None, parsing_details: Optional[Dict[str, Any]] = None) -> ToolExecutionContext:
         """Create a tool execution context with display name and parsing details populated."""

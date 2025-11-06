@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from core.tools.message_tool import MessageTool
 from core.tools.sb_expose_tool import SandboxExposeTool
 from core.tools.web_search_tool import SandboxWebSearchTool
+from core.tools.image_search_tool import SandboxImageSearchTool
 from dotenv import load_dotenv
 from core.utils.config import config, EnvMode
 from core.prompts.agent_builder_prompt import get_agent_builder_prompt
@@ -44,9 +45,7 @@ from core.tools.paper_search_tool import PaperSearchTool
 from core.ai_models.manager import model_manager
 from core.tools.vapi_voice_tool import VapiVoiceTool
 
-
 load_dotenv()
-
 
 @dataclass
 class AgentConfig:
@@ -105,11 +104,26 @@ class ToolManager:
     
     def _register_sandbox_tools(self, disabled_tools: List[str]):
         """Register sandbox-related tools with granular control."""
+        # Register web search tools conditionally based on API keys
+        if config.TAVILY_API_KEY or config.FIRECRAWL_API_KEY:
+            if 'web_search_tool' not in disabled_tools:
+                enabled_methods = self._get_enabled_methods_for_tool('web_search_tool')
+                self.thread_manager.add_tool(SandboxWebSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
+                if enabled_methods:
+                    logger.debug(f"✅ Registered web_search_tool with methods: {enabled_methods}")
+        
+        if config.SERPER_API_KEY:
+            if 'image_search_tool' not in disabled_tools:
+                enabled_methods = self._get_enabled_methods_for_tool('image_search_tool')
+                self.thread_manager.add_tool(SandboxImageSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
+                if enabled_methods:
+                    logger.debug(f"✅ Registered image_search_tool with methods: {enabled_methods}")
+        
+        # Register other sandbox tools
         sandbox_tools = [
             ('sb_shell_tool', SandboxShellTool, {'project_id': self.project_id, 'thread_manager': self.thread_manager}),
             ('sb_files_tool', SandboxFilesTool, {'project_id': self.project_id, 'thread_manager': self.thread_manager}),
             ('sb_expose_tool', SandboxExposeTool, {'project_id': self.project_id, 'thread_manager': self.thread_manager}),
-            ('web_search_tool', SandboxWebSearchTool, {'project_id': self.project_id, 'thread_manager': self.thread_manager}),
             ('sb_vision_tool', SandboxVisionTool, {'project_id': self.project_id, 'thread_id': self.thread_id, 'thread_manager': self.thread_manager}),
             ('sb_image_edit_tool', SandboxImageEditTool, {'project_id': self.project_id, 'thread_id': self.thread_id, 'thread_manager': self.thread_manager}),
             ('sb_kb_tool', SandboxKbTool, {'project_id': self.project_id, 'thread_manager': self.thread_manager}),
@@ -161,7 +175,6 @@ class ToolManager:
             if enabled_methods:
                 logger.debug(f"✅ Registered vapi_voice_tool with methods: {enabled_methods}")
             
-    
     def _register_agent_builder_tools(self, agent_id: str, disabled_tools: List[str]):
         """Register agent builder tools with proper initialization."""
         from core.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
@@ -291,7 +304,7 @@ class MCPManager:
         if not all_mcps:
             return None
         
-        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps, thread_manager=self.thread_manager)
+        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps)
         try:
             await mcp_wrapper_instance.initialize_and_register_tools()
             
@@ -620,7 +633,7 @@ class AgentRunner:
         mcp_manager = MCPManager(self.thread_manager, self.account_id)
         return await mcp_manager.register_mcp_tools(self.config.agent_config)
     
-    async def run(self) -> AsyncGenerator[Dict[str, Any], None]:
+    async def run(self, cancellation_event: Optional[asyncio.Event] = None) -> AsyncGenerator[Dict[str, Any], None]:
         await self.setup()
         await self.setup_tools()
         mcp_wrapper_instance = await self.setup_mcp_tools()
@@ -638,12 +651,15 @@ class AgentRunner:
         continue_execution = True
 
         latest_user_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).eq('type', 'user').order('created_at', desc=True).limit(1).execute()
+        latest_user_message_content = None
         if latest_user_message.data and len(latest_user_message.data) > 0:
             data = latest_user_message.data[0]['content']
             if isinstance(data, str):
                 data = json.loads(data)
             if self.config.trace:
                 self.config.trace.update(input=data['content'])
+            # Extract content for fast path optimization
+            latest_user_message_content = data.get('content') if isinstance(data, dict) else str(data)
 
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1
@@ -680,8 +696,9 @@ class AgentRunner:
                     llm_temperature=0,
                     llm_max_tokens=max_tokens,
                     tool_choice="auto",
-                    max_xml_tool_calls=6,
+                    max_xml_tool_calls=1,
                     temporary_message=temporary_message,
+                    latest_user_message_content=latest_user_message_content,
                     processor_config=ProcessorConfig(
                         xml_tool_calling=True,
                         native_tool_calling=False,
@@ -691,7 +708,8 @@ class AgentRunner:
                         xml_adding_strategy="user_message"
                     ),
                     native_max_auto_continues=self.config.native_max_auto_continues,
-                    generation=generation
+                    generation=generation,
+                    cancellation_event=cancellation_event
                 )
 
                 last_tool_call = None
@@ -813,7 +831,8 @@ async def run_agent(
     max_iterations: int = 100,
     model_name: str = "openai/gpt-5-mini",
     agent_config: Optional[dict] = None,    
-    trace: Optional[StatefulTraceClient] = None
+    trace: Optional[StatefulTraceClient] = None,
+    cancellation_event: Optional[asyncio.Event] = None
 ):
     effective_model = model_name
 
@@ -837,5 +856,5 @@ async def run_agent(
     )
     
     runner = AgentRunner(config)
-    async for chunk in runner.run():
+    async for chunk in runner.run(cancellation_event=cancellation_event):
         yield chunk
