@@ -235,10 +235,26 @@ export function FileRenderer({
     return undefined;
   }, [isHtmlFile, content, project?.sandbox?.sandbox_url, tiptapHtmlContent]);
 
-  const htmlPreviewUrl =
-    isHtmlFile && project?.sandbox?.sandbox_url && (filePath || fileName)
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName)
-      : blobHtmlUrl;
+  const projectId = (project as any)?.project_id || (project as any)?.id;
+  const previewTarget = filePath || fileName;
+
+  const htmlPreviewUrl = React.useMemo(() => {
+    if (isHtmlFile && project?.sandbox?.sandbox_url && previewTarget) {
+      const proxied = constructHtmlPreviewUrl(project.sandbox.sandbox_url, previewTarget, {
+        projectId,
+      });
+
+      if (proxied) {
+        return proxied;
+      }
+
+      return constructHtmlPreviewUrl(project.sandbox.sandbox_url, previewTarget, {
+        preferProxy: false,
+      });
+    }
+
+    return blobHtmlUrl;
+  }, [isHtmlFile, project?.sandbox?.sandbox_url, previewTarget, projectId, blobHtmlUrl]);
 
   React.useEffect(() => {
     return () => {

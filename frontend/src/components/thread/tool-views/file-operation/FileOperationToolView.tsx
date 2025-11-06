@@ -150,12 +150,24 @@ export function FileOperationToolView({
 
   const projectId = (project as any)?.project_id || (project as any)?.id;
 
-  const htmlPreviewUrl =
-    isHtml && project?.sandbox?.sandbox_url && processedFilePath
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath)
-      : undefined;
+  const sandboxHtmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url && processedFilePath
+    ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath, { preferProxy: false })
+    : undefined;
 
-  const maskedHtmlPreviewUrl = maskPreviewUrl(projectId, htmlPreviewUrl);
+  const proxiedHtmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url && processedFilePath
+    ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath, { projectId })
+    : undefined;
+
+  const maskedHtmlPreviewUrl = !proxiedHtmlPreviewUrl && projectId
+    ? maskPreviewUrl(projectId, sandboxHtmlPreviewUrl)
+    : undefined;
+
+  const htmlPreviewUrl = proxiedHtmlPreviewUrl || maskedHtmlPreviewUrl || sandboxHtmlPreviewUrl;
+
+  const openInBrowserHref = htmlPreviewUrl || sandboxHtmlPreviewUrl;
+  const openInBrowserTitle = sandboxHtmlPreviewUrl && htmlPreviewUrl && sandboxHtmlPreviewUrl !== htmlPreviewUrl
+    ? `URL original da sandbox: ${sandboxHtmlPreviewUrl}`
+    : undefined;
 
   const FileIcon = getFileIcon(fileName);
 
@@ -337,9 +349,15 @@ export function FileOperationToolView({
               </div>
             </div>
             <div className='flex items-center gap-2'>
-              {isHtml && htmlPreviewUrl && !isStreaming && (
+              {isHtml && openInBrowserHref && !isStreaming && (
                 <Button variant="outline" size="sm" className="h-8 text-xs bg-white dark:bg-muted/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-none" asChild>
-                  <a href={maskedHtmlPreviewUrl || htmlPreviewUrl} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={openInBrowserHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={openInBrowserTitle}
+                    data-sandbox-url={sandboxHtmlPreviewUrl}
+                  >
                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                     Open in Browser
                   </a>

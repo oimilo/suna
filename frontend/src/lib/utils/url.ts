@@ -6,26 +6,73 @@
  * @param filePath - The path to the HTML file (can include /workspace/ prefix)
  * @returns The properly encoded preview URL, or undefined if inputs are invalid
  */
-export function constructHtmlPreviewUrl(
-  sandboxUrl: string | undefined,
-  filePath: string | undefined,
-): string | undefined {
-  if (!sandboxUrl || !filePath) {
+type HtmlPreviewUrlOptions = {
+  projectId?: string;
+  preferProxy?: boolean;
+};
+
+function normalizePreviewFilePath(filePath?: string): string | undefined {
+  if (filePath == null) {
     return undefined;
   }
 
-  // Remove /workspace/ prefix if present
-  const processedPath = filePath.replace(/^\/workspace\//, '');
+  let workingPath = filePath;
 
-  // Split the path into segments and encode each segment individually
-  const pathSegments = processedPath
+  try {
+    const parsed = new URL(filePath);
+    workingPath = parsed.pathname;
+  } catch {
+  }
+
+  workingPath = workingPath
+    .replace(/^\/?workspace\//, '')
+    .replace(/^\/+/, '');
+
+  if (!workingPath) {
+    return 'index.html';
+  }
+
+  if (workingPath.endsWith('/')) {
+    const trimmed = workingPath.replace(/\/+$/, '');
+    return trimmed ? `${trimmed}/index.html` : 'index.html';
+  }
+
+  return workingPath;
+}
+
+export function constructHtmlPreviewUrl(
+  sandboxUrl: string | undefined,
+  filePath: string | undefined,
+  options?: HtmlPreviewUrlOptions,
+): string | undefined {
+  const preferProxy = options?.preferProxy ?? true;
+  const projectId = options?.projectId;
+
+  const normalizedPath = normalizePreviewFilePath(filePath ?? '');
+
+  if (preferProxy && projectId) {
+    const proxied = constructProjectPreviewFileUrl(projectId, normalizedPath);
+    if (proxied) {
+      return proxied;
+    }
+  }
+
+  if (!sandboxUrl) {
+    return undefined;
+  }
+
+  const base = sandboxUrl.replace(/\/+$/, '');
+
+  if (!normalizedPath) {
+    return `${base}/`;
+  }
+
+  const encodedPath = normalizedPath
     .split('/')
-    .map((segment) => encodeURIComponent(segment));
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
 
-  // Join the segments back together with forward slashes
-  const encodedPath = pathSegments.join('/');
-
-  return `${sandboxUrl}/${encodedPath}`;
+  return `${base}/${encodedPath}`;
 }
 
 /**
@@ -66,15 +113,13 @@ export function constructProjectPreviewProxyUrl(
   const basePath = `/api/preview/${projectId}/p/${port}`;
   const base = brandOrigin ? `${brandOrigin}${basePath}` : basePath;
 
-  if (!filePath) {
+  const normalizedPath = normalizePreviewFilePath(filePath ?? '');
+
+  if (!normalizedPath) {
     return `${base}/`;
   }
 
-  const processedPath = filePath
-    .replace(/^\/workspace\//, '')
-    .replace(/^\/+/, '');
-
-  const encodedSegments = processedPath
+  const encodedSegments = normalizedPath
     .split('/')
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment));
@@ -94,19 +139,13 @@ export function constructProjectPreviewFileUrl(
   const basePath = `/api/preview/${projectId}`;
   const base = brandOrigin ? `${brandOrigin}${basePath}` : basePath;
 
-  if (!filePath) {
+  const normalizedPath = normalizePreviewFilePath(filePath ?? '');
+
+  if (!normalizedPath) {
     return `${base}/`;
   }
 
-  const processedPath = filePath
-    .replace(/^\/workspace\//, '')
-    .replace(/^\/+/, '');
-
-  if (!processedPath) {
-    return `${base}/`;
-  }
-
-  const encodedSegments = processedPath
+  const encodedSegments = normalizedPath
     .split('/')
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment));

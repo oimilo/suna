@@ -1,6 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+async function responseContainsPreviewWarning(response: Response): Promise<boolean> {
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.toLowerCase().includes('text/html')) {
+    return false
+  }
+
+  try {
+    const body = await response.clone().text()
+    return /preview url warning/i.test(body)
+  } catch {
+    return false
+  }
+}
+
+async function fetchWithFallback(urls: string[]): Promise<{ response: Response; upstreamUrl: string }> {
+  let lastProblem: { response: Response; url: string } | null = null
+  let lastError: unknown = null
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-Daytona-Skip-Preview-Warning': 'true',
+          'Accept': '*/*',
+        },
+      })
+
+      if (!response.ok) {
+        lastProblem = { response, url }
+        if (response.status === 404) {
+          continue
+        }
+        return { response, upstreamUrl: url }
+      }
+
+      if (await responseContainsPreviewWarning(response)) {
+        lastProblem = { response, url }
+        continue
+      }
+
+      return { response, upstreamUrl: url }
+    } catch (error) {
+      console.error('Preview proxy lookup candidate error:', url, error)
+      lastError = error
+    }
+  }
+
+  if (lastProblem) {
+    return { response: lastProblem.response, upstreamUrl: lastProblem.url }
+  }
+
+  throw lastError ?? new Error('Failed to fetch preview asset')
+}
+
 // Simple proxy to avoid Daytona preview warning
 // This just redirects to Daytona with the skip-warning header
 export async function GET(
@@ -44,17 +99,35 @@ export async function GET(
   const sandboxUrl = project.sandbox.sandbox_url
   const cleanPath = filePath.replace(/^\/+/, '')
   const searchParams = request.nextUrl.search
-  const daytonaPreviewUrl = `${sandboxUrl}/${cleanPath}${searchParams ? searchParams : ''}`
+  const normalizedPath = cleanPath.replace(/\/+$/, '')
+  const searchParams = request.nextUrl.search || ''
+  const base = sandboxUrl.replace(/\/+$/, '')
+  const endsWithSlash = request.nextUrl.pathname.endsWith('/')
+
+  const candidateSegments: (string | undefined)[] = []
+  if (!normalizedPath || endsWithSlash) {
+    const indexSegment = normalizedPath ? `${normalizedPath}/index.html` : 'index.html'
+    candidateSegments.push(indexSegment)
+  }
+  candidateSegments.push(normalizedPath || undefined)
+
+  const hasRootCandidate = candidateSegments.some((segment) => segment === undefined)
+  const sanitizedSegments = candidateSegments
+    .filter((segment): segment is string => typeof segment === 'string')
+    .map((segment) => segment.replace(/^\/+/, ''))
+
+  const urlCandidates = Array.from(new Set([
+    ...sanitizedSegments.map((segment) => `${base}/${segment}${searchParams}`),
+    ...(hasRootCandidate ? [`${base}/${searchParams}`] : []),
+  ])).filter(Boolean)
+
+  if (urlCandidates.length === 0) {
+    urlCandidates.push(`${base}/${searchParams}`)
+  }
   
   try {
-    // Fetch from Daytona with the skip-warning header
-    const response = await fetch(daytonaPreviewUrl, {
-      method: 'GET',
-      headers: {
-        'X-Daytona-Skip-Preview-Warning': 'true',
-        'Accept': '*/*',
-      },
-    })
+    // Fetch from Daytona with skip-warning header and fallback handling
+    const { response, upstreamUrl } = await fetchWithFallback(urlCandidates)
     
     if (!response.ok) {
       return NextResponse.json(
@@ -74,7 +147,7 @@ export async function GET(
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
         'X-Frame-Options': 'SAMEORIGIN',
-        'X-Upstream-URL': daytonaPreviewUrl,
+        'X-Upstream-URL': upstreamUrl,
         'X-Proxy-Project': projectId,
       }
     })
