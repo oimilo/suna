@@ -67,6 +67,10 @@ export function HtmlRenderer({
         return blobHtmlUrl || previewUrl;
     }, [project?.sandbox?.sandbox_url, filePath, blobHtmlUrl, previewUrl]);
 
+    useEffect(() => {
+        setViewMode('preview');
+    }, [htmlPreviewUrl, content]);
+
     // Clean up blob URL on unmount
     useEffect(() => {
         return () => {
