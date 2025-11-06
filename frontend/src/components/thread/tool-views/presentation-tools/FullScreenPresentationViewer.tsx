@@ -46,6 +46,7 @@ interface FullScreenPresentationViewerProps {
   presentationName?: string;
   sandboxUrl?: string;
   initialSlide?: number;
+  projectId?: string;
 }
 
 export function FullScreenPresentationViewer({
@@ -54,6 +55,7 @@ export function FullScreenPresentationViewer({
   presentationName,
   sandboxUrl,
   initialSlide = 1,
+  projectId,
 }: FullScreenPresentationViewerProps) {
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
@@ -93,20 +95,37 @@ export function FullScreenPresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(presentationName);
       
-      const metadataUrl = constructHtmlPreviewUrl(
-        sandboxUrl, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
+      const metadataPath = `presentations/${sanitizedPresentationName}/metadata.json`;
+
+      const proxiedUrl = constructHtmlPreviewUrl(
+        sandboxUrl,
+        metadataPath,
+        { projectId }
       );
-      
-      const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
+
+      const directUrl = constructHtmlPreviewUrl(
+        sandboxUrl,
+        metadataPath,
+        { preferProxy: false }
+      );
+
+      const url = proxiedUrl ?? directUrl;
+
+      if (!url) {
+        throw new Error('Unable to construct metadata URL');
+      }
+
+      const urlWithCacheBust = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      
-      if (response.ok) {
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response.ok && contentType.includes('application/json')) {
         const data = await response.json();
         setMetadata(data);
         console.log('Successfully loaded presentation metadata:', data);
@@ -120,7 +139,10 @@ export function FullScreenPresentationViewer({
         
         return; // Success, exit early
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const responseBody = await response.text();
+        throw new Error(
+          `HTTP ${response.status}: ${response.statusText}. Content-Type: ${contentType}. Body preview: ${responseBody.slice(0, 200)}`
+        );
       }
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
@@ -150,7 +172,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [presentationName, sandboxUrl, backgroundRetryInterval]);
+  }, [presentationName, sandboxUrl, projectId, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
@@ -341,7 +363,20 @@ export function FullScreenPresentationViewer({
         );
       }
 
-      const slideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path);
+      const proxiedSlideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path, { projectId });
+      const directSlideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path, { preferProxy: false });
+      const slideUrl = proxiedSlideUrl ?? directSlideUrl;
+
+      if (!slideUrl) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Unable to build preview URL</p>
+            </div>
+          </div>
+        );
+      }
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
 
@@ -391,7 +426,7 @@ export function FullScreenPresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [sandboxUrl, refreshTimestamp, showEditor]);
+  }, [sandboxUrl, projectId, refreshTimestamp, showEditor]);
 
   // Render slide iframe with proper scaling
   const renderSlide = useMemo(() => {

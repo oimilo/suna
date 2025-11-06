@@ -5,6 +5,12 @@ interface PresentationViewerState {
   presentationName?: string;
   sandboxUrl?: string;
   initialSlide?: number;
+  projectId?: string;
+}
+
+interface OpenPresentationOptions {
+  initialSlide?: number;
+  projectId?: string;
 }
 
 export function usePresentationViewer() {
@@ -15,13 +21,14 @@ export function usePresentationViewer() {
   const openPresentation = (
     presentationName: string,
     sandboxUrl: string,
-    initialSlide: number = 1
+    options: OpenPresentationOptions = {}
   ) => {
     setViewerState({
       isOpen: true,
       presentationName,
       sandboxUrl,
-      initialSlide,
+      initialSlide: options.initialSlide ?? 1,
+      projectId: options.projectId,
     });
   };
 
