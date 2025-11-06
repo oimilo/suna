@@ -133,6 +133,7 @@ export function PresentationViewer({
 
   // Get tool title for display
   const toolTitle = getToolTitle(name || 'presentation-viewer');
+  const projectId = (project as any)?.project_id || (project as any)?.id;
 
   // Helper function to sanitize filename (matching backend logic)
   const sanitizeFilename = (name: string): string => {
@@ -151,24 +152,40 @@ export function PresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
-      const metadataUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
+      const metadataPath = `presentations/${sanitizedPresentationName}/metadata.json`;
+
+      const proxiedUrl = constructHtmlPreviewUrl(
+        project.sandbox.sandbox_url,
+        metadataPath,
+        { projectId }
       );
-      
-      // Add cache-busting parameter to ensure fresh data
-      const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
-      
+
+      const directUrl = constructHtmlPreviewUrl(
+        project.sandbox.sandbox_url,
+        metadataPath,
+        { preferProxy: false }
+      );
+
+      const url = proxiedUrl ?? directUrl;
+
+      if (!url) {
+        throw new Error('Unable to construct metadata URL');
+      }
+
+      const urlWithCacheBust = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
-      
+
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
-      
-      if (response.ok) {
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response.ok && contentType.includes('application/json')) {
         const data = await response.json();
         setMetadata(data);
         console.log('Successfully loaded presentation metadata:', data);
@@ -182,7 +199,10 @@ export function PresentationViewer({
         
         return; // Success, exit early
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const responseBody = await response.text();
+        throw new Error(
+          `HTTP ${response.status}: ${response.statusText}. Content-Type: ${contentType}. Body preview: ${responseBody.slice(0, 200)}`
+        );
       }
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
@@ -420,7 +440,20 @@ export function PresentationViewer({
         );
       }
 
-      const slideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
+      const proxiedSlideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path, { projectId });
+      const directSlideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path, { preferProxy: false });
+      const slideUrl = proxiedSlideUrl ?? directSlideUrl;
+
+      if (!slideUrl) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Unable to build preview URL</p>
+            </div>
+          </div>
+        );
+      }
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
 
@@ -466,7 +499,7 @@ export function PresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [project?.sandbox?.sandbox_url, refreshTimestamp]);
+  }, [project?.sandbox?.sandbox_url, projectId, refreshTimestamp]);
 
   // Render individual slide using the original approach
   const renderSlidePreview = useCallback((slide: SlideMetadata & { number: number }) => {
@@ -751,6 +784,7 @@ export function PresentationViewer({
         presentationName={extractedPresentationName}
         sandboxUrl={project?.sandbox?.sandbox_url}
         initialSlide={fullScreenInitialSlide || visibleSlide || currentSlideNumber || slides[0]?.number || 1}
+        projectId={projectId}
       />
     </Card>
   );
