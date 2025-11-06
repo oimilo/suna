@@ -36,20 +36,25 @@ const handleLocalFiles = (
   const newUploadedFiles: UploadedFile[] = filteredFiles.map((file) => {
     // Normalize filename to NFC
     const normalizedName = normalizeFilenameToNFC(file.name);
+    const displayName = file.name || normalizedName;
+    const uploadPath = `/workspace/${normalizedName}`;
 
     return {
-      name: normalizedName,
-      path: `/workspace/${normalizedName}`,
+      name: displayName,
+      originalName: displayName,
+      path: uploadPath,
       size: file.size,
       type: file.type || 'application/octet-stream',
-      localUrl: URL.createObjectURL(file)
+      localUrl: URL.createObjectURL(file),
+      legacyPaths: [],
     };
   });
 
   setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
   filteredFiles.forEach((file) => {
     const normalizedName = normalizeFilenameToNFC(file.name);
-    toast.success(`File attached: ${normalizedName}`);
+    const displayName = file.name || normalizedName;
+    toast.success(`File attached: ${displayName}`);
   });
 };
 
@@ -109,29 +114,45 @@ const uploadFiles = async (
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
+      let responseBody: any = null;
+      try {
+        responseBody = await response.json();
+      } catch (_) {
+        responseBody = null;
+      }
+
+      const serverPathRaw = responseBody?.path || uploadPath;
+      const serverPath = serverPathRaw.startsWith('/')
+        ? serverPathRaw
+        : `/${serverPathRaw}`;
+      const originalFilename = responseBody?.original_filename || file.name || normalizedName;
+
       // If file was already in chat and we have queryClient, invalidate its cache
       if (isFileInChat && queryClient) {
         // Invalidate all content types for this file
         ['text', 'blob', 'json'].forEach(contentType => {
-          const queryKey = fileQueryKeys.content(sandboxId, uploadPath, contentType);
+          const queryKey = fileQueryKeys.content(sandboxId, serverPath, contentType);
           queryClient.removeQueries({ queryKey });
         });
 
         // Also invalidate directory listing
-        const directoryPath = uploadPath.substring(0, uploadPath.lastIndexOf('/'));
+        const directoryPathRaw = serverPath.substring(0, serverPath.lastIndexOf('/'));
+        const directoryPath = directoryPathRaw || '/workspace';
         queryClient.invalidateQueries({
           queryKey: fileQueryKeys.directory(sandboxId, directoryPath),
         });
       }
 
       newUploadedFiles.push({
-        name: normalizedName,
-        path: uploadPath,
+        name: originalFilename,
+        originalName: originalFilename,
+        path: serverPath,
         size: file.size,
         type: file.type || 'application/octet-stream',
+        legacyPaths: serverPath === uploadPath ? [] : [uploadPath],
       });
 
-      toast.success(`File uploaded: ${normalizedName}`);
+      toast.success(`File uploaded: ${originalFilename}`);
     }
 
     setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
