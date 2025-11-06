@@ -18,7 +18,6 @@ from core.billing.billing_integration import billing_integration
 from .trigger_service import get_trigger_service, TriggerType
 from .provider_service import get_provider_service
 from .execution_service import get_execution_service
-from .workflow_service import get_workflow_service
 
 
 from .utils import get_next_run_time, get_human_readable_schedule
@@ -169,12 +168,8 @@ async def get_agent_triggers(
         trigger_service = get_trigger_service(db)
         triggers = await trigger_service.get_agent_triggers(agent_id)
         
-        base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-        
         responses = []
         for trigger in triggers:
-            webhook_url = f"{base_url}/api/triggers/{trigger.trigger_id}/webhook"
-            
             responses.append(TriggerResponse(
                 trigger_id=trigger.trigger_id,
                 agent_id=trigger.agent_id,
@@ -183,7 +178,7 @@ async def get_agent_triggers(
                 name=trigger.name,
                 description=trigger.description,
                 is_active=trigger.is_active,
-                webhook_url=webhook_url,
+                webhook_url=None,
                 created_at=trigger.created_at.isoformat(),
                 updated_at=trigger.updated_at.isoformat(),
                 config=trigger.config
@@ -229,12 +224,9 @@ async def get_all_user_triggers(
         if not triggers_result.data:
             return []
         
-        base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-        
         responses = []
         for trigger in triggers_result.data:
             agent_id = trigger['agent_id']
-            webhook_url = f"{base_url}/api/triggers/{trigger['trigger_id']}/webhook"
 
             config = trigger.get('config', {})
             if isinstance(config, str):
@@ -252,7 +244,7 @@ async def get_all_user_triggers(
                 'name': trigger['name'],
                 'description': trigger.get('description'),
                 'is_active': trigger.get('is_active', False),
-                'webhook_url': webhook_url,
+                'webhook_url': None,
                 'created_at': trigger['created_at'],
                 'updated_at': trigger['updated_at'],
                 'config': config,
@@ -367,9 +359,6 @@ async def create_agent_trigger(
         # Sync triggers to version config after creation
         await sync_triggers_to_version_config(agent_id)
         
-        base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-        webhook_url = f"{base_url}/api/triggers/{trigger.trigger_id}/webhook"
-        
         return TriggerResponse(
             trigger_id=trigger.trigger_id,
             agent_id=trigger.agent_id,
@@ -378,7 +367,7 @@ async def create_agent_trigger(
             name=trigger.name,
             description=trigger.description,
             is_active=trigger.is_active,
-            webhook_url=webhook_url,
+            webhook_url=None,
             created_at=trigger.created_at.isoformat(),
             updated_at=trigger.updated_at.isoformat(),
             config=trigger.config
@@ -407,9 +396,6 @@ async def get_trigger(
         
         await verify_and_authorize_trigger_agent_access(trigger.agent_id, user_id)
         
-        base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-        webhook_url = f"{base_url}/api/triggers/{trigger_id}/webhook"
-        
         return TriggerResponse(
             trigger_id=trigger.trigger_id,
             agent_id=trigger.agent_id,
@@ -418,7 +404,7 @@ async def get_trigger(
             name=trigger.name,
             description=trigger.description,
             is_active=trigger.is_active,
-            webhook_url=webhook_url,
+            webhook_url=None,
             created_at=trigger.created_at.isoformat(),
             updated_at=trigger.updated_at.isoformat(),
             config=trigger.config
@@ -457,9 +443,6 @@ async def update_trigger(
         # Sync triggers to version config after update
         await sync_triggers_to_version_config(updated_trigger.agent_id)
         
-        base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-        webhook_url = f"{base_url}/api/triggers/{trigger_id}/webhook"
-
         return TriggerResponse(
             trigger_id=updated_trigger.trigger_id,
             agent_id=updated_trigger.agent_id,
@@ -468,7 +451,7 @@ async def update_trigger(
             name=updated_trigger.name,
             description=updated_trigger.description,
             is_active=updated_trigger.is_active,
-            webhook_url=webhook_url,
+            webhook_url=None,
             created_at=updated_trigger.created_at.isoformat(),
             updated_at=updated_trigger.updated_at.isoformat(),
             config=updated_trigger.config
@@ -543,7 +526,7 @@ async def trigger_webhook(
         # Process trigger event
         trigger_service = get_trigger_service(db)
         result = await trigger_service.process_trigger_event(trigger_id, raw_data)
-
+        
         if not result.success:
             return JSONResponse(
                 status_code=400,
@@ -551,10 +534,9 @@ async def trigger_webhook(
             )
         
         # Execute if needed
-        trigger = await trigger_service.get_trigger(trigger_id)
-
-        if result.should_execute_agent and trigger:
-            try:
+        if result.should_execute_agent:
+            trigger = await trigger_service.get_trigger(trigger_id)
+            if trigger:
                 logger.debug(f"Executing agent {trigger.agent_id} for trigger {trigger_id}")
                 
                 from .trigger_service import TriggerEvent
@@ -562,8 +544,7 @@ async def trigger_webhook(
                     trigger_id=trigger_id,
                     agent_id=trigger.agent_id,
                     trigger_type=trigger.trigger_type,
-                    raw_data=raw_data,
-                    workflow_id=trigger.workflow_id,
+                    raw_data=raw_data
                 )
                 
                 execution_service = get_execution_service(db)
@@ -581,60 +562,18 @@ async def trigger_webhook(
                     "execution": execution_result,
                     "trigger_result": {
                         "should_execute_agent": result.should_execute_agent,
-                        "should_execute_workflow": result.should_execute_workflow,
-                        "agent_prompt": result.agent_prompt,
-                        "workflow_id": result.workflow_id,
+                        "agent_prompt": result.agent_prompt
                     }
                 })
-            except Exception as exc:
-                logger.error(f"Failed to execute agent for trigger {trigger_id}: {exc}")
-                return JSONResponse(
-                    status_code=500,
-                    content={"success": False, "error": "Agent execution failed"}
-                )
-
-        if result.should_execute_workflow and trigger:
-            try:
-                workflow_service = get_workflow_service(db)
-                client = await db.client
-                agent_row = await client.table('agents').select('account_id').eq('agent_id', trigger.agent_id).single().execute()
-                account_id = agent_row.data.get('account_id') if agent_row.data else None
-                if not account_id:
-                    raise RuntimeError("Agent account not found")
-
-                execution, _ = await workflow_service.record_execution(
-                    agent_id=trigger.agent_id,
-                    user_id=str(account_id),
-                    workflow_id=result.workflow_id or trigger.workflow_id or "",
-                    triggered_by="trigger",
-                    input_data=result.execution_variables,
-                )
-
-                return JSONResponse(content={
-                    "success": True,
-                    "message": "Trigger processed and workflow execution recorded",
-                    "trigger_result": {
-                        "should_execute_agent": result.should_execute_agent,
-                        "should_execute_workflow": result.should_execute_workflow,
-                        "workflow_id": execution.workflow_id,
-                    },
-                    "execution": execution.as_dict(),
-                })
-            except Exception as exc:
-                logger.error(f"Failed to record workflow execution for trigger {trigger_id}: {exc}")
-                return JSONResponse(
-                    status_code=500,
-                    content={"success": False, "error": "Workflow execution failed"}
-                )
+            else:
+                logger.warning(f"Trigger {trigger_id} not found for execution")
         
         logger.debug(f"Webhook processed but no execution needed")
         return JSONResponse(content={
             "success": True,
             "message": "Trigger processed successfully (no execution needed)",
             "trigger_result": {
-                "should_execute_agent": result.should_execute_agent,
-                "should_execute_workflow": result.should_execute_workflow,
-                "workflow_id": result.workflow_id,
+                "should_execute_agent": result.should_execute_agent
             }
         })
         
@@ -644,3 +583,5 @@ async def trigger_webhook(
             status_code=500,
             content={"success": False, "error": "Internal server error"}
         )
+
+

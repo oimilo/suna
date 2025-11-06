@@ -17,8 +17,8 @@ ON agents(account_id)
 WHERE metadata->>'is_suna_default' = 'true';
 
 COMMENT ON COLUMN agents.metadata IS 'Stores additional agent metadata including:
-- is_suna_default: boolean - Whether this is the official Prophet default agent
-- centrally_managed: boolean - Whether this agent is managed centrally by Prophet
+- is_suna_default: boolean - Whether this is the official Suna default agent
+- centrally_managed: boolean - Whether this agent is managed centrally by Suna
 - management_version: string - Version identifier for central management
 - restrictions: object - What editing restrictions apply to this agent
 - installation_date: timestamp - When this agent was installed

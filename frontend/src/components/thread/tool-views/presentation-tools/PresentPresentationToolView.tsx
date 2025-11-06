@@ -117,13 +117,6 @@ export function PresentPresentationToolView({
     }
   };
 
-  const resolvedSandboxId =
-    (typeof args?.sandbox_id === 'string' ? args.sandbox_id : undefined) ??
-    project?.sandbox?.id ??
-    (project as any)?.sandbox_id ??
-    project?.id ??
-    undefined;
-
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
       <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
@@ -195,17 +188,6 @@ export function PresentPresentationToolView({
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-              {presentationUrl && (
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  className="bg-gray-600 hover:bg-gray-700 text-white"
-                  onClick={() => window.open(presentationUrl, '_blank')}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Presentation
-                </Button>
-              )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
@@ -299,7 +281,7 @@ export function PresentPresentationToolView({
                       key={index}
                       filepath={attachment}
                       onClick={onFileClick}
-                      sandboxId={resolvedSandboxId}
+                      sandboxId={project?.sandbox_id}
                       project={project}
                       className="bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700"
                     />

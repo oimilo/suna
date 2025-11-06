@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CircleDashed, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CircleDashed, Maximize2 } from 'lucide-react';
 import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,6 @@ interface FloatingToolPreviewProps {
   indicatorIndex?: number;
   indicatorTotal?: number;
   onIndicatorClick?: (index: number) => void;
-  onNavigate?: (index: number) => void;
 }
 
 const FLOATING_LAYOUT_ID = 'tool-panel-float';
@@ -65,22 +64,16 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
   toolCalls,
   currentIndex,
   onExpand,
-  agentName: _agentName,
+  agentName,
   isVisible,
   showIndicators = false,
   indicatorIndex = 0,
   indicatorTotal = 1,
   onIndicatorClick,
-  onNavigate,
 }) => {
   const [isExpanding, setIsExpanding] = React.useState(false);
-  const [internalIndex, setInternalIndex] = React.useState(currentIndex);
-  const currentToolCall = toolCalls[internalIndex] || toolCalls[currentIndex];
+  const currentToolCall = toolCalls[currentIndex];
   const totalCalls = toolCalls.length;
-
-  React.useEffect(() => {
-    setInternalIndex(currentIndex);
-  }, [currentIndex]);
 
   React.useEffect(() => {
     if (isVisible) {
@@ -88,18 +81,12 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
     }
   }, [isVisible]);
 
+  if (!currentToolCall || totalCalls === 0) return null;
+
   const toolName = currentToolCall.assistantCall?.name || 'Tool Call';
   const CurrentToolIcon = getToolIcon(toolName);
   const isStreaming = currentToolCall.toolResult?.content === 'STREAMING';
   const isSuccess = isStreaming ? true : getToolResultStatus(currentToolCall);
-
-  const goToIndex = React.useCallback((newIndex: number) => {
-    const next = (newIndex + totalCalls) % totalCalls;
-    setInternalIndex(next);
-    onNavigate?.(next);
-  }, [totalCalls, onNavigate]);
-
-  if (!currentToolCall || totalCalls === 0) return null;
 
   const handleClick = () => {
     setIsExpanding(true);
@@ -113,134 +100,107 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
       {isVisible && (
         <motion.div
           layoutId={FLOATING_LAYOUT_ID}
-          initial={{ opacity: 0, y: 8, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.97 }}
+          layout
           transition={{
-            type: 'spring',
-            stiffness: 520,
-            damping: 34,
+            layout: {
+              type: "spring",
+              stiffness: 300,
+              damping: 30
+            }
           }}
-          className="w-full max-w-[210px]"
+          className="-mb-4 w-full"
           style={{ pointerEvents: 'auto' }}
         >
           <motion.div
             layoutId={CONTENT_LAYOUT_ID}
-            className={cn(
-              'relative overflow-hidden cursor-pointer',
-              'rounded-xl border border-black/6 dark:border-white/8',
-              'bg-background'
-            )}
-            onClick={handleClick}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
+            className="bg-card border border-border rounded-3xl p-2 w-full cursor-pointer group"
+            onClick={handleClick}
             style={{ opacity: isExpanding ? 0 : 1 }}
           >
-            <div className="px-3 py-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-center">
-                    {isStreaming ? (
-                      <CircleDashed className="h-3.5 w-3.5 text-blue-500 animate-spin" />
-                    ) : (
-                      <CurrentToolIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-
-                  <span className="text-xs font-medium text-foreground truncate">
-                    {getUserFriendlyToolName(toolName)}
-                  </span>
-
-                  {totalCalls > 1 && (
-                    <span className="text-[10px] text-muted-foreground bg-background/70 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                      {internalIndex + 1}/{totalCalls}
-                    </span>
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <motion.div
+                  layoutId="tool-icon"
+                  className={cn(
+                    "w-10 h-10 rounded-2xl flex items-center justify-center",
+                    isStreaming
+                      ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                      : isSuccess
+                        ? "bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-800"
+                        : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
                   )}
-
-                  {isStreaming && (
-                    <div className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 flex items-center gap-1 flex-shrink-0">
-                      <CircleDashed className="h-2.5 w-2.5 animate-spin" />
-                      <span>Executando</span>
-                    </div>
+                  style={{ opacity: isExpanding ? 0 : 1 }}
+                >
+                  {isStreaming ? (
+                    <CircleDashed className="h-5 w-5 text-blue-500 dark:text-blue-400 animate-spin" style={{ opacity: isExpanding ? 0 : 1 }} />
+                  ) : (
+                    <CurrentToolIcon className="h-5 w-5 text-foreground" style={{ opacity: isExpanding ? 0 : 1 }} />
                   )}
-                  {!isStreaming && isSuccess && (
-                    <div className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 flex-shrink-0">
-                      Concluído
-                    </div>
-                  )}
-                  {!isStreaming && !isSuccess && (
-                    <div className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-500/10 text-red-600 flex-shrink-0">
-                      Erro
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1">
-                  {showIndicators && indicatorTotal === 2 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const nextIndex = indicatorIndex === 0 ? 1 : 0;
-                        onIndicatorClick?.(nextIndex);
-                      }}
-                      className="flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-muted/40 transition-colors"
-                    >
-                      {Array.from({ length: indicatorTotal }).map((_, index) => (
-                        <div
-                          key={index}
-                          className={cn(
-                            'transition-all duration-300 ease-out rounded-full',
-                            index === indicatorIndex
-                              ? 'w-4 h-1.5 bg-foreground'
-                              : 'w-2.5 h-1.5 bg-muted-foreground/40'
-                          )}
-                        />
-                      ))}
-                    </button>
-                  )}
-                  {totalCalls > 1 && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          goToIndex(internalIndex - 1);
-                        }}
-                      >
-                        <ChevronLeft className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          goToIndex(internalIndex + 1);
-                        }}
-                      >
-                        <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleClick();
-                    }}
-                  >
-                    <Maximize2 className="h-3 w-3" />
-                  </Button>
-                </div>
+                </motion.div>
               </div>
+
+              <div className="flex-1 min-w-0" style={{ opacity: isExpanding ? 0 : 1 }}>
+                <motion.div layoutId="tool-title" className="flex items-center gap-2 mb-1">
+                  <h4 className="text-sm font-medium text-foreground truncate">
+                    {getUserFriendlyToolName(toolName)}
+                  </h4>
+                </motion.div>
+
+                <motion.div layoutId="tool-status" className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    isStreaming
+                      ? "bg-blue-500 animate-pulse"
+                      : isSuccess
+                        ? "bg-green-500"
+                        : "bg-red-500"
+                  )} />
+                  <span className="text-xs text-muted-foreground truncate">
+                    {isStreaming
+                      ? `${agentName || 'Suna'} is working...`
+                      : isSuccess
+                        ? "Success"
+                        : "Failed"
+                    }
+                  </span>
+                </motion.div>
+              </div>
+
+              {/* Apple-style notification indicators - only for multiple notification types */}
+              {showIndicators && indicatorTotal === 2 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent tool expansion
+                    // Toggle between the two notifications (binary switch)
+                    const nextIndex = indicatorIndex === 0 ? 1 : 0;
+                    onIndicatorClick?.(nextIndex);
+                  }}
+                  className="flex items-center gap-1.5 mr-3 px-2 py-1.5 rounded-lg hover:bg-muted/30 transition-colors"
+                  style={{ opacity: isExpanding ? 0 : 1 }}
+                >
+                  {Array.from({ length: indicatorTotal }).map((_, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        "transition-all duration-300 ease-out rounded-full",
+                        index === indicatorIndex
+                          ? "w-6 h-2 bg-foreground"
+                          : "w-3 h-2 bg-muted-foreground/40"
+                      )}
+                    />
+                  ))}
+                </button>
+              )}
+
+              <Button value='ghost' className="bg-transparent hover:bg-transparent flex-shrink-0" style={{ opacity: isExpanding ? 0 : 1 }}>
+                <Maximize2 className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </Button>
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
   );
-};
+}; 

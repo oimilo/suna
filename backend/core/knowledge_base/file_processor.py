@@ -137,7 +137,7 @@ class FileProcessor:
         try:
             # Model priority: Google Gemini → OpenRouter → GPT-5 Mini
             models = [
-                ("gemini/gemini-2.5-flash-lite", 1_000_000),  # 1M context
+                ("google/gemini-2.5-flash-lite", 1_000_000),  # 1M context
                 ("openrouter/google/gemini-2.5-flash-lite", 1_000_000),  # Fallback
                 ("gpt-5-mini", 400_000)  # Final fallback
             ]

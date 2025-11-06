@@ -40,10 +40,7 @@ export function HtmlRenderer({
         try {
             // If it's an API URL, extract the full path from the path parameter
             if (previewUrl.includes('/api/sandboxes/')) {
-                const url = new URL(
-                    previewUrl,
-                    typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
-                );
+                const url = new URL(previewUrl);
                 const path = url.searchParams.get('path');
                 if (path) {
                     // Remove /workspace/ prefix if present
@@ -78,39 +75,6 @@ export function HtmlRenderer({
 
     return (
         <div className={cn('w-full h-full flex flex-col', className)}>
-            {/* Toolbar */}
-            <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/50">
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant={viewMode === 'preview' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setViewMode('preview')}
-                    >
-                        <Monitor className="h-4 w-4" />
-                        Preview
-                    </Button>
-                    <Button
-                        variant={viewMode === 'code' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setViewMode('code')}
-                    >
-                        <Code className="h-4 w-4" />
-                        Code
-                    </Button>
-                </div>
-
-                {htmlPreviewUrl && (
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
-                        <a href={htmlPreviewUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                            Open in new tab
-                        </a>
-                    </Button>
-                )}
-            </div>
-
             {/* Content area */}
             <div className="flex-1 min-h-0 relative">
                 {viewMode === 'preview' ? (
@@ -133,4 +97,4 @@ export function HtmlRenderer({
             </div>
         </div>
     );
-}
+} 

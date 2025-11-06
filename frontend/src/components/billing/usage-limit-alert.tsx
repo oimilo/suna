@@ -1,9 +1,10 @@
 'use client';
 
-import { Info, X, Sparkles } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { BillingModal } from './billing-modal';
+import { useState } from 'react';
 
 interface BillingErrorAlertProps {
   message?: string;
@@ -22,47 +23,27 @@ export function BillingErrorAlert({
   onDismiss,
   isOpen,
 }: BillingErrorAlertProps) {
-  const router = useRouter();
+  const [showBillingModal, setShowBillingModal] = useState(false);
 
   if (!isOpen) return null;
 
-  // Determinar o tipo de erro baseado na mensagem
-  const isDailyCreditsExhausted = message?.includes('Créditos diários esgotados');
-  const isMonthlyLimitReached = message?.includes('Limite mensal');
-  const isBothExhausted = message?.includes('e créditos diários esgotados');
-
-  // Definir título e descrição baseado no tipo de erro
-  const getTitle = () => {
-    if (isBothExhausted) return 'Todos os créditos esgotados';
-    if (isDailyCreditsExhausted) return 'Créditos diários esgotados';
-    if (isMonthlyLimitReached) return 'Limite do plano atingido';
-    return 'Créditos esgotados';
-  };
-
-  const getDescription = () => {
-    if (isBothExhausted) {
-      return 'Seus créditos do plano e diários foram totalmente utilizados.';
-    }
-    if (isDailyCreditsExhausted) {
-      return 'Seus 200 créditos diários gratuitos foram utilizados. Novos créditos em breve!';
-    }
-    if (isMonthlyLimitReached) {
-      return 'Você atingiu o limite mensal do seu plano.';
-    }
-    return 'Você atingiu o limite de créditos.';
-  };
-
   return (
-    <div className="fixed bottom-4 right-4 z-[9999]">
-      <div className="bg-amber-500/10 backdrop-blur-sm border border-amber-500/30 rounded-lg p-5 shadow-lg max-w-md">
+    <>
+      <BillingModal 
+        open={showBillingModal} 
+        onOpenChange={setShowBillingModal}
+        showUsageLimitAlert={true}
+      />
+      <div className="fixed bottom-4 right-4 z-[9999]">
+      <div className="bg-destructive/15 backdrop-blur-sm border border-destructive/30 rounded-lg p-5 shadow-lg max-w-md">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 bg-amber-500/20 p-2 rounded-full">
-            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <div className="flex-shrink-0 bg-destructive/20 p-2 rounded-full">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                {getTitle()}
+              <h3 className="text-sm font-semibold text-destructive">
+                Usage Limit Reached
               </h3>
               <Button
                 variant="ghost"
@@ -73,9 +54,7 @@ export function BillingErrorAlert({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              {getDescription()}
-            </p>
+            <p className="text-sm text-muted-foreground mb-3">{message}</p>
 
             <div className="flex gap-2">
               <Button
@@ -84,21 +63,20 @@ export function BillingErrorAlert({
                 onClick={onDismiss}
                 className="text-xs"
               >
-                Entendi
+                Dismiss
               </Button>
               <Button
                 size="sm"
-                onClick={() =>
-                  router.push(`/settings/billing?accountId=${accountId}`)
-                }
-                className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={() => setShowBillingModal(true)}
+                className="text-xs bg-destructive hover:bg-destructive/90"
               >
-                Ver Opções de Upgrade
+                Upgrade Plan
               </Button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

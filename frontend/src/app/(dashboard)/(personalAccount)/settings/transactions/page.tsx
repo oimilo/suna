@@ -1,4 +1,4 @@
-import { CreditTransactions } from '@/components/billing/credit-transactions';
+import CreditTransactions from '@/components/billing/credit-transactions';
 
 export default function TransactionsPage() {
   return (

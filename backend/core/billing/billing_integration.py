@@ -71,14 +71,6 @@ class BillingIntegration:
             message_id=message_id
         )
         
-        if not isinstance(result, dict):
-            logger.error(f"[BILLING] use_credits returned unexpected response: {result}")
-            return {
-                'success': False,
-                'cost': float(cost),
-                'error': 'use_credits_no_response'
-            }
-        
         if result.get('success'):
             logger.info(f"[BILLING] Successfully deducted ${cost:.6f} from user {account_id}. New balance: ${result.get('new_total', 0):.2f} (expiring: ${result.get('from_expiring', 0):.2f}, non-expiring: ${result.get('from_non_expiring', 0):.2f})")
         else:

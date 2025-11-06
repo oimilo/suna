@@ -3,7 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from core.services import redis
 import sentry
 from contextlib import asynccontextmanager
@@ -14,9 +14,8 @@ from core.utils.config import config, EnvMode
 import asyncio
 from core.utils.logger import logger, structlog
 import time
-import os
-import urllib.parse as urlparse
 from collections import OrderedDict
+import os
 
 from pydantic import BaseModel
 import uuid
@@ -25,16 +24,14 @@ from core import api as core_api
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
+from core.billing.setup_api import router as setup_router
 from core.admin.admin_api import router as admin_router
-from core.admin.admin_management_api import router as admin_management_router
-from core.admin.analytics_api import router as analytics_router
 from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.master_password_api import router as master_password_router
 from core.services import transcription as transcription_api
 import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
-from core.triggers import workflow_api as workflows_api
 from core.services import api_keys_api
 
 
@@ -75,7 +72,6 @@ async def lifespan(app: FastAPI):
         # asyncio.create_task(core_api.restore_running_agent_runs())
         
         triggers_api.initialize(db)
-        workflows_api.initialize(db)
         credentials_api.initialize(db)
         template_api.initialize(db)
         composio_api.initialize(db)
@@ -136,37 +132,9 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
-def _add_origin(origins_list, origin_val):
-    if not origin_val:
-        return
-    origin = origin_val.rstrip('/')
-    if origin not in origins_list:
-        origins_list.append(origin)
-    try:
-        parsed = urlparse.urlparse(origin)
-        host = parsed.netloc
-        if host:
-            if host.startswith('www.'):
-                counterpart = f"{parsed.scheme}://{host[4:]}"
-            else:
-                counterpart = f"{parsed.scheme}://www.{host}"
-            if counterpart not in origins_list:
-                origins_list.append(counterpart)
-    except Exception:
-        pass
-
-# Define allowed origins based on environment and deployment URLs
-allowed_origins = [
-    "https://prophet.build",
-    "https://www.prophet.build",
-    "https://www.suna.so",
-    "https://suna.so",
-]
+# Define allowed origins based on environment
+allowed_origins = ["https://www.kortix.com", "https://kortix.com", "https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
-
-# Include deployment/site URLs from env
-for var in ["OR_SITE_URL", "APP_URL", "DEPLOY_DOMAIN", "NEXT_PUBLIC_URL"]:
-    _add_origin(allowed_origins, os.getenv(var))
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
@@ -175,13 +143,12 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.prophet.build")
-    allowed_origins.append("https://staging.prophet.so")
     allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
-    allow_origin_regex = r"https://(prophet|suna)-.*-prjcts\.vercel\.app"
+    # Allow Vercel preview deployments for both legacy and new project names
+    allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
 
-# Allow localhost access in production for master login operations
+# Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
@@ -200,13 +167,17 @@ api_router = APIRouter()
 
 # Include all API routers without individual prefixes
 api_router.include_router(core_api.router)
+
+# Include sanitized API endpoints for frontend-ready message format
+from core import api_sanitized
+api_router.include_router(api_sanitized.router)
+
 api_router.include_router(sandbox_api.router)
 api_router.include_router(billing_router)
+api_router.include_router(setup_router)
 api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
 api_router.include_router(admin_router)
-api_router.include_router(admin_management_router)
-api_router.include_router(analytics_router)
 api_router.include_router(master_password_router)
 
 from core.mcp_module import api as mcp_api
@@ -224,7 +195,6 @@ from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
 api_router.include_router(triggers_api.router)
-api_router.include_router(workflows_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
@@ -234,6 +204,85 @@ api_router.include_router(google_slides_router)
 
 from core.google.google_docs_api import router as google_docs_router
 api_router.include_router(google_docs_router)
+
+@api_router.get("/presentation-templates/{template_name}/image.png", summary="Get Presentation Template Image", tags=["presentations"])
+async def get_presentation_template_image(template_name: str):
+    """Serve presentation template preview images"""
+    try:
+        # Construct path to template image
+        image_path = os.path.join(
+            os.path.dirname(__file__),
+            "core",
+            "templates",
+            "presentations",
+            template_name,
+            "image.png"
+        )
+        
+        # Verify file exists and is within templates directory (security check)
+        image_path = os.path.abspath(image_path)
+        templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "core", "templates", "presentations"))
+        
+        if not image_path.startswith(templates_dir):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not os.path.exists(image_path):
+            raise HTTPException(status_code=404, detail="Template image not found")
+        
+        return FileResponse(image_path, media_type="image/png")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving template image: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@api_router.get("/presentation-templates/{template_name}/pdf", summary="Get Presentation Template PDF", tags=["presentations"])
+async def get_presentation_template_pdf(template_name: str):
+    """Serve presentation template PDF files"""
+    try:
+        # Construct path to template pdf folder
+        pdf_folder = os.path.join(
+            os.path.dirname(__file__),
+            "core",
+            "templates",
+            "presentations",
+            template_name,
+            "pdf"
+        )
+        
+        # Verify folder exists and is within templates directory (security check)
+        pdf_folder = os.path.abspath(pdf_folder)
+        templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "core", "templates", "presentations"))
+        
+        if not pdf_folder.startswith(templates_dir):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not os.path.exists(pdf_folder):
+            raise HTTPException(status_code=404, detail="Template PDF folder not found")
+        
+        # Find the first PDF file in the folder
+        pdf_files = [f for f in os.listdir(pdf_folder) if f.lower().endswith('.pdf')]
+        
+        if not pdf_files:
+            raise HTTPException(status_code=404, detail="No PDF file found in template")
+        
+        # Use the first PDF file found
+        pdf_path = os.path.join(pdf_folder, pdf_files[0])
+        
+        return FileResponse(
+            pdf_path, 
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename={template_name}.pdf"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving template PDF: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():

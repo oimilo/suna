@@ -10,27 +10,15 @@ class DynamicToolBuilder:
     
     def create_dynamic_methods(self, tools_info: List[Dict[str, Any]], custom_tools: Dict[str, Dict[str, Any]], execute_callback: Callable[[str, Dict[str, Any]], Awaitable[ToolResult]]) -> Dict[str, Callable]:
         methods = {}
-
-        sorted_tools = sorted(
-            tools_info,
-            key=lambda info: self._calculate_priority(info.get('name') or info.get('function', {}).get('name', '')),
-        )
-
-        for tool_info in sorted_tools:
+        
+        for tool_info in tools_info:
             tool_name = tool_info.get('name', '')
-            if not tool_name and 'function' in tool_info:
-                tool_name = tool_info['function'].get('name', '')
             if tool_name:
                 method = self._create_dynamic_method(tool_name, tool_info, execute_callback)
                 if method:
                     methods[method['method_name']] = method['method']
-
-        sorted_custom_tools = sorted(
-            custom_tools.items(),
-            key=lambda item: self._calculate_priority(item[0]),
-        )
-
-        for tool_name, tool_info in sorted_custom_tools:
+        
+        for tool_name, tool_info in custom_tools.items():
             openapi_tool_info = {
                 "name": tool_name,
                 "description": tool_info['description'],
@@ -39,7 +27,7 @@ class DynamicToolBuilder:
             method = self._create_dynamic_method(tool_name, openapi_tool_info, execute_callback)
             if method:
                 methods[method['method_name']] = method['method']
-
+        
         logger.debug(f"Created {len(methods)} dynamic MCP tool methods")
         return methods
     
@@ -75,24 +63,6 @@ class DynamicToolBuilder:
         # logger.debug(f"Created dynamic method '{method_name}' for MCP tool '{tool_name}' from server '{server_name}'")
         
         return tool_data
-
-    def _calculate_priority(self, tool_name: str) -> int:
-        name = (tool_name or '').lower()
-        priority = 0
-
-        heavy_keywords = ["dump", "export", "raw", "full", "schema"]
-        if any(keyword in name for keyword in heavy_keywords):
-            priority += 200
-
-        if name.startswith("list_"):
-            priority += 60
-            if "all" in name or name.endswith("_all"):
-                priority += 80
-
-        if name.startswith("get_all") or name.endswith("_all"):
-            priority += 80
-
-        return priority
     
     def _parse_tool_name(self, tool_name: str) -> tuple[str, str, str]:
         if tool_name.startswith("custom_"):

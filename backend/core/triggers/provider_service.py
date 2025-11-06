@@ -46,28 +46,15 @@ class TriggerProvider(ABC):
 class ScheduleProvider(TriggerProvider):
     def __init__(self):
         super().__init__("schedule", TriggerType.SCHEDULE)
-        # This should point to your backend base URL since Supabase Cron will POST to backend
-        self._webhook_base_url = os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
         self._db = DBConnection()
     
     async def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         if 'cron_expression' not in config:
             raise ValueError("cron_expression is required for scheduled triggers")
-
-        execution_type = str(config.get('execution_type', 'agent') or 'agent')
-        if execution_type not in ('agent', 'workflow'):
-            raise ValueError("execution_type must be 'agent' or 'workflow'")
-
-        if execution_type == 'agent':
-            if not config.get('agent_prompt'):
-                raise ValueError("agent_prompt is required for agent execution")
-            config['workflow_id'] = None
-        else:
-            workflow_id = config.get('workflow_id')
-            if not workflow_id:
-                raise ValueError("workflow_id is required when execution_type is 'workflow'")
-            config.setdefault('agent_prompt', None)
-
+        
+        if 'agent_prompt' not in config:
+            raise ValueError("agent_prompt is required for agent execution")
+        
         user_timezone = config.get('timezone', 'UTC')
         if user_timezone != 'UTC':
             try:
@@ -84,7 +71,8 @@ class ScheduleProvider(TriggerProvider):
     
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
-            webhook_url = f"{self._webhook_base_url}/api/triggers/{trigger.trigger_id}/webhook"
+            # Note: webhook_url removed - scheduled triggers may need alternative configuration
+            webhook_url = f"http://localhost:8000/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')
 
@@ -95,8 +83,6 @@ class ScheduleProvider(TriggerProvider):
                 "trigger_id": trigger.trigger_id,
                 "agent_id": trigger.agent_id,
                 "agent_prompt": trigger.config.get('agent_prompt'),
-                "workflow_id": trigger.config.get('workflow_id'),
-                "execution_type": trigger.config.get('execution_type', 'agent'),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
@@ -176,24 +162,12 @@ class ScheduleProvider(TriggerProvider):
                 'trigger_id': event.trigger_id,
                 'agent_id': event.agent_id
             }
-
-            execution_type = str(raw_data.get('execution_type') or trigger.config.get('execution_type', 'agent') or 'agent')
-            if execution_type == 'workflow':
-                workflow_id = raw_data.get('workflow_id') or trigger.config.get('workflow_id')
-                if not workflow_id:
-                    raise ValueError("workflow_id is required for workflow execution")
-                return TriggerResult(
-                    success=True,
-                    should_execute_workflow=True,
-                    workflow_id=workflow_id,
-                    execution_variables=execution_variables
-                )
-
-            agent_prompt = raw_data.get('agent_prompt') or trigger.config.get('agent_prompt')
-
+            
+            agent_prompt = raw_data.get('agent_prompt')
+            
             if not agent_prompt:
                 raise ValueError("agent_prompt is required for agent execution")
-
+            
             return TriggerResult(
                 success=True,
                 should_execute_agent=True,

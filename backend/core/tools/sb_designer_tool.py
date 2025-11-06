@@ -1,10 +1,7 @@
 from typing import Optional
-from urllib.parse import parse_qs, unquote, urlparse
-
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
-from core.utils.logger import logger
 import httpx
 from io import BytesIO
 import uuid
@@ -166,11 +163,7 @@ class SandboxDesignerTool(SandboxToolsBase):
                 if not image_path:
                     return self.fail_response("'image_path' is required for edit mode.")
 
-                normalized_image_path = self._normalize_image_path(image_path)
-                if isinstance(normalized_image_path, ToolResult):
-                    return normalized_image_path
-
-                image_bytes = await self._get_image_bytes(normalized_image_path)
+                image_bytes = await self._get_image_bytes(image_path)
                 if isinstance(image_bytes, ToolResult):  
                     return image_bytes
 
@@ -291,48 +284,6 @@ class SandboxDesignerTool(SandboxToolsBase):
 
     def _get_size_string(self, width: int, height: int) -> str:
         return "auto"
-
-    def _normalize_image_path(self, image_path: str) -> str | ToolResult:
-        trimmed_path = image_path.strip()
-
-        try:
-            parsed = urlparse(trimmed_path)
-            api_path = parsed.path or ""
-
-            if api_path.startswith("/api/sandboxes/"):
-                query_params = parse_qs(parsed.query or "")
-                path_values = query_params.get("path")
-
-                if not path_values or not path_values[0].strip():
-                    return self.fail_response(
-                        "Invalid design URL provided: missing 'path' query parameter."
-                    )
-
-                target_path = unquote(path_values[0])
-
-                if not target_path:
-                    return self.fail_response(
-                        "Invalid design URL provided: empty 'path' value."
-                    )
-
-                if not target_path.startswith("/"):
-                    target_path = f"/{target_path}"
-
-                if not target_path.startswith(self.workspace_path):
-                    target_path = f"{self.workspace_path}/{target_path.lstrip('/')}"
-
-                logger.debug(
-                    f"Designer Tool: normalized sandbox design URL '{trimmed_path}' to '{target_path}'"
-                )
-
-                return target_path
-
-        except Exception as exc:
-            logger.warning(
-                f"Designer Tool: failed to normalize image path '{trimmed_path}': {exc}"
-            )
-
-        return trimmed_path
 
     async def _get_image_bytes(self, image_path: str) -> bytes | ToolResult:
         if image_path.startswith(("http://", "https://")):

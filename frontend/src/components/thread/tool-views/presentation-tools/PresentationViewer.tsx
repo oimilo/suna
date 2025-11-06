@@ -152,28 +152,23 @@ export function PresentationViewer({
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
       const metadataUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
+        project.sandbox.sandbox_url, 
         `presentations/${sanitizedPresentationName}/metadata.json`
       );
-
-      if (!metadataUrl) {
-        throw new Error('Unable to construct metadata URL');
-      }
-
+      
+      // Add cache-busting parameter to ensure fresh data
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
-
+      
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
-
+      
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
-
-      const contentType = response.headers.get('content-type') || '';
-
-      if (response.ok && contentType.includes('application/json')) {
+      
+      if (response.ok) {
         const data = await response.json();
         setMetadata(data);
         console.log('Successfully loaded presentation metadata:', data);
@@ -187,10 +182,7 @@ export function PresentationViewer({
         
         return; // Success, exit early
       } else {
-        const responseBody = await response.text();
-        throw new Error(
-          `HTTP ${response.status}: ${response.statusText}. Content-Type: ${contentType}. Body preview: ${responseBody.slice(0, 200)}`
-        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
@@ -429,17 +421,6 @@ export function PresentationViewer({
       }
 
       const slideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
-
-      if (!slideUrl) {
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Unable to build preview URL</p>
-            </div>
-          </div>
-        );
-      }
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
 

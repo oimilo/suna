@@ -1,7 +1,7 @@
 import { createMutationHook, createQueryHook } from "@/hooks/use-query";
 import { threadKeys } from "./keys";
 import { Thread, updateThread, toggleThreadPublicStatus, deleteThread, getThread } from "./utils";
-import { sunaThreads } from "@/upstream/suna/threads";
+import { getThreads } from "@/lib/api";
 
 export const useThreadQuery = (threadId: string) =>
   createQueryHook(
@@ -44,7 +44,7 @@ export const useDeleteThreadMutation = () =>
 export const useThreadsForProject = (projectId: string) => {
   return createQueryHook(
     threadKeys.byProject(projectId),
-    () => sunaThreads.getThreads(projectId),
+    () => getThreads(projectId),
     {
       enabled: !!projectId,
       retry: 1,

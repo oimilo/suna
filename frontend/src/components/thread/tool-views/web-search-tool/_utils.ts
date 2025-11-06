@@ -40,15 +40,35 @@ const extractFromNewFormat = (content: any): WebSearchData => {
     }
     parsedOutput = parsedOutput || {};
 
+    // Handle both single and batch image search responses
+    let images: string[] = [];
+    let query = args.query || parsedOutput?.query || null;
+    
+    if (parsedOutput?.batch_results && Array.isArray(parsedOutput.batch_results)) {
+      // Batch response: flatten all images from all queries
+      images = parsedOutput.batch_results.reduce((acc: string[], result: any) => {
+        return acc.concat(result.images || []);
+      }, []);
+      
+      // Create combined query string for display
+      const queries = parsedOutput.batch_results.map((r: any) => r.query).filter(Boolean);
+      if (queries.length > 0) {
+        query = queries.length > 1 ? `${queries.length} queries: ${queries.join(', ')}` : queries[0];
+      }
+    } else {
+      // Single response
+      images = parsedOutput?.images || [];
+    }
+
     const extractedData = {
-      query: args.query || parsedOutput?.query || null,
+      query,
       results: parsedOutput?.results?.map((result: any) => ({
         title: result.title || '',
         url: result.url || '',
         snippet: result.content || result.snippet || ''
       })) || [],
       answer: parsedOutput?.answer || null,
-      images: parsedOutput?.images || [],
+      images,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp
     };
@@ -109,52 +129,14 @@ export function extractWebSearchData(
   let actualToolTimestamp = toolTimestamp;
   let actualAssistantTimestamp = assistantTimestamp;
 
-  const toNullableString = (value: unknown): string | null => {
-    if (value === null || value === undefined) {
-      return null;
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    try {
-      return JSON.stringify(value);
-    } catch (error) {
-      try {
-        return String(value);
-      } catch (stringError) {
-        return null;
-      }
-    }
-  };
-
-  const sanitizeResult = (result: any) => {
-    if (!result || typeof result !== 'object') {
-      return {
-        title: '',
-        url: '',
-        snippet: undefined,
-      };
-    }
-
-    return {
-      title: toNullableString(result.title) ?? '',
-      url: toNullableString(result.url) ?? '',
-      snippet: toNullableString(result.content ?? result.snippet ?? undefined) ?? undefined,
-    };
-  };
-
   const assistantNewFormat = extractFromNewFormat(assistantContent);
   const toolNewFormat = extractFromNewFormat(toolContent);
 
   if (assistantNewFormat.query || assistantNewFormat.results.length > 0) {
-    query = toNullableString(assistantNewFormat.query);
-    searchResults = assistantNewFormat.results.map(sanitizeResult);
-    answer = toNullableString(assistantNewFormat.answer);
-    images = Array.isArray(assistantNewFormat.images)
-      ? assistantNewFormat.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0)
-      : [];
+    query = assistantNewFormat.query;
+    searchResults = assistantNewFormat.results;
+    answer = assistantNewFormat.answer;
+    images = assistantNewFormat.images;
     if (assistantNewFormat.success !== undefined) {
       actualIsSuccess = assistantNewFormat.success;
     }
@@ -162,12 +144,10 @@ export function extractWebSearchData(
       actualAssistantTimestamp = assistantNewFormat.timestamp;
     }
   } else if (toolNewFormat.query || toolNewFormat.results.length > 0) {
-    query = toNullableString(toolNewFormat.query);
-    searchResults = toolNewFormat.results.map(sanitizeResult);
-    answer = toNullableString(toolNewFormat.answer);
-    images = Array.isArray(toolNewFormat.images)
-      ? toolNewFormat.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0)
-      : [];
+    query = toolNewFormat.query;
+    searchResults = toolNewFormat.results;
+    answer = toolNewFormat.answer;
+    images = toolNewFormat.images;
     if (toolNewFormat.success !== undefined) {
       actualIsSuccess = toolNewFormat.success;
     }
@@ -178,10 +158,10 @@ export function extractWebSearchData(
     const assistantLegacy = extractFromLegacyFormat(assistantContent);
     const toolLegacy = extractFromLegacyFormat(toolContent);
 
-    query = toNullableString(assistantLegacy.query || toolLegacy.query);
+    query = assistantLegacy.query || toolLegacy.query;
     
     const legacyResults = extractSearchResults(toolContent);
-    searchResults = legacyResults.map(sanitizeResult);
+    searchResults = legacyResults;
     
     if (toolContent) {
       try {
@@ -194,11 +174,18 @@ export function extractWebSearchData(
           parsedContent = {};
         }
 
-        if (parsedContent.answer) {
-          answer = toNullableString(parsedContent.answer);
+        if (parsedContent.answer && typeof parsedContent.answer === 'string') {
+          answer = parsedContent.answer;
         }
-        if (parsedContent.images && Array.isArray(parsedContent.images)) {
-          images = parsedContent.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0);
+        
+        // Handle both single and batch image responses in legacy format
+        if (parsedContent.batch_results && Array.isArray(parsedContent.batch_results)) {
+          // Batch response: flatten all images from all queries
+          images = parsedContent.batch_results.reduce((acc: string[], result: any) => {
+            return acc.concat(result.images || []);
+          }, []);
+        } else if (parsedContent.images && Array.isArray(parsedContent.images)) {
+          images = parsedContent.images;
         }
       } catch (e) {
       }
@@ -206,14 +193,12 @@ export function extractWebSearchData(
   }
 
   if (!query) {
-    query = toNullableString(
-      extractSearchQuery(assistantContent) || extractSearchQuery(toolContent),
-    );
+    query = extractSearchQuery(assistantContent) || extractSearchQuery(toolContent);
   }
   
   if (searchResults.length === 0) {
     const fallbackResults = extractSearchResults(toolContent);
-    searchResults = fallbackResults.map(sanitizeResult);
+    searchResults = fallbackResults;
   }
 
   return {

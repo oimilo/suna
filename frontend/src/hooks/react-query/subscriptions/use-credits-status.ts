@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_URL } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
+
+const BACKEND_BASE_URL = (() => {
+  const url = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+  if (!url) return '';
+  return url.endsWith('/api') ? url : `${url}/api`;
+})();
 
 // Alinha com Prophet: usar /billing/check e shape simplificado
 export interface CreditsStatus {
@@ -17,10 +22,10 @@ export interface CreditsStatus {
 }
 
 async function fetchCreditsStatus(token: string | null): Promise<CreditsStatus | null> {
-  if (!token) return null;
+  if (!token || !BACKEND_BASE_URL) return null;
   
   try {
-    const response = await fetch(`${API_URL}/billing/check`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/billing/check`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

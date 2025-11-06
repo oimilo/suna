@@ -3,7 +3,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -24,7 +23,7 @@ import {
   useStopAgentMutation,
 } from '@/hooks/react-query/threads/use-agent-run';
 import { useSharedSubscription } from '@/contexts/SubscriptionContext';
-import { SubscriptionStatus } from '@/components/thread/chat-input/_use-model-selection';
+export type SubscriptionStatus = 'no_subscription' | 'active';
 
 import {
   UnifiedMessage,
@@ -48,6 +47,7 @@ import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog'
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
+import { fileQueryKeys } from '@/hooks/react-query/files';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { handleGoogleSlidesUpload } from './tool-views/utils/presentation-utils';
 
@@ -64,7 +64,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const queryClient = useQueryClient();
 
   // State
-  const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [fileViewerOpen, setFileViewerOpen] = useState(false);
   const [fileToView, setFileToView] = useState<string | null>(null);
@@ -87,7 +86,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const { data: agentsResponse } = useAgents();
   const agents = agentsResponse?.agents || [];
   const [isSidePanelAnimating, setIsSidePanelAnimating] = useState(false);
-  const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [userInitiatedRun, setUserInitiatedRun] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
@@ -98,17 +96,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   // Refs - simplified for flex-column-reverse
   const latestMessageRef = useRef<HTMLDivElement>(null);
+  const initialLayoutAppliedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastStreamStartedRef = useRef<string | null>(null); // Track last runId we started streaming for
+  const pendingMessageRef = useRef<string | null>(null); // Store pending message to add when agent starts
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
-  const shouldReserveSidebarSpace = useMemo(() => {
-    if (isMobile) {
-      return leftSidebarState === 'expanded';
-    }
-    return true;
-  }, [isMobile, leftSidebarState]);
 
   // Custom hooks
   const {
@@ -169,40 +163,57 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     userClosedPanelRef,
   });
 
-  useEffect(() => {
-    if (!isSidePanelOpen && isPanelMinimized) {
-      setIsPanelMinimized(false);
-    }
-  }, [isSidePanelOpen, isPanelMinimized]);
-
   const addUserMessageMutation = useAddUserMessageMutation();
   const startAgentMutation = useStartAgentMutation();
   const stopAgentMutation = useStopAgentMutation();
   const { data: threadAgentData } = useThreadAgent(threadId);
   const agent = threadAgentData?.agent;
-  const workflowId = threadQuery.data?.metadata?.workflow_id;
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: threadKeys.agentRuns(threadId) });
     queryClient.invalidateQueries({ queryKey: threadKeys.messages(threadId) });
   }, [threadId, queryClient]);
 
+  // Listen for sandbox-active event to invalidate file caches
+  useEffect(() => {
+    const handleSandboxActive = (event: Event) => {
+      const customEvent = event as CustomEvent<{ sandboxId: string; projectId: string }>;
+      const { sandboxId, projectId: eventProjectId } = customEvent.detail;
+      
+      // Only invalidate if it's for this project
+      if (eventProjectId === projectId) {
+        console.log('[ThreadComponent] Sandbox active, invalidating file caches for:', sandboxId);
+        
+        // Invalidate all file content queries
+        queryClient.invalidateQueries({ 
+          queryKey: fileQueryKeys.contents()
+        });
+        
+        // This will cause all file attachments to refetch with the now-active sandbox
+        // toast.success('Sandbox is ready');
+      }
+    };
+
+    window.addEventListener('sandbox-active', handleSandboxActive);
+    return () => window.removeEventListener('sandbox-active', handleSandboxActive);
+  }, [projectId, queryClient]);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     if (urlParams.get('google_auth') === 'success') {
       // Clean up the URL parameters first
       window.history.replaceState({}, '', window.location.pathname);
-      
+
       // Check if there was an intent to upload to Google Slides
       const uploadIntent = sessionStorage.getItem('google_slides_upload_intent');
       if (uploadIntent) {
         sessionStorage.removeItem('google_slides_upload_intent');
-        
+
         try {
           const uploadData = JSON.parse(uploadIntent);
           const { presentation_path, sandbox_url } = uploadData;
-          
+
           if (presentation_path && sandbox_url) {
             // Handle upload in async function
             (async () => {
@@ -210,10 +221,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 sandbox_url,
                 presentation_path
               );
-              
+
               // Show loading toast and handle upload
               const loadingToast = toast.loading('Google authentication successful! Uploading presentation...');
-              
+
               try {
                 await uploadPromise;
                 // Success toast is now handled universally by handleGoogleSlidesUpload
@@ -247,11 +258,11 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       // Otherwise, fall back to threadAgentId (existing behavior)
       const threadAgentId = threadAgentData?.agent?.agent_id;
       const agentIdToUse = configuredAgentId || threadAgentId;
-      
+
       console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
-      
+
       initializeFromAgents(agents, agentIdToUse);
-      
+
       // If configuredAgentId is provided, force selection and override any existing selection
       if (configuredAgentId && selectedAgentId !== configuredAgentId) {
         console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
@@ -263,11 +274,11 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const { data: subscriptionData } = useSharedSubscription();
   const subscriptionStatus: SubscriptionStatus =
     subscriptionData?.status === 'active' ||
-    subscriptionData?.status === 'trialing'
+      subscriptionData?.status === 'trialing'
       ? 'active'
       : 'no_subscription';
 
-  const handleProjectRenamed = useCallback((newName: string) => {}, []);
+  const handleProjectRenamed = useCallback((newName: string) => { }, []);
 
   // Create restricted agent selection handler when configuredAgentId is provided
   const handleAgentSelect = useCallback((agentId: string | undefined) => {
@@ -283,7 +294,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       // Ignore attempts to select other agents
       return;
     }
-    
+
     // Normal agent selection behavior
     setSelectedAgent(agentId);
   }, [configuredAgentId, setSelectedAgent]);
@@ -362,13 +373,37 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           break;
         case 'connecting':
           setAgentStatus('connecting');
+          
+          // Add optimistic message when agent starts connecting
+          if (pendingMessageRef.current) {
+            const optimisticUserMessage: UnifiedMessage = {
+              message_id: `temp-${Date.now()}`,
+              thread_id: threadId,
+              type: 'user',
+              is_llm_message: false,
+              content: pendingMessageRef.current,
+              metadata: '{}',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+
+            setMessages((prev) => [...prev, optimisticUserMessage]);
+            pendingMessageRef.current = null; // Clear after adding
+            
+            // Auto-scroll to bottom when message is added
+            setTimeout(() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }, 100);
+          }
           break;
         case 'streaming':
           setAgentStatus('running');
           break;
       }
     },
-    [setAgentStatus, setAgentRunId, setAutoOpenedPanel],
+    [setAgentStatus, setAgentRunId, setAutoOpenedPanel, threadId, setMessages],
   );
 
   const handleStreamError = useCallback((errorMessage: string) => {
@@ -384,9 +419,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
     console.error(`[PAGE] Stream hook error: ${errorMessage}`);
     toast.error(`Stream Error: ${errorMessage}`);
+    
+    // Clear pending message on error
+    pendingMessageRef.current = null;
   }, []);
 
-  const handleStreamClose = useCallback(() => {}, []);
+  const handleStreamClose = useCallback(() => { }, []);
 
   const {
     status: streamHookStatus,
@@ -411,31 +449,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const handleSubmitMessage = useCallback(
     async (
       message: string,
-      options?: { model_name?: string; enable_thinking?: boolean },
+      options?: { model_name?: string },
     ) => {
       if (!message.trim()) return;
       setIsSending(true);
 
-      const optimisticUserMessage: UnifiedMessage = {
-        message_id: `temp-${Date.now()}`,
-        thread_id: threadId,
-        type: 'user',
-        is_llm_message: false,
-        content: message,
-        metadata: '{}',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, optimisticUserMessage]);
-      setNewMessage('');
-
-      // Auto-scroll to bottom when user sends a message
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 100);
+      // Store the message to add optimistically when agent starts running
+      pendingMessageRef.current = message;
 
       try {
         const messagePromise = addUserMessageMutation.mutateAsync({
@@ -459,6 +479,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         if (results[0].status === 'rejected') {
           const reason = results[0].reason;
           console.error('Failed to send message:', reason);
+          pendingMessageRef.current = null;
           throw new Error(
             `Failed to send message: ${reason?.message || reason}`,
           );
@@ -467,6 +488,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         if (results[1].status === 'rejected') {
           const error = results[1].reason;
           console.error('Failed to start agent:', error);
+          pendingMessageRef.current = null;
 
           if (error instanceof BillingError) {
             setBillingData({
@@ -478,12 +500,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               accountId: null,
             });
             setShowBillingAlert(true);
-
-            setMessages((prev) =>
-              prev.filter(
-                (m) => m.message_id !== optimisticUserMessage.message_id,
-              ),
-            );
             return;
           }
 
@@ -495,12 +511,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               runningThreadIds: running_thread_ids,
             });
             setShowAgentLimitDialog(true);
-
-            setMessages((prev) =>
-              prev.filter(
-                (m) => m.message_id !== optimisticUserMessage.message_id,
-              ),
-            );
             return;
           }
 
@@ -514,12 +524,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               accountId: null,
             });
             setShowBillingAlert(true);
-
-            setMessages((prev) =>
-              prev.filter(
-                (m) => m.message_id !== optimisticUserMessage.message_id,
-              ),
-            );
             return;
           }
 
@@ -537,9 +541,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         ) {
           toast.error(err instanceof Error ? err.message : 'Operation failed');
         }
-        setMessages((prev) =>
-          prev.filter((m) => m.message_id !== optimisticUserMessage.message_id),
-        );
       } finally {
         setIsSending(false);
       }
@@ -583,35 +584,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     [],
   );
 
-  const handleSidePanelClose = useCallback(() => {
-    setIsSidePanelOpen(false);
-    userClosedPanelRef.current = true;
-    setAutoOpenedPanel(true);
-    setIsPanelMinimized(false);
-  }, [setIsSidePanelOpen, userClosedPanelRef, setAutoOpenedPanel]);
-
-  const handleSidePanelMinimize = useCallback(() => {
-    setIsPanelMinimized(true);
-  }, []);
-
-  const handleSidePanelMaximize = useCallback(() => {
-    setIsPanelMinimized(false);
-    setIsSidePanelOpen(true);
-    userClosedPanelRef.current = false;
-  }, [setIsSidePanelOpen, userClosedPanelRef]);
-
-  const handleSidePanelRequestOpen = useCallback(() => {
-    setIsPanelMinimized(false);
-    setIsSidePanelOpen(true);
-    userClosedPanelRef.current = false;
-  }, [setIsSidePanelOpen, userClosedPanelRef]);
-
-  const handleExpandToolPreview = useCallback(() => {
-    setIsPanelMinimized(false);
-    setIsSidePanelOpen(true);
-    userClosedPanelRef.current = false;
-  }, [setIsSidePanelOpen, userClosedPanelRef]);
-
   const toolViewAssistant = useCallback(
     (assistantContent?: string, toolContent?: string) => {
       if (!assistantContent) return null;
@@ -643,11 +615,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               Tool Result
             </div>
             <div
-              className={`px-2 py-0.5 rounded-full text-xs ${
-                isSuccess
-                  ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
-                  : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300'
-              }`}
+              className={`px-2 py-0.5 rounded-full text-xs ${isSuccess
+                ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
+                : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300'
+                }`}
             >
               {isSuccess ? 'Success' : 'Failed'}
             </div>
@@ -664,6 +635,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   );
 
   // Effects
+  useEffect(() => {
+    if (!initialLayoutAppliedRef.current) {
+      setLeftSidebarOpen(false);
+      initialLayoutAppliedRef.current = true;
+    }
+  }, [setLeftSidebarOpen]);
+
   useEffect(() => {
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
@@ -750,7 +728,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Milo Prophet`;
+      document.title = `${projectName} | Kortix`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -758,13 +736,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Milo Prophet`,
+          `${projectName} - Interactive agent conversation powered by Kortix`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Milo Prophet`);
+        ogTitle.setAttribute('content', `${projectName} | Kortix`);
       }
 
       const ogDescription = document.querySelector(
@@ -863,7 +841,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
-        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onViewFiles={handleOpenFileViewer}
         fileViewerOpen={fileViewerOpen}
@@ -876,10 +853,11 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={handleSidePanelClose}
-        onSidePanelMinimize={handleSidePanelMinimize}
-        onSidePanelMaximize={handleSidePanelMaximize}
-        onSidePanelRequestOpen={handleSidePanelRequestOpen}
+        onSidePanelClose={() => {
+          setIsSidePanelOpen(false);
+          userClosedPanelRef.current = true;
+          setAutoOpenedPanel(true);
+        }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -938,7 +916,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           compact={true}
         >
           {/* Thread Content - Scrollable */}
-          <div 
+          <div
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col-reverse"
           >
@@ -968,8 +946,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           {/* Compact Chat Input */}
           <div className="flex-shrink-0 border-t border-border/20 bg-background p-4">
             <ChatInput
-              value={newMessage}
-              onChange={setNewMessage}
               onSubmit={handleSubmitMessage}
               placeholder={`Describe what you need help with...`}
               loading={isSending}
@@ -986,6 +962,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               enableAdvancedConfig={false}
               onFileBrowse={handleOpenFileViewer}
               sandboxId={sandboxId || undefined}
+              projectId={projectId}
               messages={messages}
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}
@@ -993,11 +970,15 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               hideAgentSelection={!!configuredAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={isPanelMinimized && toolCalls.length > 0}
-              onExpandToolPreview={handleExpandToolPreview}
+              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+              onExpandToolPreview={() => {
+                setIsSidePanelOpen(true);
+                userClosedPanelRef.current = false;
+              }}
               defaultShowSnackbar="tokens"
               showScrollToBottomIndicator={showScrollToBottom}
               onScrollToBottom={scrollToBottom}
+              threadId={threadId}
             />
           </div>
         </ThreadLayout>
@@ -1031,7 +1012,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={isSidePanelOpen}
-        isPanelMinimized={isPanelMinimized}
         onToggleSidePanel={toggleSidePanel}
         onProjectRenamed={handleProjectRenamed}
         onViewFiles={handleOpenFileViewer}
@@ -1045,10 +1025,11 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentStatus={agentStatus}
         currentToolIndex={currentToolIndex}
         onSidePanelNavigate={handleSidePanelNavigate}
-        onSidePanelClose={handleSidePanelClose}
-        onSidePanelMinimize={handleSidePanelMinimize}
-        onSidePanelMaximize={handleSidePanelMaximize}
-        onSidePanelRequestOpen={handleSidePanelRequestOpen}
+        onSidePanelClose={() => {
+          setIsSidePanelOpen(false);
+          userClosedPanelRef.current = true;
+          setAutoOpenedPanel(true);
+        }}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
@@ -1061,56 +1042,42 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentName={agent && agent.name}
         disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
       >
-        <div
-          className={cn(
-            'flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out',
-            !isMobile && (!isSidePanelOpen || isPanelMinimized)
-              ? shouldReserveSidebarSpace
-                ? 'px-[72px] md:px-[256px]'
-                : 'px-[40px]'
-              : ''
-          )}
-        >
-          <ThreadContent
-            messages={messages}
-            streamingTextContent={streamingTextContent}
-            streamingToolCall={streamingToolCall}
-            agentStatus={agentStatus}
-            handleToolClick={handleToolClick}
-            handleOpenFileViewer={handleOpenFileViewer}
-            readOnly={false}
-            streamHookStatus={streamHookStatus}
-            sandboxId={sandboxId}
-            project={project}
-            debugMode={debugMode}
-            agentName={agent && agent.name}
-            agentAvatar={undefined}
-            agentMetadata={agent?.metadata}
-            agentData={agent}
-            scrollContainerRef={scrollContainerRef}
-          />
-        </div>
+        <ThreadContent
+          messages={messages}
+          streamingTextContent={streamingTextContent}
+          streamingToolCall={streamingToolCall}
+          agentStatus={agentStatus}
+          handleToolClick={handleToolClick}
+          handleOpenFileViewer={handleOpenFileViewer}
+          readOnly={false}
+          streamHookStatus={streamHookStatus}
+          sandboxId={sandboxId}
+          project={project}
+          debugMode={debugMode}
+          agentName={agent && agent.name}
+          agentAvatar={undefined}
+          agentMetadata={agent?.metadata}
+          agentData={agent}
+          scrollContainerRef={scrollContainerRef}
+        />
 
         <div
           className={cn(
-            'fixed bottom-[15px] z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8 pb-[5px]',
+            'fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8',
             isSidePanelAnimating
               ? ''
               : 'transition-all duration-200 ease-in-out',
-            isMobile
-              ? 'left-0 right-0'
-              : shouldReserveSidebarSpace
-                ? 'left-[72px] right-[72px] md:left-[256px] md:right-[256px]'
-                : 'left-[24px] right-[48px]',
-            isSidePanelOpen && !isPanelMinimized && !isMobile
+            leftSidebarState === 'expanded'
+              ? 'left-[94px] md:left-[320px]'
+              : 'left-[94px]',
+            isSidePanelOpen && !isMobile
               ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]'
-              : '',
+              : 'right-0',
+            isMobile ? 'left-0 right-0' : '',
           )}
         >
           <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
             <ChatInput
-              value={newMessage}
-              onChange={setNewMessage}
               onSubmit={handleSubmitMessage}
               placeholder={`Describe what you need help with...`}
               loading={isSending}
@@ -1127,15 +1094,20 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               enableAdvancedConfig={false}
               onFileBrowse={handleOpenFileViewer}
               sandboxId={sandboxId || undefined}
+              projectId={projectId}
               messages={messages}
               agentName={agent && agent.name}
               selectedAgentId={selectedAgentId}
               onAgentSelect={handleAgentSelect}
+              threadId={threadId}
               hideAgentSelection={!!configuredAgentId}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
-              showToolPreview={isPanelMinimized && toolCalls.length > 0}
-              onExpandToolPreview={handleExpandToolPreview}
+              showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+              onExpandToolPreview={() => {
+                setIsSidePanelOpen(true);
+                userClosedPanelRef.current = false;
+              }}
               defaultShowSnackbar="tokens"
               showScrollToBottomIndicator={showScrollToBottom}
               onScrollToBottom={scrollToBottom}

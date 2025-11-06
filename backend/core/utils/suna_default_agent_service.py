@@ -16,12 +16,7 @@ class SunaDefaultAgentService:
         from core.suna_config import SUNA_CONFIG
         return SUNA_CONFIG.copy()
     
-    async def install_for_all_users(
-        self,
-        *,
-        display_name: Optional[str] = None,
-        description: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def install_for_all_users(self) -> Dict[str, Any]:
         """Install Suna agent for all users who don't have one."""
         logger.debug("🚀 Installing Suna agents for users who don't have them")
         
@@ -43,52 +38,30 @@ class SunaDefaultAgentService:
                 return {
                     "installed_count": 0,
                     "failed_count": 0,
-                    "details": [
-                        {
-                            "status": "noop",
-                            "message": "All users already have Suna agents"
-                        }
-                    ]
+                    "details": ["All users already have Suna agents"]
                 }
             
             logger.debug(f"📦 Installing Suna for {len(missing_accounts)} users")
             
             success_count = 0
             failed_count = 0
-            details = []
+            errors = []
             
             for account_id in missing_accounts:
                 try:
-                    await self._create_suna_agent_for_user(
-                        account_id,
-                        display_name=display_name,
-                        description=description
-                    )
+                    await self._create_suna_agent_for_user(account_id)
                     success_count += 1
-                    details.append({
-                        "account_id": account_id,
-                        "status": "installed"
-                    })
                     logger.debug(f"✅ Installed Suna for user {account_id}")
                 except Exception as e:
                     failed_count += 1
                     error_msg = f"Failed to install for user {account_id}: {str(e)}"
-                    details.append({
-                        "account_id": account_id,
-                        "status": "failed",
-                        "error": str(e)
-                    })
+                    errors.append(error_msg)
                     logger.error(error_msg)
             
             return {
                 "installed_count": success_count,
                 "failed_count": failed_count,
-                "details": details if details else [
-                    {
-                        "status": "installed",
-                        "message": f"Successfully installed for {success_count} users"
-                    }
-                ]
+                "details": errors if errors else [f"Successfully installed for {success_count} users"]
             }
             
         except Exception as e:
@@ -97,22 +70,10 @@ class SunaDefaultAgentService:
             return {
                 "installed_count": 0,
                 "failed_count": 0,
-                "details": [
-                    {
-                        "status": "failed",
-                        "error": error_msg
-                    }
-                ]
+                "details": [error_msg]
             }
     
-    async def install_suna_agent_for_user(
-        self,
-        account_id: str,
-        replace_existing: bool = False,
-        *,
-        display_name: Optional[str] = None,
-        description: Optional[str] = None
-    ) -> Optional[str]:
+    async def install_suna_agent_for_user(self, account_id: str, replace_existing: bool = False) -> Optional[str]:
         """Install Suna agent for a specific user."""
         logger.debug(f"🔄 Installing Suna agent for user: {account_id}")
         
@@ -134,11 +95,7 @@ class SunaDefaultAgentService:
                     return existing_agent_id
 
             # Create new agent
-            agent_id = await self._create_suna_agent_for_user(
-                account_id,
-                display_name=display_name,
-                description=description
-            )
+            agent_id = await self._create_suna_agent_for_user(account_id)
             logger.debug(f"Successfully installed Suna agent {agent_id} for user {account_id}")
             return agent_id
                 
@@ -171,45 +128,28 @@ class SunaDefaultAgentService:
             logger.error(f"Failed to get agent stats: {e}")
             return {"error": str(e)}
     
-    async def _create_suna_agent_for_user(
-        self,
-        account_id: str,
-        *,
-        display_name: Optional[str] = None,
-        description: Optional[str] = None
-    ) -> str:
+    async def _create_suna_agent_for_user(self, account_id: str) -> str:
         """Create a Suna agent for a user."""
         from core.suna_config import SUNA_CONFIG
         
         client = await self._db.client
-
-        name = display_name or SUNA_CONFIG["name"]
-        agent_description = description or SUNA_CONFIG["description"]
         
         # Create agent record
         agent_data = {
             "account_id": account_id,
-            "name": name,
-            "description": agent_description,
+            "name": SUNA_CONFIG["name"],
+            "description": SUNA_CONFIG["description"],
             "is_default": True,
             "icon_name": "sun",
-            "icon_color": "#F59E0B",
-            "icon_background": "#FFF3CD",
+            "icon_color": "#FFFFFF",
+            "icon_background": "#000000",
             "metadata": {
                 "is_suna_default": True,
                 "centrally_managed": True,
-                "installation_date": datetime.now(timezone.utc).isoformat(),
-                "source_name": SUNA_CONFIG["name"],
-                "source_description": SUNA_CONFIG["description"],
+                "installation_date": datetime.now(timezone.utc).isoformat()
             },
             "version_count": 1
         }
-
-        if display_name and display_name != SUNA_CONFIG["name"]:
-            agent_data["metadata"]["display_name_override"] = display_name
-
-        if description and description != SUNA_CONFIG["description"]:
-            agent_data["metadata"]["description_override"] = description
         
         result = await client.table('agents').insert(agent_data).execute()
         
@@ -276,3 +216,4 @@ class SunaDefaultAgentService:
         except Exception as e:
             logger.error(f"Failed to delete agent {agent_id}: {e}")
             raise
+

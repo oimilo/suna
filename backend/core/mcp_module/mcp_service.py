@@ -100,36 +100,6 @@ class MCPService:
         self._logger = logger
         self._connections: Dict[str, MCPConnection] = {}
         self._encryption_service = EncryptionService()
-    
-    def _normalize_tool_name(self, name: Optional[str]) -> str:
-        if not name:
-            return ""
-        normalized = str(name).strip().lower()
-        for char in ("-", " ", ".", "/", ":"):
-            normalized = normalized.replace(char, "_")
-        while "__" in normalized:
-            normalized = normalized.replace("__", "_")
-        return normalized
-    
-    def _tool_name_in_list(self, tool_name: str, names: Optional[List[str]]) -> bool:
-        if not names:
-            return True
-        if tool_name in names:
-            return True
-        normalized_target = self._normalize_tool_name(tool_name)
-        for candidate in names:
-            if not candidate:
-                continue
-            if candidate in ("*", "all"):
-                return True
-            if self._normalize_tool_name(candidate) == normalized_target:
-                if candidate != tool_name:
-                    self._logger.debug(
-                        f"Normalized MCP tool name match: requested '{tool_name}' "
-                        f"matched configured '{candidate}'"
-                    )
-                return True
-        return False
 
     async def connect_server(self, mcp_config: Dict[str, Any], external_user_id: Optional[str] = None) -> MCPConnection:
         # Determine provider from type field
@@ -157,62 +127,36 @@ class MCPService:
             
             # Add timeout to prevent hanging
             async with asyncio.timeout(30):
-                # First try HTTP (default in upstream)
-                try:
-                    async with streamablehttp_client(server_url, headers=headers) as (
-                        read_stream, write_stream, _
-                    ):
-                        session = ClientSession(read_stream, write_stream)
-                        await session.initialize()
-                        
-                        tool_result = await session.list_tools()
-                        tools = tool_result.tools if tool_result else []
-                        
-                        connection = MCPConnection(
-                            qualified_name=request.qualified_name,
-                            name=request.name,
-                            config=request.config,
-                            enabled_tools=request.enabled_tools,
-                            provider=request.provider,
-                            external_user_id=request.external_user_id,
-                            session=session,
-                            tools=tools
-                        )
-                        
-                        self._connections[request.qualified_name] = connection
-                        self._logger.debug(f"Connected (HTTP) to {request.qualified_name} ({len(tools)} tools available)")
-                        return connection
-                except Exception as http_err:
-                    # Fallback to SSE if HTTP path fails
-                    self._logger.warning(f"HTTP connect failed for {request.qualified_name}: {http_err}. Trying SSE fallback...")
-                    async with sse_client(server_url) as (read_stream, write_stream):
-                        session = ClientSession(read_stream, write_stream)
-                        await session.initialize()
-                        
-                        tool_result = await session.list_tools()
-                        tools = tool_result.tools if tool_result else []
-                        
-                        connection = MCPConnection(
-                            qualified_name=request.qualified_name,
-                            name=request.name,
-                            config=request.config,
-                            enabled_tools=request.enabled_tools,
-                            provider=request.provider,
-                            external_user_id=request.external_user_id,
-                            session=session,
-                            tools=tools
-                        )
-                        
-                        self._connections[request.qualified_name] = connection
-                        self._logger.debug(f"Connected (SSE fallback) to {request.qualified_name} ({len(tools)} tools available)")
-                        return connection
+                async with streamablehttp_client(server_url, headers=headers) as (
+                    read_stream, write_stream, _
+                ):
+                    session = ClientSession(read_stream, write_stream)
+                    await session.initialize()
+                    
+                    tool_result = await session.list_tools()
+                    tools = tool_result.tools if tool_result else []
+                    
+                    connection = MCPConnection(
+                        qualified_name=request.qualified_name,
+                        name=request.name,
+                        config=request.config,
+                        enabled_tools=request.enabled_tools,
+                        provider=request.provider,
+                        external_user_id=request.external_user_id,
+                        session=session,
+                        tools=tools
+                    )
+                    
+                    self._connections[request.qualified_name] = connection
+                    self._logger.debug(f"Connected to {request.qualified_name} ({len(tools)} tools available)")
+                    
+                    return connection
                     
         except asyncio.TimeoutError:
             error_msg = f"Connection timeout for {request.qualified_name} after 30 seconds"
             self._logger.error(error_msg)
             raise MCPConnectionError(error_msg)
         except Exception as e:
-            # Final guard (already attempted HTTP and possibly SSE)
             self._logger.error(f"Failed to connect to {request.qualified_name}: {str(e)}")
             raise MCPConnectionError(f"Failed to connect to MCP server: {str(e)}")
     
@@ -270,7 +214,7 @@ class MCPService:
                 continue
             
             for tool in connection.tools:
-                if not self._tool_name_in_list(tool.name, connection.enabled_tools):
+                if tool.name not in connection.enabled_tools:
                     continue
                 
                 openapi_tool = {
@@ -296,20 +240,14 @@ class MCPService:
     async def _execute_tool_internal(self, request: ToolExecutionRequest) -> ToolExecutionResult:
         self._logger.debug(f"Executing tool: {request.tool_name}")
         
-        connection, resolved_tool_name = self._find_tool_connection(request.tool_name)
-        if not connection or not resolved_tool_name:
+        connection = self._find_tool_connection(request.tool_name)
+        if not connection:
             raise MCPToolNotFoundError(f"Tool not found: {request.tool_name}")
         
         if not connection.session:
             raise MCPToolExecutionError(f"No active session for tool: {request.tool_name}")
         
-        if resolved_tool_name != request.tool_name:
-            self._logger.debug(
-                f"Normalized MCP tool request '{request.tool_name}' to '{resolved_tool_name}'"
-            )
-            request.tool_name = resolved_tool_name
-        
-        if not self._tool_name_in_list(request.tool_name, connection.enabled_tools):
+        if request.tool_name not in connection.enabled_tools:
             raise MCPToolExecutionError(f"Tool not enabled: {request.tool_name}")
         
         try:
@@ -344,37 +282,22 @@ class MCPService:
                 error=error_msg
             )
     
-    def _find_tool_connection(self, tool_name: str) -> Tuple[Optional[MCPConnection], Optional[str]]:
-        normalized_target = self._normalize_tool_name(tool_name)
+    def _find_tool_connection(self, tool_name: str) -> Optional[MCPConnection]:
         for connection in self.get_all_connections():
             if not connection.tools:
                 continue
             
             for tool in connection.tools:
                 if tool.name == tool_name:
-                    return connection, tool.name
-                
-                if self._normalize_tool_name(tool.name) == normalized_target:
-                    return connection, tool.name
+                    return connection
         
-        return None, None
+        return None
 
     async def discover_custom_tools(self, request_type: str, config: Dict[str, Any]) -> CustomMCPConnectionResult:
-        # Preserve upstream behavior but add graceful fallback between HTTP and SSE
         if request_type == "http":
-            http_res = await self._discover_http_tools(config)
-            if http_res.success:
-                return http_res
-            # Try SSE as fallback
-            self._logger.warning(f"HTTP discovery failed for {config.get('url','')}: {http_res.message}. Trying SSE fallback...")
-            return await self._discover_sse_tools(config)
-        elif request_type == "sse":
-            sse_res = await self._discover_sse_tools(config)
-            if sse_res.success:
-                return sse_res
-            # Try HTTP as fallback
-            self._logger.warning(f"SSE discovery failed for {config.get('url','')}: {sse_res.message}. Trying HTTP fallback...")
             return await self._discover_http_tools(config)
+        elif request_type == "sse":
+            return await self._discover_sse_tools(config)
         else:
             raise CustomMCPError(f"Unsupported request type: {request_type}")
     

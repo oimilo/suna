@@ -62,13 +62,7 @@ class DataProvidersTool(Tool):
                 return self.fail_response("Data provider name is required.")
                 
             if service_name not in self.register_data_providers:
-                available = ", ".join(self.register_data_providers.keys())
-                return self.fail_response(
-                    f"'{service_name}' is not a supported data provider. "
-                    f"Available providers: {available}. "
-                    "If you meant an authenticated app (e.g., Trello, Google Calendar, Slack), "
-                    "use the Composio MCP discovery workflow instead of the data providers tool."
-                )
+                return self.fail_response(f"Data provider '{service_name}' not found. Available data providers: {list(self.register_data_providers.keys())}")
                 
             endpoints = self.register_data_providers[service_name].get_endpoints()
             return self.success_response(endpoints)
@@ -137,28 +131,14 @@ class DataProvidersTool(Tool):
                 return self.fail_response("route is required.")
                 
             if service_name not in self.register_data_providers:
-                available = ", ".join(self.register_data_providers.keys())
-                return self.fail_response(
-                    f"Bloqueado: '{service_name}' não faz parte do catálogo de data_providers. "
-                    f"Somente serviços públicos são aceitos: {available}. "
-                    "Se você está trabalhando com um app gerenciado via Composio/MCP (Google Calendar, Trello, Slack, etc.), "
-                    "continue no fluxo MCP usando discover_user_mcp_servers/configure_profile_for_agent e, depois, "
-                    "invoque diretamente a ferramenta MCP correspondente (ex.: `googlecalendar_list_events`) em vez de execute_data_provider_call."
-                )
+                return self.fail_response(f"API '{service_name}' not found. Available APIs: {list(self.register_data_providers.keys())}")
             
             data_provider = self.register_data_providers[service_name]
             if route == service_name:
-                return self.fail_response(
-                    f"route '{route}' must reference a specific endpoint, not the provider name."
-                )
+                return self.fail_response(f"route '{route}' is the same as service_name '{service_name}'. YOU FUCKING IDIOT!")
             
             if route not in data_provider.get_endpoints().keys():
-                return self.fail_response(
-                    f"O endpoint '{route}' não existe para o data_provider '{service_name}'. "
-                    "Reveja os endpoints com get_data_provider_endpoints. "
-                    "Se a intenção era acionar uma ação MCP autenticada, volte para o fluxo Composio (discover → configure) "
-                    "e chame o método MCP retornado pelo discovery (por exemplo, `googlecalendar_list_events`)."
-                )
+                return self.fail_response(f"Endpoint '{route}' not found in {service_name} data provider.")
             
             
             result = data_provider.call_endpoint(route, payload)

@@ -16,7 +16,6 @@ interface ThreadLayoutProps {
   project: Project | null;
   sandboxId: string | null;
   isSidePanelOpen: boolean;
-  isPanelMinimized?: boolean;
   onToggleSidePanel: () => void;
   onProjectRenamed?: (newName: string) => void;
   onViewFiles: (filePath?: string, filePathList?: string[]) => void;
@@ -31,9 +30,6 @@ interface ThreadLayoutProps {
   currentToolIndex: number;
   onSidePanelNavigate: (index: number) => void;
   onSidePanelClose: () => void;
-  onSidePanelMinimize?: () => void;
-  onSidePanelMaximize?: () => void;
-  onSidePanelRequestOpen?: () => void;
   renderAssistantMessage: (assistantContent?: string, toolContent?: string) => React.ReactNode;
   renderToolResult: (toolContent?: string, isSuccess?: boolean) => React.ReactNode;
   isLoading: boolean;
@@ -56,7 +52,6 @@ export function ThreadLayout({
   project,
   sandboxId,
   isSidePanelOpen,
-  isPanelMinimized = false,
   onToggleSidePanel,
   onProjectRenamed,
   onViewFiles,
@@ -71,9 +66,6 @@ export function ThreadLayout({
   currentToolIndex,
   onSidePanelNavigate,
   onSidePanelClose,
-  onSidePanelMinimize,
-  onSidePanelMaximize,
-  onSidePanelRequestOpen,
   renderAssistantMessage,
   renderToolResult,
   isLoading,
@@ -164,7 +156,7 @@ export function ThreadLayout({
       )}
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isPanelMinimized && !isActuallyMobile))
+        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isActuallyMobile))
           ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
           : ''
           }`}
@@ -185,10 +177,7 @@ export function ThreadLayout({
 
       <ToolCallSidePanel
         isOpen={isSidePanelOpen && initialLoadCompleted}
-        isPanelMinimized={isPanelMinimized}
         onClose={onSidePanelClose}
-        onMinimize={onSidePanelMinimize}
-        onMaximize={onSidePanelMaximize}
         toolCalls={toolCalls}
         messages={messages}
         externalNavigateToIndex={externalNavIndex}
@@ -202,7 +191,6 @@ export function ThreadLayout({
         onFileClick={onViewFiles}
         agentName={agentName}
         disableInitialAnimation={disableInitialAnimation}
-        onRequestOpen={onSidePanelRequestOpen}
       />
 
       {sandboxId && (

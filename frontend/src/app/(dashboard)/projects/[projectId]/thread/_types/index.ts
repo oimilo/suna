@@ -9,7 +9,7 @@ export type {
 } from '@/components/thread/types';
 
 // Re-export other needed types
-export type { ToolCallInput } from '@/components/thread/tool-call-helpers';
+export type { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 export type { Project } from '@/lib/api';
 
 // Local types specific to this page
