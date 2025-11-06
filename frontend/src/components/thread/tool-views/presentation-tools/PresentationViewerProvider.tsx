@@ -3,13 +3,7 @@ import { usePresentationViewer } from '@/hooks/use-presentation-viewer';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 
 interface PresentationViewerContextType {
-  openPresentation: (
-    presentationName: string,
-    sandboxUrl: string,
-    options?: {
-      initialSlide?: number;
-    }
-  ) => void;
+  openPresentation: (presentationName: string, sandboxUrl: string, initialSlide?: number) => void;
   closePresentation: () => void;
 }
 
@@ -44,8 +38,5 @@ export function usePresentationViewerContext() {
 // const { openPresentation } = usePresentationViewerContext();
 // 
 // const handleOpenPresentation = () => {
-//   openPresentation('my-presentation', 'https://sandbox-url.com', {
-//     initialSlide: 1,
-//     projectId: 'project-id-123'
-//   });
+//   openPresentation('my-presentation', 'https://sandbox-url.com', 1);
 // };

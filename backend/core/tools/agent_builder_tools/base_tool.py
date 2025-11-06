@@ -19,19 +19,11 @@ class AgentBuilderBaseTool(Tool):
         self.db = db_connection
         self.agent_id = agent_id
     
-    def _get_current_thread_id(self) -> str:
-        """Get thread_id from current execution context."""
-        context_vars = structlog.contextvars.get_contextvars()
-        thread_id = context_vars.get('thread_id')
-        if not thread_id:
-            raise ValueError("No thread_id available from execution context")
-        return thread_id
-
     async def _get_current_account_id(self) -> str:
         """Get account_id from current thread context."""
         context_vars = structlog.contextvars.get_contextvars()
         thread_id = context_vars.get('thread_id')
-
+        
         if not thread_id:
             raise ValueError("No thread_id available from execution context")
         

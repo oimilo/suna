@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 
 import { CreditPurchaseInline } from '@/components/billing/credit-purchase-inline';
-import { CreditTransactions } from '@/components/billing/credit-transactions';
+import CreditTransactions from '@/components/billing/credit-transactions';
 import { SubscriptionCancellationCard } from '@/components/billing/subscription-cancellation-card';
 import { TrialManagement } from '@/components/dashboard/trial-management';
 import { PricingSection } from '@/components/home/sections/pricing-section';

@@ -9,7 +9,7 @@ from core.agentpress.thread_manager import ThreadManager
 
 @tool_metadata(
     display_name="Terminal & Commands",
-    description="Run commands, install packages, and execute scripts in your workspace. **Never use this tool to trigger MCP integrations (curl localhost, etc.) — always call the discovered MCP function directly (e.g., `googlecalendar_list_events`).**",
+    description="Run commands, install packages, and execute scripts in your workspace",
     icon="Terminal",
     color="bg-gray-100 dark:bg-gray-800/50",
     is_core=True,
@@ -50,7 +50,7 @@ class SandboxShellTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "execute_command",
-            "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations. ⚠️ Do not use this tool to acessar MCP endpoints (por exemplo, `curl http://localhost:8001`). Use as funções MCP geradas dentro do runtime (ex.: `googlecalendar_list_events`).",
+            "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -90,14 +90,6 @@ class SandboxShellTool(SandboxToolsBase):
         timeout: int = 60
     ) -> ToolResult:
         try:
-            lower_cmd = command.lower()
-            if "localhost:8001" in lower_cmd:
-                return self.fail_response(
-                    "Comandos MCP devem usar as funções geradas no runtime (descubra com "
-                    "`discover_user_mcp_servers` e invoque o método correspondente, como `googlecalendar_list_events`). "
-                    "Evite shell/curl para acionar MCP."
-                )
-
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
             

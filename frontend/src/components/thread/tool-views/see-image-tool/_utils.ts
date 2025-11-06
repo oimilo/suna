@@ -45,8 +45,32 @@ const extractFromNewFormat = (content: any): {
       }
     }
 
+    // Extract display file path from structured output, fall back to args
+    let filePath = args.file_path || null;
+    const rawOutput = toolExecution.result?.output;
+    
+    // Check if output has display_file_path (handles both object and string formats)
+    if (rawOutput) {
+      let outputData = rawOutput;
+      console.log('outputData', outputData);
+      
+      // Parse string output if needed
+      if (typeof rawOutput === 'string') {
+        try {
+          outputData = JSON.parse(rawOutput);
+        } catch (e) {
+          // Not JSON, keep original
+        }
+      }
+      
+      // Use display_file_path if available
+      if (outputData && typeof outputData === 'object' && outputData.file_path) {
+        filePath = outputData.file_path;
+      }
+    }
+
     const extractedData = {
-      filePath: args.file_path || null,
+      filePath,
       description: parsedContent.summary || null,
       success: toolExecution.result?.success,
       timestamp: toolExecution.execution_details?.timestamp,
@@ -85,11 +109,11 @@ function extractImageFilePath(content: string | object | undefined | null): stri
     const parsedContent = JSON.parse(contentStr);
     if (parsedContent.content && typeof parsedContent.content === 'string') {
       const nestedContentStr = parsedContent.content;
-      let filePathMatch = nestedContentStr.match(/<see-image\s+file_path=["']([^"']+)["'][^>]*><\/see-image>/i);
+      let filePathMatch = nestedContentStr.match(/<load-image\s+file_path=["']([^"']+)["'][^>]*><\/load-image>/i);
       if (filePathMatch) {
         return cleanImagePath(filePathMatch[1]);
       }
-      filePathMatch = nestedContentStr.match(/<see-image[^>]*>([^<]+)<\/see-image>/i);
+      filePathMatch = nestedContentStr.match(/<load-image[^>]*>([^<]+)<\/load-image>/i);
       if (filePathMatch) {
         return cleanImagePath(filePathMatch[1]);
       }
@@ -97,11 +121,11 @@ function extractImageFilePath(content: string | object | undefined | null): stri
   } catch (e) {
   }
   
-  let filePathMatch = contentStr.match(/<see-image\s+file_path=["']([^"']+)["'][^>]*><\/see-image>/i);
+  let filePathMatch = contentStr.match(/<load-image\s+file_path=["']([^"']+)["'][^>]*><\/load-image>/i);
   if (filePathMatch) {
     return cleanImagePath(filePathMatch[1]);
   }
-  filePathMatch = contentStr.match(/<see-image[^>]*>([^<]+)<\/see-image>/i);
+  filePathMatch = contentStr.match(/<load-image[^>]*>([^<]+)<\/load-image>/i);
   if (filePathMatch) {
     return cleanImagePath(filePathMatch[1]);
   }
@@ -125,7 +149,7 @@ function extractImageDescription(content: string | object | undefined | null): s
   try {
     const parsedContent = JSON.parse(contentStr);
     if (parsedContent.content && typeof parsedContent.content === 'string') {
-      const parts = parsedContent.content.split(/<see-image/i);
+      const parts = parsedContent.content.split(/<load-image/i);
       if (parts.length > 1) {
         return parts[0].trim();
       }
@@ -133,7 +157,7 @@ function extractImageDescription(content: string | object | undefined | null): s
   } catch (e) {
   }
 
-  const parts = contentStr.split(/<see-image/i);
+  const parts = contentStr.split(/<load-image/i);
   if (parts.length > 1) {
     return parts[0].trim();
   }
@@ -156,7 +180,7 @@ function parseToolResult(content: string | object | undefined | null): { success
     } catch (e) {
     }
 
-    const toolResultPattern = /<tool_result>\s*<see-image>\s*ToolResult\(([^)]+)\)\s*<\/see-image>\s*<\/tool_result>/;
+    const toolResultPattern = /<tool_result>\s*<load-image>\s*ToolResult\(([^)]+)\)\s*<\/load-image>\s*<\/tool_result>/;
     const toolResultMatch = contentToProcess.match(toolResultPattern);
     
     if (toolResultMatch) {
@@ -177,7 +201,7 @@ function parseToolResult(content: string | object | undefined | null): { success
       return { success, message, filePath };
     }
     
-    const directToolResultMatch = contentToProcess.match(/<tool_result>\s*<see-image>\s*([^<]+)<\/see-image>\s*<\/tool_result>/);
+    const directToolResultMatch = contentToProcess.match(/<tool_result>\s*<load-image>\s*([^<]+)<\/load-image>\s*<\/tool_result>/);
     if (directToolResultMatch) {
       const resultContent = directToolResultMatch[1];
       const success = resultContent.includes('success=True') || resultContent.includes('Successfully');

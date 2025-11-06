@@ -1,10 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { X, AlertTriangle, Shield } from 'lucide-react';
-import { toast } from 'sonner';
-
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,7 +11,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cancelSubscription } from '@/lib/api/billing-v2';
+import { 
+  X, 
+  AlertTriangle,
+  Shield
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cancelSubscription } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { subscriptionKeys } from '@/hooks/react-query/subscriptions/keys';
 
 interface CancelSubscriptionButtonProps {
@@ -29,7 +32,7 @@ interface CancelSubscriptionButtonProps {
   className?: string;
 }
 
-export function CancelSubscriptionButton({
+export function CancelSubscriptionButton({ 
   subscriptionId,
   hasCommitment = false,
   commitmentEndDate,
@@ -37,7 +40,7 @@ export function CancelSubscriptionButton({
   onCancel,
   variant = 'outline',
   size = 'default',
-  className,
+  className
 }: CancelSubscriptionButtonProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -47,18 +50,21 @@ export function CancelSubscriptionButton({
     setIsCancelling(true);
     try {
       const response = await cancelSubscription();
-
+      
       if (response.success) {
         toast.success(response.message);
         queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
         queryClient.invalidateQueries({ queryKey: ['subscription', 'cancellation-status'] });
         setShowCancelDialog(false);
-        onCancel?.();
+        if (onCancel) {
+          onCancel();
+        }
       } else {
         toast.error(response.message);
       }
     } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível cancelar a assinatura.');
+      console.error('Error cancelling subscription:', error);
+      toast.error(error.message || 'Failed to cancel subscription');
     } finally {
       setIsCancelling(false);
     }
@@ -77,75 +83,94 @@ export function CancelSubscriptionButton({
         className={className}
       >
         <X className="h-4 w-4" />
-        Cancelar assinatura
+        Cancel Subscription
       </Button>
 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Confirmar cancelamento
+              Cancel Subscription
             </DialogTitle>
             <DialogDescription>
-              Esta ação agenda o cancelamento ao final do ciclo atual. Até lá você mantém acesso completo.
+              Are you sure you want to cancel your subscription?
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4 text-sm text-muted-foreground">
+          
+          <div className="space-y-4 py-4">
             {hasCommitment ? (
               <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
-                  Seu plano possui compromisso anual. A assinatura será encerrada após
-                  {' '}
-                  {commitmentEndDate
-                    ? new Date(commitmentEndDate).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                      })
-                    : 'o término do compromisso'}
-                  {monthsRemaining > 0 && (
-                    <> ({monthsRemaining} {monthsRemaining === 1 ? 'mês' : 'meses'} restantes)</>
-                  )}.
+                  <div className="space-y-2">
+                    <p className="font-semibold">Annual Commitment Active</p>
+                    <p>
+                      Your subscription will be cancelled after your commitment ends on{' '}
+                      <span className="font-semibold">
+                        {commitmentEndDate ? new Date(commitmentEndDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }) : 'commitment end date'}
+                      </span>
+                      {monthsRemaining > 0 && (
+                        <> ({monthsRemaining} {monthsRemaining === 1 ? 'month' : 'months'} remaining)</>
+                      )}.
+                    </p>
+                    <p className="text-sm">
+                      You'll continue to have full access to your plan until then.
+                    </p>
+                  </div>
                 </AlertDescription>
               </Alert>
             ) : (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Você continuará com acesso até o fim do período já pago. Depois disso, a cobrança será interrompida.
+                  <div className="space-y-2">
+                    <p>Your subscription will be cancelled at the end of your current billing period.</p>
+                    <p className="text-sm">
+                      You'll retain access to all features and your remaining credits until then.
+                    </p>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
 
-            <ul className="space-y-1">
-              <li>• Créditos não expiráveis permanecem na conta.</li>
-              <li>• É possível reativar a assinatura a qualquer momento antes da data efetiva.</li>
-              <li>• Recursos premium permanecem disponíveis até o cancelamento.</li>
-            </ul>
+            <div className="text-sm text-muted-foreground">
+              <p className="font-semibold mb-1">After cancellation:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Your monthly credits will stop renewing</li>
+                <li>You'll lose access to premium features</li>
+                <li>Any non-expiring credits will remain in your account</li>
+                <li>You can reactivate your subscription anytime before it ends</li>
+              </ul>
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelDialog(false)} disabled={isCancelling}>
-              Manter assinatura
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelDialog(false)}
+              disabled={isCancelling}
+            >
+              Keep Subscription
             </Button>
             <Button
               variant="destructive"
               onClick={handleCancel}
               disabled={isCancelling}
-              className="gap-2"
             >
               {isCancelling ? (
                 <>
-                  <X className="h-4 w-4 animate-pulse" />
-                  Cancelando...
+                  <X className="mr-2 h-4 w-4 animate-pulse" />
+                  Cancelling...
                 </>
               ) : hasCommitment ? (
-                'Agendar cancelamento'
+                'Schedule Cancellation'
               ) : (
-                'Cancelar assinatura'
+                'Cancel Subscription'
               )}
             </Button>
           </DialogFooter>
@@ -154,4 +179,3 @@ export function CancelSubscriptionButton({
     </>
   );
 }
-

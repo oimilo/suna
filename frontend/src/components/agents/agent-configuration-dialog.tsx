@@ -444,7 +444,7 @@ export function AgentConfigurationDialog({
                   <div className="flex-shrink-0">
                     {isProphetAgent ? (
                       <AgentAvatar
-                        isProphetDefault={true}
+                        isSunaDefault={true}
                         agentName={formData.name}
                         size={44}
                         className="ring-1 ring-border shadow-sm"
@@ -545,7 +545,7 @@ export function AgentConfigurationDialog({
                                       iconColor={agent.icon_color}
                                       backgroundColor={agent.icon_background}
                                       agentName={agent.name}
-                                      isProphetDefault={agent.metadata?.is_suna_default}
+                                      isSunaDefault={agent.metadata?.is_suna_default}
                                       size={24}
                                       className="flex-shrink-0"
                                     />

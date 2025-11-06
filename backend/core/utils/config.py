@@ -80,8 +80,8 @@ class Configuration:
     
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
-    
-    
+
+
     # Subscription tier IDs - Production
     STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
     STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrhomjgDnO'
@@ -305,8 +305,11 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://prophet.build"
-    OR_APP_NAME: Optional[str] = "Prophet"    
+    OR_SITE_URL: Optional[str] = "https://kortix.ai"
+    OR_APP_NAME: Optional[str] = "Kortix AI"
+    
+    # Frontend URL configuration
+    FRONTEND_URL_ENV: Optional[str] = None
     
     # AWS Bedrock authentication
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
@@ -316,8 +319,6 @@ class Configuration:
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str
-    SUPABASE_PUBLIC_IMAGE_BUCKET: Optional[str] = "agentpress-public-images"
-    SUPABASE_AGENT_PROFILE_BUCKET: Optional[str] = "agentpress-agent-profile-images"
     
     # Redis configuration
     REDIS_HOST: Optional[str] = "localhost"
@@ -358,9 +359,9 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME: Optional[str] = "kortix/suna:0.1.3.23"
-    SANDBOX_SNAPSHOT_NAME: Optional[str] = "kortix/suna:0.1.3.23"
-    SANDBOX_ENTRYPOINT: Optional[str] = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.24"
+    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.24"
+    SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
     # LangFuse configuration
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
@@ -369,7 +370,6 @@ class Configuration:
 
     # Admin API key for server-side operations
     KORTIX_ADMIN_API_KEY: Optional[str] = None
-    ADMIN_MASTER_PASSWORD: Optional[str] = None
 
     # API Keys system configuration
     API_KEY_SECRET: Optional[str] = "default-secret-key-change-in-production"
@@ -471,8 +471,31 @@ class Configuration:
             return self.STRIPE_PRODUCT_ID_STAGING
         return self.STRIPE_PRODUCT_ID_PROD
     
+    @property
+    def FRONTEND_URL(self) -> str:
+        """
+        Get the frontend URL based on environment.
+        
+        Returns:
+        - Production: 'https://kortix.com' (or FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.kortix.com' (or FRONTEND_URL_ENV if set)
+        - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
+        """
+        # Check for environment variable override first
+        if self.FRONTEND_URL_ENV:
+            return self.FRONTEND_URL_ENV
+        
+        # Environment-based defaults
+        if self.ENV_MODE == EnvMode.PRODUCTION:
+            return 'https://kortix.com'
+        elif self.ENV_MODE == EnvMode.STAGING:
+            return 'https://staging.kortix.com'
+        else:
+            # Local mode
+            return 'http://localhost:3000'
+    
     def _generate_admin_api_key(self) -> str:
-        """Generate a secure admin API key for Milo administrative functions."""
+        """Generate a secure admin API key for Kortix administrative functions."""
         # Generate 32 random bytes and encode as hex for a readable API key
         key_bytes = secrets.token_bytes(32)
         return key_bytes.hex()
@@ -541,6 +564,11 @@ class Configuration:
         max_parallel_runs_env = os.getenv("MAX_PARALLEL_AGENT_RUNS")
         if max_parallel_runs_env is not None:
             self._MAX_PARALLEL_AGENT_RUNS_ENV = max_parallel_runs_env
+        
+        # Custom handling for frontend URL
+        frontend_url_env = os.getenv("FRONTEND_URL")
+        if frontend_url_env is not None:
+            self.FRONTEND_URL_ENV = frontend_url_env
     
     def _validate(self):
         """Validate configuration based on type hints."""

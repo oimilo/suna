@@ -16,7 +16,6 @@ from core.agentpress.thread_manager import ThreadManager
 from core.services.supabase import DBConnection
 from core.services import redis
 from dramatiq.brokers.redis import RedisBroker
-from dramatiq.brokers.rabbitmq import RabbitmqBroker
 import os
 from core.services.langfuse import langfuse
 from core.utils.retry import retry
@@ -27,20 +26,10 @@ from typing import Dict, Any
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
 
-broker = None
-rabbitmq_url = os.getenv("RABBITMQ_URL")
-try:
-    if rabbitmq_url:
-        logger.info("🔧 Configuring Dramatiq broker: RabbitMQ")
-        # IMPORTANT: Async actors require AsyncIO middleware regardless of broker type
-        broker = RabbitmqBroker(url=rabbitmq_url, middleware=[dramatiq.middleware.AsyncIO()])
-    else:
-        logger.info(f"🔧 Configuring Dramatiq broker: Redis at {redis_host}:{redis_port}")
-        broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
-    dramatiq.set_broker(broker)
-except Exception as e:
-    logger.error(f"Failed to configure Dramatiq broker: {e}")
-    raise
+logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
+redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+
+dramatiq.set_broker(redis_broker)
 
 _initialized = False
 db = DBConnection()
@@ -128,6 +117,9 @@ async def run_agent_background(
     pubsub = None
     stop_checker = None
     stop_signal_received = False
+    
+    # Create cancellation event to signal LLM to stop
+    cancellation_event = asyncio.Event()
 
     # Define Redis keys and channels
     response_list_key = f"agent_run:{agent_run_id}:responses"
@@ -148,6 +140,8 @@ async def run_agent_background(
                     if data == "STOP":
                         logger.debug(f"Received STOP signal for agent run {agent_run_id} (Instance: {instance_id})")
                         stop_signal_received = True
+                        # Set cancellation event to stop LLM execution immediately
+                        cancellation_event.set()
                         break
                 # Periodically refresh the active run key TTL
                 if total_responses % 50 == 0: # Refresh every 50 responses or so
@@ -177,12 +171,13 @@ async def run_agent_background(
         # Ensure active run key exists and has TTL
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
-        # Initialize agent generator
+        # Initialize agent generator with cancellation event
         agent_gen = run_agent(
             thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
             agent_config=agent_config,
             trace=trace,
+            cancellation_event=cancellation_event,
         )
 
         final_status = "running"

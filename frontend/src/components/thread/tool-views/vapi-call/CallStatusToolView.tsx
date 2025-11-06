@@ -41,7 +41,9 @@ export function CallStatusToolView({
             </div>
           </div>
           {!isStreaming && (
-            <Badge variant={isSuccess ? 'default' : 'destructive'}>
+            <Badge
+              variant={isSuccess ? "default" : "destructive"}
+            >
               {isSuccess ? (
                 <CheckCircle className="h-3.5 w-3.5 mr-1" />
               ) : (
@@ -54,7 +56,9 @@ export function CallStatusToolView({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {assistantContent && <div className="text-sm text-foreground">{assistantContent}</div>}
+        {assistantContent && (
+          <div className="text-sm text-foreground">{assistantContent}</div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
@@ -109,7 +113,9 @@ export function CallStatusToolView({
 
           <div className="space-y-1">
             <div className="text-xs text-muted-foreground">Call ID</div>
-            <div className="text-xs font-mono text-foreground truncate">{callData.call_id}</div>
+            <div className="text-xs font-mono text-foreground truncate">
+              {callData.call_id}
+            </div>
           </div>
         </div>
 
@@ -124,10 +130,10 @@ export function CallStatusToolView({
                 <div
                   key={idx}
                   className={cn(
-                    'text-sm p-3 rounded-2xl relative',
+                    "text-sm p-3 rounded-2xl relative",
                     msg.role === 'assistant'
-                      ? 'bg-muted-foreground/20 border border-border ml-4'
-                      : 'bg-muted/80 border border-border mr-4',
+                      ? "bg-muted-foreground/20 border border-border ml-4"
+                      : "bg-muted/80 border border-border mr-4"
                   )}
                 >
                   <div className="font-medium text-xs text-muted-foreground mb-1 flex items-center gap-1">

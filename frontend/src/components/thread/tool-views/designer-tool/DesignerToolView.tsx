@@ -27,10 +27,11 @@ import { Slider } from '@/components/ui/slider';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Toggle } from '@/components/ui/toggle';
-import { useImageContent } from '@/hooks/react-query/files/use-image-content';
+import { useImageContent } from '@/hooks/react-query/files';
 
 interface DesignElement {
   id: string;
@@ -52,25 +53,27 @@ interface DesignerToolViewProps extends ToolViewProps {
   onFileClick?: (filePath: string) => void;
 }
 
-function DesignElementImage({
+function DesignElementImage({ 
   element,
-  isSelected,
-}: {
+  isSelected
+}: { 
   element: DesignElement;
   isSelected: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
-
+  
+  // If we have a direct URL, use it; otherwise load via hook
   const { data: imageUrl, isLoading, error } = useImageContent(
     element.sandboxId,
     element.filePath,
-    {
-      enabled: !element.directUrl && !imageError,
-    },
+    { 
+      enabled: !element.directUrl && !imageError
+    }
   );
 
   const finalUrl = element.directUrl || imageUrl;
 
+  // Loading state
   if (!element.directUrl && isLoading && !finalUrl) {
     return (
       <div className="flex items-center justify-center w-full h-full bg-muted/50 animate-pulse rounded-lg">
@@ -79,11 +82,14 @@ function DesignElementImage({
     );
   }
 
+  // Error state
   if (!finalUrl || imageError || (!element.directUrl && error)) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full bg-muted/50 rounded-lg">
         <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
-        <span className="text-xs text-muted-foreground text-center px-2">{element.name}</span>
+        <span className="text-xs text-muted-foreground text-center px-2">
+          {element.name}
+        </span>
       </div>
     );
   }
@@ -146,73 +152,76 @@ export function DesignerToolView({
     actualToolTimestamp,
     actualAssistantTimestamp,
     sandbox_id,
-  } = extractDesignerData(assistantContent, toolContent, isSuccess, toolTimestamp, assistantTimestamp);
+  } = extractDesignerData(
+    assistantContent,
+    toolContent,
+    isSuccess,
+    toolTimestamp,
+    assistantTimestamp
+  );
 
+  // Track processed paths to avoid duplicates
   const processedPathsRef = useRef<Set<string>>(new Set());
   const lastProcessedPath = useRef<string>('');
 
   useEffect(() => {
     if (generatedImagePath && !isStreaming) {
       const sandboxId = sandbox_id || project?.sandbox?.id || project?.id;
-
+      
       if (!sandboxId) {
         console.warn('Designer Tool: No sandbox ID available');
         return;
       }
-
+      
       let relativePath = generatedImagePath;
       if (relativePath.startsWith('/workspace/')) {
         relativePath = relativePath.substring('/workspace/'.length);
       } else if (relativePath.startsWith('/')) {
         relativePath = relativePath.substring(1);
       }
-
+      
+      // Create a unique key based on the actual content
       const contentKey = `${relativePath}-${designUrl || ''}-${JSON.stringify(toolContent)}`;
-
+      
+      // Skip if this is the exact same content we just processed
       if (lastProcessedPath.current === contentKey) {
         console.log('Designer Tool: Skipping duplicate content');
         return;
       }
-
+      
       lastProcessedPath.current = contentKey;
-      const elementId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-
-      if (processedPathsRef.current.has(contentKey)) {
-        console.log('Designer Tool: Content already processed previously');
-        return;
-      }
-
-      processedPathsRef.current.add(contentKey);
-
+      const elementId = `design-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       console.log('Designer Tool: Adding new element', {
         relativePath,
         designUrl,
         elementId,
-        currentCount: elements.length,
+        currentCount: elements.length
       });
-
+      
       setElements(prevElements => {
         let x = 100;
         let y = 100;
-
+        
+        // Calculate position for new element
         if (prevElements.length > 0) {
           const rightmostElement = prevElements.reduce((rightmost, el) => {
             const rightmostRight = rightmost.x + rightmost.width;
             const currentRight = el.x + el.width;
             return currentRight > rightmostRight ? el : rightmost;
           }, prevElements[0]);
-
+          
           x = rightmostElement.x + rightmostElement.width + artboardPadding;
           y = rightmostElement.y;
         }
-
+        
         const newElement: DesignElement = {
           id: elementId,
-          sandboxId,
+          sandboxId: sandboxId,
           filePath: relativePath,
           directUrl: designUrl,
-          x,
-          y,
+          x: x,
+          y: y,
           width: width || 400,
           height: height || 400,
           rotation: 0,
@@ -221,14 +230,14 @@ export function DesignerToolView({
           name: relativePath.split('/').pop() || 'design',
           locked: false,
         };
-
+        
         console.log('Designer Tool: New elements array', [...prevElements, newElement]);
         return [...prevElements, newElement];
       });
-
+      
       setSelectedElement(elementId);
     }
-  }, [generatedImagePath, designUrl, sandbox_id, project, width, height, isStreaming, toolContent, elements.length]);
+  }, [generatedImagePath, designUrl, sandbox_id, project, width, height, isStreaming, toolContent]);
 
   const snapToGridValue = (value: number) => {
     if (!snapToGrid) return value;
@@ -264,16 +273,18 @@ export function DesignerToolView({
       const deltaX = e.clientX - dragStart.x;
       const deltaY = e.clientY - dragStart.y;
 
-      setElements(prevElements => prevElements.map(el => {
-        if (el.id === draggedElement) {
-          return {
-            ...el,
-            x: snapToGridValue(elementStart.x + deltaX / canvasScale),
-            y: snapToGridValue(elementStart.y + deltaY / canvasScale),
-          };
-        }
-        return el;
-      }));
+      setElements(prevElements => {
+        return prevElements.map(el => {
+          if (el.id === draggedElement) {
+            return {
+              ...el,
+              x: snapToGridValue(elementStart.x + deltaX / canvasScale),
+              y: snapToGridValue(elementStart.y + deltaY / canvasScale),
+            };
+          }
+          return el;
+        });
+      });
     } else if (isPanning) {
       const deltaX = e.clientX - panStart.x;
       const deltaY = e.clientY - panStart.y;
@@ -319,7 +330,14 @@ export function DesignerToolView({
   };
 
   const updateElement = (elementId: string, updates: Partial<DesignElement>) => {
-    setElements(prevElements => prevElements.map(el => (el.id === elementId ? { ...el, ...updates } : el)));
+    setElements(prevElements => {
+      return prevElements.map(el => {
+        if (el.id === elementId) {
+          return { ...el, ...updates };
+        }
+        return el;
+      });
+    });
   };
 
   const handleZoomIn = () => {
@@ -355,21 +373,6 @@ export function DesignerToolView({
     }
   };
 
-  const handleOpenInWorkspace = () => {
-    const element = elements.find(el => el.id === selectedElement);
-    if (element?.filePath && onFileClick) {
-      onFileClick(element.filePath);
-    }
-  };
-
-  const gridBackground = showGrid
-    ? {
-        backgroundImage:
-          'linear-gradient(to right, rgba(148, 163, 184, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, 0.15) 1px, transparent 1px)',
-        backgroundSize: `${gridSize * canvasScale}px ${gridSize * canvasScale}px`,
-      }
-    : undefined;
-
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
       <CardHeader className="h-16 border-b p-3 px-4">
@@ -395,291 +398,404 @@ export function DesignerToolView({
                 )}
                 {width && height && (
                   <Badge variant="outline" className="text-xs">
-                    {width}×{height}
+                    {width}×{height}px
                   </Badge>
                 )}
               </div>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            {status && (
-              <Badge variant="outline" className="text-xs max-w-[220px] truncate">
-                {status}
+            <TooltipProvider>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 p-1 bg-background/80 rounded-lg border">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleZoomOut}
+                        className="h-8 w-8"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Zoom Out</TooltipContent>
+                  </Tooltip>
+
+                  <span className="text-xs px-2 min-w-[50px] text-center">
+                    {Math.round(canvasScale * 100)}%
+                  </span>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleZoomIn}
+                        className="h-8 w-8"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Zoom In</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleResetView}
+                        className="h-8 w-8"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset View</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 bg-background/80 rounded-lg p-1 border">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Toggle
+                      pressed={showGrid}
+                      onPressedChange={setShowGrid}
+                      className="h-8 w-8 data-[state=on]:bg-purple-100 dark:data-[state=on]:bg-purple-900/50"
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Toggle>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Grid</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Toggle
+                      pressed={snapToGrid}
+                      onPressedChange={setSnapToGrid}
+                      className="h-8 w-8 data-[state=on]:bg-purple-100 dark:data-[state=on]:bg-purple-900/50"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect x="4" y="4" width="4" height="4" />
+                        <rect x="10" y="10" width="4" height="4" />
+                        <rect x="16" y="4" width="4" height="4" />
+                        <rect x="4" y="16" width="4" height="4" />
+                        <rect x="16" y="16" width="4" height="4" />
+                      </svg>
+                    </Toggle>
+                  </TooltipTrigger>
+                  <TooltipContent>Snap to Grid</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+
+            {!isStreaming && (
+              <Badge
+                className={cn(
+                  "px-3",
+                  actualIsSuccess
+                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white"
+                    : "bg-gradient-to-r from-rose-500 to-rose-600 text-white"
+                )}
+              >
+                {actualIsSuccess ? (
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                ) : (
+                  <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                )}
+                {actualIsSuccess ? 'Ready' : 'Failed'}
               </Badge>
             )}
-            {error && (
-              <Badge variant="destructive" className="text-xs max-w-[220px] truncate">
-                {error}
+
+            {isStreaming && (
+              <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                Creating Design
               </Badge>
             )}
-            <Badge variant={actualIsSuccess ? 'default' : 'destructive'} className="gap-1 text-xs">
-              {actualIsSuccess ? (
-                <CheckCircle className="h-3.5 w-3.5" />
-              ) : (
-                <AlertTriangle className="h-3.5 w-3.5" />
-              )}
-              {actualIsSuccess ? 'Concluído' : 'Erro'}
-            </Badge>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-0">
-        <div className="flex h-full">
-          <div className="flex-1 relative overflow-hidden bg-muted/30">
-            <div className="absolute inset-0 flex flex-col">
-              <div className="flex justify-between p-3">
-                <div className="flex items-center gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="secondary" size="sm" onClick={handleZoomOut}>
-                        <ZoomOut className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Diminuir zoom</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="secondary" size="sm" onClick={handleZoomIn}>
-                        <ZoomIn className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Aumentar zoom</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="secondary" size="sm" onClick={handleResetView}>
-                        <Maximize2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Centralizar</TooltipContent>
-                  </Tooltip>
-                  <div className="w-28">
-                    <Slider
-                      value={[canvasScale * 100]}
-                      min={50}
-                      max={200}
-                      step={5}
-                      onValueChange={([value]) => setCanvasScale(value / 100)}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground w-12">{Math.round(canvasScale * 100)}%</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Toggle
-                    pressed={showGrid}
-                    onPressedChange={setShowGrid}
-                    aria-label="Toggle grid"
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Toggle>
-                  <Toggle
-                    pressed={snapToGrid}
-                    onPressedChange={setSnapToGrid}
-                    aria-label="Toggle snap to grid"
-                  >
-                    <Layers className="h-4 w-4" />
-                  </Toggle>
-                </div>
-              </div>
-
+      <CardContent className="p-0 flex-1 flex">
+        <div className="flex flex-1">
+          <div
+            ref={canvasRef}
+            className={cn(
+              "flex-1 relative overflow-auto bg-zinc-50 dark:bg-zinc-950",
+              isPanning && "cursor-grab"
+            )}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {showGrid && (
               <div
-                ref={canvasRef}
-                className="flex-1 relative overflow-auto"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onMouseDown={handleCanvasMouseDown}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent ${gridSize - 1}px, rgba(0,0,0,0.05) ${gridSize}px),
+                                    repeating-linear-gradient(90deg, transparent, transparent ${gridSize - 1}px, rgba(0,0,0,0.05) ${gridSize}px)`,
+                  backgroundSize: `${gridSize}px ${gridSize}px`,
+                }}
+              />
+            )}
+            <div
+              className="relative m-8 canvas-content"
+              style={{
+                transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
+                transformOrigin: 'top left',
+                minWidth: '2400px',
+                minHeight: '1600px',
+              }}
+            >
+              {elements.map((element) => (
                 <div
+                  key={element.id}
                   className={cn(
-                    'canvas-content min-h-full min-w-full transition-transform duration-150 ease-out',
-                    isDragging && 'cursor-grabbing',
-                    isPanning && 'cursor-grabbing',
+                    "absolute cursor-move select-none rounded-lg",
+                    element.locked && "cursor-not-allowed opacity-50"
                   )}
                   style={{
-                    transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
-                    ...gridBackground,
+                    left: `${element.x}px`,
+                    top: `${element.y}px`,
+                    width: `${element.width}px`,
+                    height: `${element.height}px`,
+                    transform: `rotate(${element.rotation}deg)`,
+                    zIndex: selectedElement === element.id ? 999 : element.zIndex,
+                    opacity: element.opacity / 100,
+                    boxSizing: 'border-box',
+                    outline: selectedElement === element.id ? '2px solid rgb(168 85 247)' : 'none',
+                    outlineOffset: '0px',
                   }}
+                  onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+                  onClick={() => setSelectedElement(element.id)}
                 >
-                  <div className="relative" style={{ padding: artboardPadding }}>
-                    {elements.map(element => (
-                      <div
-                        key={element.id}
-                        className={cn(
-                          'absolute bg-white rounded-2xl shadow-lg border transition-all duration-150',
-                          selectedElement === element.id
-                            ? 'border-primary ring-2 ring-primary/40'
-                            : 'border-border/70',
-                        )}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                          transform: `rotate(${element.rotation}deg)`,
-                          opacity: element.opacity / 100,
-                          zIndex: element.zIndex,
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                        onClick={() => setSelectedElement(element.id)}
-                      >
-                        <DesignElementImage element={element} isSelected={selectedElement === element.id} />
-                        <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg">
-                          <Sparkles className="h-3 w-3" />
-                          <span className="truncate max-w-[140px]">{element.name}</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {elements.length === 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                          <Wand2 className="h-8 w-8" />
-                          <div className="text-center">
-                            <p className="font-medium">Nenhum design processado ainda</p>
-                            <p className="text-sm">
-                              Assim que o agente gerar uma arte, ela aparecerá aqui automaticamente.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  <DesignElementImage
+                    element={element}
+                    isSelected={selectedElement === element.id}
+                  />
+                  {selectedElement === element.id && !element.locked && (
+                    <>
+                      <div className="absolute -top-3 -left-3 w-6 h-6 bg-white border-2 border-purple-500 rounded-full cursor-nw-resize z-10 shadow-sm" />
+                      <div className="absolute -top-3 -right-3 w-6 h-6 bg-white border-2 border-purple-500 rounded-full cursor-ne-resize z-10 shadow-sm" />
+                      <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-white border-2 border-purple-500 rounded-full cursor-sw-resize z-10 shadow-sm" />
+                      <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-white border-2 border-purple-500 rounded-full cursor-se-resize z-10 shadow-sm" />
+                    </>
+                  )}
+                </div>
+              ))}
+              {elements.length === 0 && !isStreaming && (
+                <div className="flex flex-col items-center justify-center h-96 text-center">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 flex items-center justify-center mb-4">
+                    <Sparkles className="h-10 w-10 text-purple-600 dark:text-purple-400" />
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="w-[320px] border-l p-4 space-y-4 bg-background">
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Parâmetros</p>
-                <div className="space-y-2">
-                  {mode && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Modo</span>
-                      <span>{mode}</span>
-                    </div>
-                  )}
-                  {platformPreset && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Plataforma</span>
-                      <span className="capitalize">{platformPreset.replace(/_/g, ' ')}</span>
-                    </div>
-                  )}
-                  {quality && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Qualidade</span>
-                      <span>{quality}</span>
-                    </div>
-                  )}
-                  {width && height && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Dimensões</span>
-                      <span>
-                        {width}×{height} px
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {prompt && (
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Prompt</p>
-                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap bg-muted/60 rounded-lg p-3">
-                    {prompt}
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    Professional Design Canvas
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Your design will appear here. Drag to position, use controls to transform.
                   </p>
                 </div>
               )}
-
-              {imagePath && (
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Imagem base</p>
-                  <Button variant="secondary" size="sm" className="w-full" onClick={() => onFileClick?.(imagePath)}>
-                    <ExternalLink className="h-3.5 w-3.5 mr-2" /> Abrir no workspace
-                  </Button>
+              {isStreaming && (
+                <div className="flex flex-col items-center justify-center h-96 text-center">
+                  <Loader2 className="h-10 w-10 text-purple-600 dark:text-purple-400 animate-spin mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    Generating Design
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Creating your {platformPreset?.replace(/_/g, ' ')} design...
+                  </p>
                 </div>
               )}
-
-              {designUrl && (
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">URL pública</p>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => window.open(designUrl, '_blank')}>
-                    <ExternalLink className="h-3.5 w-3.5 mr-2" /> Abrir em nova aba
-                  </Button>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Ações</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={!selectedElement}
-                    onClick={handleOpenInWorkspace}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-2" /> Workspace
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={!selectedElement}
-                    onClick={handleDownload}
-                  >
-                    <Download className="h-3.5 w-3.5 mr-2" /> Download
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={!selectedElement}
-                    onClick={handleOpenInNewTab}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 mr-2" /> Nova aba
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!selectedElement}
-                    onClick={() => selectedElement && updateElement(selectedElement, { locked: !elements.find(el => el.id === selectedElement)?.locked })}
-                  >
-                    {elements.find(el => el.id === selectedElement)?.locked ? (
-                      <>
-                        <Unlock className="h-3.5 w-3.5 mr-2" /> Desbloquear
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-3.5 w-3.5 mr-2" /> Bloquear
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-xs text-muted-foreground">
-                {actualAssistantTimestamp && (
-                  <div className="flex justify-between">
-                    <span>Solicitação</span>
-                    <span>{formatTimestamp(actualAssistantTimestamp)}</span>
-                  </div>
-                )}
-                {actualToolTimestamp && (
-                  <div className="flex justify-between">
-                    <span>Execução</span>
-                    <span>{formatTimestamp(actualToolTimestamp)}</span>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
+          {selectedElement && elements.length > 0 && (() => {
+            const element = elements.find(el => el.id === selectedElement);
+            if (!element) return null;
+            
+            return (
+              <div className="w-80 border-l bg-background p-4 space-y-4 overflow-y-auto">
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    Artboard Properties
+                  </h3>
+                  
+                  {elements.length > 1 && (
+                    <div className="mb-4 space-y-2">
+                      <label className="text-xs text-muted-foreground">Artboards ({elements.length})</label>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {elements.map((el, idx) => (
+                          <div
+                            key={el.id}
+                            onClick={() => setSelectedElement(el.id)}
+                            className={cn(
+                              "p-2 rounded cursor-pointer text-xs flex items-center justify-between",
+                              selectedElement === el.id 
+                                ? "bg-purple-100 dark:bg-purple-900/50 border border-purple-500" 
+                                : "hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent"
+                            )}
+                          >
+                            <span className="truncate">
+                              {idx + 1}. {el.name}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">
+                              {el.width}×{el.height}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">Position</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs">X</label>
+                          <input
+                            type="number"
+                            value={element.x}
+                            onChange={e => updateElement(element.id, { x: Number(e.target.value) })}
+                            className="w-full px-2 py-1 text-sm border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs">Y</label>
+                          <input
+                            type="number"
+                            value={element.y}
+                            onChange={e => updateElement(element.id, { y: Number(e.target.value) })}
+                            className="w-full px-2 py-1 text-sm border rounded"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">Size</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs">Width</label>
+                          <input
+                            type="number"
+                            value={element.width}
+                            onChange={e => updateElement(element.id, { width: Number(e.target.value) })}
+                            className="w-full px-2 py-1 text-sm border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs">Height</label>
+                          <input
+                            type="number"
+                            value={element.height}
+                            onChange={e => updateElement(element.id, { height: Number(e.target.value) })}
+                            className="w-full px-2 py-1 text-sm border rounded"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">
+                        Rotation: {element.rotation}°
+                      </label>
+                      <Slider
+                        value={[element.rotation]}
+                        onValueChange={([value]) => updateElement(element.id, { rotation: value })}
+                        min={-180}
+                        max={180}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-muted-foreground">
+                        Opacity: {element.opacity}%
+                      </label>
+                      <Slider
+                        value={[element.opacity]}
+                        onValueChange={([value]) => updateElement(element.id, { opacity: value })}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-muted-foreground">Lock Artboard</label>
+                      <Toggle
+                        pressed={element.locked}
+                        onPressedChange={locked => updateElement(element.id, { locked })}
+                        className="h-8"
+                      >
+                        {element.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                      </Toggle>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleOpenInNewTab}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Open
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleDownload}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Export
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </CardContent>
+      <div className="px-4 py-2 h-10 bg-gradient-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+        <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <Badge className="h-6 py-0.5" variant="outline">
+            <Wand2 className="h-3 w-3 mr-1" />
+            Designer Canvas
+          </Badge>
+          {elements.length > 0 && (
+            <Badge variant="secondary" className="h-6 py-0.5">
+              {elements.length} Artboard{elements.length !== 1 ? 's' : ''}
+            </Badge>
+          )}
+          {selectedElement && (() => {
+            const element = elements.find(el => el.id === selectedElement);
+            return element ? (
+              <Badge variant="secondary" className="h-6 py-0.5">
+                {element.name}
+              </Badge>
+            ) : null;
+          })()}
+        </div>
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {actualAssistantTimestamp ? formatTimestamp(actualAssistantTimestamp) : ''}
+        </div>
+      </div>
     </Card>
   );
 }
-

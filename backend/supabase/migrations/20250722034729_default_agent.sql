@@ -1,6 +1,6 @@
 BEGIN;
 
--- Create RPC function to find Prophet default agent for an account
+-- Create RPC function to find Suna default agent for an account
 CREATE OR REPLACE FUNCTION find_suna_default_agent_for_account(p_account_id UUID)
 RETURNS TABLE (
     agent_id UUID,
@@ -60,7 +60,7 @@ BEGIN
 END;
 $$;
 
--- Create function to get all Prophet default agents
+-- Create function to get all Suna default agents
 CREATE OR REPLACE FUNCTION get_all_suna_default_agents()
 RETURNS TABLE (
     agent_id UUID,
@@ -128,7 +128,7 @@ BEGIN
 END;
 $$;
 
--- Create function to get Prophet default agent statistics
+-- Create function to get Suna default agent statistics
 CREATE OR REPLACE FUNCTION get_suna_default_agent_stats()
 RETURNS TABLE (
     total_agents INTEGER,
@@ -152,7 +152,7 @@ BEGIN
     FROM agents a
     WHERE COALESCE((a.metadata->>'is_suna_default')::boolean, false) = true;
     
-    -- Get active count (all Prophet agents are considered active)
+    -- Get active count (all Suna agents are considered active)
     SELECT COUNT(*) INTO active_count
     FROM agents a
     WHERE COALESCE((a.metadata->>'is_suna_default')::boolean, false) = true;

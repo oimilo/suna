@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
@@ -83,39 +83,6 @@ class EntryResponse(BaseModel):
     summary: str
     file_size: int
     created_at: str
-
-
-class AgentEntryResponse(BaseModel):
-    entry_id: str
-    name: str
-    description: str
-    content: Optional[str] = None
-    usage_context: str = "always"
-    is_active: bool = True
-    source_type: str = "file"
-    source_metadata: Dict[str, Any] = {}
-    file_size: int
-    created_at: str
-    updated_at: Optional[str] = None
-
-
-class AgentEntriesResponse(BaseModel):
-    entries: List[AgentEntryResponse]
-    total_count: int
-    total_tokens: int = 0
-
-
-class AgentProcessingJob(BaseModel):
-    job_id: str
-    job_type: str
-    status: str
-    created_at: str
-    completed_at: Optional[str] = None
-    error_message: Optional[str] = None
-
-
-class AgentProcessingJobsResponse(BaseModel):
-    jobs: List[AgentProcessingJob]
 
 class UpdateEntryRequest(BaseModel):
     summary: str = Field(..., min_length=1, max_length=1000)
@@ -555,100 +522,10 @@ async def update_agent_assignments(
             }).execute()
         
         return {"success": True, "message": "Assignments updated successfully"}
-
+        
     except Exception as e:
         logger.error(f"Error updating agent assignments: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update assignments")
-
-
-@router.get("/agents/{agent_id}", response_model=AgentEntriesResponse)
-async def get_agent_entries(
-    agent_id: str,
-    include_inactive: bool = False,
-    auth: AuthorizedAgentAccess = Depends(require_agent_access)
-):
-    """Return agent-assigned knowledge base entries (legacy compatibility)."""
-    try:
-        client = await db.client
-
-        assignments_result = await client.table('agent_knowledge_entry_assignments').select(
-            'entry_id, enabled'
-        ).eq('agent_id', agent_id).eq('account_id', auth.user_id).execute()
-
-        if not assignments_result.data:
-            return AgentEntriesResponse(entries=[], total_count=0, total_tokens=0)
-
-        active_entry_ids: List[str] = []
-        all_entry_ids: List[str] = []
-        for assignment in assignments_result.data:
-            entry_id = assignment.get('entry_id')
-            if not entry_id:
-                continue
-            all_entry_ids.append(entry_id)
-            if assignment.get('enabled', True):
-                active_entry_ids.append(entry_id)
-
-        selected_ids = all_entry_ids if include_inactive else active_entry_ids
-        if not selected_ids:
-            return AgentEntriesResponse(entries=[], total_count=0, total_tokens=0)
-
-        entries_query = client.table('knowledge_base_entries').select(
-            'entry_id, filename, summary, file_size, usage_context, is_active, created_at, updated_at, folder_id, file_path, mime_type'
-        ).in_('entry_id', selected_ids).eq('account_id', auth.user_id)
-
-        if not include_inactive:
-            entries_query = entries_query.eq('is_active', True)
-
-        entries_result = await entries_query.execute()
-
-        def _metadata(entry: Dict[str, Any]) -> Dict[str, Any]:
-            metadata: Dict[str, Any] = {}
-            if entry.get('folder_id'):
-                metadata['folder_id'] = entry['folder_id']
-            if entry.get('file_path'):
-                metadata['file_path'] = entry['file_path']
-            if entry.get('mime_type'):
-                metadata['mime_type'] = entry['mime_type']
-            return metadata
-
-        entries: List[AgentEntryResponse] = []
-        for entry in entries_result.data:
-            entries.append(AgentEntryResponse(
-                entry_id=entry['entry_id'],
-                name=entry.get('filename') or 'Untitled',
-                description=entry.get('summary') or '',
-                content=entry.get('summary') or '',
-                usage_context=entry.get('usage_context') or 'always',
-                is_active=entry.get('is_active', True),
-                source_type='file',
-                source_metadata=_metadata(entry),
-                file_size=entry.get('file_size') or 0,
-                created_at=entry.get('created_at'),
-                updated_at=entry.get('updated_at'),
-            ))
-
-        entries.sort(key=lambda item: item.created_at or '', reverse=True)
-
-        return AgentEntriesResponse(
-            entries=entries,
-            total_count=len(entries),
-            total_tokens=0,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting agent knowledge base entries: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve agent knowledge base entries")
-
-
-@router.get("/agents/{agent_id}/processing-jobs", response_model=AgentProcessingJobsResponse)
-async def get_agent_processing_jobs(
-    agent_id: str,
-    auth: AuthorizedAgentAccess = Depends(require_agent_access)
-):
-    """Return processing jobs for legacy clients (currently none)."""
-    return AgentProcessingJobsResponse(jobs=[])
 
 class FolderMoveRequest(BaseModel):
     folder_id: str

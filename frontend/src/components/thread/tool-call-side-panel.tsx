@@ -2,11 +2,11 @@
 
 import { Project } from '@/lib/api';
 import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Radio, Minimize2, Copy, Check, Globe, Wrench } from 'lucide-react';
+import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Minimize2, Globe, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { HealthCheckedVncIframe } from './HealthCheckedVncIframe';
 import { BrowserHeader } from './tool-views/BrowserToolView';
-import { WindowControls } from './window-controls';
-import { useSidebarContext } from '@/contexts/sidebar-context';
 
 import {
   Drawer,
@@ -43,10 +41,7 @@ export interface ToolCallInput {
 
 interface ToolCallSidePanelProps {
   isOpen: boolean;
-  isPanelMinimized?: boolean;
   onClose: () => void;
-  onMinimize?: () => void;
-  onMaximize?: () => void;
   toolCalls: ToolCallInput[];
   currentIndex: number;
   onNavigate: (newIndex: number) => void;
@@ -67,7 +62,6 @@ interface ToolCallSidePanelProps {
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
   compact?: boolean;
-  onRequestOpen?: () => void;
 }
 
 interface ToolCallSnapshot {
@@ -85,7 +79,7 @@ interface ViewToggleProps {
   onViewChange: (view: 'tools' | 'browser') => void;
 }
 
-const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChange }) => {
+const ViewToggle: React.FC<ViewToggleProps> = memo(function ViewToggle({ currentView, onViewChange }) {
   return (
     <div className="relative flex items-center gap-1 bg-muted rounded-3xl px-1 py-1">
       {/* Sliding background */}
@@ -130,39 +124,31 @@ const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChange }) =>
       </Button>
     </div>
   );
-};
+});
 
 // Helper function to generate the computer title
 const getComputerTitle = (agentName?: string): string => {
-  return agentName ? `${agentName}'s Computer` : "Prophet's Computer";
+  return agentName ? `${agentName}'s Computer` : "Suna's Computer";
 };
 
 // Reusable header component for the tool panel
 interface PanelHeaderProps {
   agentName?: string;
   onClose: () => void;
-  onMinimize?: () => void;
   isStreaming?: boolean;
   variant?: 'drawer' | 'desktop' | 'motion';
   showMinimize?: boolean;
-  hasToolResult?: boolean;
   layoutId?: string;
-  onMaximize?: () => void;
-  isMaximized?: boolean;
 }
 
-const PanelHeader: React.FC<PanelHeaderProps> = ({
+const PanelHeader: React.FC<PanelHeaderProps> = memo(function PanelHeader({
   agentName,
   onClose,
-  onMinimize,
-  onMaximize,
-  isMaximized = false,
   isStreaming = false,
   variant = 'desktop',
   showMinimize = false,
-  hasToolResult = false,
   layoutId,
-}) => {
+}) {
   const title = getComputerTitle(agentName);
   
   if (variant === 'drawer') {
@@ -175,7 +161,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onMinimize ?? onClose}
+            onClick={onClose}
             className="h-8 w-8"
             title="Minimize to floating preview"
           >
@@ -194,15 +180,6 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {showMinimize && (
-              <WindowControls
-                variant="macos"
-                onMinimize={onMinimize ?? onClose}
-                onMaximize={onMaximize}
-                isMaximized={isMaximized}
-                className="ml-1"
-              />
-            )}
             <motion.div layoutId="tool-icon" className="ml-2">
               <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                 {title}
@@ -217,17 +194,15 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
                 <span>Running</span>
               </div>
             )}
-            {!showMinimize && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-8 w-8"
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+              title="Minimize to floating preview"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </motion.div>
@@ -238,15 +213,6 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
     <div className="pt-4 pl-4 pr-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {showMinimize && (
-            <WindowControls
-              variant="macos"
-              onMinimize={onMinimize ?? onClose}
-              onMaximize={onMaximize}
-              isMaximized={isMaximized}
-              className="ml-1"
-            />
-          )}
           <div className="ml-2">
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
               {title}
@@ -260,29 +226,24 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
               <span>Running</span>
             </Badge>
           )}
-          {showMinimize ? null : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-              title="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+            title={showMinimize ? "Minimize to floating preview" : "Close"}
+          >
+            {showMinimize ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
     </div>
   );
-};
+});
 
 export function ToolCallSidePanel({
   isOpen,
-  isPanelMinimized = false,
   onClose,
-  onMinimize,
-  onMaximize,
   toolCalls,
   currentIndex,
   onNavigate,
@@ -295,18 +256,14 @@ export function ToolCallSidePanel({
   onFileClick,
   disableInitialAnimation,
   compact = false,
-  onRequestOpen,
 }: ToolCallSidePanelProps) {
   const [dots, setDots] = React.useState('');
   const [internalIndex, setInternalIndex] = React.useState(0);
   const [navigationMode, setNavigationMode] = React.useState<'live' | 'manual'>('live');
   const [toolCallSnapshots, setToolCallSnapshots] = React.useState<ToolCallSnapshot[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  const [showViewToggle, setShowViewToggle] = React.useState(false);
-  const [isMaximized, setIsMaximized] = React.useState(false);
 
   // Add copy functionality state
-  const [isCopyingContent, setIsCopyingContent] = React.useState(false);
   // Add view toggle state  
   const [currentView, setCurrentView] = React.useState<'tools' | 'browser'>('tools');
   const currentViewRef = React.useRef(currentView);
@@ -318,24 +275,17 @@ export function ToolCallSidePanel({
 
   const isMobile = useIsMobile();
   const { isOpen: isDocumentModalOpen } = useDocumentModalStore();
-  let isPinned = false;
-  try {
-    const sidebarContext = useSidebarContext();
-    isPinned = sidebarContext.isPinned;
-  } catch {
-    isPinned = false;
-  }
 
   const sandbox = project?.sandbox;
   
   // Add refresh key state for VNC iframe
   const [vncRefreshKey, setVncRefreshKey] = React.useState(0);
   
-  const handleVncRefresh = React.useCallback(() => {
+  const handleVncRefresh = useCallback(() => {
     setVncRefreshKey(prev => prev + 1);
   }, []);
 
-  const persistentVncIframe = React.useMemo(() => {
+  const persistentVncIframe = useMemo(() => {
     if (!sandbox || !sandbox.vnc_preview || !sandbox.pass || !sandbox.id) return null;
     
     return (
@@ -353,7 +303,7 @@ export function ToolCallSidePanel({
   }, [sandbox, vncRefreshKey]);
 
   // Helper function to check if a tool is browser-related
-  const isBrowserTool = React.useCallback((toolName: string | undefined): boolean => {
+  const isBrowserTool = useCallback((toolName: string | undefined): boolean => {
     if (!toolName) return false;
     const lowerName = toolName.toLowerCase();
     return [
@@ -369,7 +319,6 @@ export function ToolCallSidePanel({
     const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
     const currentSnapshot = toolCallSnapshots[safeIndex];
     const isCurrentSnapshotBrowserTool = isBrowserTool(currentSnapshot?.toolCall.assistantCall?.name);
-    setShowViewToggle(isCurrentSnapshotBrowserTool);
     
     // Handle view switching based on agent status
     if (agentStatus === 'idle') {
@@ -405,44 +354,21 @@ export function ToolCallSidePanel({
     }
   }, [toolCallSnapshots, internalIndex, isBrowserTool, agentStatus]);
 
-  const handleClose = React.useCallback(() => {
-    setIsMaximized(false);
+  const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
 
-  const handleMinimize = React.useCallback(() => {
-    setIsMaximized(false);
-    if (onMinimize) {
-      onMinimize();
-    } else {
-      onClose();
-    }
-  }, [onMinimize, onClose]);
-
-  const handleMaximizeToggle = React.useCallback(() => {
-    setIsMaximized((prev) => {
-      const next = !prev;
-      if (next) {
-        onMaximize?.();
-      }
-      return next;
-    });
-  }, [onMaximize]);
-
-  React.useEffect(() => {
-    if (!isOpen) {
-      setIsMaximized(false);
-    }
-  }, [isOpen]);
-
-  React.useEffect(() => {
-    const newSnapshots = toolCalls.map((toolCall, index) => ({
+  // Memoize snapshot creation to prevent unnecessary recalculations
+  const newSnapshots = useMemo(() => {
+    return toolCalls.map((toolCall, index) => ({
       id: `${index}-${toolCall.assistantCall.timestamp || Date.now()}`,
       toolCall,
       index,
       timestamp: Date.now(),
     }));
+  }, [toolCalls]);
 
+  React.useEffect(() => {
     const hadSnapshots = toolCallSnapshots.length > 0;
     const hasNewSnapshots = newSnapshots.length > toolCallSnapshots.length;
     setToolCallSnapshots(newSnapshots);
@@ -492,17 +418,30 @@ export function ToolCallSidePanel({
     }
   }, [currentIndex, toolCallSnapshots.length, isInitialized, navigationMode]);
 
-  const safeInternalIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
-  const currentSnapshot = toolCallSnapshots[safeInternalIndex];
-  const currentToolCall = currentSnapshot?.toolCall;
-  const totalCalls = toolCallSnapshots.length;
-  const latestIndex = Math.max(0, totalCalls - 1);
+  // Memoize expensive calculations
+  const { safeInternalIndex, currentSnapshot, currentToolCall, totalCalls, latestIndex, completedToolCalls, totalCompletedCalls } = useMemo(() => {
+    const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
+    const snapshot = toolCallSnapshots[safeIndex];
+    const toolCall = snapshot?.toolCall;
+    const total = toolCallSnapshots.length;
+    const latest = Math.max(0, total - 1);
 
-  const completedToolCalls = toolCallSnapshots.filter(snapshot =>
-    snapshot.toolCall.toolResult?.content &&
-    snapshot.toolCall.toolResult.content !== 'STREAMING'
-  );
-  const totalCompletedCalls = completedToolCalls.length;
+    const completed = toolCallSnapshots.filter(snapshot =>
+      snapshot.toolCall.toolResult?.content &&
+      snapshot.toolCall.toolResult.content !== 'STREAMING'
+    );
+    const completedCount = completed.length;
+
+    return {
+      safeInternalIndex: safeIndex,
+      currentSnapshot: snapshot,
+      currentToolCall: toolCall,
+      totalCalls: total,
+      latestIndex: latest,
+      completedToolCalls: completed,
+      totalCompletedCalls: completedCount
+    };
+  }, [internalIndex, toolCallSnapshots]);
 
   // Derive a user-facing timeline that is stable and easy to reason about:
   // - If the current tool is STREAMING, show the last completed result content;
@@ -510,8 +449,7 @@ export function ToolCallSidePanel({
   //   the last completed step while streaming so the user can still scrub.
   let displayToolCall = currentToolCall;
   let displayIndex = safeInternalIndex;
-  let displayTotalCalls = totalCalls;
-  const isAtTrueLatest = safeInternalIndex === latestIndex;
+  const displayTotalCalls = totalCalls;
 
   const isCurrentToolStreaming = currentToolCall?.toolResult?.content === 'STREAMING';
   if (isCurrentToolStreaming && totalCompletedCalls > 0) {
@@ -520,10 +458,6 @@ export function ToolCallSidePanel({
     displayIndex = completedToolCalls.length - 1;
   }
 
-  const currentToolName = displayToolCall?.assistantCall?.name || 'Tool Call';
-  const CurrentToolIcon = getToolIcon(
-    currentToolCall?.assistantCall?.name || 'unknown',
-  );
   const isStreaming = displayToolCall?.toolResult?.content === 'STREAMING';
 
   // Extract actual success value from tool content with fallbacks
@@ -592,17 +526,15 @@ export function ToolCallSidePanel({
       fileContent = typeof toolContent === 'string' ? toolContent : JSON.stringify(toolContent, null, 2);
     }
 
-    setIsCopyingContent(true);
     const success = await copyToClipboard(fileContent);
     if (success) {
       toast.success('File content copied to clipboard');
     } else {
       toast.error('Failed to copy file content');
     }
-    setTimeout(() => setIsCopyingContent(false), 500);
   }, [displayToolCall?.toolResult?.content, copyToClipboard]);
 
-  const internalNavigate = React.useCallback((newIndex: number, source: string = 'internal') => {
+  const internalNavigate = useCallback((newIndex: number, source: string = 'internal') => {
     if (newIndex < 0 || newIndex >= totalCalls) return;
 
     const isNavigatingToLatest = newIndex === totalCalls - 1;
@@ -622,14 +554,14 @@ export function ToolCallSidePanel({
   const isLiveMode = navigationMode === 'live';
   const pointerIndex = isLiveMode ? latestIndex : safeInternalIndex;
 
-  const navigateToPrevious = React.useCallback(() => {
+  const navigateToPrevious = useCallback(() => {
     if (pointerIndex > 0) {
       setNavigationMode('manual');
       internalNavigate(pointerIndex - 1, 'user_explicit');
     }
   }, [pointerIndex, internalNavigate]);
 
-  const navigateToNext = React.useCallback(() => {
+  const navigateToNext = useCallback(() => {
     if (pointerIndex < latestIndex) {
       const nextIndex = pointerIndex + 1;
       setNavigationMode(nextIndex === latestIndex ? 'live' : 'manual');
@@ -637,20 +569,20 @@ export function ToolCallSidePanel({
     }
   }, [pointerIndex, latestIndex, internalNavigate]);
 
-  const jumpToLive = React.useCallback(() => {
+  const jumpToLive = useCallback(() => {
     setNavigationMode('live');
     setInternalIndex(latestIndex);
     internalNavigate(latestIndex, 'user_explicit');
   }, [latestIndex, internalNavigate]);
 
-  const jumpToLatest = React.useCallback(() => {
+  const jumpToLatest = useCallback(() => {
     // For idle state: jump to the latest completed (same as latestIndex here)
     setNavigationMode('manual');
     setInternalIndex(latestIndex);
     internalNavigate(latestIndex, 'user_explicit');
   }, [latestIndex, internalNavigate]);
 
-  const renderStatusButton = React.useCallback(() => {
+  const renderStatusButton = useCallback(() => {
     const baseClasses = "flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full w-[116px]";
     const dotClasses = "w-1.5 h-1.5 rounded-full";
     const textClasses = "text-xs font-medium";
@@ -699,7 +631,7 @@ export function ToolCallSidePanel({
     }
   }, [isLiveMode, agentStatus, jumpToLive, jumpToLatest]);
 
-  const handleSliderChange = React.useCallback(([newValue]: [number]) => {
+  const handleSliderChange = useCallback(([newValue]: [number]) => {
     // Slider maps directly over all snapshots for simplicity and correctness
     const bounded = Math.max(0, Math.min(newValue, latestIndex));
     setNavigationMode(bounded === latestIndex ? 'live' : 'manual');
@@ -711,7 +643,7 @@ export function ToolCallSidePanel({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       // Don't handle side panel shortcuts when document modal is open
-      console.log('Side panel handler - document modal open:', isDocumentModalOpen, 'key:', event.key);
+      // console.log('Side panel handler - document modal open:', isDocumentModalOpen, 'key:', event.key);
       if (isDocumentModalOpen) return;
       
       if ((event.metaKey || event.ctrlKey) && event.key === 'i') {
@@ -761,7 +693,7 @@ export function ToolCallSidePanel({
     return () => clearInterval(interval);
   }, [isStreaming]);
 
-  if (!isOpen || isPanelMinimized) {
+  if (!isOpen) {
     return null;
   }
 
@@ -798,10 +730,7 @@ export function ToolCallSidePanel({
                 <PanelHeader 
                   agentName={agentName}
                   onClose={handleClose}
-                  onMinimize={handleMinimize}
-                  onMaximize={handleMaximizeToggle}
-                  isMaximized={isMaximized}
-                  showMinimize={!!onMinimize}
+                  showMinimize={true}
                 />
                 <div className="flex-1 p-4 overflow-auto">
                   <div className="space-y-4">
@@ -827,10 +756,6 @@ export function ToolCallSidePanel({
             <PanelHeader 
               agentName={agentName}
               onClose={handleClose}
-              onMinimize={handleMinimize}
-              onMaximize={handleMaximizeToggle}
-              isMaximized={isMaximized}
-              showMinimize={!!onMinimize}
             />
           )}
           <div className="flex flex-col items-center justify-center flex-1 p-8">
@@ -845,10 +770,10 @@ export function ToolCallSidePanel({
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  No tool activity
+                  No actions yet
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Tool calls and computer interactions will appear here when they're being executed.
+                  Worker actions and results will appear here as they execute
                 </p>
               </div>
             </div>
@@ -866,11 +791,7 @@ export function ToolCallSidePanel({
               <PanelHeader 
                 agentName={agentName}
                 onClose={handleClose}
-                onMinimize={handleMinimize}
-                onMaximize={handleMaximizeToggle}
-                isMaximized={isMaximized}
                 isStreaming={true}
-                showMinimize={!!onMinimize}
               />
             )}
             {isMobile && (
@@ -910,10 +831,6 @@ export function ToolCallSidePanel({
             <PanelHeader 
               agentName={agentName}
               onClose={handleClose}
-              onMinimize={handleMinimize}
-              onMaximize={handleMaximizeToggle}
-              isMaximized={isMaximized}
-              showMinimize={!!onMinimize}
             />
           )}
           <div className="flex-1 p-4 overflow-auto">
@@ -951,14 +868,9 @@ export function ToolCallSidePanel({
           <PanelHeader 
             agentName={agentName}
             onClose={handleClose}
-            onMinimize={handleMinimize}
             isStreaming={isStreaming}
             variant="motion"
-            hasToolResult={!!displayToolCall.toolResult?.content}
             layoutId={CONTENT_LAYOUT_ID}
-            showMinimize={!!onMinimize}
-            onMaximize={handleMaximizeToggle}
-            isMaximized={isMaximized}
           />
         )}
 
@@ -1077,26 +989,13 @@ export function ToolCallSidePanel({
               damping: 35
             }
           }}
-          className={cn(
-            'border border-black/6 dark:border-white/8 rounded-3xl flex flex-col z-30 shadow-lg dark:shadow-none',
-            compact ? 'm-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]'
-                    : 'fixed',
-            !compact && !isMaximized && !isMobile && 'top-2 right-2 bottom-4 w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]',
-            !compact && !isMaximized && isMobile && 'top-2 right-2 bottom-4 left-4'
-          )}
-          style={(() => {
-            const style: React.CSSProperties = { overflow: 'hidden' };
-
-            if (!compact && isMaximized && !isMobile) {
-              const sidebarWidth = isPinned ? 272 : 88;
-              style.top = 16;
-              style.right = 16;
-              style.bottom = 16;
-              style.left = sidebarWidth;
-            }
-
-            return style;
-          })()}
+          className={compact 
+            ? "m-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] border rounded-3xl flex flex-col z-30"
+            : "fixed top-2 right-2 bottom-4 border rounded-3xl flex flex-col z-30 w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]"
+          }
+          style={{
+            overflow: 'hidden',
+          }}
         >
           <div className="flex-1 flex flex-col overflow-hidden bg-card">
             {renderContent()}

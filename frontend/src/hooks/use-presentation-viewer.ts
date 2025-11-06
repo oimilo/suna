@@ -7,10 +7,6 @@ interface PresentationViewerState {
   initialSlide?: number;
 }
 
-interface OpenPresentationOptions {
-  initialSlide?: number;
-}
-
 export function usePresentationViewer() {
   const [viewerState, setViewerState] = useState<PresentationViewerState>({
     isOpen: false,
@@ -19,13 +15,13 @@ export function usePresentationViewer() {
   const openPresentation = (
     presentationName: string,
     sandboxUrl: string,
-    options: OpenPresentationOptions = {}
+    initialSlide: number = 1
   ) => {
     setViewerState({
       isOpen: true,
       presentationName,
       sandboxUrl,
-      initialSlide: options.initialSlide ?? 1,
+      initialSlide,
     });
   };
 

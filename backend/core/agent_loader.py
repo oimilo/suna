@@ -6,7 +6,6 @@ eliminating duplication across agent_crud, agent_service, and agent_runs.
 """
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
-import json
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
 
@@ -308,21 +307,7 @@ class AgentLoader:
     
     def _row_to_agent_data(self, row: Dict[str, Any]) -> AgentData:
         """Convert database row to AgentData."""
-        metadata_raw = row.get('metadata') or {}
-        metadata: Dict[str, Any]
-        if isinstance(metadata_raw, dict):
-            metadata = metadata_raw
-        elif isinstance(metadata_raw, str):
-            try:
-                metadata = json.loads(metadata_raw)
-                if not isinstance(metadata, dict):
-                    metadata = {}
-            except json.JSONDecodeError:
-                metadata = {}
-        else:
-            metadata = {}
-        
-        restrictions = metadata.get('restrictions') if isinstance(metadata.get('restrictions'), dict) else None
+        metadata = row.get('metadata', {}) or {}
         
         return AgentData(
             agent_id=row['agent_id'],
@@ -341,31 +326,25 @@ class AgentLoader:
             version_count=row.get('version_count', 1),
             metadata=metadata,
             is_suna_default=metadata.get('is_suna_default', False),
-            centrally_managed=metadata.get('centrally_managed', False),
-            restrictions=restrictions,
             config_loaded=False
         )
     
     async def _load_agent_config(self, agent: AgentData, user_id: str):
         """Load full configuration for a single agent."""
         if agent.is_suna_default:
-            self._load_suna_config(agent)
+            await self._load_suna_config(agent, user_id)
         else:
             await self._load_custom_config(agent, user_id)
         
         agent.config_loaded = True
     
-    def _load_suna_config(self, agent: AgentData):
-        """Load Suna central configuration."""
+    async def _load_suna_config(self, agent: AgentData, user_id: Optional[str] = None):
         from core.suna_config import SUNA_CONFIG
         from core.config_helper import _extract_agentpress_tools_for_run
         
         agent.system_prompt = SUNA_CONFIG['system_prompt']
         agent.model = SUNA_CONFIG['model']
         agent.agentpress_tools = _extract_agentpress_tools_for_run(SUNA_CONFIG['agentpress_tools'])
-        agent.configured_mcps = []
-        agent.custom_mcps = []
-        agent.triggers = []
         agent.centrally_managed = True
         agent.restrictions = {
             'system_prompt_editable': False,
@@ -374,6 +353,42 @@ class AgentLoader:
             'description_editable': False,
             'mcps_editable': True
         }
+        
+        if agent.current_version_id and user_id:
+            try:
+                from core.versioning.version_service import get_version_service
+                version_service = await get_version_service()
+                
+                version = await version_service.get_version(
+                    agent_id=agent.agent_id,
+                    version_id=agent.current_version_id,
+                    user_id=user_id
+                )
+                
+                version_dict = version.to_dict()
+                
+                if 'config' in version_dict and version_dict['config']:
+                    config = version_dict['config']
+                    tools = config.get('tools', {})
+                    
+                    agent.configured_mcps = tools.get('mcp', [])
+                    agent.custom_mcps = tools.get('custom_mcp', [])
+                    agent.triggers = config.get('triggers', [])
+                else:
+                    agent.configured_mcps = version_dict.get('configured_mcps', [])
+                    agent.custom_mcps = version_dict.get('custom_mcps', [])
+                    agent.triggers = []
+                    
+                logger.debug(f"Loaded Suna config with {len(agent.configured_mcps)} configured MCPs and {len(agent.custom_mcps)} custom MCPs")
+            except Exception as e:
+                logger.warning(f"Failed to load MCPs from version for Suna agent {agent.agent_id}: {e}")
+                agent.configured_mcps = []
+                agent.custom_mcps = []
+                agent.triggers = []
+        else:
+            agent.configured_mcps = []
+            agent.custom_mcps = []
+            agent.triggers = []
     
     async def _load_custom_config(self, agent: AgentData, user_id: str):
         """Load custom agent configuration from version."""
@@ -393,28 +408,40 @@ class AgentLoader:
             
             version_dict = version.to_dict()
             
-            config = version_dict.get('config') or {}
-            tools = config.get('tools', {}) if isinstance(config.get('tools'), dict) else {}
-            
-            agent.system_prompt = config.get('system_prompt', '')
-            agent.model = config.get('model')
-            agent.configured_mcps = tools.get('mcp', []) if isinstance(tools.get('mcp'), list) else []
-            agent.custom_mcps = tools.get('custom_mcp', []) if isinstance(tools.get('custom_mcp'), list) else []
-            
-            from core.config_helper import _extract_agentpress_tools_for_run
-            agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
-            
-            agent.triggers = config.get('triggers', []) if isinstance(config.get('triggers'), list) else []
+            # Extract from new config format
+            if 'config' in version_dict and version_dict['config']:
+                config = version_dict['config']
+                tools = config.get('tools', {})
+                
+                agent.system_prompt = config.get('system_prompt', '')
+                agent.model = config.get('model')
+                agent.configured_mcps = tools.get('mcp', [])
+                agent.custom_mcps = tools.get('custom_mcp', [])
+                
+                from core.config_helper import _extract_agentpress_tools_for_run
+                agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
+                
+                agent.triggers = config.get('triggers', [])
+            else:
+                # Old format compatibility
+                agent.system_prompt = version_dict.get('system_prompt', '')
+                agent.model = version_dict.get('model')
+                agent.configured_mcps = version_dict.get('configured_mcps', [])
+                agent.custom_mcps = version_dict.get('custom_mcps', [])
+                
+                from core.config_helper import _extract_agentpress_tools_for_run
+                agent.agentpress_tools = _extract_agentpress_tools_for_run(
+                    version_dict.get('agentpress_tools', {})
+                )
+                
+                agent.triggers = []
             
             agent.version_name = version_dict.get('version_name', 'v1')
             agent.version_number = version_dict.get('version_number')
             agent.version_created_at = version_dict.get('created_at')
             agent.version_updated_at = version_dict.get('updated_at')
             agent.version_created_by = version_dict.get('created_by')
-            if not agent.restrictions and isinstance(agent.metadata, dict):
-                agent.restrictions = agent.metadata.get('restrictions') if isinstance(
-                    agent.metadata.get('restrictions'), dict
-                ) else {}
+            agent.restrictions = {}
             
         except Exception as e:
             logger.warning(f"Failed to load version for agent {agent.agent_id}: {e}")
@@ -431,99 +458,77 @@ class AgentLoader:
         agent.agentpress_tools = _extract_agentpress_tools_for_run(_get_default_agentpress_tools())
         agent.triggers = []
         agent.version_name = 'v1'
-        if not agent.restrictions:
-            if isinstance(agent.metadata, dict) and isinstance(agent.metadata.get('restrictions'), dict):
-                agent.restrictions = agent.metadata['restrictions']
-            else:
-                agent.restrictions = {}
+        agent.restrictions = {}
     
     async def _batch_load_configs(self, agents: list[AgentData]):
         """Batch load configurations for multiple agents."""
-        version_ids = [
-            a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default
-        ]
-
+        
+        # Get all version IDs for non-Suna agents
+        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default]
+        
         if not version_ids:
+            # Only Suna agents, load their configs
             for agent in agents:
                 if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                    await self._load_suna_config(agent, agent.account_id)
                     agent.config_loaded = True
             return
-
+        
         try:
+            # Use versioning service instead of direct config access
             from core.versioning.version_service import get_version_service
-
             version_service = await get_version_service()
-            version_map: Dict[str, Dict[str, Any]] = {}
-
+            
+            # Create version map using versioning service
+            version_map = {}
             for agent in agents:
                 if agent.current_version_id and not agent.is_suna_default:
                     try:
                         version = await version_service.get_version(
                             agent_id=agent.agent_id,
                             version_id=agent.current_version_id,
-                            user_id=agent.account_id,
+                            user_id=agent.account_id
                         )
                         if version:
-                            version_dict = version.to_dict()
-                            version_config = {
-                                "system_prompt": version.system_prompt,
-                                "model": version.model,
-                                "tools": {
-                                    "agentpress": version_dict.get("agentpress_tools") or {},
-                                    "mcp": version_dict.get("configured_mcps") or [],
-                                    "custom_mcp": version_dict.get("custom_mcps") or [],
-                                },
-                            }
-                            if "triggers" in version_dict:
-                                version_config["triggers"] = version_dict["triggers"]
-
-                            version_dict["config"] = version_config
-                            version_map[agent.agent_id] = version_dict
-                    except Exception as exc:
-                        logger.warning(
-                            "Failed to load version %s for agent %s: %s",
-                            agent.current_version_id,
-                            agent.agent_id,
-                            exc,
-                        )
+                            version_map[agent.agent_id] = version.to_dict()
+                    except Exception as e:
+                        logger.warning(f"Failed to load version {agent.current_version_id} for agent {agent.agent_id}: {e}")
                         continue
-
+            
+            # Apply configs
             for agent in agents:
                 if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                    await self._load_suna_config(agent, agent.account_id)
                     agent.config_loaded = True
                 elif agent.agent_id in version_map:
                     self._apply_version_config(agent, version_map[agent.agent_id])
                     agent.config_loaded = True
-
-        except Exception as exc:
-            logger.warning(f"Failed to batch load agent configs via VersionService: {exc}")
-            # Fallback: ensure Suna defaults still load
+                # else: leave config_loaded = False
+                
+        except Exception as e:
+            logger.warning(f"Failed to batch load agent configs: {e}")
+            # Fallback: load Suna configs only
             for agent in agents:
                 if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                    await self._load_suna_config(agent, agent.account_id)
                     agent.config_loaded = True
     
     def _apply_version_config(self, agent: AgentData, version_row: Dict[str, Any]):
         """Apply version configuration to agent."""
         config = version_row.get('config') or {}
-        tools = config.get('tools', {}) if isinstance(config.get('tools'), dict) else {}
+        tools = config.get('tools', {})
         
         from core.config_helper import _extract_agentpress_tools_for_run
         
         agent.system_prompt = config.get('system_prompt', '')
         agent.model = config.get('model')
-        agent.configured_mcps = tools.get('mcp', []) if isinstance(tools.get('mcp'), list) else []
-        agent.custom_mcps = tools.get('custom_mcp', []) if isinstance(tools.get('custom_mcp'), list) else []
+        agent.configured_mcps = tools.get('mcp', [])
+        agent.custom_mcps = tools.get('custom_mcp', [])
         agent.agentpress_tools = _extract_agentpress_tools_for_run(tools.get('agentpress', {}))
-        agent.triggers = config.get('triggers', []) if isinstance(config.get('triggers'), list) else []
+        agent.triggers = config.get('triggers', [])
         agent.version_name = version_row.get('version_name', 'v1')
         agent.version_number = version_row.get('version_number')
-        if not agent.restrictions and isinstance(agent.metadata, dict):
-            agent.restrictions = agent.metadata.get('restrictions') if isinstance(
-                agent.metadata.get('restrictions'), dict
-            ) else {}
+        agent.restrictions = {}
 
 
 # Singleton instance
@@ -535,3 +540,4 @@ async def get_agent_loader() -> AgentLoader:
     if _loader is None:
         _loader = AgentLoader()
     return _loader
+

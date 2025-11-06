@@ -1,11 +1,10 @@
 import uuid
+import json
 import hashlib
 import base64
-import binascii
-import string
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 from cryptography.fernet import Fernet
 
@@ -53,43 +52,6 @@ class ProfileNotFoundError(Exception):
 
 class ProfileAccessDeniedError(Exception):
     pass
-
-
-BASE64_CHARS = set(string.ascii_letters + string.digits + '+/_-')
-
-
-def _decode_layers(value: str, max_layers: int = 4) -> Optional[bytes]:
-    current = (value or '').strip()
-    if not current:
-        return None
-
-    for _ in range(max_layers):
-        padding = '=' * ((4 - len(current) % 4) % 4)
-        decoded: Optional[bytes] = None
-        for decoder in (base64.b64decode, base64.urlsafe_b64decode):
-            try:
-                decoded = decoder(current + padding)
-                break
-            except binascii.Error:
-                decoded = None
-        if decoded is None:
-            return None
-
-        try:
-            candidate = decoded.decode('utf-8').strip()
-        except UnicodeDecodeError:
-            return decoded
-
-        if not candidate:
-            return decoded
-
-        if set(candidate) <= BASE64_CHARS:
-            current = candidate
-            continue
-
-        return decoded
-
-    return None
 
 
 class ProfileService:
@@ -268,16 +230,13 @@ class ProfileService:
             raise ProfileAccessDeniedError("Access denied to profile")
     
     def _map_to_profile(self, data: Dict[str, Any]) -> MCPCredentialProfile:
-        encrypted_config_bytes = _decode_layers(data.get('encrypted_config', ''))
-        config: Dict[str, Any] = {}
-
-        if encrypted_config_bytes:
-            try:
-                config = self._encryption.decrypt_config(encrypted_config_bytes, data['config_hash'])
-            except Exception as e:
-                logger.error(f"Failed to decrypt profile {data['profile_id']}: {e}")
-                config = {}
-
+        try:
+            encrypted_config = base64.b64decode(data['encrypted_config'])
+            config = self._encryption.decrypt_config(encrypted_config, data['config_hash'])
+        except Exception as e:
+            logger.error(f"Failed to decrypt profile {data['profile_id']}: {e}")
+            config = {}
+        
         return MCPCredentialProfile(
             profile_id=data['profile_id'],
             account_id=data['account_id'],

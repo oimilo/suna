@@ -130,8 +130,7 @@ async def generate_icon_and_colors(name: str, description: str = "") -> Dict[str
     """
     logger.debug(f"Generating icon and colors for: {name}")
     try:
-        # Use Suna-standard lightweight model for metadata tasks
-        model_name = "openai/gpt-5-nano"
+        model_name = "openai/gpt-5-nano-2025-08-07"
         
         frontend_colors = [
             "#000000", "#FFFFFF", "#6366F1", "#10B981", "#F59E0B", 
@@ -166,8 +165,8 @@ Example response:
         response = await make_llm_api_call(
             messages=messages, 
             model_name=model_name, 
-            max_tokens=256, 
-            temperature=1,
+            max_tokens=4000, 
+            temperature=0.7,
             response_format={"type": "json_object"},
             stream=False
         )

@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional
 from core.utils.pagination import PaginationService, PaginationParams, PaginatedResponse
 from core.utils.logger import logger
 from .agent_loader import AgentLoader
+from core.utils.query_utils import batch_query_in
 
 
 class AgentFilters:
@@ -223,60 +224,36 @@ class AgentService:
         )
 
     async def _load_agent_versions_batch(self, agents: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        """
-        Fetch current version metadata for the provided agents using the shared
-        VersionService (keeps behaviour aligned with Suna while reusing the
-        normalization already handled there).
-        """
-        version_map: Dict[str, Dict[str, Any]] = {}
-        version_ids = {agent.get("current_version_id") for agent in agents if agent.get("current_version_id")}
-
-        if not version_ids:
-            return version_map
-
-        try:
-            from core.versioning.version_service import get_version_service
-
-            version_service = await get_version_service()
-
-            for agent in agents:
-                version_id = agent.get("current_version_id")
-                if not version_id:
-                    continue
-
-                try:
-                    version = await version_service.get_version(
-                        agent_id=agent["agent_id"],
-                        version_id=version_id,
-                        user_id=agent.get("account_id") or "system",
-                    )
-                    if version:
-                        version_dict = version.to_dict()
-                        version_config = {
-                            "system_prompt": version.system_prompt,
-                            "model": version.model,
-                            "tools": {
-                                "mcp": version_dict.get("configured_mcps") or [],
-                                "custom_mcp": version_dict.get("custom_mcps") or [],
-                                "agentpress": version_dict.get("agentpress_tools") or {},
-                            },
-                        }
-                        if "triggers" in version_dict:
-                            version_config["triggers"] = version_dict["triggers"]
-
-                        version_dict["config"] = version_config
-                        version_map[agent["agent_id"]] = version_dict
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to load version %s for agent %s: %s",
-                        version_id,
-                        agent.get("agent_id"),
-                        exc,
-                    )
-        except Exception as exc:
-            logger.warning("Failed to batch load agent versions via VersionService: %s", exc)
-
-        return version_map
+        version_map = {}
+        version_ids = list({agent['current_version_id'] for agent in agents if agent.get('current_version_id')})
+        
+        if version_ids:
+            try:
+                # Use versioning service instead of direct config access
+                from core.versioning.version_service import get_version_service
+                version_service = await get_version_service()
+                
+                version_map = {}
+                for agent in agents:
+                    version_id = agent.get('current_version_id')
+                    if version_id:
+                        try:
+                            # Get version data using versioning service
+                            version = await version_service.get_version(
+                                agent_id=agent['agent_id'],
+                                version_id=version_id,
+                                user_id=agent['account_id']  # Use account_id as user_id
+                            )
+                            if version:
+                                version_dict = version.to_dict()
+                                version_map[agent['agent_id']] = version_dict
+                        except Exception as e:
+                            logger.warning(f"Failed to load version {version_id} for agent {agent['agent_id']}: {e}")
+                            continue
+                        
+            except Exception as e:
+                logger.warning(f"Failed to batch load agent versions: {e}")
+                version_map = {}
 
     async def _passes_complex_filters(
         self, 
@@ -291,7 +268,7 @@ class AgentService:
         if version_data:
             self.loader._apply_version_config(agent, version_data)
         elif agent.is_suna_default:
-            self.loader._load_suna_config(agent)
+            await self.loader._load_suna_config(agent, agent.account_id)
         else:
             # No config available, use empty defaults for filtering
             agent.configured_mcps = []
@@ -334,14 +311,15 @@ class AgentService:
         agents: List[Dict[str, Any]], 
         version_map: Dict[str, Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        def get_tools_count(agent_row):
+        agent_tool_counts = []
+        for agent_row in agents:
             agent = self.loader._row_to_agent_data(agent_row)
             version_data = version_map.get(agent.agent_id)
             
             if version_data:
                 self.loader._apply_version_config(agent, version_data)
             elif agent.is_suna_default:
-                self.loader._load_suna_config(agent)
+                await self.loader._load_suna_config(agent, agent.account_id)
             
             configured_mcps = agent.configured_mcps or []
             agentpress_tools = agent.agentpress_tools or {}
@@ -352,9 +330,11 @@ class AgentService:
                 if tool_data and isinstance(tool_data, dict) and tool_data.get('enabled', False)
             ) if agentpress_tools else 0
             
-            return mcp_count + agentpress_count
+            tools_count = mcp_count + agentpress_count
+            agent_tool_counts.append((agent_row, tools_count))
         
-        return sorted(agents, key=get_tools_count, reverse=True)
+        agent_tool_counts.sort(key=lambda x: x[1], reverse=True)
+        return [agent_row for agent_row, _ in agent_tool_counts]
     
     async def _load_agents_with_configs(
         self,
@@ -381,7 +361,7 @@ class AgentService:
                 self.loader._apply_version_config(agent, version_data)
                 agent.config_loaded = True
             elif agent.is_suna_default:
-                self.loader._load_suna_config(agent)
+                await self.loader._load_suna_config(agent, agent.account_id)
                 agent.config_loaded = True
             
             agent_datas.append(agent.to_dict())

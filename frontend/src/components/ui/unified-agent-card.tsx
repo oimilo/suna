@@ -142,7 +142,7 @@ const CardAvatar: React.FC<{
   }
 
   if (isProphetDefaultAgent) {
-    return <AgentAvatar isProphetDefault={true} size={size} className="border" />;
+    return <AgentAvatar isSunaDefault={true} size={size} className="border" />;
   }
 
   if (data.icon_name) {

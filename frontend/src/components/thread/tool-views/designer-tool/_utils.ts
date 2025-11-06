@@ -24,7 +24,7 @@ export function extractDesignerData(
   toolContent: string | object | undefined | null,
   isSuccess: boolean,
   toolTimestamp?: string,
-  assistantTimestamp?: string,
+  assistantTimestamp?: string
 ): DesignerData {
   const assistantData = extractToolData(assistantContent);
   const toolData = extractToolData(toolContent);
@@ -49,15 +49,15 @@ export function extractDesignerData(
 
   if (toolContent && typeof toolContent === 'object') {
     const tc = toolContent as any;
-
+    
     if (tc.sandbox_id) {
       sandbox_id = tc.sandbox_id;
     }
-
+    
     if (tc.tool_execution?.result?.output) {
       const output = tc.tool_execution.result.output;
       actualIsSuccess = tc.tool_execution.result.success !== false;
-
+      
       if (typeof output === 'object' && output !== null) {
         if (output.design_path) {
           generatedImagePath = output.design_path;
@@ -76,24 +76,24 @@ export function extractDesignerData(
         }
       } else if (typeof output === 'string') {
         status = output;
-
+        
         const pathMatch = output.match(/Design saved at:\s*([^\s]+)/i);
         if (pathMatch) {
           generatedImagePath = pathMatch[1];
         } else {
-          const anyPathMatch = output.match(/(\/workspace\/designs\/[\S]+\.png)/i);
+          const anyPathMatch = output.match(/(\/workspace\/designs\/[^\s]+\.png)/i);
           if (anyPathMatch) {
             generatedImagePath = anyPathMatch[1];
           }
         }
-
+        
         if (output.includes('error') || output.includes('Error') || output.includes('Failed')) {
           error = output;
           actualIsSuccess = false;
         }
       }
     }
-
+    
     if (tc.metadata?.frontend_content?.tool_execution?.result?.output) {
       const output = tc.metadata.frontend_content.tool_execution.result.output;
       if (typeof output === 'object' && output !== null) {
@@ -104,7 +104,7 @@ export function extractDesignerData(
           designUrl = output.design_url;
         }
       } else if (typeof output === 'string' && !generatedImagePath) {
-        const pathMatch = output.match(/(\/workspace\/designs\/[\S]+\.png)/i);
+        const pathMatch = output.match(/(\/workspace\/designs\/[^\s]+\.png)/i);
         if (pathMatch) {
           generatedImagePath = pathMatch[1];
         }
@@ -114,11 +114,11 @@ export function extractDesignerData(
 
   if (!generatedImagePath && toolContent) {
     const toolResult = toolData.toolResult;
-
+    
     if (toolResult?.toolOutput && typeof toolResult.toolOutput === 'string') {
       const result = toolResult.toolOutput;
-
-      const fullPathMatch = result.match(/(\/workspace\/designs\/[\S]+\.png)/i);
+      
+      const fullPathMatch = result.match(/(\/workspace\/designs\/[^\s]+\.png)/i);
       if (fullPathMatch) {
         generatedImagePath = fullPathMatch[1];
       } else {
@@ -137,7 +137,7 @@ export function extractDesignerData(
         actualIsSuccess = true;
       }
     }
-
+    
     if (toolResult?.isSuccess !== undefined) {
       actualIsSuccess = toolResult.isSuccess;
     }
@@ -145,7 +145,7 @@ export function extractDesignerData(
 
   const contentStr = normalizeContentToString(toolContent);
   if (contentStr && !generatedImagePath) {
-    const fullPathMatch = contentStr.match(/(\/workspace\/designs\/[\S]+\.png)/i);
+    const fullPathMatch = contentStr.match(/(\/workspace\/designs\/[^\s]+\.png)/i);
     if (fullPathMatch) {
       generatedImagePath = fullPathMatch[1];
     } else {
@@ -174,15 +174,14 @@ export function extractDesignerData(
     actualAssistantTimestamp,
     sandbox_id,
   };
-
+  
   console.log('Designer Tool Data Extraction:', {
     toolContent,
     extractedImagePath: generatedImagePath,
     status,
     success: actualIsSuccess,
-    fullExtractedData: result,
+    fullExtractedData: result
   });
-
+  
   return result;
-}
-
+} 

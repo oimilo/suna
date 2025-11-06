@@ -107,7 +107,7 @@ class Model:
         """Get complete LiteLLM parameters for this model, including all configuration."""
         # Start with intelligent defaults
         params = {
-            "model": self.full_id,
+            "model": self.id,
             "num_retries": 5,
         }
         

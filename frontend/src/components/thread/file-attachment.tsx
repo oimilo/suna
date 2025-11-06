@@ -7,7 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import { AttachmentGroup } from './attachment-group';
 import { HtmlRenderer } from './preview-renderers/html-renderer';
-import { MarkdownRenderer } from './preview-renderers/markdown-renderer';
+import { MarkdownRenderer } from './preview-renderers/file-preview-markdown-renderer';
 import { CsvRenderer } from './preview-renderers/csv-renderer';
 import { XlsxRenderer } from './preview-renderers/xlsx-renderer';
 import { PdfRenderer as PdfPreviewRenderer } from './preview-renderers/pdf-renderer';
@@ -193,6 +193,8 @@ export function FileAttachment({
 
     // Simplified state management
     const [hasError, setHasError] = React.useState(false);
+    const [isSandboxDeleted, setIsSandboxDeleted] = React.useState(false);
+    const [imageLoaded, setImageLoaded] = React.useState(false);
 
     // XLSX sheet management
     const [xlsxSheetIndex, setXlsxSheetIndex] = React.useState(0);
@@ -261,12 +263,37 @@ export function FileAttachment({
         isXlsx && shouldShowPreview ? filepath : undefined
     );
 
+    // Helper function to check if error is due to deleted sandbox
+    const isSandboxDeletedError = (error: any): boolean => {
+        if (!error) return false;
+        const errorMessage = error?.message || error?.toString() || '';
+        return (
+            errorMessage.includes('404') ||
+            errorMessage.includes('Sandbox not found') ||
+            errorMessage.includes('Failed to retrieve sandbox') ||
+            errorMessage.includes('no project owns this sandbox')
+        );
+    };
+
     // Set error state based on query errors
     React.useEffect(() => {
-        if (fileContentError || imageError || pdfError || xlsxError) {
-            setHasError(true);
+        const anyError = fileContentError || imageError || pdfError || xlsxError;
+        if (anyError) {
+            // Check if it's a sandbox deleted error
+            if (isSandboxDeletedError(anyError)) {
+                setIsSandboxDeleted(true);
+                setHasError(false); // Don't show regular error UI
+            } else {
+                setHasError(true);
+                setIsSandboxDeleted(false);
+            }
         }
     }, [fileContentError, imageError, pdfError, xlsxError]);
+
+    // Reset image loaded state when URL changes
+    React.useEffect(() => {
+        setImageLoaded(false);
+    }, [imageUrl, localPreviewUrl, filepath]);
 
     // Parse XLSX to get sheet names when blob URL is available
     React.useEffect(() => {
@@ -343,33 +370,35 @@ export function FileAttachment({
             ? (customStyle as any)['--attachment-height'] as string
             : '54px';
 
-        // Show loading state for images
-        if (imageLoading && sandboxId) {
+        // No separate loading state needed - we handle it inline in the main render
+
+        // Check for sandbox deleted state
+        if (isSandboxDeleted) {
             return (
-                <button
-                    onClick={handleClick}
+                <div
                     className={cn(
-                        "group relative min-h-[54px] min-w-fit rounded-xl cursor-pointer",
-                        "border border-black/10 dark:border-white/10",
-                        "bg-black/5 dark:bg-black/20",
+                        "group relative rounded-xl",
+                        "border border-border/50",
+                        "bg-muted/30",
                         "p-0 overflow-hidden",
-                        "flex items-center justify-center",
-                        isGridLayout ? "w-full" : "min-w-[54px]",
+                        "flex flex-col items-center justify-center gap-2",
+                        "opacity-50 cursor-not-allowed",
+                        // Match the aspect ratio behavior
+                        isGridLayout ? "w-full aspect-[4/3]" : "h-[54px] w-[54px]",
                         className
                     )}
                     style={{
-                        maxWidth: "100%",
-                        height: isSingleItemGrid && isGridLayout ? 'auto' : (isGridLayout ? imageHeight : 'auto'),
-                        maxHeight: isSingleItemGrid && isGridLayout ? '800px' : undefined,
-                        minHeight: isGridLayout ? imageHeight : '54px',
-                        ...customStyle
+                        ...customStyle,
+                        // For grid layout, ensure proper minimum dimensions
+                        minHeight: isGridLayout ? '200px' : undefined,
+                        height: isGridLayout ? 'auto' : undefined
                     }}
-                    title={filename}
+                    title={`${filename} - Sandbox no longer available`}
                 >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                    </div>
-                </button>
+                    <IconComponent className="h-6 w-6 text-muted-foreground" />
+                    <div className="text-xs text-muted-foreground font-medium">Unavailable</div>
+                    <div className="text-[10px] text-muted-foreground/70">Sandbox deleted</div>
+                </div>
             );
         }
 
@@ -379,24 +408,26 @@ export function FileAttachment({
                 <button
                     onClick={handleClick}
                     className={cn(
-                        "group relative min-h-[54px] min-w-fit rounded-xl cursor-pointer",
-                        "border border-black/10 dark:border-white/10",
-                        "bg-black/5 dark:bg-black/20",
+                        "group relative rounded-xl cursor-pointer",
+                        "border border-red-500/20 dark:border-red-500/30",
+                        "bg-red-500/5 dark:bg-red-500/10",
                         "p-0 overflow-hidden",
-                        "flex flex-col items-center justify-center gap-1",
-                        isGridLayout ? "w-full" : "inline-block",
+                        "flex flex-col items-center justify-center gap-2",
+                        // Match the aspect ratio behavior
+                        isGridLayout ? "w-full aspect-[4/3]" : "h-[54px] w-[54px]",
                         className
                     )}
                     style={{
-                        maxWidth: "100%",
-                        height: isSingleItemGrid && isGridLayout ? 'auto' : (isGridLayout ? imageHeight : 'auto'),
-                        maxHeight: isSingleItemGrid && isGridLayout ? '800px' : undefined,
-                        ...customStyle
+                        ...customStyle,
+                        // For grid layout, ensure proper minimum dimensions
+                        minHeight: isGridLayout ? '200px' : undefined,
+                        height: isGridLayout ? 'auto' : undefined
                     }}
                     title={filename}
                 >
-                    <IconComponent className="h-6 w-6 text-red-500 mb-1" />
-                    <div className="text-xs text-red-500">Failed to load image</div>
+                    <IconComponent className="h-6 w-6 text-red-500" />
+                    <div className="text-xs text-red-500 font-medium">Failed to load</div>
+                    <div className="text-[10px] text-red-500/70">Click to open</div>
                 </button>
             );
         }
@@ -405,35 +436,53 @@ export function FileAttachment({
             <button
                 onClick={handleClick}
                 className={cn(
-                    "group relative min-h-[54px] rounded-2xl cursor-pointer",
+                    "group relative rounded-2xl cursor-pointer",
                     "border border-black/10 dark:border-white/10",
                     "bg-black/5 dark:bg-black/20",
                     "p-0 overflow-hidden", // No padding, content touches borders
                     "flex items-center justify-center", // Center the image
-                    isGridLayout ? "w-full" : "inline-block", // Full width in grid
+                    // For grid, full width with auto height; for inline, fixed height
+                    isGridLayout ? "w-full" : "h-[54px] inline-block",
                     className
                 )}
                 style={{
-                    maxWidth: "100%", // Ensure doesn't exceed container width
-                    height: isSingleItemGrid && isGridLayout ? 'auto' : (isGridLayout ? imageHeight : 'auto'),
-                    maxHeight: isSingleItemGrid && isGridLayout ? '800px' : undefined,
-                    ...customStyle
+                    ...customStyle,
+                    // Only apply minHeight if image hasn't loaded yet (prevents thin line)
+                    minHeight: isGridLayout && !imageLoaded ? '200px' : undefined,
+                    // Use aspect ratio placeholder until image loads
+                    aspectRatio: isGridLayout && !imageLoaded ? '4/3' : undefined,
+                    height: isGridLayout ? 'auto' : customStyle?.height
                 }}
                 title={filename}
             >
+                {/* Show loading spinner overlay while image is loading */}
+                {!imageLoaded && isGridLayout && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-black/5 to-black/10 dark:from-white/5 dark:to-white/10 z-10">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    </div>
+                )}
+                
                 <img
                     src={sandboxId && session?.access_token ? imageUrl : (fileUrl || '')}
                     alt={filename}
                     className={cn(
-                        "max-h-full max-w-full", // Respect parent constraints
-                        isSingleItemGrid ? "object-contain" : isGridLayout ? "w-full h-full object-cover" : "w-auto"
+                        // Preserve natural aspect ratio - let image dictate dimensions
+                        isGridLayout ? "w-full h-auto" : "h-full w-auto",
+                        "object-contain",
+                        // Hide image until it loads (prevents layout shift)
+                        !imageLoaded && isGridLayout ? "opacity-0" : "opacity-100"
                     )}
                     style={{
-                        height: isSingleItemGrid ? 'auto' : imageHeight,
                         objectPosition: "center",
-                        objectFit: isSingleItemGrid ? "contain" : isGridLayout ? "cover" : "contain"
+                        maxHeight: isGridLayout ? customStyle?.maxHeight : undefined
                     }}
-                    onLoad={() => {
+                    onLoad={(e) => {
+                        console.log(`Image loaded: ${filename}`, {
+                            naturalWidth: (e.target as HTMLImageElement)?.naturalWidth,
+                            naturalHeight: (e.target as HTMLImageElement)?.naturalHeight,
+                            src: (e.target as HTMLImageElement)?.src?.substring(0, 50) + '...'
+                        });
+                        setImageLoaded(true);
                     }}
                     onError={(e) => {
                         // Avoid logging the error for all instances of the same image
@@ -469,6 +518,7 @@ export function FileAttachment({
                         }
 
                         setHasError(true);
+                        setImageLoaded(true); // Consider it "loaded" even on error
                         // If the image failed to load and we have a localPreviewUrl that's a blob URL, try using it directly
                         if (localPreviewUrl && typeof localPreviewUrl === 'string' && localPreviewUrl.startsWith('blob:')) {
                             (e.target as HTMLImageElement).src = localPreviewUrl;
@@ -491,7 +541,11 @@ export function FileAttachment({
     };
 
     // HTML/MD/CSV/PDF preview when not collapsed and in grid layout
-    if (shouldShowPreview && isGridLayout) {
+    // Only show preview if we have actual content or it's loading
+    const hasContent = fileContent || pdfBlobUrl || xlsxBlobUrl;
+    const isLoadingContent = fileContentLoading || pdfLoading || xlsxLoading;
+    
+    if (shouldShowPreview && isGridLayout && (hasContent || isLoadingContent || hasError || isSandboxDeleted)) {
         // Determine the renderer component
         const Renderer = rendererMap[extension as keyof typeof rendererMap];
 
@@ -512,7 +566,7 @@ export function FileAttachment({
                     minWidth: 0,          // Prevent flex shrinking issues
                     ...customStyle
                 }}
-                onClick={hasError ? handleClick : undefined} // Make clickable if error
+                onClick={hasError && !isSandboxDeleted ? handleClick : undefined} // Make clickable if error (but not if sandbox deleted)
             >
                 {/* Content area */}
                 <div
@@ -525,7 +579,7 @@ export function FileAttachment({
                     }}
                 >
                     {/* Render PDF, XLSX, or text-based previews */}
-                    {!hasError && (
+                    {!hasError && !isSandboxDeleted && (
                         <>
                             {isPdf && (() => {
                                 const pdfUrlForRender = localPreviewUrl || (sandboxId ? (pdfBlobUrl ?? null) : fileUrl);
@@ -558,8 +612,19 @@ export function FileAttachment({
                         </>
                     )}
 
+                    {/* Sandbox deleted state */}
+                    {isSandboxDeleted && (
+                        <div className="h-full w-full flex flex-col items-center justify-center p-4 opacity-50">
+                            <IconComponent className="h-12 w-12 text-muted-foreground mb-3" />
+                            <div className="text-muted-foreground font-medium mb-1">File no longer accessible</div>
+                            <div className="text-muted-foreground text-sm text-center">
+                                Sandbox has been deleted
+                            </div>
+                        </div>
+                    )}
+
                     {/* Error state */}
-                    {hasError && (
+                    {hasError && !isSandboxDeleted && (
                         <div className="h-full w-full flex flex-col items-center justify-center p-4">
                             <div className="text-red-500 mb-2">Error loading content</div>
                             <div className="text-muted-foreground text-sm text-center mb-2">
@@ -674,41 +739,70 @@ export function FileAttachment({
     }
 
     // Regular files with details
-    const safeStyle = { ...customStyle };
-    delete safeStyle.height;
-    delete (safeStyle as any)['--attachment-height'];
+    const safeStyle = isGridLayout ? customStyle : { ...customStyle };
+    if (!isGridLayout) {
+        delete safeStyle.height;
+        delete (safeStyle as any)['--attachment-height'];
+    }
 
-    const fileButton = (
+    const fileButton = isSandboxDeleted ? (
+        <div
+            className={cn(
+                "group flex items-center rounded-xl transition-all duration-200 overflow-hidden cursor-not-allowed",
+                "border border-border/50",
+                "bg-muted/30 opacity-50",
+                "text-left",
+                "h-[54px] w-fit min-w-[200px] max-w-[300px]",
+                className
+            )}
+            style={safeStyle}
+            title={`${filename} - Sandbox no longer available`}
+        >
+            {/* Icon container */}
+            <div className="w-[54px] h-full flex items-center justify-center flex-shrink-0 bg-muted/50">
+                <IconComponent className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            {/* Text content */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center px-3 py-2 overflow-hidden">
+                <div className="text-sm font-medium text-muted-foreground truncate">
+                    {filename}
+                </div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                    <span className="truncate">Unavailable</span>
+                    <span className="flex-shrink-0">·</span>
+                    <span className="flex-shrink-0">Sandbox deleted</span>
+                </div>
+            </div>
+        </div>
+    ) : (
         <button
             onClick={handleClick}
             className={cn(
-                "group flex rounded-xl transition-all duration-200 min-h-[54px] h-[54px] overflow-hidden cursor-pointer",
+                "group flex items-center rounded-xl transition-all duration-200 overflow-hidden cursor-pointer",
                 "border border-black/10 dark:border-white/10",
-                "bg-sidebar",
+                "bg-sidebar hover:bg-accent/5",
                 "text-left",
-                "pr-7", // Right padding for X button
-                isInlineMode
-                    ? "min-w-[170px] w-full sm:max-w-[300px] sm:w-fit" // Full width on mobile, constrained on larger screens
-                    : "min-w-[170px] max-w-[300px] w-fit", // Original constraints for grid layout
+                "h-[54px] w-fit min-w-[200px] max-w-[300px]",
                 className
             )}
             style={safeStyle}
             title={filename}
         >
-            <div className="relative min-w-[54px] w-[54px] h-full aspect-square flex-shrink-0 bg-black/5 dark:bg-white/5">
-                <div className="flex items-center justify-center h-full w-full">
-                    <IconComponent className="h-5 w-5 text-black/60 dark:text-white/60" />
-                </div>
+            {/* Icon container */}
+            <div className="w-[54px] h-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/5">
+                <IconComponent className="h-5 w-5 text-black/60 dark:text-white/60" />
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col justify-center p-2 pl-3 overflow-hidden">
-                <div className="text-sm font-medium text-foreground truncate max-w-full">
+            {/* Text content */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center px-3 py-2 overflow-hidden">
+                <div className="text-sm font-medium text-foreground truncate">
                     {filename}
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                    <span className="text-black/60 dark:text-white/60 truncate">{typeLabel}</span>
-                    <span className="text-black/40 dark:text-white/40 flex-shrink-0">·</span>
-                    <span className="text-black/60 dark:text-white/60 flex-shrink-0">{fileSize}</span>
+                    <span className="truncate">{typeLabel}</span>
+                    <span className="flex-shrink-0">·</span>
+                    <span className="flex-shrink-0">{fileSize}</span>
                 </div>
             </div>
         </button>
@@ -754,7 +848,20 @@ export function FileAttachmentGrid({
     if (!attachments || attachments.length === 0) return null;
 
     // For standalone rendering, always expand previews to show content
-    const shouldCollapse = standalone ? false : collapsed;
+    // Always show previews for HTML files
+    const shouldCollapse = false; // Always show previews like in CompleteToolView
+
+    // Calculate appropriate max image height based on number of files
+    // When there are multiple files, use smaller max heights to prevent taking up too much screen space
+    const getGridImageHeight = () => {
+        if (!standalone) return 200; // Default for non-standalone
+        
+        const fileCount = attachments.length;
+        if (fileCount === 1) return 600; // Large for single file - preserves aspect ratio better
+        if (fileCount === 2) return 400; // Medium for 2 files
+        if (fileCount <= 4) return 300; // Smaller for 3-4 files
+        return 250; // Even smaller for 5+ files
+    };
 
     const content = (
         <AttachmentGroup
@@ -764,7 +871,7 @@ export function FileAttachmentGrid({
             sandboxId={sandboxId}
             showPreviews={showPreviews}
             layout="grid"
-            gridImageHeight={standalone ? 500 : 150} // Larger height for standalone files
+            gridImageHeight={getGridImageHeight()}
             collapsed={shouldCollapse}
             project={project}
             standalone={standalone}

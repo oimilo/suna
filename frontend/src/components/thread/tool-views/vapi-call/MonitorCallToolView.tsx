@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getToolTitle } from '../utils';
+import { useVapiCallRealtime } from '@/hooks/useVapiCallRealtime';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -62,7 +63,7 @@ function extractMonitorData(toolContent: string | undefined): MonitorCallData | 
       ended_at: output.ended_at,
       transcript: output.transcript || [],
       is_live: output.is_live,
-      message: output.message,
+      message: output.message
     };
   } catch (e) {
     console.error('Error extracting monitor data:', e);
@@ -71,13 +72,13 @@ function extractMonitorData(toolContent: string | undefined): MonitorCallData | 
 }
 
 const statusConfig = {
-  queued: { label: 'Queued', color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400', icon: Phone },
-  ringing: { label: 'Ringing', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', icon: PhoneCall },
+  'queued': { label: 'Queued', color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400', icon: Phone },
+  'ringing': { label: 'Ringing', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', icon: PhoneCall },
   'in-progress': { label: 'In Progress', color: 'bg-green-500/10 text-green-600 dark:text-green-400', icon: PhoneCall },
-  completed: { label: 'Completed', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
-  ended: { label: 'Ended', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400', icon: Phone },
-  failed: { label: 'Failed', color: 'bg-red-500/10 text-red-600 dark:text-red-400', icon: PhoneMissed },
-  unknown: { label: 'Unknown', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400', icon: Phone },
+  'completed': { label: 'Completed', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
+  'ended': { label: 'Ended', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400', icon: Phone },
+  'failed': { label: 'Failed', color: 'bg-red-500/10 text-red-600 dark:text-red-400', icon: PhoneMissed },
+  'unknown': { label: 'Unknown', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400', icon: Phone }
 };
 
 export function MonitorCallToolView({
@@ -94,7 +95,7 @@ export function MonitorCallToolView({
     toolContent,
     extractedData: initialData,
     callId: initialData?.call_id,
-    initialTranscript: initialData?.transcript,
+    initialTranscript: initialData?.transcript
   });
 
   const [liveTranscript, setLiveTranscript] = useState<any[]>(initialData?.transcript || []);
@@ -102,6 +103,10 @@ export function MonitorCallToolView({
   const toolTitle = getToolTitle(name);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+  // Don't use the hook, we'll implement our own subscription
+  // useVapiCallRealtime(initialData?.call_id);
+
+  // Set up direct Supabase real-time subscription
   useEffect(() => {
     if (!initialData?.call_id) return;
 
@@ -110,6 +115,7 @@ export function MonitorCallToolView({
     let channel: RealtimeChannel;
 
     const setupSubscription = async () => {
+      // First, do an initial fetch to get current data
       const { data: currentData } = await supabase
         .from('vapi_calls')
         .select('*')
@@ -119,7 +125,7 @@ export function MonitorCallToolView({
       if (currentData) {
         console.log('[MonitorCallToolView] Initial data from DB:', {
           status: currentData.status,
-          transcriptLength: Array.isArray(currentData.transcript) ? currentData.transcript.length : 0,
+          transcriptLength: Array.isArray(currentData.transcript) ? currentData.transcript.length : 0
         });
         setLiveStatus(currentData.status);
         if (currentData.transcript) {
@@ -130,6 +136,7 @@ export function MonitorCallToolView({
         }
       }
 
+      // Set up real-time subscription
       channel = supabase
         .channel(`call-monitor-${initialData.call_id}`)
         .on(
@@ -138,7 +145,7 @@ export function MonitorCallToolView({
             event: '*',
             schema: 'public',
             table: 'vapi_calls',
-            filter: `call_id=eq.${initialData.call_id}`,
+            filter: `call_id=eq.${initialData.call_id}`
           },
           (payload) => {
             console.log('[MonitorCallToolView] Real-time update received:', payload);
@@ -156,7 +163,7 @@ export function MonitorCallToolView({
                 setLiveTranscript(transcriptArray);
               }
             }
-          },
+          }
         )
         .subscribe((status) => {
           console.log('[MonitorCallToolView] Subscription status:', status);
@@ -179,6 +186,7 @@ export function MonitorCallToolView({
       if (!initialData?.call_id) return null;
       const supabase = createClient();
 
+      // Use maybeSingle() instead of single() to handle 0 rows gracefully
       const { data, error } = await supabase
         .from('vapi_calls')
         .select('*')
@@ -190,6 +198,7 @@ export function MonitorCallToolView({
         return null;
       }
 
+      // If no data found, return initial data to keep showing something
       if (!data) {
         console.log('[MonitorCallToolView] No data found, using initial data');
         return {
@@ -197,26 +206,31 @@ export function MonitorCallToolView({
           status: initialData.status || 'queued',
           transcript: initialData.transcript || [],
           phone_number: initialData.phone_number,
-          is_live: true,
+          is_live: true
         };
       }
 
       console.log('[MonitorCallToolView] Fetched call data:', {
         status: data.status,
-        transcriptLength: Array.isArray(data.transcript) ? data.transcript.length : 0,
+        transcriptLength: Array.isArray(data.transcript) ? data.transcript.length : 0
       });
       return data;
     },
     enabled: !!initialData?.call_id,
     refetchInterval: (query) => {
+      // Use either the fetched status or initial status
       const status = query.state.data?.status || initialData?.status || liveStatus;
       const isLive = status && ['queued', 'ringing', 'in-progress'].includes(status);
       console.log(`[MonitorCallToolView] Polling check - Status: ${status}, isLive: ${isLive}`);
-      return isLive ? 1000 : false;
+      // Poll more frequently for live calls
+      return isLive ? 1000 : false;  // Poll every 1 second for live calls
     },
-    staleTime: 0,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 0,  // Always consider data stale to ensure fresh updates
+    gcTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
   });
+
+  // Remove this useEffect as we're now handling updates via direct subscription
+  // The query is now just for backup/fallback
 
   useEffect(() => {
     if (transcriptEndRef.current && liveTranscript.length > 0) {
@@ -224,12 +238,14 @@ export function MonitorCallToolView({
     }
   }, [liveTranscript]);
 
+  // Backup polling in case real-time subscription fails
   useEffect(() => {
     if (liveStatus === 'in-progress' || liveStatus === 'ringing' || liveStatus === 'queued') {
       console.log('[MonitorCallToolView] Setting up backup polling for active call');
       const interval = setInterval(() => {
+        // Only refetch if we haven't received updates in a while
         refetch();
-      }, 3000);
+      }, 3000); // Less frequent since we have real-time subscription
 
       return () => clearInterval(interval);
     }
@@ -239,23 +255,22 @@ export function MonitorCallToolView({
     return <div className="text-sm text-muted-foreground">No call monitoring data available</div>;
   }
 
+  // Use the live state which is updated by real-time subscription
   const currentStatus = liveStatus;
   const statusInfo = statusConfig[currentStatus as keyof typeof statusConfig] || statusConfig.unknown;
   const StatusIcon = statusInfo.icon;
   const isActive = currentStatus === 'ringing' || currentStatus === 'in-progress' || currentStatus === 'queued';
-  const currentTranscript = liveTranscript;
+  const currentTranscript = liveTranscript; // Always use the live transcript state
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col overflow-hidden bg-card">
       <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                'relative p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20',
-                isActive && 'animate-pulse',
-              )}
-            >
+            <div className={cn(
+              "relative p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20",
+              isActive && "animate-pulse"
+            )}>
               {isActive ? (
                 <Loader2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-spin" />
               ) : (
@@ -268,8 +283,8 @@ export function MonitorCallToolView({
               </CardTitle>
               {isActive && (
                 <span className="flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                  <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
               )}
             </div>
@@ -279,8 +294,8 @@ export function MonitorCallToolView({
               variant="secondary"
               className={
                 isSuccess
-                  ? 'bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300'
-                  : 'bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300'
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
               }
             >
               {isSuccess ? (
@@ -295,18 +310,24 @@ export function MonitorCallToolView({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {assistantContent && <div className="text-sm text-foreground">{assistantContent}</div>}
+        {assistantContent && (
+          <div className="text-sm text-foreground">{assistantContent}</div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <div className="text-xs text-muted-foreground">Call ID</div>
-            <div className="text-xs font-mono text-foreground truncate">{initialData.call_id}</div>
+            <div className="text-xs font-mono text-foreground truncate">
+              {initialData.call_id}
+            </div>
           </div>
 
           {initialData.phone_number && (
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Phone Number</div>
-              <div className="text-sm font-medium text-foreground">{initialData.phone_number}</div>
+              <div className="text-sm font-medium text-foreground">
+                {initialData.phone_number}
+              </div>
             </div>
           )}
         </div>
@@ -315,18 +336,22 @@ export function MonitorCallToolView({
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <User className="h-3 w-3" />
-              {isActive ? <span className="text-red-500 font-bold">🔴 LIVE CONVERSATION</span> : <span>Conversation Transcript</span>}
+              {isActive ? (
+                <span className="text-red-500 font-medium">🔴 LIVE CONVERSATION</span>
+              ) : (
+                <span>Conversation Transcript</span>
+              )}
             </div>
             <div className="space-y-2 bg-muted/30 rounded-lg p-3 border border-border max-h-96 overflow-y-auto">
               {currentTranscript.map((msg, idx) => (
                 <div
                   key={idx}
                   className={cn(
-                    'text-sm p-2 rounded transition-all',
+                    "text-sm p-2 rounded transition-all",
                     msg.role === 'assistant'
-                      ? 'bg-primary/5 border-l-2 border-primary/20'
-                      : 'bg-secondary/50 border-l-2 border-secondary/20',
-                    idx === currentTranscript.length - 1 && isActive && 'animate-pulse',
+                      ? "bg-primary/5 border-l-2 border-primary/20"
+                      : "bg-secondary/50 border-l-2 border-secondary/20",
+                    idx === currentTranscript.length - 1 && isActive && "animate-pulse"
                   )}
                 >
                   <div className="font-medium text-xs text-muted-foreground mb-1">
@@ -344,14 +369,17 @@ export function MonitorCallToolView({
             <p className="text-sm text-muted-foreground">Waiting for conversation to start...</p>
           </div>
         ) : (
-          <div className="text-center py-8 text-sm text-muted-foreground">No transcript available yet</div>
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No transcript available yet
+          </div>
         )}
 
         {initialData.message && (
-          <div className="text-xs text-muted-foreground pt-2 border-t border-border">{initialData.message}</div>
+          <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+            {initialData.message}
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
-

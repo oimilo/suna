@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Editor } from '@/components/agents/docs-agent/editor';
 import { AdvancedToolbar } from '@/components/agents/docs-agent/advanced-toolbar';
 import { exportDocument, type ExportFormat } from '@/lib/utils/document-export';
-import { MiloLogo } from '../sidebar/milo-logo';
+import { KortixLogo } from '../sidebar/kortix-logo';
 import { useDocumentModalStore } from '@/lib/stores/use-document-modal-store';
 
 interface TipTapDocumentModalProps {
@@ -29,6 +29,8 @@ interface TipTapDocumentModalProps {
     content: string;
     metadata?: any;
     doc_id?: string;
+    created_at?: string;
+    updated_at?: string;
   };
   sandboxId: string;
   onSave?: () => void;
@@ -179,7 +181,7 @@ export function TipTapDocumentModal({
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MiloLogo size={24} />
+              <KortixLogo size={24} />
               <DialogTitle>{fileName}</DialogTitle>
               <SaveStateIndicator />
             </div>
@@ -197,6 +199,7 @@ export function TipTapDocumentModal({
         
         <div className="flex-1 -mt-4 overflow-auto bg-background">
           <Editor
+            key={`${filePath}-${documentData?.updated_at}`}
             content={documentData.content || '<p></p>'}
             onChange={handleEditorChange}
             onEditorReady={handleEditorReady}

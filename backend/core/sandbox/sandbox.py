@@ -3,13 +3,14 @@ from dotenv import load_dotenv
 from core.utils.logger import logger
 from core.utils.config import config
 from core.utils.config import Configuration
+import asyncio
 
 load_dotenv()
 
 # logger.debug("Initializing Daytona sandbox configuration")
 daytona_config = DaytonaConfig(
     api_key=config.DAYTONA_API_KEY,
-    api_url=config.DAYTONA_SERVER_URL,
+    api_url=config.DAYTONA_SERVER_URL, 
     target=config.DAYTONA_TARGET,
 )
 
@@ -43,10 +44,13 @@ async def get_or_start_sandbox(sandbox_id: str) -> AsyncSandbox:
             logger.info(f"Sandbox is in {sandbox.state} state. Starting...")
             try:
                 await daytona.start(sandbox)
-                # Wait a moment for the sandbox to initialize
-                # sleep(5)
-                # Refresh sandbox state after starting
-                sandbox = await daytona.get(sandbox_id)
+                
+                # Wait for sandbox to reach STARTED state
+                for _ in range(30):
+                    await asyncio.sleep(1)
+                    sandbox = await daytona.get(sandbox_id)
+                    if sandbox.state == SandboxState.STARTED:
+                        break
                 
                 # Start supervisord in a session when restarting
                 await start_supervisord_session(sandbox)
@@ -65,18 +69,15 @@ async def start_supervisord_session(sandbox: AsyncSandbox):
     """Start supervisord in a session."""
     session_id = "supervisord-session"
     try:
-        # logger.debug(f"Creating session {session_id} for supervisord")
         await sandbox.process.create_session(session_id)
-        
-        # Execute supervisord command
         await sandbox.process.execute_session_command(session_id, SessionExecuteRequest(
             command="exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf",
             var_async=True
         ))
-        # logger.debug(f"Supervisord started in session {session_id}")
+        logger.info("Supervisord started successfully")
     except Exception as e:
-        logger.error(f"Error starting supervisord session: {str(e)}")
-        raise e
+        # Don't fail if supervisord already running
+        logger.warning(f"Could not start supervisord: {str(e)}")
 
 async def create_sandbox(password: str, project_id: str = None) -> AsyncSandbox:
     """Create a new sandbox with all required services configured and running."""
@@ -90,7 +91,7 @@ async def create_sandbox(password: str, project_id: str = None) -> AsyncSandbox:
         labels = {'id': project_id}
         
     params = CreateSandboxFromSnapshotParams(
-        snapshot=config.SANDBOX_SNAPSHOT_NAME or Configuration.SANDBOX_SNAPSHOT_NAME,
+        snapshot=Configuration.SANDBOX_SNAPSHOT_NAME,
         public=True,
         labels=labels,
         env_vars={
@@ -135,12 +136,6 @@ async def delete_sandbox(sandbox_id: str) -> bool:
         
         # Delete the sandbox
         await daytona.delete(sandbox)
-        try:
-            from core.sandbox.tool_base import SandboxToolsBase
-
-            SandboxToolsBase.clear_cached_sandbox_by_sandbox_id(sandbox_id)
-        except Exception as cache_err:
-            logger.warning(f"Failed to clear sandbox cache for {sandbox_id}: {cache_err}")
         
         logger.info(f"Successfully deleted sandbox {sandbox_id}")
         return True

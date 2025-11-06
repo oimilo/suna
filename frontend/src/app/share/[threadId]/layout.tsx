@@ -1,18 +1,17 @@
 import { Metadata } from 'next';
 import { getThread, getProject } from '@/lib/api-server';
-import { BRANDING } from '@/lib/branding';
 
 export async function generateMetadata({ params }): Promise<Metadata> {
   const { threadId } = await params;
   const fallbackMetaData = {
-    title: `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`,
-    description: `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`,
+    title: 'Shared Conversation | Kortix',
+    description: 'Replay this Agent conversation on Korti',
     alternates: {
       canonical: `${process.env.NEXT_PUBLIC_URL}/share/${threadId}`,
     },
     openGraph: {
-      title: `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`,
-      description: `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`,
+      title: 'Shared Conversation | Kortix',
+      description: 'Replay this Agent conversation on Kortix',
       images: [`${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`],
     },
   };
@@ -26,14 +25,14 @@ export async function generateMetadata({ params }): Promise<Metadata> {
     }
 
     const isDevelopment =
-      process.env.NODE_ENV === 'development' ||
+      // process.env.NODE_ENV === 'development' ||
       process.env.NEXT_PUBLIC_ENV_MODE === 'LOCAL' ||
       process.env.NEXT_PUBLIC_ENV_MODE === 'local';
 
-    const title = projectData.name || `Conversa Compartilhada | ${BRANDING.company} ${BRANDING.name}`;
+    const title = projectData.name || 'Shared Conversation | Kortix';
     const description =
       projectData.description ||
-      `Reproduza esta conversa do Agente em ${BRANDING.company} ${BRANDING.name}`;
+      'Replay this Agent conversation on Kortix';
     const ogImage = isDevelopment
       ? `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`
       : `${process.env.NEXT_PUBLIC_URL}/api/share-page/og-image?title=${projectData.name}`;

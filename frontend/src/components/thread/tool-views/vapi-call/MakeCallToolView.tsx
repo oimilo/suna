@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, CheckCircle, Clock, User, Mic, Brain, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Phone, CheckCircle, Clock, User, Mic, Brain, Loader2, AlertTriangle } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,10 @@ export function MakeCallToolView({
   const toolTitle = getToolTitle(name);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+
+
+
+  // Subscribe to real-time updates
   useVapiCallRealtime(callData?.call_id);
 
   const { data: realtimeData } = useQuery({
@@ -47,7 +51,7 @@ export function MakeCallToolView({
 
       console.log('[MakeCallToolView] Fetched call data:', {
         status: data?.status,
-        transcriptLength: Array.isArray(data?.transcript) ? data.transcript.length : 0,
+        transcriptLength: Array.isArray(data?.transcript) ? data.transcript.length : 0
       });
       return data;
     },
@@ -65,7 +69,7 @@ export function MakeCallToolView({
     if (realtimeData) {
       console.log('[MakeCallToolView] Updating from realtime data:', {
         status: realtimeData.status,
-        transcript: realtimeData.transcript,
+        transcript: realtimeData.transcript
       });
 
       setLiveStatus(realtimeData.status);
@@ -91,6 +95,7 @@ export function MakeCallToolView({
 
   useEffect(() => {
     if (transcriptEndRef.current && liveTranscript.length > previousTranscriptLength) {
+      // Only scroll when new messages are added
       setPreviousTranscriptLength(liveTranscript.length);
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
@@ -109,15 +114,15 @@ export function MakeCallToolView({
       initial={isNew ? { opacity: 0, y: 20, scale: 0.9 } : { opacity: 1, y: 0, scale: 1 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={isNew ? {
-        type: 'spring',
+        type: "spring",
         stiffness: 400,
         damping: 25,
       } : undefined}
       className={cn(
-        'text-sm p-3 rounded-2xl relative mb-3',
+        "text-sm p-3 rounded-2xl relative mb-3",
         msg.role === 'assistant'
-          ? 'bg-accent/50 border border-border ml-4'
-          : 'bg-muted/80 border border-border mr-4',
+          ? "bg-accent/50 border border-border ml-4"
+          : "bg-muted/80 border border-border mr-4"
       )}
     >
       <div className="font-medium text-xs text-muted-foreground mb-1 flex items-center gap-1">
@@ -137,11 +142,15 @@ export function MakeCallToolView({
           </>
         )}
       </div>
-      <div className="text-foreground">{msg.message}</div>
+      <div className="text-foreground">
+        {msg.message}
+      </div>
     </motion.div>
-  ), (prevProps, nextProps) => prevProps.msg.message === nextProps.msg.message
-      && prevProps.msg.role === nextProps.msg.role
-      && prevProps.isNew === nextProps.isNew);
+  ), (prevProps, nextProps) => {
+    return prevProps.msg.message === nextProps.msg.message &&
+      prevProps.msg.role === nextProps.msg.role &&
+      prevProps.isNew === nextProps.isNew;
+  });
 
   MessageBubble.displayName = 'MessageBubble';
 
@@ -151,112 +160,215 @@ export function MakeCallToolView({
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={cn(
-              'relative p-2 rounded-xl border',
-              isActive
-                ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border-emerald-500/20'
-                : 'bg-gradient-to-br from-zinc-500/10 to-zinc-600/5 border-zinc-500/20',
+              "relative p-2 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20",
+              isActive && "animate-pulse"
             )}>
               {isActive ? (
-                <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
               ) : (
-                <Phone className="w-5 h-5 text-emerald-500" />
+                <Phone className="w-5 h-5 text-green-500" />
               )}
             </div>
-            <div>
-              <CardTitle className="text-base font-medium text-foreground">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 {toolTitle}
               </CardTitle>
-              <div className="text-xs text-muted-foreground">
-                {formatPhoneNumber(callData.phone_number)}
-              </div>
+              {isActive && (
+                <span className="flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+              )}
             </div>
           </div>
           {!isStreaming && (
-            <Badge variant={isSuccess ? 'default' : 'destructive'}>
+            <Badge
+              variant={isSuccess ? "default" : "destructive"}
+            >
               {isSuccess ? (
                 <CheckCircle className="h-3.5 w-3.5 mr-1" />
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5 mr-1" />
               )}
-              {isSuccess ? 'Call initiated' : 'Failed to initiate'}
+              {isSuccess ? 'Call initiated successfully' : 'Failed to initiate call'}
             </Badge>
           )}
         </div>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {assistantContent && <div className="text-sm text-foreground">{assistantContent}</div>}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Call ID</div>
-            <div className="text-xs font-mono text-foreground bg-muted/50 rounded p-2 border border-border truncate">
-              {callData.call_id}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Model</div>
-            <div className="text-sm text-foreground">{callData.model || 'Anthropic Claude'}</div>
-          </div>
-          {callData.voice && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Voice</div>
-              <div className="text-sm text-foreground">{callData.voice}</div>
-            </div>
-          )}
-          {callData.country && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Country</div>
-              <div className="text-sm text-foreground">
-                {callData.country} {callData.country_code ? `(${callData.country_code})` : ''}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 bg-muted/40 rounded-lg p-2 border border-muted/60">
-            <Brain className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">Status:</span>
-            <Badge className={cn('text-xs', statusInfo.color)}>{statusInfo.label}</Badge>
-          </div>
-          <div className="flex items-center gap-2 bg-muted/40 rounded-lg p-2 border border-muted/60">
-            <Mic className="h-4 w-4 text-primary" />
-            {isActive ? 'Live transcript updating...' : 'Transcript ready'}
-          </div>
-        </div>
-
-        {callData.first_message && (
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">First Message</div>
-            <div className="text-sm text-foreground bg-muted/40 rounded-lg p-3 border border-muted/50">
-              {callData.first_message}
-            </div>
-          </div>
+        {assistantContent && (
+          <div className="text-sm text-foreground">{assistantContent}</div>
         )}
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <MessageSquare className="h-3 w-3" />
-            Live Transcript
-          </div>
-          <div className="space-y-3 bg-muted/50 rounded-lg p-3 border border-border max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/50">
-            {liveTranscript.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-6">
-                Waiting for transcript...
+        <AnimatePresence mode="wait">
+          {isActive && liveTranscript.length > 0 ? (
+            <motion.div
+              key="live-view"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.5, type: "spring" }}
+              className="space-y-6"
+            >
+              <motion.div
+                className="relative h-32 flex items-center justify-center overflow-hidden rounded-2xl"
+                initial={{ height: 0 }}
+                animate={{ height: 128 }}
+                transition={{ duration: 0.5, type: "spring", stiffness: 300 }}
+              >
+                <motion.div
+                  className="relative z-10"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                    delay: 0.2
+                  }}
+                >
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-destructive flex items-center justify-center"
+                    animate={{
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeOut"
+                    }}
+                  >
+                    <Mic className="w-10 h-10 text-destructive-foreground" />
+                  </motion.div>
+                  <motion.div
+                    className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <span className="text-xs font-medium text-red-500 uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      Live
+                    </span>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+              <motion.div
+                className="flex justify-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="text-center space-y-1">
+                  <div className="text-lg font-medium text-foreground">
+                    {formatPhoneNumber(callData?.phone_number)}
+                  </div>
+                  <Badge className={cn("text-xs", statusInfo.color)}>
+                    {statusInfo.label}
+                  </Badge>
+                </div>
+              </motion.div>
+              <motion.div
+                className="h-64 overflow-y-auto rounded-lg bg-muted/50 p-3 border border-border scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                style={{
+                  scrollBehavior: 'smooth',
+                }}
+              >
+                {liveTranscript.map((msg, idx) => {
+                  const isNew = idx >= previousTranscriptLength;
+                  return (
+                    <MessageBubble
+                      key={`${msg.role}-${idx}-${msg.message.substring(0, 20)}`}
+                      msg={msg}
+                      index={idx}
+                      isNew={isNew}
+                    />
+                  );
+                })}
+                <div ref={transcriptEndRef} className="h-4" />
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="regular-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    Phone Number
+                  </div>
+                  <div className="text-sm font-medium text-foreground">
+                    {formatPhoneNumber(callData?.phone_number)}
+                  </div>
+                </div>
+
+                {(callData?.call_id) && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CheckCircle className="h-3 w-3" />
+                      Call ID
+                    </div>
+                    <div className="text-xs font-mono text-foreground truncate">
+                      {callData.call_id}
+                    </div>
+                  </div>
+                )}
+
+                {callData?.model && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Brain className="h-3 w-3" />
+                      Model
+                    </div>
+                    <div className="text-sm text-foreground">{callData.model}</div>
+                  </div>
+                )}
+
+                {callData?.voice && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Mic className="h-3 w-3" />
+                      Voice
+                    </div>
+                    <div className="text-sm text-foreground">{callData.voice}</div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <AnimatePresence initial={false}>
-                {liveTranscript.map((msg, idx) => (
-                  <MessageBubble key={idx} msg={msg} index={idx} isNew={idx >= previousTranscriptLength} />
-                ))}
-              </AnimatePresence>
-            )}
-            <div ref={transcriptEndRef} />
+
+              {callData?.first_message && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">First Message</div>
+                  <div className="text-sm text-foreground bg-muted/50 rounded-lg p-3 border border-border">
+                    {callData.first_message}
+                  </div>
+                </div>
+              )}
+              {isActive && liveTranscript.length === 0 && (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 mx-auto mb-2 text-muted-foreground animate-spin" />
+                  <p className="text-sm text-muted-foreground">Waiting for conversation to start...</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {callData?.message && (
+          <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+            {callData.message}
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
 }
-

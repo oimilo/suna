@@ -44,8 +44,8 @@ export function WaitForCallCompletionToolView({
               variant="secondary"
               className={
                 isSuccess
-                  ? 'bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300'
-                  : 'bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300'
+                  ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                  : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
               }
             >
               {isSuccess ? (
@@ -60,12 +60,16 @@ export function WaitForCallCompletionToolView({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {assistantContent && <div className="text-sm text-foreground">{assistantContent}</div>}
+        {assistantContent && (
+          <div className="text-sm text-foreground">{assistantContent}</div>
+        )}
 
         <div className="bg-muted/30 rounded-lg p-4 border border-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Final Status</span>
-            <Badge className={cn('text-xs', statusInfo.color)}>{statusInfo.label}</Badge>
+            <Badge className={cn("text-xs", statusInfo.color)}>
+              {statusInfo.label}
+            </Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -74,7 +78,9 @@ export function WaitForCallCompletionToolView({
                 <Phone className="h-3 w-3" />
                 Call ID
               </div>
-              <div className="text-xs font-mono text-foreground truncate">{data.call_id}</div>
+              <div className="text-xs font-mono text-foreground truncate">
+                {data.call_id}
+              </div>
             </div>
 
             {data.duration_seconds !== undefined && (
@@ -83,7 +89,9 @@ export function WaitForCallCompletionToolView({
                   <Clock className="h-3 w-3" />
                   Duration
                 </div>
-                <div className="text-sm font-medium text-foreground">{formatDuration(data.duration_seconds)}</div>
+                <div className="text-sm font-medium text-foreground">
+                  {formatDuration(data.duration_seconds)}
+                </div>
               </div>
             )}
 
@@ -93,7 +101,9 @@ export function WaitForCallCompletionToolView({
                   <MessageSquare className="h-3 w-3" />
                   Transcript Messages
                 </div>
-                <div className="text-sm font-medium text-foreground">{data.transcript_messages} messages</div>
+                <div className="text-sm font-medium text-foreground">
+                  {data.transcript_messages} messages
+                </div>
               </div>
             )}
 
@@ -103,7 +113,9 @@ export function WaitForCallCompletionToolView({
                   <DollarSign className="h-3 w-3" />
                   Total Cost
                 </div>
-                <div className="text-sm font-medium text-foreground">${data.cost.toFixed(4)}</div>
+                <div className="text-sm font-medium text-foreground">
+                  ${data.cost.toFixed(4)}
+                </div>
               </div>
             )}
           </div>
@@ -118,4 +130,3 @@ export function WaitForCallCompletionToolView({
     </Card>
   );
 }
-

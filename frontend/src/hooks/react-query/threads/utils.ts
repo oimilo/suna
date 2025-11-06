@@ -1,41 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
-import { getBackendUrl } from "@/lib/env-check";
+import { getProject as getProjectFromApi, type Project } from "@/lib/api";
 
-const API_URL = getBackendUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+// Re-export Project type for consistent imports
+export type { Project };
 
 export type Thread = {
     thread_id: string;
-    account_id: string | null;
     project_id?: string | null;
     is_public?: boolean;
     created_at: string;
     updated_at: string;
     metadata?: {
-      workflow_id?: string;
-      workflow_name?: string;
-      workflow_run_name?: string;
-      is_workflow_execution?: boolean;
       agent_id?: string;
-      is_agent_builder?: boolean;
+    
       [key: string]: any;
     };
-    [key: string]: any;
-  };
-  
-  export type Project = {
-    id: string;
-    name: string;
-    description: string;
-    account_id: string;
-    created_at: string;
-    updated_at?: string;
-    sandbox: {
-      vnc_preview?: string;
-      sandbox_url?: string;
-      id?: string;
-      pass?: string;
-    };
-    is_public?: boolean;
     [key: string]: any;
   };
   
@@ -84,106 +65,42 @@ export const toggleThreadPublicStatus = async (
     return updateThread(threadId, { is_public: isPublic });
 };
 
-const deleteSandbox = async (sandboxId: string): Promise<void> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
-
-    const response = await fetch(`${API_URL}/sandboxes/${sandboxId}`, {
-      method: 'DELETE',
-      headers,
-    });
-
-    if (!response.ok) {
-      console.warn('Failed to delete sandbox, continuing with thread deletion');
-    }
-  } catch (error) {
-    console.warn('Error deleting sandbox, continuing with thread deletion:', error);
-  }
-};
-
+/**
+ * Delete a thread using the backend API endpoint.
+ * The backend handles deleting all associated data (messages, agent runs, project, sandbox).
+ */
 export const deleteThread = async (threadId: string, sandboxId?: string): Promise<void> => {
     try {
       const supabase = createClient();
+      
+      // Get auth session for the API request
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      // If sandbox ID is provided, delete it directly
-      if (sandboxId) {
-        await deleteSandbox(sandboxId);
-      } else {
-        // Otherwise, get the thread to find its project and sandbox
-        const { data: thread, error: threadError } = await supabase
-          .from('threads')
-          .select('project_id')
-          .eq('thread_id', threadId)
-          .single();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
 
-        if (threadError) {
-          console.error('Error fetching thread:', threadError);
-          throw new Error(`Error fetching thread: ${threadError.message}`);
-        }
-
-        // If thread has a project, get sandbox ID and delete it
-        if (thread?.project_id) {
-          const { data: project } = await supabase
-            .from('projects')
-            .select('sandbox')
-            .eq('project_id', thread.project_id)
-            .single();
-
-          if (project?.sandbox?.id) {
-            await deleteSandbox(project.sandbox.id);
-          }
-        }
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      console.log(`Deleting all agent runs for thread ${threadId}`);
-      const { error: agentRunsError } = await supabase
-        .from('agent_runs')
-        .delete()
-        .eq('thread_id', threadId);
+      // Use the backend DELETE endpoint which handles everything
+      const response = await fetch(`${API_URL}/threads/${threadId}`, {
+        method: 'DELETE',
+        headers,
+      });
 
-      if (agentRunsError) {
-        console.error('Error deleting agent runs:', agentRunsError);
-        throw new Error(`Error deleting agent runs: ${agentRunsError.message}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('Error deleting thread:', errorText);
+        throw new Error(`Failed to delete thread: ${errorText}`);
       }
 
-      console.log(`Deleting all messages for thread ${threadId}`);
-      const { error: messagesError } = await supabase
-        .from('messages')
-        .delete()
-        .eq('thread_id', threadId);
-
-      if (messagesError) {
-        console.error('Error deleting messages:', messagesError);
-        throw new Error(`Error deleting messages: ${messagesError.message}`);
-      }
-
-      console.log(`Deleting thread ${threadId}`);
-      const { error: threadError2 } = await supabase
-        .from('threads')
-        .delete()
-        .eq('thread_id', threadId);
-  
-      if (threadError2) {
-        console.error('Error deleting thread:', threadError2);
-        throw new Error(`Error deleting thread: ${threadError2.message}`);
-      }
-  
-      console.log(
-        `Thread ${threadId} successfully deleted with all related items`,
-      );
+      console.log(`Thread ${threadId} deleted successfully`);
     } catch (error) {
-      console.error('Error deleting thread and related items:', error);
+      console.error('Error deleting thread:', error);
       throw error;
     }
   };
@@ -230,18 +147,11 @@ export const getPublicProjects = async (): Promise<Project[]> => {
         return [];
       }
   
-      console.log(
-        '[API] Raw public projects from DB:',
-        projects?.length,
-        projects,
-      );
-  
       // Map database fields to our Project type
       const mappedProjects: Project[] = (projects || []).map((project) => ({
         id: project.project_id,
         name: project.name || '',
         description: project.description || '',
-        account_id: project.account_id,
         created_at: project.created_at,
         updated_at: project.updated_at,
         sandbox: project.sandbox || {
@@ -253,11 +163,6 @@ export const getPublicProjects = async (): Promise<Project[]> => {
         is_public: true, // Mark these as public projects
       }));
   
-      console.log(
-        '[API] Mapped public projects for frontend:',
-        mappedProjects.length,
-      );
-  
       return mappedProjects;
     } catch (err) {
       console.error('Error fetching public projects:', err);
@@ -267,96 +172,10 @@ export const getPublicProjects = async (): Promise<Project[]> => {
 
 
 
+  // Wrapper around api.ts getProject to maintain consistent imports
+  // Delegates to api.ts which includes retry logic + better error handling
   export const getProject = async (projectId: string): Promise<Project> => {
-    const supabase = createClient();
-  
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('project_id', projectId)
-        .single();
-  
-      if (error) {
-        // Handle the specific "no rows returned" error from Supabase
-        if (error.code === 'PGRST116') {
-          throw new Error(`Project not found or not accessible: ${projectId}`);
-        }
-        throw error;
-      }
-  
-      console.log('Raw project data from database:', data);
-  
-      // If project has a sandbox, ensure it's started
-      if (data.sandbox?.id) {
-        // Fire off sandbox activation without blocking
-        const ensureSandboxActive = async () => {
-          try {
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
-  
-            // For public projects, we don't need authentication
-            const headers: Record<string, string> = {
-              'Content-Type': 'application/json',
-            };
-  
-            if (session?.access_token) {
-              headers['Authorization'] = `Bearer ${session.access_token}`;
-            }
-  
-            console.log(`Ensuring sandbox is active for project ${projectId}...`);
-            const response = await fetch(
-              `${API_URL}/project/${projectId}/sandbox/ensure-active`,
-              {
-                method: 'POST',
-                headers,
-              },
-            );
-  
-            if (!response.ok) {
-              const errorText = await response
-                .text()
-                .catch(() => 'No error details available');
-              console.warn(
-                `Failed to ensure sandbox is active: ${response.status} ${response.statusText}`,
-                errorText,
-              );
-            } else {
-              console.log('Sandbox activation successful');
-            }
-          } catch (sandboxError) {
-            console.warn('Failed to ensure sandbox is active:', sandboxError);
-          }
-        };
-  
-        // Start the sandbox activation without awaiting
-        ensureSandboxActive();
-      }
-  
-      // Map database fields to our Project type
-      const mappedProject: Project = {
-        id: data.project_id,
-        name: data.name || '',
-        description: data.description || '',
-        account_id: data.account_id,
-        is_public: data.is_public || false,
-        created_at: data.created_at,
-        sandbox: data.sandbox || {
-          id: '',
-          pass: '',
-          vnc_preview: '',
-          sandbox_url: '',
-        },
-      };
-  
-      // console.log('Mapped project data for frontend:', mappedProject);
-  
-      return mappedProject;
-    } catch (error) {
-      console.error(`Error fetching project ${projectId}:`, error);
-      throw error;
-    }
+    return await getProjectFromApi(projectId);
   };
 
 
@@ -365,10 +184,6 @@ export const getPublicProjects = async (): Promise<Project[]> => {
     data: Partial<Project>,
   ): Promise<Project> => {
     const supabase = createClient();
-  
-    console.log('Updating project with ID:', projectId);
-    console.log('Update data:', data);
-  
     // Sanity check to avoid update errors
     if (!projectId || projectId === '') {
       console.error('Attempted to update project with invalid ID:', projectId);
@@ -412,7 +227,6 @@ export const getPublicProjects = async (): Promise<Project[]> => {
       id: updatedData.project_id,
       name: updatedData.name,
       description: updatedData.description || '',
-      account_id: updatedData.account_id,
       created_at: updatedData.created_at,
       sandbox: updatedData.sandbox || {
         id: '',
