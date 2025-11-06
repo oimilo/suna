@@ -87,7 +87,7 @@ async function main() {
         const account = accounts.find(a => a.id === prophet.account_id);
         console.log(`• ${account?.name || 'Conta desconhecida'}`);
         console.log(`  Agent ID: ${prophet.agent_id}`);
-        console.log(`  Suna Default: ${prophet.metadata?.is_suna_default ? '✅' : '❌'}`);
+        console.log(`  Prophet Default: ${prophet.metadata?.is_suna_default ? '✅' : '❌'}`);
         console.log('');
       });
     }

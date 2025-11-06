@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAgent } from '@/hooks/react-query/agents/use-agents';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { MiloLogo } from '@/components/sidebar/milo-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 
 interface AgentAvatarProps {
@@ -15,20 +15,20 @@ interface AgentAvatarProps {
   backgroundColor?: string;
   agentName?: string;
   imageUrl?: string;
-  isSunaDefault?: boolean;
+  isProphetDefault?: boolean;
 }
 
 export const AgentAvatar: React.FC<AgentAvatarProps> = ({ 
   agentId, 
   size = 16, 
   className = "", 
-  fallbackName = "Suna",
+  fallbackName = "Prophet",
   iconName,
   iconColor,
   backgroundColor,
   agentName,
   imageUrl,
-  isSunaDefault,
+  isProphetDefault,
 }) => {
   const { data: agent, isLoading } = useAgent(agentId || '');
 
@@ -46,10 +46,9 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   const resolvedBackground = agent?.icon_background || backgroundColor || '#F3F4F6';
   const resolvedImageUrl = agent?.profile_image_url || imageUrl;
   const resolvedName = agent?.name || agentName || fallbackName;
-  const isSuna = agent?.metadata?.is_suna_default || isSunaDefault;
-
-  if (isSuna) {
-    return <KortixLogo size={size} />;
+  const isProphet = agent?.metadata?.is_suna_default || isProphetDefault;
+  if (isProphet) {
+    return <MiloLogo size={size} />;
   }
 
   if (resolvedIconName) {
@@ -83,10 +82,10 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   }
 
   if (!agentId) {
-    return <KortixLogo size={size} />;
+    return <MiloLogo size={size} />;
   }
 
-  return <KortixLogo size={size} />;
+  return <MiloLogo size={size} />;
 };
 
 interface AgentNameProps {
@@ -96,7 +95,7 @@ interface AgentNameProps {
 
 export const AgentName: React.FC<AgentNameProps> = ({ 
   agentId, 
-  fallback = "Suna" 
+  fallback = "Prophet" 
 }) => {
   const { data: agent, isLoading } = useAgent(agentId || '');
 

@@ -36,7 +36,7 @@ export const projectsApi = {
           return { data: [], error: null };
         }
 
-        // Temporary: Use user_id as account_id (original Suna behavior)
+        // Temporary: Use user_id as account_id (original Prophet behavior)
         const { data, error } = await supabase
           .from('projects')
           .select('*')
@@ -130,7 +130,7 @@ export const projectsApi = {
           if (userError) return { data: null, error: userError };
           if (!userData.user) return { data: null, error: new Error('You must be logged in to create a project') };
           
-          // Temporary: Use user_id as account_id (original Suna behavior)
+          // Temporary: Use user_id as account_id (original Prophet behavior)
           accountId = userData.user.id;
         }
 
@@ -245,7 +245,7 @@ export const threadsApi = {
         if (userError) return { data: null, error: userError };
         if (!userData.user) return { data: [], error: null };
 
-        // Temporary: Use user_id as account_id (original Suna behavior)
+        // Temporary: Use user_id as account_id (original Prophet behavior)
         let query = supabase.from('threads').select('*').eq('account_id', userData.user.id);
         
         if (projectId) {
@@ -302,7 +302,7 @@ export const threadsApi = {
           return { data: null, error: new Error('You must be logged in to create a thread') };
         }
 
-        // Temporary: Use user_id as account_id (original Suna behavior)
+        // Temporary: Use user_id as account_id (original Prophet behavior)
         const { data, error } = await supabase
           .from('threads')
           .insert({

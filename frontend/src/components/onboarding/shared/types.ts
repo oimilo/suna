@@ -16,6 +16,13 @@ export interface UserContext {
   };
   invitedTeammates?: string[];
   selectedAgents?: string[];
+  persona?: {
+    goal?: string;
+    focus?: string;
+    tone?: string;
+    profile?: string;
+    interests?: string[];
+  };
 }
 
 export interface OnboardingStep {

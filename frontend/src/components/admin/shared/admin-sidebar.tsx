@@ -82,7 +82,7 @@ export function AdminSidebar() {
             {!isCollapsed && (
               <div>
                 <h2 className="text-lg font-semibold">Admin Panel</h2>
-                <p className="text-xs text-muted-foreground">Prophet/Suna</p>
+                <p className="text-xs text-muted-foreground">Prophet/Milo</p>
               </div>
             )}
             <Button

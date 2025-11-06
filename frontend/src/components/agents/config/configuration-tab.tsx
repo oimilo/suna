@@ -58,18 +58,18 @@ export function ConfigurationTab({
   initialAccordion,
   agentMetadata,
 }: ConfigurationTabProps) {
-  const isSunaAgent = agentMetadata?.is_suna_default || false;
+  const isProphetAgent = agentMetadata?.is_suna_default || false;
   
   const mapAccordion = React.useCallback((val?: string) => {
     if (val === 'instructions') return 'system';
-    if (isSunaAgent && (val === 'system' || val === 'tools')) {
+    if (isProphetAgent && (val === 'system' || val === 'tools')) {
       return 'integrations';
     }
     if (['system', 'tools', 'integrations', 'knowledge', 'workflows', 'triggers'].includes(val || '')) {
       return val!;
     }
-    return isSunaAgent ? 'integrations' : 'system';
-  }, [isSunaAgent]);
+    return isProphetAgent ? 'integrations' : 'system';
+  }, [isProphetAgent]);
   
   const [openAccordion, setOpenAccordion] = React.useState<string>(() => mapAccordion(initialAccordion));
   React.useEffect(() => {
@@ -84,7 +84,7 @@ export function ConfigurationTab({
   const areMCPsEditable = !isViewingOldVersion && (restrictions.mcps_editable !== false);
   
   const handleSystemPromptChange = (value: string) => {
-    if (!isSystemPromptEditable && isSunaAgent) {
+    if (!isSystemPromptEditable && isProphetAgent) {
       toast.error("Prompt do sistema não pode ser editado", {
         description: `O prompt do sistema do ${BRANDING.name} é gerenciado centralmente e não pode ser alterado.`,
       });
@@ -95,7 +95,7 @@ export function ConfigurationTab({
 
   return (
     <div className="p-4">
-      {isSunaAgent && (
+      {isProphetAgent && (
         <div className="mb-4 p-4 bg-primary/10 border border-primary-200 rounded-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="text-primary-600">
@@ -111,7 +111,7 @@ export function ConfigurationTab({
       )}
       
       <Accordion type="single" collapsible value={openAccordion} onValueChange={setOpenAccordion} className="space-y-2">
-        {!isSunaAgent && (
+        {!isProphetAgent && (
           <AccordionItem 
             value="system" 
             className="rounded-xl hover:bg-muted/30 border transition-colors duration-200"
@@ -138,7 +138,7 @@ export function ConfigurationTab({
             </AccordionContent>
           </AccordionItem>
         )}
-        {!isSunaAgent && (
+        {!isProphetAgent && (
           <AccordionItem 
             value="tools" 
             className="rounded-xl hover:bg-muted/30 border transition-colors duration-200"
@@ -159,7 +159,7 @@ export function ConfigurationTab({
                 tools={displayData.agentpress_tools}
                 onToolsChange={areToolsEditable ? (tools) => onFieldChange('agentpress_tools', tools) : () => {}}
                 disabled={!areToolsEditable}
-                isSunaAgent={isSunaAgent}
+                isProphetAgent={isProphetAgent}
               />
             </AccordionContent>
           </AccordionItem>

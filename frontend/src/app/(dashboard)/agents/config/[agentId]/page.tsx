@@ -107,10 +107,10 @@ export default function AgentConfigurationPage() {
   const handleSave = useCallback(async () => {
     if (!agent || isViewingOldVersion) return;
     
-    const isSunaAgent = agent?.metadata?.is_suna_default || false;
+    const isProphetAgent = agent?.metadata?.is_suna_default || false;
     const restrictions = agent?.metadata?.restrictions || {};
     
-    if (isSunaAgent) {
+    if (isProphetAgent) {
       if (restrictions.name_editable === false && formData.name !== originalData.name) {
         toast.error("Não é possível salvar alterações", {
           description: `O nome de ${BRANDING.name} não pode ser modificado.`,

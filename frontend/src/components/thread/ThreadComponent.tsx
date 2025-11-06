@@ -81,7 +81,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     setSelectedAgent,
     initializeFromAgents,
     getCurrentAgent,
-    isSunaAgent,
+    isProphetAgent,
   } = useAgentSelection();
 
   const { data: agentsResponse } = useAgents();
@@ -750,7 +750,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Kortix Suna`;
+      document.title = `${projectName} | Milo Prophet`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -758,13 +758,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Kortix Suna`,
+          `${projectName} - Interactive agent conversation powered by Milo Prophet`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Kortix Suna`);
+        ogTitle.setAttribute('content', `${projectName} | Milo Prophet`);
       }
 
       const ogDescription = document.querySelector(

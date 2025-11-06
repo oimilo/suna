@@ -26,7 +26,7 @@ interface GranularToolConfigurationProps {
   tools: Record<string, any>;
   onToolsChange: (tools: Record<string, any>) => void;
   disabled?: boolean;
-  isSunaAgent?: boolean;
+  isProphetAgent?: boolean;
   isLoading?: boolean;
 }
 
@@ -34,7 +34,7 @@ export const GranularToolConfiguration = ({
   tools, 
   onToolsChange, 
   disabled = false, 
-  isSunaAgent = false, 
+  isProphetAgent = false, 
   isLoading = false 
 }: GranularToolConfigurationProps) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -96,7 +96,7 @@ export const GranularToolConfiguration = ({
   };
 
   const handleToolGroupToggle = (toolName: string, enabled: boolean) => {
-    if (disabled && isSunaAgent) {
+    if (disabled && isProphetAgent) {
       toast.error("Tools cannot be modified", {
         description: "Prophet's default tools are managed centrally and cannot be changed.",
       });
@@ -138,7 +138,7 @@ export const GranularToolConfiguration = ({
     const toolGroup = getToolGroup(toolName, toolsData);
     const method = toolGroup?.methods.find(m => m.name === methodName);
     
-    if (disabled && isSunaAgent) {
+    if (disabled && isProphetAgent) {
       toast.error("Methods cannot be modified", {
         description: "Prophet's default tool methods are managed centrally and cannot be changed.",
       });

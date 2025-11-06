@@ -53,10 +53,10 @@ async function checkProphetAgents() {
     console.log(`✅ Encontrados ${prophetAgents.length} agentes Prophet:\n`);
     
     prophetAgents.forEach(agent => {
-      const isSunaDefault = agent.metadata?.is_suna_default || false;
+      const isProphetDefault = agent.metadata?.is_suna_default || false;
       console.log(`   • Account: ${agent.account_id}`);
       console.log(`     ID: ${agent.agent_id}`);
-      console.log(`     Suna Default: ${isSunaDefault ? 'Sim' : 'Não'}`);
+      console.log(`     Prophet Default: ${isProphetDefault ? 'Sim' : 'Não'}`);
       console.log(`     Criado em: ${new Date(agent.created_at).toLocaleDateString('pt-BR')}\n`);
     });
 

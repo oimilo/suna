@@ -11,7 +11,7 @@ import {
     getUserFriendlyToolName,
     safeJsonParse,
 } from '@/components/thread/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { MiloLogo } from '@/components/sidebar/milo-logo';
 import { AgentLoader } from './loader';
 import { AgentAvatar, AgentName } from './agent-avatar';
 import { parseXmlToolCalls, isNewXmlFormat } from '@/components/thread/tool-views/xml-parser';
@@ -396,8 +396,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     project,
     debugMode = false,
     isPreviewMode = false,
-    agentName = 'Suna',
-    agentAvatar = <KortixLogo size={16} />,
+    agentName = 'Prophet',
+    agentAvatar = <MiloLogo size={16} />,
     emptyStateComponent,
     threadMetadata,
     scrollContainerRef,
@@ -423,15 +423,15 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     // Helper function to get agent info robustly
     const getAgentInfo = useCallback(() => {
 
-        // Check if this is a Suna default agent from metadata
-        const isSunaDefaultAgent = agentMetadata?.is_suna_default || false;
+        // Check if this is a Prophet default agent from metadata
+        const isProphetDefaultAgent = agentMetadata?.is_suna_default || false;
 
         // Then check recent messages for agent info
         const recentAssistantWithAgent = [...displayMessages].reverse().find(msg =>
             msg.type === 'assistant' && msg.agents?.name
         );
 
-        if (agentData && !isSunaDefaultAgent) {
+        if (agentData && !isProphetDefaultAgent) {
             const profileUrl = agentData.profile_image_url;
             const avatar = profileUrl ? (
                 <img src={profileUrl} alt={agentData.name || agentName} className="h-5 w-5 rounded object-cover" />
@@ -441,7 +441,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 </div>
             ) : (
                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                    <KortixLogo size={16} />
+                    <MiloLogo size={16} />
                 </div>
             );
             return {
@@ -451,16 +451,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         }
 
         if (recentAssistantWithAgent?.agents?.name) {
-            const isSunaAgent = recentAssistantWithAgent.agents.name === 'Suna' || isSunaDefaultAgent;
+            const isProphetAgent = recentAssistantWithAgent.agents.name === 'Prophet' || isProphetDefaultAgent;
             // Prefer profile image if available on the agent payload
             const profileUrl = (recentAssistantWithAgent as any)?.agents?.profile_image_url;
-            const avatar = profileUrl && !isSunaDefaultAgent ? (
+            const avatar = profileUrl && !isProphetDefaultAgent ? (
                 <img src={profileUrl} alt={recentAssistantWithAgent.agents.name} className="h-5 w-5 rounded object-cover" />
-            ) : !isSunaDefaultAgent ? (
+            ) : !isProphetDefaultAgent ? (
                 <>
-                    {isSunaAgent ? (
+                    {isProphetAgent ? (
                         <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                            <KortixLogo size={16} />
+                            <MiloLogo size={16} />
                         </div>
                     ) : (
                         <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
@@ -470,7 +470,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 </>
             ) : (
                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                    <KortixLogo size={16} />
+                    <MiloLogo size={16} />
                 </div>
             );
             return {
@@ -479,20 +479,20 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             };
         }
 
-        // Fallback: if this is a Suna default agent, always show KortixLogo
-        if (isSunaDefaultAgent) {
+        // Fallback: if this is a Prophet default agent, always show MiloLogo
+        if (isProphetDefaultAgent) {
             return {
-                name: agentName || 'Suna',
+                name: agentName || 'Prophet',
                 avatar: (
                     <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                        <KortixLogo size={16} />
+                        <MiloLogo size={16} />
                     </div>
                 )
             };
         }
 
         return {
-            name: agentName || 'Suna',
+            name: agentName || 'Prophet',
             avatar: agentAvatar
         };
     }, [threadMetadata, displayMessages, agentName, agentAvatar, agentMetadata, agentData]);

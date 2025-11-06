@@ -158,12 +158,12 @@ export function AgentConfigurationDialog({
     setEditName(configSource.name || '');
   }, [agent, versionData]);
 
-  const isSunaAgent = agent?.metadata?.is_suna_default || false;
+  const isProphetAgent = agent?.metadata?.is_suna_default || false;
   const restrictions = agent?.metadata?.restrictions || {};
-  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isSunaAgent;
-  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isSunaAgent;
-  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isSunaAgent;
-  const isDefaultEditable = !isViewingOldVersion && (restrictions.default_editable !== false) && !isSunaAgent;
+  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isProphetAgent;
+  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isProphetAgent;
+  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isProphetAgent;
+  const isDefaultEditable = !isViewingOldVersion && (restrictions.default_editable !== false) && !isProphetAgent;
 
   const enabledToolCount = useMemo(() => {
     if (!formData.agentpress_tools) {
@@ -270,7 +270,7 @@ export function AgentConfigurationDialog({
     }
 
     if (!isNameEditable) {
-      if (isSunaAgent) {
+      if (isProphetAgent) {
         toast.error("Name cannot be edited", {
           description: "Prophet's name is managed centrally and cannot be changed.",
         });
@@ -286,7 +286,7 @@ export function AgentConfigurationDialog({
 
   const handleSystemPromptChange = (value: string) => {
     if (!isSystemPromptEditable) {
-      if (isSunaAgent) {
+      if (isProphetAgent) {
         toast.error("System prompt cannot be edited", {
           description: "Prophet's system prompt is managed centrally.",
         });
@@ -303,7 +303,7 @@ export function AgentConfigurationDialog({
 
   const handleToolsChange = (tools: Record<string, boolean | { enabled: boolean; description: string }>) => {
     if (!areToolsEditable) {
-      if (isSunaAgent) {
+      if (isProphetAgent) {
         toast.error("Tools cannot be edited", {
           description: "Prophet's tools are managed centrally.",
         });
@@ -316,7 +316,7 @@ export function AgentConfigurationDialog({
 
   const handleDefaultToggle = (checked: boolean) => {
     if (!isDefaultEditable) {
-      if (isSunaAgent) {
+      if (isProphetAgent) {
         toast.error('Default status cannot be changed', {
           description: "Prophet's status is managed centrally.",
         });
@@ -442,9 +442,9 @@ export function AgentConfigurationDialog({
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div className="flex items-start gap-4 min-w-0">
                   <div className="flex-shrink-0">
-                    {isSunaAgent ? (
+                    {isProphetAgent ? (
                       <AgentAvatar
-                        isSunaDefault={true}
+                        isProphetDefault={true}
                         agentName={formData.name}
                         size={44}
                         className="ring-1 ring-border shadow-sm"
@@ -545,7 +545,7 @@ export function AgentConfigurationDialog({
                                       iconColor={agent.icon_color}
                                       backgroundColor={agent.icon_background}
                                       agentName={agent.name}
-                                      isSunaDefault={agent.metadata?.is_suna_default}
+                                      isProphetDefault={agent.metadata?.is_suna_default}
                                       size={24}
                                       className="flex-shrink-0"
                                     />
@@ -611,7 +611,7 @@ export function AgentConfigurationDialog({
                           Default
                         </Badge>
                       )}
-                      {isSunaAgent && (
+                      {isProphetAgent && (
                         <Badge variant="outline" className="border-blue-400/40 text-blue-300">
                           Managed
                         </Badge>
@@ -740,7 +740,7 @@ export function AgentConfigurationDialog({
                   className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
                 >
                   <div className="flex flex-col flex-1 min-h-0 gap-4">
-                    {isSunaAgent && (
+                    {isProphetAgent && (
                       <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
@@ -766,7 +766,7 @@ export function AgentConfigurationDialog({
                   className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
                 >
                   <div className="flex flex-col flex-1 min-h-0 gap-4">
-                    {isSunaAgent && (
+                    {isProphetAgent && (
                       <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
@@ -779,7 +779,7 @@ export function AgentConfigurationDialog({
                         tools={formData.agentpress_tools}
                         onToolsChange={handleToolsChange}
                         disabled={!areToolsEditable}
-                        isSunaAgent={isSunaAgent}
+                        isProphetAgent={isProphetAgent}
                         isLoading={isLoading}
                       />
                     </div>

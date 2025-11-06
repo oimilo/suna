@@ -130,7 +130,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
     const [uncontrolledValue, setUncontrolledValue] = useState('');
     const value = isControlled ? controlledValue : uncontrolledValue;
 
-    const isSunaAgent = agentMetadata?.is_suna_default || false;
+    const isProphetAgent = agentMetadata?.is_suna_default || false;
 
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -418,6 +418,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
                   onOpenUpgrade={() => setBillingModalOpen(true)}
                   agentName={agentName}
+                  isProphetAgent={isProphetAgent}
                 />
               </CardContent>
             </div>
