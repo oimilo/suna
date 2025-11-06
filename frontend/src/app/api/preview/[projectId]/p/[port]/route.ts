@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { PreviewAccessError, resolveProjectSandbox } from '../../../project-access'
 
 async function responseContainsPreviewWarning(response: Response): Promise<boolean> {
   const contentType = response.headers.get('content-type') || ''
@@ -64,29 +64,21 @@ export async function GET(
 ) {
   const { projectId, port } = await params
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let sandboxUrl: string
 
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('sandbox, is_public')
-    .eq('project_id', projectId)
-    .maybeSingle()
+  try {
+    const project = await resolveProjectSandbox(projectId)
+    sandboxUrl = project.sandboxUrl
+  } catch (error) {
+    if (error instanceof PreviewAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
 
-  if (projectError) {
-    console.error('Preview proxy project lookup error:', projectError)
-  }
-
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: user ? 403 : 401 })
-  }
-
-  if (!project.sandbox?.sandbox_url) {
-    return NextResponse.json({ error: 'No sandbox available for this project' }, { status: 404 })
+    console.error('Preview project access error (port root):', error)
+    return NextResponse.json({ error: 'Erro ao validar acesso ao projeto' }, { status: 500 })
   }
 
   // sandbox_url example: https://8080-<id>.proxy.daytona.works
-  const sandboxUrl: string = project.sandbox.sandbox_url
   const rewritten = sandboxUrl.replace(/https:\/\/(\d+)-/, `https://${port}-`)
   const searchParams = request.nextUrl.search
   const base = rewritten.replace(/\/+$/, '')

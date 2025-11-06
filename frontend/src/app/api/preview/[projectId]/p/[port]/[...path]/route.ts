@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { PreviewAccessError, resolveProjectSandbox } from '../../../../project-access'
 
 async function responseContainsPreviewWarning(response: Response): Promise<boolean> {
   const contentType = response.headers.get('content-type') || ''
@@ -64,35 +64,26 @@ export async function GET(
   const { projectId, port, path } = await params
   const filePath = path.join('/')
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let sandboxUrl: string
 
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('sandbox, is_public')
-    .eq('project_id', projectId)
-    .maybeSingle()
+  try {
+    const project = await resolveProjectSandbox(projectId)
+    sandboxUrl = project.sandboxUrl
+  } catch (error) {
+    if (error instanceof PreviewAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
 
-  if (projectError) {
-    console.error('Preview proxy (ported) project lookup error:', projectError)
+    console.error('Preview project access error (ported path):', error)
+    return NextResponse.json({ error: 'Erro ao validar acesso ao projeto' }, { status: 500 })
   }
-
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: user ? 403 : 401 })
-  }
-
-  if (!project.sandbox?.sandbox_url) {
-    return NextResponse.json({ error: 'No sandbox available for this project' }, { status: 404 })
-  }
-
-  // Original sandbox_url is typically like https://8080-<id>.proxy.daytona.works
-  const sandboxUrl: string = project.sandbox.sandbox_url
 
   // Rewrite the leading port segment to the requested port
   const rewritten = sandboxUrl.replace(/https:\/\/(\d+)-/, `https://${port}-`)
   const cleanPath = filePath.replace(/^\/+/, '')
   const normalizedPath = cleanPath.replace(/\/+$/, '')
-  const searchParams = request.nextUrl.search || ''
+  const rawSearch = request.nextUrl.search
+  const search = rawSearch || ''
   const base = rewritten.replace(/\/+$/, '')
   const endsWithSlash = request.nextUrl.pathname.endsWith('/')
 
@@ -109,12 +100,12 @@ export async function GET(
     .map((segment) => segment.replace(/^\/+/, ''))
 
   const urlCandidates = Array.from(new Set([
-    ...sanitizedSegments.map((segment) => `${base}/${segment}${searchParams}`),
-    ...(hasRootCandidate ? [`${base}/${searchParams}`] : []),
+    ...sanitizedSegments.map((segment) => `${base}/${segment}${search}`),
+    ...(hasRootCandidate ? [`${base}/${search}`] : []),
   ])).filter(Boolean)
 
   if (urlCandidates.length === 0) {
-    urlCandidates.push(`${base}/${searchParams}`)
+    urlCandidates.push(`${base}/${search}`)
   }
 
   try {
