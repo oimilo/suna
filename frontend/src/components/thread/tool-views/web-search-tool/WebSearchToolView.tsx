@@ -52,6 +52,16 @@ export function WebSearchToolView({
 
   const toolTitle = getToolTitle(name);
 
+  const formattedQuery = React.useMemo(() => {
+    if (!query) return null;
+    if (typeof query === 'string') return query;
+    try {
+      return JSON.stringify(query, null, 2);
+    } catch (error) {
+      return String(query);
+    }
+  }, [query]);
+
   const getFavicon = (url: string) => {
     try {
       const domain = new URL(url).hostname;
@@ -117,7 +127,7 @@ export function WebSearchToolView({
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
             title="Searching the web"
-            filePath={query}
+            filePath={formattedQuery ?? undefined}
             showProgress={true}
           />
         ) : searchResults.length > 0 || answer ? (
@@ -307,7 +317,7 @@ export function WebSearchToolView({
             </h3>
             <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
               <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                {query || 'Unknown query'}
+                {formattedQuery ?? 'Unknown query'}
               </code>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">

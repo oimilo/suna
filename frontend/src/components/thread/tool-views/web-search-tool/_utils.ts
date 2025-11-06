@@ -109,14 +109,52 @@ export function extractWebSearchData(
   let actualToolTimestamp = toolTimestamp;
   let actualAssistantTimestamp = assistantTimestamp;
 
+  const toNullableString = (value: unknown): string | null => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      try {
+        return String(value);
+      } catch (stringError) {
+        return null;
+      }
+    }
+  };
+
+  const sanitizeResult = (result: any) => {
+    if (!result || typeof result !== 'object') {
+      return {
+        title: '',
+        url: '',
+        snippet: undefined,
+      };
+    }
+
+    return {
+      title: toNullableString(result.title) ?? '',
+      url: toNullableString(result.url) ?? '',
+      snippet: toNullableString(result.content ?? result.snippet ?? undefined) ?? undefined,
+    };
+  };
+
   const assistantNewFormat = extractFromNewFormat(assistantContent);
   const toolNewFormat = extractFromNewFormat(toolContent);
 
   if (assistantNewFormat.query || assistantNewFormat.results.length > 0) {
-    query = assistantNewFormat.query;
-    searchResults = assistantNewFormat.results;
-    answer = assistantNewFormat.answer;
-    images = assistantNewFormat.images;
+    query = toNullableString(assistantNewFormat.query);
+    searchResults = assistantNewFormat.results.map(sanitizeResult);
+    answer = toNullableString(assistantNewFormat.answer);
+    images = Array.isArray(assistantNewFormat.images)
+      ? assistantNewFormat.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0)
+      : [];
     if (assistantNewFormat.success !== undefined) {
       actualIsSuccess = assistantNewFormat.success;
     }
@@ -124,10 +162,12 @@ export function extractWebSearchData(
       actualAssistantTimestamp = assistantNewFormat.timestamp;
     }
   } else if (toolNewFormat.query || toolNewFormat.results.length > 0) {
-    query = toolNewFormat.query;
-    searchResults = toolNewFormat.results;
-    answer = toolNewFormat.answer;
-    images = toolNewFormat.images;
+    query = toNullableString(toolNewFormat.query);
+    searchResults = toolNewFormat.results.map(sanitizeResult);
+    answer = toNullableString(toolNewFormat.answer);
+    images = Array.isArray(toolNewFormat.images)
+      ? toolNewFormat.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0)
+      : [];
     if (toolNewFormat.success !== undefined) {
       actualIsSuccess = toolNewFormat.success;
     }
@@ -138,10 +178,10 @@ export function extractWebSearchData(
     const assistantLegacy = extractFromLegacyFormat(assistantContent);
     const toolLegacy = extractFromLegacyFormat(toolContent);
 
-    query = assistantLegacy.query || toolLegacy.query;
+    query = toNullableString(assistantLegacy.query || toolLegacy.query);
     
     const legacyResults = extractSearchResults(toolContent);
-    searchResults = legacyResults;
+    searchResults = legacyResults.map(sanitizeResult);
     
     if (toolContent) {
       try {
@@ -154,11 +194,11 @@ export function extractWebSearchData(
           parsedContent = {};
         }
 
-        if (parsedContent.answer && typeof parsedContent.answer === 'string') {
-          answer = parsedContent.answer;
+        if (parsedContent.answer) {
+          answer = toNullableString(parsedContent.answer);
         }
         if (parsedContent.images && Array.isArray(parsedContent.images)) {
-          images = parsedContent.images;
+          images = parsedContent.images.filter((image: unknown) => typeof image === 'string' && image.trim().length > 0);
         }
       } catch (e) {
       }
@@ -166,12 +206,14 @@ export function extractWebSearchData(
   }
 
   if (!query) {
-    query = extractSearchQuery(assistantContent) || extractSearchQuery(toolContent);
+    query = toNullableString(
+      extractSearchQuery(assistantContent) || extractSearchQuery(toolContent),
+    );
   }
   
   if (searchResults.length === 0) {
     const fallbackResults = extractSearchResults(toolContent);
-    searchResults = fallbackResults;
+    searchResults = fallbackResults.map(sanitizeResult);
   }
 
   return {
