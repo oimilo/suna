@@ -19,7 +19,6 @@ import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { StreamingText } from './StreamingText';
 import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
-import { maskPreviewUrl } from '@/lib/utils/url';
 
 
 // Helper function to render all attachments as standalone messages
@@ -49,21 +48,6 @@ export function renderStandaloneAttachments(attachments: string[], fileViewerHan
 export function renderAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project) {
     // All attachments are now rendered as standalone, so this returns null
     return null;
-}
-
-const URL_REGEX = /https?:\/\/[^\s<>'")]+/g;
-
-function maskSandboxLinks(text: string, project?: Project): string {
-    if (!text) {
-        return text;
-    }
-
-    const projectId = (project as any)?.project_id || (project as any)?.id;
-    if (!projectId) {
-        return text;
-    }
-
-    return text.replace(URL_REGEX, (url) => maskPreviewUrl(projectId, url) ?? url);
 }
 
 // Render Markdown content while preserving XML tags that should be displayed as tool calls
@@ -98,7 +82,6 @@ export function renderMarkdownContent(
 ) {
     // Preprocess content to convert text-only tools to natural text
     content = preprocessTextOnlyTools(content);
-    content = maskSandboxLinks(content, project);
     
     // If in debug mode, just display raw content in a pre tag
     if (debugMode) {
@@ -782,7 +765,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                         // Remove attachment info from the message content
                                         const cleanContent = messageContent.replace(/\[Uploaded File: .*?\]/g, '').trim();
-                                        const maskedCleanContent = maskSandboxLinks(cleanContent, project);
+                                        const maskedCleanContent = cleanContent;
 
                                         return (
                                             <div key={group.key} className="space-y-3">
@@ -943,7 +926,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                             }
                                                                         }
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
-                                                                        const maskedTextBeforeTag = maskSandboxLinks(textBeforeTag, project);
+                                                                        const maskedTextBeforeTag = textBeforeTag;
                                                                         const showCursor =
                                                                           (streamHookStatus ===
                                                                             'streaming' ||
@@ -1013,7 +996,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                             }
                                                                         }
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
-                                                                        const maskedTextBeforeTag = maskSandboxLinks(textBeforeTag, project);
+                                                                        const maskedTextBeforeTag = textBeforeTag;
                                                                         const showCursor = isStreamingText && !detectedTag;
 
                                                                         return (

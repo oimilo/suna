@@ -291,57 +291,6 @@ async def read_file(
         logger.error(f"Error reading file in sandbox {sandbox_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# -----------------------------------------------------------
-# Project-scoped preview proxy
-# Supports: /api/preview/{project_id}/p/{port}/... → Daytona preview URL
-# -----------------------------------------------------------
-
-async def _resolve_preview_base_url(project_id: str, port: int) -> str:
-    """Fetch sandbox for project and resolve provider preview base URL for a port."""
-    client = await db.client
-    project_result = await client.table('projects').select('*').eq('project_id', project_id).execute()
-    if not project_result.data:
-        raise HTTPException(status_code=404, detail="Project not found")
-    sandbox_info = project_result.data[0].get('sandbox', {})
-    sandbox_id = sandbox_info.get('id')
-    if not sandbox_id:
-        raise HTTPException(status_code=404, detail="No sandbox found for this project")
-    sandbox = await get_or_start_sandbox(sandbox_id)
-    # Ask provider for preview link for this port
-    try:
-        preview_link = await sandbox.get_preview_link(int(port))
-        base_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-        return base_url.rstrip('/')
-    except Exception as e:
-        logger.error(f"Failed to resolve preview URL for project {project_id} port {port}: {e}")
-        raise HTTPException(status_code=502, detail="Failed to resolve preview URL")
-
-@router.get("/preview/{project_id}/p/{port}")
-async def preview_root(project_id: str, port: int, request: Request):
-    base_url = await _resolve_preview_base_url(project_id, port)
-    # Forward root path
-    forward_url = f"{base_url}/"
-    async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client:
-        upstream = await client.get(forward_url, headers={"User-Agent": request.headers.get("User-Agent", "")})
-        return Response(content=upstream.content, status_code=upstream.status_code, media_type=upstream.headers.get("content-type", "text/html"))
-
-@router.get("/preview/{project_id}/p/{port}/{path:path}")
-async def preview_proxy(project_id: str, port: int, path: str, request: Request):
-    base_url = await _resolve_preview_base_url(project_id, port)
-    # Preserve query string
-    qs = ("?" + str(request.query_params)) if request.query_params else ""
-    forward_url = f"{base_url}/{path}{qs}"
-    # Minimal header passthrough; avoid Host override
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "connection", "content-length"]}
-    method = request.method.upper()
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        if method == "GET" or method == "HEAD":
-            upstream = await client.request(method, forward_url, headers=headers)
-        else:
-            body = await request.body()
-            upstream = await client.request(method, forward_url, headers=headers, content=body)
-    return Response(content=upstream.content, status_code=upstream.status_code, media_type=upstream.headers.get("content-type", "application/octet-stream"))
-
 @router.delete("/sandboxes/{sandbox_id}/files")
 async def delete_file(
     sandbox_id: str, 

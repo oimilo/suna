@@ -26,7 +26,7 @@ export const BRANDING = {
   companyUrl: process.env.NEXT_PUBLIC_COMPANY_URL || "https://oimilo.com",
   
   // Contact email (can be different from support email)
-  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contato@oimilo.com",
+  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "start@prophet.build",
   
   // Careers URL
   careersUrl: process.env.NEXT_PUBLIC_CAREERS_URL || "https://oimilo.com/careers",

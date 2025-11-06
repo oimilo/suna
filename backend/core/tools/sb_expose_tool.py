@@ -1,10 +1,8 @@
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
-from core.utils.config import config
 import asyncio
-import os
-from urllib.parse import urljoin, urlparse, urlunparse
+import time
 
 @tool_metadata(
     display_name="Port Exposure",
@@ -19,8 +17,6 @@ class SandboxExposeTool(SandboxToolsBase):
 
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
-
-    _DEFAULT_PROXY_BASE_URL = "https://www.prophet.build"
 
     @openapi_schema({
         "type": "function",
@@ -53,83 +49,29 @@ class SandboxExposeTool(SandboxToolsBase):
             if not 1 <= port <= 65535:
                 return self.fail_response(f"Invalid port number: {port}. Must be between 1 and 65535.")
 
-            # Get the preview link for the specified port (ensures the preview is available at provider)
+            # Check if something is actually listening on the port (for custom ports)
+            if port not in [6080, 8080, 8003]:  # Skip check for known sandbox ports
+                try:
+                    port_check = await self.sandbox.process.exec(f"netstat -tlnp | grep :{port}", timeout=5)
+                    if port_check.exit_code != 0:
+                        return self.fail_response(f"No service is currently listening on port {port}. Please start a service on this port first.")
+                except Exception:
+                    # If we can't check, proceed anyway - the user might be starting a service
+                    pass
+
+            # Get the preview link for the specified port
             preview_link = await self.sandbox.get_preview_link(port)
-            original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-
-            # Build unique per-project proxy URL (backup logic)
-            proxy_url = self._build_proxy_url(self._get_proxy_base_url(), self.project_id, port)
-
+            
+            # Extract the actual URL from the preview link object
+            url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            
             return self.success_response({
-                "url": original_url,
-                "original_url": original_url,
-                "proxy_url": proxy_url,
+                "url": url,
                 "port": port,
-                "message": (
-                    f"Successfully exposed port {port}. "
-                    f"Project proxy: {proxy_url}  |  Direct preview: {original_url}"
-                )
+                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {url}"
             })
                 
         except ValueError:
             return self.fail_response(f"Invalid port number: {port}. Must be a valid integer between 1 and 65535.")
         except Exception as e:
             return self.fail_response(f"Error exposing port {port}: {str(e)}")
-
-    @classmethod
-    def _build_proxy_url(cls, base_url: str, project_id: str, port: int) -> str:
-        """Compose an absolute proxy URL for the exposed port."""
-        normalized_base = (base_url or "").strip() or cls._DEFAULT_PROXY_BASE_URL
-        # Ensure trailing slash so urljoin appends relative segments correctly
-        normalized_base = normalized_base.rstrip('/') + '/'
-        relative_path = f"api/preview/{project_id}/p/{port}/"
-        return urljoin(normalized_base, relative_path)
-
-    @classmethod
-    def _normalize_base_candidate(cls, raw_candidate: str | None) -> str | None:
-        if not raw_candidate:
-            return None
-
-        candidate = raw_candidate.strip()
-        if not candidate:
-            return None
-
-        if candidate.startswith("//"):
-            candidate = f"https:{candidate}"
-        elif "//" not in candidate:
-            candidate = f"https://{candidate.lstrip('/')}"
-
-        parsed = urlparse(candidate)
-        if not parsed.netloc:
-            return None
-
-        scheme = parsed.scheme or "https"
-        netloc = parsed.netloc
-
-        path = (parsed.path or "").rstrip('/')
-        if path.endswith('/api'):
-            path = path[:-4]
-        path = path.rstrip('/')
-
-        if path and not path.startswith('/'):
-            path = f"/{path}"
-
-        base_url = urlunparse((scheme, netloc, path, '', '', '')).rstrip('/')
-        return base_url or None
-
-    def _get_proxy_base_url(self) -> str:
-        candidates = [
-            config.DAYTONA_PREVIEW_PROXY_BASE_URL,
-            os.getenv("NEXT_PUBLIC_BACKEND_URL"),
-            os.getenv("BACKEND_URL"),
-            os.getenv("APP_BACKEND_URL"),
-            os.getenv("NEXT_PUBLIC_APP_URL"),
-            os.getenv("APP_URL"),
-        ]
-
-        for raw_candidate in candidates:
-            normalized = self._normalize_base_candidate(raw_candidate)
-            if normalized:
-                return normalized
-
-        return self._DEFAULT_PROXY_BASE_URL

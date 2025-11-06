@@ -133,7 +133,6 @@ export function PresentationViewer({
 
   // Get tool title for display
   const toolTitle = getToolTitle(name || 'presentation-viewer');
-  const projectId = (project as any)?.project_id || (project as any)?.id;
 
   // Helper function to sanitize filename (matching backend logic)
   const sanitizeFilename = (name: string): string => {
@@ -152,27 +151,16 @@ export function PresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
-      const metadataPath = `presentations/${sanitizedPresentationName}/metadata.json`;
-
-      const proxiedUrl = constructHtmlPreviewUrl(
+      const metadataUrl = constructHtmlPreviewUrl(
         project.sandbox.sandbox_url,
-        metadataPath,
-        { projectId }
+        `presentations/${sanitizedPresentationName}/metadata.json`
       );
 
-      const directUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        metadataPath,
-        { preferProxy: false }
-      );
-
-      const url = proxiedUrl ?? directUrl;
-
-      if (!url) {
+      if (!metadataUrl) {
         throw new Error('Unable to construct metadata URL');
       }
 
-      const urlWithCacheBust = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
 
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
 
@@ -440,9 +428,7 @@ export function PresentationViewer({
         );
       }
 
-      const proxiedSlideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path, { projectId });
-      const directSlideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path, { preferProxy: false });
-      const slideUrl = proxiedSlideUrl ?? directSlideUrl;
+      const slideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
 
       if (!slideUrl) {
         return (
@@ -499,7 +485,7 @@ export function PresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [project?.sandbox?.sandbox_url, projectId, refreshTimestamp]);
+  }, [project?.sandbox?.sandbox_url, refreshTimestamp]);
 
   // Render individual slide using the original approach
   const renderSlidePreview = useCallback((slide: SlideMetadata & { number: number }) => {
@@ -784,7 +770,6 @@ export function PresentationViewer({
         presentationName={extractedPresentationName}
         sandboxUrl={project?.sandbox?.sandbox_url}
         initialSlide={fullScreenInitialSlide || visibleSlide || currentSlideNumber || slides[0]?.number || 1}
-        projectId={projectId}
       />
     </Card>
   );

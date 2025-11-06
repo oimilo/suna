@@ -31,7 +31,7 @@ import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { CodeBlockCode } from '@/components/ui/code-block';
-import { constructHtmlPreviewUrl, maskPreviewUrl } from '@/lib/utils/url';
+import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import {
   Card,
   CardContent,
@@ -187,26 +187,11 @@ export function FileEditToolView({
   const hasHighlighting = hasLanguageHighlighting(language);
   const contentLines = splitContentIntoLines(updatedContent);
 
-  const projectId = (project as any)?.project_id || (project as any)?.id;
-
-  const sandboxHtmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url && processedFilePath
-    ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath, { preferProxy: false })
+  const htmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url && processedFilePath
+    ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath)
     : undefined;
 
-  const proxiedHtmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url && processedFilePath
-    ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath, { projectId })
-    : undefined;
-
-  const maskedHtmlPreviewUrl = !proxiedHtmlPreviewUrl && projectId
-    ? maskPreviewUrl(projectId, sandboxHtmlPreviewUrl)
-    : undefined;
-
-  const htmlPreviewUrl = proxiedHtmlPreviewUrl || maskedHtmlPreviewUrl || sandboxHtmlPreviewUrl;
-
-  const openInBrowserHref = htmlPreviewUrl || sandboxHtmlPreviewUrl;
-  const openInBrowserTitle = sandboxHtmlPreviewUrl && htmlPreviewUrl && sandboxHtmlPreviewUrl !== htmlPreviewUrl
-    ? `URL original da sandbox: ${sandboxHtmlPreviewUrl}`
-    : undefined;
+  const openInBrowserHref = htmlPreviewUrl;
 
   const FileIcon = getFileIcon(fileName);
 
@@ -344,8 +329,6 @@ export function FileEditToolView({
                     href={openInBrowserHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title={openInBrowserTitle}
-                    data-sandbox-url={sandboxHtmlPreviewUrl}
                   >
                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                     Open in Browser

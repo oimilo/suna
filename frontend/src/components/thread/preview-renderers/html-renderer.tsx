@@ -25,7 +25,6 @@ export function HtmlRenderer({
     project
 }: HtmlRendererProps) {
     const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
-    const projectId = (project as any)?.project_id || (project as any)?.id;
 
     // Create a blob URL for HTML content if needed
     const blobHtmlUrl = useMemo(() => {
@@ -37,28 +36,14 @@ export function HtmlRenderer({
     }, [content, project?.sandbox?.sandbox_url]);
 
     // Get full file path from the previewUrl
-    const filePath = useMemo((): string | undefined => {
+    const filePath = useMemo(() => {
         try {
-            if (!previewUrl) {
-                return undefined;
-            }
-
-            if (previewUrl.startsWith('/api/preview/')) {
-                return undefined;
-            }
-
-            try {
-                const parsed = new URL(previewUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-                if (parsed.pathname.startsWith('/api/preview/')) {
-                    return undefined;
-                }
-            } catch {
-                // ignore parsing error for relative URLs
-            }
-
             // If it's an API URL, extract the full path from the path parameter
             if (previewUrl.includes('/api/sandboxes/')) {
-                const url = new URL(previewUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+                const url = new URL(
+                    previewUrl,
+                    typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+                );
                 const path = url.searchParams.get('path');
                 if (path) {
                     // Remove /workspace/ prefix if present
@@ -70,49 +55,17 @@ export function HtmlRenderer({
             return previewUrl;
         } catch (e) {
             console.error('Error extracting file path:', e);
-            return undefined;
+            return '';
         }
     }, [previewUrl]);
 
-    const previewIsProxied = useMemo(() => {
-        if (!previewUrl) {
-            return false;
-        }
-
-        if (previewUrl.startsWith('/api/preview/')) {
-            return true;
-        }
-
-        try {
-            const parsed = new URL(previewUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-            return parsed.pathname.startsWith('/api/preview/');
-        } catch {
-            return false;
-        }
-    }, [previewUrl]);
-
+    // Construct HTML file preview URL using the full file path
     const htmlPreviewUrl = useMemo(() => {
-        if (previewIsProxied && previewUrl) {
-            return previewUrl;
-        }
-
         if (project?.sandbox?.sandbox_url && filePath) {
-            const proxied = constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath, {
-                projectId,
-            });
-            if (proxied) {
-                return proxied;
-            }
-
-            const direct = constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath, {
-                preferProxy: false,
-            });
-            if (direct) {
-                return direct;
-            }
+            return constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath);
         }
         return blobHtmlUrl || previewUrl;
-    }, [project?.sandbox?.sandbox_url, filePath, projectId, blobHtmlUrl, previewUrl, previewIsProxied]);
+    }, [project?.sandbox?.sandbox_url, filePath, blobHtmlUrl, previewUrl]);
 
     // Clean up blob URL on unmount
     useEffect(() => {
@@ -125,6 +78,39 @@ export function HtmlRenderer({
 
     return (
         <div className={cn('w-full h-full flex flex-col', className)}>
+            {/* Toolbar */}
+            <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/50">
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant={viewMode === 'preview' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setViewMode('preview')}
+                    >
+                        <Monitor className="h-4 w-4" />
+                        Preview
+                    </Button>
+                    <Button
+                        variant={viewMode === 'code' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setViewMode('code')}
+                    >
+                        <Code className="h-4 w-4" />
+                        Code
+                    </Button>
+                </div>
+
+                {htmlPreviewUrl && (
+                    <Button variant="outline" size="sm" className="gap-2" asChild>
+                        <a href={htmlPreviewUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                            Open in new tab
+                        </a>
+                    </Button>
+                )}
+            </div>
+
             {/* Content area */}
             <div className="flex-1 min-h-0 relative">
                 {viewMode === 'preview' ? (
@@ -147,4 +133,4 @@ export function HtmlRenderer({
             </div>
         </div>
     );
-} 
+}

@@ -46,7 +46,6 @@ interface FullScreenPresentationViewerProps {
   presentationName?: string;
   sandboxUrl?: string;
   initialSlide?: number;
-  projectId?: string;
 }
 
 export function FullScreenPresentationViewer({
@@ -55,7 +54,6 @@ export function FullScreenPresentationViewer({
   presentationName,
   sandboxUrl,
   initialSlide = 1,
-  projectId,
 }: FullScreenPresentationViewerProps) {
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
@@ -95,27 +93,16 @@ export function FullScreenPresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(presentationName);
       
-      const metadataPath = `presentations/${sanitizedPresentationName}/metadata.json`;
-
-      const proxiedUrl = constructHtmlPreviewUrl(
+      const metadataUrl = constructHtmlPreviewUrl(
         sandboxUrl,
-        metadataPath,
-        { projectId }
+        `presentations/${sanitizedPresentationName}/metadata.json`
       );
 
-      const directUrl = constructHtmlPreviewUrl(
-        sandboxUrl,
-        metadataPath,
-        { preferProxy: false }
-      );
-
-      const url = proxiedUrl ?? directUrl;
-
-      if (!url) {
+      if (!metadataUrl) {
         throw new Error('Unable to construct metadata URL');
       }
 
-      const urlWithCacheBust = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
       const response = await fetch(urlWithCacheBust, {
@@ -172,7 +159,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [presentationName, sandboxUrl, projectId, backgroundRetryInterval]);
+  }, [presentationName, sandboxUrl, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
@@ -363,9 +350,7 @@ export function FullScreenPresentationViewer({
         );
       }
 
-      const proxiedSlideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path, { projectId });
-      const directSlideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path, { preferProxy: false });
-      const slideUrl = proxiedSlideUrl ?? directSlideUrl;
+      const slideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path);
 
       if (!slideUrl) {
         return (
@@ -426,7 +411,7 @@ export function FullScreenPresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [sandboxUrl, projectId, refreshTimestamp, showEditor]);
+  }, [sandboxUrl, refreshTimestamp, showEditor]);
 
   // Render slide iframe with proper scaling
   const renderSlide = useMemo(() => {

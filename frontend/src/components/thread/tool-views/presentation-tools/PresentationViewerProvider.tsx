@@ -8,7 +8,6 @@ interface PresentationViewerContextType {
     sandboxUrl: string,
     options?: {
       initialSlide?: number;
-      projectId?: string;
     }
   ) => void;
   closePresentation: () => void;
@@ -28,7 +27,6 @@ export function PresentationViewerProvider({ children }: { children: React.React
         presentationName={viewerState.presentationName}
         sandboxUrl={viewerState.sandboxUrl}
         initialSlide={viewerState.initialSlide}
-        projectId={viewerState.projectId}
       />
     </PresentationViewerContext.Provider>
   );
