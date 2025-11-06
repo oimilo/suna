@@ -7,10 +7,7 @@ import requests
 BASE_URL = "https://prophet.build"
 
 endpoints = [
-    "/api/preview/test/test.html",
-    "/api/agents/preview/test/test.html", 
-    "/preview/test/test.html",
-    "/api/thread/test/agent/start",  # Sabemos que este existe
+    "/api/thread/test/agent/start",
 ]
 
 print("🔍 Testando endpoints no Prophet:\n")
@@ -37,5 +34,3 @@ for endpoint in endpoints:
         
     except Exception as e:
         print(f"{endpoint:40} → ❌ Erro: {str(e)[:30]}")
-
-print("\n📝 Nota: O endpoint /api/preview/ deveria retornar 401 (auth required)")

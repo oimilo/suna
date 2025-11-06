@@ -188,7 +188,6 @@ FIRECRAWL_URL=https://api.firecrawl.dev
 DAYTONA_API_KEY=your-daytona-key
 DAYTONA_SERVER_URL=https://app.daytona.io/api
 # Opcionalmente, defina um endpoint específico para operações de preview via proxy
-# DAYTONA_PREVIEW_PROXY_BASE_URL=https://seu-proxy.exemplo
 DAYTONA_TARGET=us
 
 # Automation (Supabase Cron)

@@ -93,6 +93,12 @@ export function useAgentStream(
   const [toolCall, setToolCall] = useState<ParsedContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const statusRef = useRef(status);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const streamCleanupRef = useRef<(() => void) | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const currentRunIdRef = useRef<string | null>(null); // Ref to track the run ID being processed
@@ -167,6 +173,17 @@ export function useAgentStream(
       console.log(
         `[useAgentStream] Finalizing stream for ${runId} on thread ${currentThreadId} with status: ${finalStatus}`,
       );
+
+      if (
+        runId &&
+        currentRunIdRef.current &&
+        currentRunIdRef.current !== runId
+      ) {
+        console.log(
+          `[useAgentStream] Ignoring finalization for old run ID ${runId}, current is ${currentRunIdRef.current}`,
+        );
+        return;
+      }
 
       if (streamCleanupRef.current) {
         streamCleanupRef.current();
@@ -463,46 +480,55 @@ export function useAgentStream(
         errorMessage = 'Stream connection error';
       }
 
-      console.error('[useAgentStream] Streaming error:', errorMessage, err);
-      
-      // Check if this is a TransferEncoding error from OpenRouter
-      const isTransferEncodingError = 
-        errorMessage.includes('TransferEncodingError') ||
-        errorMessage.includes('Not enough data to satisfy transfer length') ||
-        errorMessage.includes('APIConnectionError') ||
-        errorMessage.includes('OpenrouterException');
-      
-      if (isTransferEncodingError) {
-        console.warn('[useAgentStream] Transfer encoding error detected, attempting to recover');
-        // Don't show error immediately, wait to see if agent is still running
-        setTimeout(() => {
-          const runId = currentRunIdRef.current;
-          if (runId) {
-            getAgentStatus(runId)
-              .then((agentStatus) => {
-                if (agentStatus.status === 'running') {
-                  console.log('[useAgentStream] Agent still running after transfer error, continuing...');
-                  // Don't finalize, let it continue
-                } else {
-                  console.log('[useAgentStream] Agent not running after transfer error, finalizing');
-                  setError('Connection interrupted while processing response');
-                  finalizeStream(mapAgentStatus(agentStatus.status) || 'error', runId);
-                }
-              })
-              .catch((statusErr) => {
-                console.error('[useAgentStream] Error checking status after transfer error:', statusErr);
-                setError('Connection lost to agent');
-                finalizeStream('error', runId);
-              });
-          }
-        }, 2000); // Wait 2 seconds before checking
-        return;
+      const lower = errorMessage.toLowerCase();
+      const isExpectedError =
+        lower.includes('not running') ||
+        lower.includes('not found') ||
+        lower.includes('does not exist') ||
+        lower.includes('404');
+
+      if (isExpectedError) {
+        console.info('[useAgentStream] Streaming skipped/ended:', errorMessage);
+      } else {
+        console.error('[useAgentStream] Streaming error:', errorMessage, err);
+
+        // Check if this is a TransferEncoding error from OpenRouter
+        const isTransferEncodingError =
+          errorMessage.includes('TransferEncodingError') ||
+          errorMessage.includes('Not enough data to satisfy transfer length') ||
+          errorMessage.includes('APIConnectionError') ||
+          errorMessage.includes('OpenrouterException');
+
+        if (isTransferEncodingError) {
+          console.warn('[useAgentStream] Transfer encoding error detected, attempting to recover');
+          // Don't show error immediately, wait to see if agent is still running
+          setTimeout(() => {
+            const runId = currentRunIdRef.current;
+            if (runId) {
+              getAgentStatus(runId)
+                .then((agentStatus) => {
+                  if (agentStatus.status === 'running') {
+                    console.log('[useAgentStream] Agent still running after transfer error, continuing...');
+                    // Don't finalize, let it continue
+                  } else {
+                    console.log('[useAgentStream] Agent not running after transfer error, finalizing');
+                    setError('Connection interrupted while processing response');
+                    finalizeStream(mapAgentStatus(agentStatus.status) || 'error', runId);
+                  }
+                })
+                .catch((statusErr) => {
+                  console.error('[useAgentStream] Error checking status after transfer error:', statusErr);
+                  setError('Connection lost to agent');
+                  finalizeStream('error', runId);
+                });
+            }
+          }, 2000); // Wait 2 seconds before checking
+          return;
+        }
+
+        setError(errorMessage);
+        toast.error(errorMessage, { duration: 15000 });
       }
-      
-      setError(errorMessage);
-      
-      // Show error toast with longer duration
-      toast.error(errorMessage, { duration: 15000 });
 
       const runId = currentRunIdRef.current;
       if (!runId) {
@@ -637,47 +663,56 @@ export function useAgentStream(
         `[useAgentStream] Received request to start streaming for ${runId}`,
       );
 
-      // Clean up any previous stream and health check
-      if (streamCleanupRef.current) {
-        console.log(
-          '[useAgentStream] Cleaning up existing stream before starting new one.',
-        );
-        streamCleanupRef.current();
-        streamCleanupRef.current = null;
-      }
-      
-      // Clear health check timer
-      if (streamHealthCheckRef.current) {
-        clearInterval(streamHealthCheckRef.current);
-        streamHealthCheckRef.current = null;
-      }
-
-      // Reset state before starting
-      setTextContent([]);
-      setToolCall(null);
-      setError(null);
-      updateStatus('connecting');
-      setAgentRunId(runId);
-      currentRunIdRef.current = runId; // Set the ref immediately
+      const previousCleanup = streamCleanupRef.current;
+      const previousRunId = currentRunIdRef.current;
 
       try {
-        // *** Crucial check: Verify agent is running BEFORE connecting ***
+        console.log(`[useAgentStream] Checking status for run ID: ${runId}`);
         const agentStatus = await getAgentStatus(runId);
-        if (!isMountedRef.current) return; // Check mount status after async call
+        if (!isMountedRef.current) return;
 
         if (agentStatus.status !== 'running') {
-          console.warn(
-            `[useAgentStream] Agent run ${runId} is not in running state (status: ${agentStatus.status}). Cannot start stream.`,
+          console.info(
+            `[useAgentStream] Stream not started for ${runId}: Agent run ${runId} is not running (status: ${agentStatus.status})`,
           );
-          setError(`Agent run is not running (status: ${agentStatus.status})`);
-          finalizeStream(
-            mapAgentStatus(agentStatus.status) || 'agent_not_running',
-            runId,
-          );
+
+          const finalStatus =
+            agentStatus.status === 'completed' ||
+            agentStatus.status === 'stopped'
+              ? mapAgentStatus(agentStatus.status)
+              : 'agent_not_running';
+
+          if (!previousRunId || previousRunId === runId) {
+            finalizeStream(finalStatus, runId);
+          } else {
+            console.log(
+              `[useAgentStream] Keeping previous stream ${previousRunId} active since new stream ${runId} can't start`,
+            );
+          }
           return;
         }
 
-        // Agent is running, proceed to create the stream
+        if (previousCleanup && previousRunId !== runId) {
+          console.log(
+            `[useAgentStream] Cleaning up previous stream ${previousRunId} to start new stream ${runId}`,
+          );
+          previousCleanup();
+          streamCleanupRef.current = null;
+        }
+
+        if (streamHealthCheckRef.current) {
+          clearInterval(streamHealthCheckRef.current);
+          streamHealthCheckRef.current = null;
+        }
+
+        setTextContent([]);
+        setToolCall(null);
+        setError(null);
+        updateStatus('connecting');
+        setAgentRunId(runId);
+        currentRunIdRef.current = runId;
+        streamRecoveryAttemptsRef.current = 0;
+
         console.log(
           `[useAgentStream] Agent run ${runId} confirmed running. Setting up EventSource.`,
         );
@@ -687,77 +722,126 @@ export function useAgentStream(
           onClose: handleStreamClose,
         });
         streamCleanupRef.current = cleanup;
-        
-        // Initialize last message time
+
         lastMessageTimeRef.current = Date.now();
-        
-        // Start health check monitoring
-        if (streamHealthCheckRef.current) {
-          clearInterval(streamHealthCheckRef.current);
-        }
-        
+
         streamHealthCheckRef.current = setInterval(async () => {
           const timeSinceLastMessage = Date.now() - lastMessageTimeRef.current;
-          
-          // If no message received for 15 seconds, check agent status
+
           if (timeSinceLastMessage > 15000) {
-            console.log(`[useAgentStream] No messages for ${timeSinceLastMessage}ms, checking agent status...`);
-            
+            console.log(
+              `[useAgentStream] No messages for ${timeSinceLastMessage}ms, checking agent status...`,
+            );
+
             try {
-              const agentStatus = await getAgentStatus(runId);
-              
-              if (agentStatus.status === 'running') {
-                // Agent is still running but stream is stuck
+              const statusCheck = await getAgentStatus(runId);
+
+              if (statusCheck.status === 'running') {
                 if (streamRecoveryAttemptsRef.current < 3) {
                   streamRecoveryAttemptsRef.current++;
-                  console.log(`[useAgentStream] Agent still running but stream stuck. Recovery attempt ${streamRecoveryAttemptsRef.current}/3`);
-                  
-                  // Try to recover by recreating the stream
+                  console.log(
+                    `[useAgentStream] Agent still running but stream stuck. Recovery attempt ${streamRecoveryAttemptsRef.current}/3`,
+                  );
+
                   if (streamCleanupRef.current) {
                     streamCleanupRef.current();
                   }
-                  
+
                   const newCleanup = streamAgent(runId, {
                     onMessage: handleStreamMessage,
                     onError: handleStreamError,
                     onClose: handleStreamClose,
                   });
                   streamCleanupRef.current = newCleanup;
-                  lastMessageTimeRef.current = Date.now(); // Reset timer
+                  lastMessageTimeRef.current = Date.now();
                 } else {
-                  console.error(`[useAgentStream] Failed to recover stream after 3 attempts`);
-                  clearInterval(streamHealthCheckRef.current!);
-                  streamHealthCheckRef.current = null;
+                  console.error(
+                    `[useAgentStream] Failed to recover stream after 3 attempts`,
+                  );
+                  if (streamHealthCheckRef.current) {
+                    clearInterval(streamHealthCheckRef.current);
+                    streamHealthCheckRef.current = null;
+                  }
                 }
               } else {
-                // Agent is no longer running, finalize
-                console.log(`[useAgentStream] Agent no longer running (status: ${agentStatus.status}), finalizing stream`);
-                clearInterval(streamHealthCheckRef.current!);
-                streamHealthCheckRef.current = null;
-                finalizeStream(mapAgentStatus(agentStatus.status) || 'completed', runId);
+                console.log(
+                  `[useAgentStream] Agent no longer running (status: ${statusCheck.status}), finalizing stream`,
+                );
+                if (streamHealthCheckRef.current) {
+                  clearInterval(streamHealthCheckRef.current);
+                  streamHealthCheckRef.current = null;
+                }
+                finalizeStream(
+                  mapAgentStatus(statusCheck.status) || 'completed',
+                  runId,
+                );
               }
-            } catch (err) {
-              console.error(`[useAgentStream] Error checking agent status during health check:`, err);
+            } catch (statusErr) {
+              console.error(
+                `[useAgentStream] Error checking agent status during health check:`,
+                statusErr,
+              );
             }
           }
-        }, 5000); // Check every 5 seconds
-        
-        // Status will be updated to 'streaming' by the first message received in handleStreamMessage
+        }, 5000);
+
+        setTimeout(async () => {
+          if (!isMountedRef.current) return;
+          if (currentRunIdRef.current !== runId) return;
+          if (statusRef.current === 'streaming') return;
+          try {
+            const latest = await getAgentStatus(runId);
+            if (!isMountedRef.current) return;
+            if (currentRunIdRef.current !== runId) return;
+            if (latest.status !== 'running') {
+              finalizeStream(
+                mapAgentStatus(latest.status) || 'agent_not_running',
+                runId,
+              );
+            }
+          } catch {
+            // ignore
+          }
+        }, 1500);
       } catch (err) {
-        if (!isMountedRef.current) return; // Check mount status after async call
+        if (!isMountedRef.current) return;
 
         const errorMessage = err instanceof Error ? err.message : String(err);
+        const lower = errorMessage.toLowerCase();
+        const isExpected =
+          lower.includes('not found') ||
+          lower.includes('404') ||
+          lower.includes('does not exist') ||
+          lower.includes('not running');
+
+        if (isExpected) {
+          console.info(
+            `[useAgentStream] Stream not started for ${runId}: ${errorMessage}`,
+          );
+          if (!previousRunId || previousRunId === runId) {
+            finalizeStream('agent_not_running', runId);
+          } else {
+            console.log(
+              `[useAgentStream] Keeping previous stream ${previousRunId} active since new stream ${runId} failed to start`,
+            );
+          }
+          return;
+        }
+
         console.error(
           `[useAgentStream] Error initiating stream for ${runId}: ${errorMessage}`,
         );
         setError(errorMessage);
 
-        const isNotFoundError =
-          errorMessage.includes('not found') ||
-          errorMessage.includes('404') ||
-          errorMessage.includes('does not exist');
-
-        finalizeStream(isNotFoundError ? 'agent_not_running' : 'error', runId);
+        if (!previousRunId || previousRunId === runId) {
+          finalizeStream('error', runId);
+        } else {
+          console.log(
+            `[useAgentStream] Keeping previous stream ${previousRunId} active despite error starting new stream ${runId}`,
+          );
+          currentRunIdRef.current = previousRunId;
+          setAgentRunId(previousRunId);
+        }
       }
     },
     [
@@ -767,7 +851,7 @@ export function useAgentStream(
       handleStreamError,
       handleStreamClose,
     ],
-  ); // Add dependencies
+  );
 
   const stopStreaming = useCallback(async () => {
     if (!isMountedRef.current || !agentRunId) return;

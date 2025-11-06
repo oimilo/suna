@@ -5,12 +5,10 @@ interface PresentationViewerState {
   presentationName?: string;
   sandboxUrl?: string;
   initialSlide?: number;
-  projectId?: string;
 }
 
 interface OpenPresentationOptions {
   initialSlide?: number;
-  projectId?: string;
 }
 
 export function usePresentationViewer() {
@@ -28,7 +26,6 @@ export function usePresentationViewer() {
       presentationName,
       sandboxUrl,
       initialSlide: options.initialSlide ?? 1,
-      projectId: options.projectId,
     });
   };
 

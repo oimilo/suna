@@ -23,7 +23,7 @@ class EmailService:
 
     def __init__(self) -> None:
         self.api_token = os.getenv("MAILTRAP_API_TOKEN")
-        self.sender_email = os.getenv("MAILTRAP_SENDER_EMAIL", "dom@milo.com")
+        self.sender_email = os.getenv("MAILTRAP_SENDER_EMAIL", "start@prophet.build")
         self.sender_name = os.getenv("MAILTRAP_SENDER_NAME", "Prophet Team")
 
         self.app_name = os.getenv("MAILTRAP_APP_NAME", DEFAULT_APP_NAME)

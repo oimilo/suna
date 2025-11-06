@@ -535,8 +535,6 @@ export function GetProjectStructureView({
     });
   }, []);
 
-  const projectId = (project as any)?.project_id || (project as any)?.id;
-
   const handleFileClick = useCallback(async (filePath: string) => {
     if (!project?.sandbox?.sandbox_url || !projectData) return;
     
@@ -546,18 +544,10 @@ export function GetProjectStructureView({
 
     try {
       const targetPath = `${projectData.projectName}/${filePath}`;
-      const proxied = constructHtmlPreviewUrl(
+      const fileUrl = constructHtmlPreviewUrl(
         project.sandbox.sandbox_url,
         targetPath,
-        { projectId }
       );
-      const direct = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        targetPath,
-        { preferProxy: false }
-      );
-
-      const fileUrl = proxied || direct;
 
       if (fileUrl) {
         const response = await fetch(fileUrl);
@@ -576,18 +566,13 @@ export function GetProjectStructureView({
     } finally {
       setLoadingFile(false);
     }
-  }, [project, projectData, projectId]);
+  }, [project, projectData]);
 
   const isHtmlFile = selectedFile?.endsWith('.html');
   const previewUrl = isHtmlFile && project?.sandbox?.sandbox_url && projectData && selectedFile
     ? constructHtmlPreviewUrl(
         project.sandbox.sandbox_url,
         `${projectData.projectName}/${selectedFile}`,
-        { projectId }
-      ) || constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        `${projectData.projectName}/${selectedFile}`,
-        { preferProxy: false }
       )
     : undefined;
 
