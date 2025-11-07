@@ -1,334 +1,242 @@
-import React from 'react';
-import { useQuery, useQueries } from '@tanstack/react-query';
+import React from 'react'
+import { useQuery, useQueries } from '@tanstack/react-query'
+import posthog from 'posthog-js'
+import { agentPlaygroundEnabled, marketplaceEnabled } from '@/flags'
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
-const BASE_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
-
-export interface FeatureFlag {
-  flag_name: string;
-  enabled: boolean;
-  details?: {
-    description?: string;
-    updated_at?: string;
-  } | null;
+const DEFAULT_FLAGS: Record<string, boolean> = {
+  custom_agents: agentPlaygroundEnabled,
+  agent_marketplace: marketplaceEnabled,
 }
 
-export interface FeatureFlagsResponse {
-  flags: Record<string, boolean>;
+const CACHE_DURATION = 5 * 60 * 1000
+const flagCache = new Map<string, { value: boolean; timestamp: number }>()
+let globalFlagsCache: { flags: Record<string, boolean>; timestamp: number } | null = null
+let posthogInitialized = false
+
+const isBrowser = typeof window !== 'undefined'
+
+function ensurePosthogInitialized(): boolean {
+  if (!isBrowser) {
+    return false
+  }
+
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
+  if (!key) {
+    return false
+  }
+
+  if (posthogInitialized) {
+    return true
+  }
+
+  try {
+    posthog.init(key, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
+      capture_pageview: false,
+      capture_pageleave: false,
+    })
+    posthogInitialized = true
+    return true
+  } catch (error) {
+    console.warn('[FeatureFlags] Failed to initialise PostHog:', error)
+    return false
+  }
 }
 
-const flagCache = new Map<string, { value: boolean; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000;
+function getFallbackValue(flagName: string): boolean {
+  if (flagName in DEFAULT_FLAGS) {
+    return DEFAULT_FLAGS[flagName]
+  }
+  return false
+}
 
-let globalFlagsCache: { flags: Record<string, boolean>; timestamp: number } | null = null;
+async function fetchFlag(flagName: string): Promise<boolean> {
+  const fallback = getFallbackValue(flagName)
+
+  if (!ensurePosthogInitialized()) {
+    return fallback
+  }
+
+  const readFlag = () => {
+    const result = posthog.isFeatureEnabled(flagName, { send_event: false })
+    if (typeof result === 'boolean') {
+      return result
+    }
+    return undefined
+  }
+
+  const immediate = readFlag()
+  if (typeof immediate === 'boolean') {
+    return immediate
+  }
+
+  await new Promise<void>((resolve) => {
+    let resolved = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        resolve()
+      }
+    }, 500)
+
+    posthog.reloadFeatureFlags()
+    posthog.onFeatureFlags(() => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        resolve()
+      }
+    })
+  })
+
+  const afterReload = readFlag()
+  if (typeof afterReload === 'boolean') {
+    return afterReload
+  }
+
+  return fallback
+}
 
 export class FeatureFlagManager {
-  private static instance: FeatureFlagManager;
-  
+  private static instance: FeatureFlagManager
+
   private constructor() {}
-  
+
   static getInstance(): FeatureFlagManager {
     if (!FeatureFlagManager.instance) {
-      FeatureFlagManager.instance = new FeatureFlagManager();
+      FeatureFlagManager.instance = new FeatureFlagManager()
     }
-    return FeatureFlagManager.instance;
+    return FeatureFlagManager.instance
   }
 
   async isEnabled(flagName: string): Promise<boolean> {
-    try {
-      const cached = flagCache.get(flagName);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.value;
-      }
-      const response = await fetch(`${BASE_URL}/feature-flags/${flagName}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        console.warn(`Failed to fetch feature flag ${flagName}: ${response.status}`);
-        return false;
-      }
-      
-      const data: FeatureFlag = await response.json();
-      
-      flagCache.set(flagName, {
-        value: data.enabled,
-        timestamp: Date.now(),
-      });
-      
-      return data.enabled;
-    } catch (error) {
-      console.error(`Error checking feature flag ${flagName}:`, error);
-      return false;
+    const cached = flagCache.get(flagName)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.value
     }
+
+    const value = await fetchFlag(flagName)
+    flagCache.set(flagName, { value, timestamp: Date.now() })
+    return value
   }
-  
-  async getFlagDetails(flagName: string): Promise<FeatureFlag | null> {
-    try {
-      const response = await fetch(`${BASE_URL}/feature-flags/${flagName}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch feature flag details for ${flagName}: ${response.status}`);
-        return null;
-      }
-      
-      const data: FeatureFlag = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Error fetching feature flag details for ${flagName}:`, error);
-      return null;
-    }
+
+  async getFlagDetails(flagName: string): Promise<{ flag_name: string; enabled: boolean }> {
+    const enabled = await this.isEnabled(flagName)
+    return { flag_name: flagName, enabled }
   }
-  
+
   async getAllFlags(): Promise<Record<string, boolean>> {
-    try {
-      if (globalFlagsCache && Date.now() - globalFlagsCache.timestamp < CACHE_DURATION) {
-        return globalFlagsCache.flags;
-      }
-      
-      const response = await fetch(`${BASE_URL}/feature-flags`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch all feature flags: ${response.status}`);
-        return {};
-      }
-      
-      const data: FeatureFlagsResponse = await response.json();
-      globalFlagsCache = {
-        flags: data.flags,
-        timestamp: Date.now(),
-      };
-      
-      Object.entries(data.flags).forEach(([flagName, enabled]) => {
-        flagCache.set(flagName, {
-          value: enabled,
-          timestamp: Date.now(),
-        });
-      });
-      
-      return data.flags;
-    } catch (error) {
-      console.error('Error fetching all feature flags:', error);
-      return {};
+    if (globalFlagsCache && Date.now() - globalFlagsCache.timestamp < CACHE_DURATION) {
+      return globalFlagsCache.flags
     }
+
+    const entries = await Promise.all(
+      Object.keys(DEFAULT_FLAGS).map(async (flagName) => {
+        const enabled = await this.isEnabled(flagName)
+        return [flagName, enabled] as const
+      })
+    )
+
+    const flags = Object.fromEntries(entries)
+    globalFlagsCache = { flags, timestamp: Date.now() }
+    return flags
   }
 
   clearCache(): void {
-    flagCache.clear();
-    globalFlagsCache = null;
+    flagCache.clear()
+    globalFlagsCache = null
   }
 
   async preloadFlags(flagNames: string[]): Promise<void> {
-    try {
-      const promises = flagNames.map(flagName => this.isEnabled(flagName));
-      await Promise.all(promises);
-    } catch (error) {
-      console.error('Error preloading feature flags:', error);
-    }
+    await Promise.all(flagNames.map((flag) => this.isEnabled(flag)))
   }
 }
 
-const featureFlagManager = FeatureFlagManager.getInstance();
+const featureFlagManager = FeatureFlagManager.getInstance()
 
 export const isEnabled = (flagName: string): Promise<boolean> => {
-  return featureFlagManager.isEnabled(flagName);
-};
+  return featureFlagManager.isEnabled(flagName)
+}
 
-export const isFlagEnabled = isEnabled;
-
-export const getFlagDetails = (flagName: string): Promise<FeatureFlag | null> => {
-  return featureFlagManager.getFlagDetails(flagName);
-};
+export const getFlagDetails = (flagName: string): Promise<{ flag_name: string; enabled: boolean }> => {
+  return featureFlagManager.getFlagDetails(flagName)
+}
 
 export const getAllFlags = (): Promise<Record<string, boolean>> => {
-  return featureFlagManager.getAllFlags();
-};
+  return featureFlagManager.getAllFlags()
+}
 
 export const clearFlagCache = (): void => {
-  featureFlagManager.clearCache();
-};
+  featureFlagManager.clearCache()
+}
 
 export const preloadFlags = (flagNames: string[]): Promise<void> => {
-  return featureFlagManager.preloadFlags(flagNames);
-};
+  return featureFlagManager.preloadFlags(flagNames)
+}
 
-// React Query key factories
 export const featureFlagKeys = {
   all: ['feature-flags'] as const,
   flag: (flagName: string) => [...featureFlagKeys.all, 'flag', flagName] as const,
-  flagDetails: (flagName: string) => [...featureFlagKeys.all, 'details', flagName] as const,
-  allFlags: () => [...featureFlagKeys.all, 'allFlags'] as const,
-};
+  allFlags: () => [...featureFlagKeys.all, 'all'] as const,
+}
 
-// Query functions
-const fetchFeatureFlag = async (flagName: string): Promise<boolean> => {
-  const response = await fetch(`${BASE_URL}/feature-flags/${flagName}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch feature flag ${flagName}: ${response.status}`);
-  }
-  
-  const data: FeatureFlag = await response.json();
-  return data.enabled;
-};
-
-const fetchFeatureFlagDetails = async (flagName: string): Promise<FeatureFlag> => {
-  const response = await fetch(`${BASE_URL}/feature-flags/${flagName}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch feature flag details for ${flagName}: ${response.status}`);
-  }
-  
-  const data: FeatureFlag = await response.json();
-  return data;
-};
-
-const fetchAllFeatureFlags = async (): Promise<Record<string, boolean>> => {
-  const response = await fetch(`${BASE_URL}/feature-flags`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch all feature flags: ${response.status}`);
-  }
-  
-  const data: FeatureFlagsResponse = await response.json();
-  return data.flags;
-};
-
-// React Query Hooks
 export const useFeatureFlag = (flagName: string, options?: {
-  enabled?: boolean;
-  staleTime?: number;
-  gcTime?: number;
-  refetchOnWindowFocus?: boolean;
+  enabled?: boolean
 }) => {
   const query = useQuery({
     queryKey: featureFlagKeys.flag(flagName),
-    queryFn: () => fetchFeatureFlag(flagName),
-    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
-    gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
-    enabled: options?.enabled ?? true,
-    retry: (failureCount, error) => {
-      // Don't retry on 4xx errors, but retry on network errors
-      if (error instanceof Error && error.message.includes('4')) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-    meta: {
-      errorMessage: `Failed to fetch feature flag: ${flagName}`,
-    },
-  });
+    queryFn: () => featureFlagManager.isEnabled(flagName),
+    staleTime: CACHE_DURATION,
+    enabled: options?.enabled !== false,
+  })
 
-  // Return backward-compatible interface
-  return {
-    enabled: query.data ?? false,
+  return React.useMemo(() => ({
+    enabled: query.data ?? getFallbackValue(flagName),
     loading: query.isLoading,
-    // Also expose React Query properties for advanced usage
-    ...query,
-  };
-};
-
-export const useFeatureFlagDetails = (flagName: string, options?: {
-  enabled?: boolean;
-  staleTime?: number;
-  gcTime?: number;
-}) => {
-  return useQuery({
-    queryKey: featureFlagKeys.flagDetails(flagName),
-    queryFn: () => fetchFeatureFlagDetails(flagName),
-    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
-    gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes
-    enabled: options?.enabled ?? true,
-    retry: (failureCount, error) => {
-      if (error instanceof Error && error.message.includes('4')) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-  });
-};
-
-export const useAllFeatureFlags = (options?: {
-  enabled?: boolean;
-  staleTime?: number;
-  gcTime?: number;
-}) => {
-  return useQuery({
-    queryKey: featureFlagKeys.allFlags(),
-    queryFn: fetchAllFeatureFlags,
-    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
-    gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes
-    enabled: options?.enabled ?? true,
-    retry: (failureCount, error) => {
-      if (error instanceof Error && error.message.includes('4')) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-  });
-};
+    error: (query.error as Error) ?? null,
+    refresh: query.refetch,
+  }), [flagName, query])
+}
 
 export const useFeatureFlags = (flagNames: string[], options?: {
-  enabled?: boolean;
-  staleTime?: number;
-  gcTime?: number;
+  enabled?: boolean
 }) => {
   const queries = useQueries({
     queries: flagNames.map((flagName) => ({
       queryKey: featureFlagKeys.flag(flagName),
-      queryFn: () => fetchFeatureFlag(flagName),
-      staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
-      gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes
-      enabled: options?.enabled ?? true,
-      retry: (failureCount: number, error: Error) => {
-        if (error.message.includes('4')) {
-          return false;
-        }
-        return failureCount < 3;
-      },
+      queryFn: () => featureFlagManager.isEnabled(flagName),
+      staleTime: CACHE_DURATION,
+      enabled: options?.enabled !== false,
     })),
-  });
+  })
 
-  // Transform the results into a more convenient format
-  const flags = React.useMemo(() => {
-    const result: Record<string, boolean> = {};
-    flagNames.forEach((flagName, index) => {
-      const query = queries[index];
-      result[flagName] = query.data ?? false;
-    });
-    return result;
-  }, [queries, flagNames]);
+  return React.useMemo(() => ({
+    flags: flagNames.reduce<Record<string, boolean>>((acc, flagName, index) => {
+      const query = queries[index]
+      acc[flagName] = query.data ?? getFallbackValue(flagName)
+      return acc
+    }, {}),
+    loading: queries.some((query) => query.isLoading),
+    errors: queries.map((query) => (query.error as Error) ?? null),
+    refresh: () => queries.forEach((query) => query.refetch()),
+  }), [flagNames, queries])
+}
 
-  const loading = queries.some(query => query.isLoading);
-  const error = queries.find(query => query.error)?.error?.message ?? null;
+export const useAllFeatureFlags = (options?: { enabled?: boolean }) => {
+  const query = useQuery({
+    queryKey: featureFlagKeys.allFlags(),
+    queryFn: () => featureFlagManager.getAllFlags(),
+    staleTime: CACHE_DURATION,
+    enabled: options?.enabled !== false,
+  })
 
-  return { flags, loading, error };
-};
+  return React.useMemo(() => ({
+    flags: query.data ?? { ...DEFAULT_FLAGS },
+    loading: query.isLoading,
+    error: (query.error as Error) ?? null,
+    refresh: query.refetch,
+  }), [query])
+}
+
+export const isFlagEnabled = isEnabled
