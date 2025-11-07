@@ -154,6 +154,11 @@ Example configuration:
 # Environment Mode
 ENV_MODE=local
 
+# Frontend configuration
+FRONTEND_URL=http://localhost:3000
+# Optional: allow extra domains (comma separated) to call the API
+CORS_EXTRA_ORIGINS=
+
 # DATABASE
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
