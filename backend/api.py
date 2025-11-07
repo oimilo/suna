@@ -16,6 +16,7 @@ from core.utils.logger import logger, structlog
 import time
 from collections import OrderedDict
 import os
+from urllib.parse import urlparse
 
 from pydantic import BaseModel
 import uuid
@@ -132,26 +133,70 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
+def _build_origin(scheme: str, host: str | None, port: int | None) -> str | None:
+    if not host:
+        return None
+    if port and not (scheme == "http" and port == 80 or scheme == "https" and port == 443):
+        return f"{scheme}://{host}:{port}"
+    return f"{scheme}://{host}"
+
+
+def _add_origin_variants(origins: set[str], origin: str | None):
+    if not origin:
+        return
+    normalized = origin.strip()
+    if not normalized:
+        return
+    normalized = normalized.rstrip("/")
+    origins.add(normalized)
+
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"}:
+        return
+
+    hostname = parsed.hostname or ""
+    port = parsed.port
+
+    if hostname.startswith("www."):
+        alt_host = hostname[4:]
+        alt_origin = _build_origin(parsed.scheme, alt_host, port)
+        if alt_origin:
+            origins.add(alt_origin.rstrip("/"))
+    elif "." in hostname:
+        alt_host = f"www.{hostname}"
+        alt_origin = _build_origin(parsed.scheme, alt_host, port)
+        if alt_origin:
+            origins.add(alt_origin.rstrip("/"))
+
+
 # Define allowed origins based on environment
-allowed_origins = ["https://www.kortix.com", "https://kortix.com", "https://www.suna.so", "https://suna.so"]
+allowed_origins_set: set[str] = set()
+_add_origin_variants(allowed_origins_set, "https://www.prophet.build")
+_add_origin_variants(allowed_origins_set, "https://prophet.build")
+
+_add_origin_variants(allowed_origins_set, config.FRONTEND_URL)
+
 allow_origin_regex = None
 
-# Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
+    _add_origin_variants(allowed_origins_set, "http://localhost:3000")
+    _add_origin_variants(allowed_origins_set, "http://127.0.0.1:3000")
 
-# Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.suna.so")
-    allowed_origins.append("http://localhost:3000")
-    # Allow Vercel preview deployments for both legacy and new project names
+    _add_origin_variants(allowed_origins_set, "https://staging.suna.so")
+    _add_origin_variants(allowed_origins_set, "http://localhost:3000")
     allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
 
-# Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
+    _add_origin_variants(allowed_origins_set, "http://localhost:3000")
+    _add_origin_variants(allowed_origins_set, "http://127.0.0.1:3000")
+
+extra_cors_origins = os.getenv("CORS_EXTRA_ORIGINS")
+if extra_cors_origins:
+    for origin_entry in extra_cors_origins.split(","):
+        _add_origin_variants(allowed_origins_set, origin_entry)
+
+allowed_origins = list(allowed_origins_set)
 
 app.add_middleware(
     CORSMiddleware,
