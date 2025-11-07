@@ -321,10 +321,12 @@ class Configuration:
     SUPABASE_JWT_SECRET: str
     
     # Redis configuration
+    REDIS_URL: Optional[str] = None
     REDIS_HOST: Optional[str] = "localhost"
     REDIS_PORT: Optional[int] = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
+    REDIS_USE_TLS: Optional[bool] = None
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
