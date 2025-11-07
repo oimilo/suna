@@ -164,6 +164,8 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_SSL=false
+# Optional: use a managed provider connection string (rediss://... enables TLS automatically)
+# REDIS_URL=
 
 # RABBITMQ
 RABBITMQ_HOST=rabbitmq
