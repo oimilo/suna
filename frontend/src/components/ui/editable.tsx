@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Textarea } from "./textarea";
 import { Input } from "./input";
-import { Button } from "../home/ui/button";
 import { cn, truncateString } from "@/lib/utils";
 import { Edit2 } from "lucide-react";
 
@@ -82,18 +81,18 @@ export const EditableText: React.FC<EditableTextProps> = ({
     return (
       <div 
         className={cn(
-          'group bg-transparent cursor-pointer inline-flex items-center gap-1',
+          'group bg-transparent cursor-pointer relative rounded px-2 py-1 -mx-2 -my-1 transition-colors',
           className
         )}
         onClick={() => setIsEditing(true)}
       >
-        <span className={cn(
+        <div className={cn(
           value ? '' : 'text-muted-foreground italic',
           multiline && minHeight ? `min-h-[${minHeight}]` : ''
         )} style={multiline && minHeight ? { minHeight } : {}}>
           {truncateString(value, 50) || placeholder}
-        </span>
-        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+        </div>
+        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-50 absolute top-1 right-1 transition-opacity" />
       </div>
     );
   };

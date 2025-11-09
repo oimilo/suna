@@ -11,10 +11,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useEditorStore } from '@/lib/stores/use-editor-store';
+import { useEditorStore } from '@/stores/use-editor-store';
 
 const fonts = [
-  { name: 'Padrão', value: '' },
+  { name: 'Default', value: '' },
   { name: 'Arial', value: 'Arial, sans-serif' },
   { name: 'Times New Roman', value: 'Times New Roman, serif' },
   { name: 'Georgia', value: 'Georgia, serif' },
@@ -32,7 +32,7 @@ export function FontSelector() {
   if (!editor) return null;
 
   const currentFont = editor.getAttributes('textStyle').fontFamily || '';
-  const currentFontName = fonts.find((font) => font.value === currentFont)?.name || 'Padrão';
+  const currentFontName = fonts.find(f => f.value === currentFont)?.name || 'Default';
 
   const setFont = (fontFamily: string) => {
     if (fontFamily === '') {
@@ -48,18 +48,18 @@ export function FontSelector() {
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 gap-1 rounded-sm px-1.5 transition-colors hover:bg-muted hover:text-foreground"
+          className="h-7 px-1.5 rounded-sm gap-1 transition-colors hover:bg-muted hover:text-foreground"
         >
           <Type className="h-3.5 w-3.5" />
           <span className="text-xs">{currentFontName}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        <DropdownMenuLabel>Fonte</DropdownMenuLabel>
+        <DropdownMenuLabel>Font Family</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {fonts.map((font) => (
           <DropdownMenuItem
-            key={font.value || 'default'}
+            key={font.value}
             onClick={() => setFont(font.value)}
             className={cn(
               'cursor-pointer',
@@ -73,5 +73,4 @@ export function FontSelector() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
+} 

@@ -2,22 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, PlugZap } from 'lucide-react';
-import { TriggerConfigDialog } from './trigger-config-dialog';
-import { TriggerProvider } from './types';
-import { Dialog } from '@/components/ui/dialog';
-import { 
-  useInstallOAuthIntegration, 
+import { Loader2, AlertCircle, Clock, PlugZap } from 'lucide-react';
+import { SimplifiedScheduleConfig } from './providers/simplified-schedule-config';
+import { TriggerProvider, ScheduleTriggerConfig } from './types';
+
+import {
+  useInstallOAuthIntegration,
   useUninstallOAuthIntegration,
-  useOAuthCallbackHandler 
-} from '@/hooks/react-query/triggers/use-oauth-integrations';
-import { 
-  useAgentTriggers, 
-  useCreateTrigger, 
-  useDeleteTrigger 
-} from '@/hooks/react-query/triggers';
+  useOAuthCallbackHandler
+} from '@/hooks/triggers/use-oauth-integrations';
+import {
+  useAgentTriggers,
+  useCreateTrigger,
+  useDeleteTrigger
+} from '@/hooks/triggers';
 import { toast } from 'sonner';
 import { EventBasedTriggerDialog } from './event-based-trigger-dialog';
+import { config, EnvMode } from '@/lib/config';
 
 interface OneClickIntegrationsProps {
   agentId: string;
@@ -25,13 +26,8 @@ interface OneClickIntegrationsProps {
 
 const OAUTH_PROVIDERS = {
   schedule: {
-    name: 'Adicionar Gatilho',
-    icon: <Plus className="h-3.5 w-3.5" />,
-    isOAuth: false
-  },
-  event: {
-    name: 'Gatilho de Evento',
-    icon: <PlugZap className="h-3.5 w-3.5" />,
+    name: 'Create Schedule Trigger',
+    icon: <Clock className="h-4 w-4" color="#10b981" />,
     isOAuth: false
   }
 } as const;
@@ -43,6 +39,19 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 }) => {
   const [configuringSchedule, setConfiguringSchedule] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
+  
+  // Schedule trigger form state
+  const [scheduleConfig, setScheduleConfig] = useState<ScheduleTriggerConfig>({
+    cron_expression: '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  const [scheduleName, setScheduleName] = useState('');
+  const [scheduleDescription, setScheduleDescription] = useState('');
+  const [scheduleIsActive, setScheduleIsActive] = useState(true);
+
+  const handleScheduleConfigChange = (config: ScheduleTriggerConfig) => {
+    setScheduleConfig(config);
+  };
   const { data: triggers = [] } = useAgentTriggers(agentId);
   const installMutation = useInstallOAuthIntegration();
   const uninstallMutation = useUninstallOAuthIntegration();
@@ -52,18 +61,22 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 
   useEffect(() => {
     handleCallback();
-  }, [handleCallback]);
+  }, []);
 
   const handleInstall = async (provider: ProviderKey) => {
     if (provider === 'schedule') {
+      // Reset form state when opening
+      setScheduleConfig({
+        cron_expression: '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
+      setScheduleName('');
+      setScheduleDescription('');
+      setScheduleIsActive(true);
       setConfiguringSchedule(true);
       return;
     }
-    if (provider === 'event') {
-      setShowEventDialog(true);
-      return;
-    }
-    
+
     try {
       await installMutation.mutateAsync({
         agent_id: agentId,
@@ -81,17 +94,14 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
           triggerId,
           agentId
         });
-        toast.success('Gatilho de agendamento removido com sucesso');
+        toast.success('Schedule trigger removed successfully');
       } catch (error) {
-        toast.error('Falha ao remover gatilho de agendamento');
+        toast.error('Failed to remove schedule trigger');
         console.error('Error removing schedule trigger:', error);
       }
       return;
     }
-    if (provider === 'event') {
-      return;
-    }
-    
+
     try {
       await uninstallMutation.mutateAsync(triggerId!);
     } catch (error) {
@@ -99,19 +109,24 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
     }
   };
 
-  const handleScheduleSave = async (config: any) => {
+  const handleScheduleSave = async (data: {
+    name: string;
+    description: string;
+    config: any;
+    is_active: boolean;
+  }) => {
     try {
       await createTriggerMutation.mutateAsync({
         agentId,
         provider_id: 'schedule',
-        name: config.name || 'Gatilho Agendado',
-        description: config.description || 'Gatilho agendado automaticamente',
-        config: config.config,
+        name: data.name || 'Scheduled Trigger',
+        description: data.description || 'Automatically scheduled trigger',
+        config: { ...data.config, is_active: data.is_active },
       });
-      toast.success('Gatilho de agendamento criado com sucesso');
+      toast.success('Schedule trigger created successfully');
       setConfiguringSchedule(false);
     } catch (error: any) {
-      toast.error(error.message || 'Falha ao criar gatilho de agendamento');
+      toast.error(error.message || 'Failed to create schedule trigger');
       console.error('Error creating schedule trigger:', error);
     }
   };
@@ -119,9 +134,6 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
   const getIntegrationForProvider = (provider: ProviderKey) => {
     if (provider === 'schedule') {
       return triggers.find(trigger => trigger.trigger_type === 'schedule');
-    }
-    if (provider === 'event') {
-      return undefined;
     }
   };
 
@@ -139,8 +151,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 
   const scheduleProvider: TriggerProvider = {
     provider_id: 'schedule',
-    name: 'Agendamento',
-    description: 'Configure agendamentos automáticos para executar seu agente ou fluxos de trabalho',
+    name: 'Schedule',
     trigger_type: 'schedule',
     webhook_enabled: true,
     config_schema: {}
@@ -148,29 +159,26 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap gap-3">
+
         {Object.entries(OAUTH_PROVIDERS).map(([providerId, config]) => {
           const provider = providerId as ProviderKey;
           const isInstalled = isProviderInstalled(provider);
-          const isLoading = installMutation.isPending || uninstallMutation.isPending || 
-                           (provider === 'schedule' && (createTriggerMutation.isPending || deleteTriggerMutation.isPending));
+          const isLoading = installMutation.isPending || uninstallMutation.isPending ||
+            (provider === 'schedule' && (createTriggerMutation.isPending || deleteTriggerMutation.isPending));
           const triggerId = getTriggerId(provider);
-          
+
           const buttonText = provider === 'schedule'
             ? config.name
-            : provider === 'event'
-              ? 'Gatilho de Evento'
-              : (isInstalled ? `Disconnect ${config.name}` : `Connect ${config.name}`);
-          
+            : (isInstalled ? `Disconnect ${config.name}` : `Connect ${config.name}`);
+
           return (
             <Button
               key={providerId}
-              variant="default"
-              size="sm"
+              variant="outline"
+              size='sm'
               onClick={() => {
                 if (provider === 'schedule') {
-                  handleInstall(provider);
-                } else if (provider === 'event') {
                   handleInstall(provider);
                 } else {
                   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -178,10 +186,10 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
                 }
               }}
               disabled={isLoading}
-              className="h-9 px-3 gap-1.5 text-sm font-medium"
+              className="flex items-center"
             >
               {isLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 config.icon
               )}
@@ -189,27 +197,31 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
             </Button>
           );
         })}
+        <Button
+          variant="default"
+          size='sm'
+          onClick={() => setShowEventDialog(true)}
+          className="flex items-center gap-2"
+        >
+          <PlugZap className="h-4 w-4" /> App-based Trigger
+        </Button>
       </div>
-      {configuringSchedule && (
-        <Dialog open={configuringSchedule} onOpenChange={setConfiguringSchedule}>
-          <TriggerConfigDialog
-            provider={scheduleProvider}
-            existingConfig={null}
-            onSave={handleScheduleSave}
-            onCancel={() => setConfiguringSchedule(false)}
-            isLoading={createTriggerMutation.isPending}
-            agentId={agentId}
-          />
-        </Dialog>
-      )}
-      <EventBasedTriggerDialog
-        open={showEventDialog}
-        onOpenChange={setShowEventDialog}
+      <EventBasedTriggerDialog open={showEventDialog} onOpenChange={setShowEventDialog} agentId={agentId} />
+      <SimplifiedScheduleConfig
+        provider={scheduleProvider}
+        config={scheduleConfig}
+        onChange={handleScheduleConfigChange}
+        errors={{}}
         agentId={agentId}
-        onTriggerCreated={() => {
-          setShowEventDialog(false);
-          toast.success('Gatilho de evento criado com sucesso');
-        }}
+        name={scheduleName}
+        description={scheduleDescription}
+        onNameChange={setScheduleName}
+        onDescriptionChange={setScheduleDescription}
+        isActive={scheduleIsActive}
+        onActiveChange={setScheduleIsActive}
+        open={configuringSchedule}
+        onOpenChange={setConfiguringSchedule}
+        onSave={handleScheduleSave}
       />
     </div>
   );

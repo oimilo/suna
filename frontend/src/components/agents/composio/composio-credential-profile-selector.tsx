@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -8,8 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { useCredentialProfilesForMcp } from '@/hooks/react-query/mcp/use-credential-profiles';
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Plus,
+} from 'lucide-react';
+import { useCredentialProfilesForMcp } from '@/hooks/mcp/use-credential-profiles';
 
 interface ComposioCredentialProfileSelectorProps {
   toolkitSlug: string;
@@ -17,6 +23,7 @@ interface ComposioCredentialProfileSelectorProps {
   selectedProfileId?: string;
   onProfileSelect: (profileId: string | null) => void;
   className?: string;
+  showCreateOption?: boolean;
 }
 
 export const ComposioCredentialProfileSelector: React.FC<ComposioCredentialProfileSelectorProps> = ({
@@ -25,13 +32,16 @@ export const ComposioCredentialProfileSelector: React.FC<ComposioCredentialProfi
   selectedProfileId,
   onProfileSelect,
   className,
+  showCreateOption = true,
 }) => {
-  const mcpQualifiedName = toolkitSlug === 'composio' ? 'composio' : `composio.${toolkitSlug}`;
-
+  const mcpQualifiedName = toolkitSlug === 'composio' 
+    ? 'composio' 
+    : `composio.${toolkitSlug}`;
+    
   const { data: profiles, isLoading } = useCredentialProfilesForMcp(mcpQualifiedName);
 
-  const selectedProfile = profiles?.find((p) => p.profile_id === selectedProfileId);
-  const activeProfiles = profiles?.filter((p) => p.is_active) || [];
+  const selectedProfile = profiles?.find(p => p.profile_id === selectedProfileId);
+  const activeProfiles = profiles?.filter(p => p.is_active) || [];
 
   if (isLoading) {
     return (
@@ -92,7 +102,7 @@ export const ComposioCredentialProfileSelector: React.FC<ComposioCredentialProfi
             </SelectContent>
           </Select>
         </div>
-
+        
         {selectedProfile && !selectedProfile.is_active && (
           <p className="text-xs text-destructive flex items-center gap-1">
             <XCircle className="h-3 w-3" />
@@ -102,4 +112,4 @@ export const ComposioCredentialProfileSelector: React.FC<ComposioCredentialProfi
       </div>
     </div>
   );
-};
+}; 

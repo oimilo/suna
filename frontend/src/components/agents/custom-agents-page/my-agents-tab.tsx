@@ -1,24 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Filter, Globe, ChevronDown, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTranslations } from '@/hooks/use-translations';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Globe } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchBar } from './search-bar';
 import { EmptyState } from '../empty-state';
 import { AgentsGrid } from '../agents-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
-import { AgentCard } from './agent-card';
+import { UnifiedAgentCard } from '@/components/ui/unified-agent-card';
 
 type AgentFilter = 'all' | 'templates';
-type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface MyAgentsTabProps {
   agentsSearchQuery: string;
@@ -28,24 +20,46 @@ interface MyAgentsTabProps {
   agentsPagination: any;
   viewMode: 'grid' | 'list';
   onCreateAgent: () => void;
-  onEditAgent: (agentId: string, tab?: AgentConfigTab) => void;
+  onEditAgent: (agentId: string) => void;
   onDeleteAgent: (agentId: string) => void;
   onToggleDefault: (agentId: string, currentDefault: boolean) => void;
   onClearFilters: () => void;
-  deleteAgentMutation: any;
+  deleteAgentMutation?: any;
+  isDeletingAgent?: (agentId: string) => boolean;
   setAgentsPage: (page: number) => void;
+  agentsPageSize: number;
+  onAgentsPageSizeChange: (pageSize: number) => void;
 
   myTemplates: any[];
   templatesLoading: boolean;
   templatesError: any;
   templatesActioningId: string | null;
+  templatesPagination?: {
+    current_page: number;
+    page_size: number;
+    total_items: number;
+    total_pages: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+  templatesPage: number;
+  setTemplatesPage: (page: number) => void;
+  templatesPageSize: number;
+  onTemplatesPageSizeChange: (pageSize: number) => void;
+  templatesSearchQuery: string;
+  setTemplatesSearchQuery: (value: string) => void;
   onPublish: (template: any) => void;
   onUnpublish: (templateId: string, templateName: string) => void;
-  getTemplateStyling: (template: any) => { avatar: string; color: string };
+  getTemplateStyling: (template: any) => { color: string };
 
   onPublishAgent?: (agent: any) => void;
   publishingAgentId?: string | null;
 }
+
+const filterOptions = [
+  { value: 'all', label: 'All Agents' },
+  { value: 'templates', label: 'Templates' },
+];
 
 export const MyAgentsTab = ({
   agentsSearchQuery,
@@ -60,32 +74,28 @@ export const MyAgentsTab = ({
   onToggleDefault,
   onClearFilters,
   deleteAgentMutation,
+  isDeletingAgent,
   setAgentsPage,
+  agentsPageSize,
+  onAgentsPageSizeChange,
   myTemplates,
   templatesLoading,
   templatesError,
   templatesActioningId,
+  templatesPagination,
+  templatesPage,
+  setTemplatesPage,
+  templatesPageSize,
+  onTemplatesPageSizeChange,
+  templatesSearchQuery,
+  setTemplatesSearchQuery,
   onPublish,
   onUnpublish,
   getTemplateStyling,
   onPublishAgent,
   publishingAgentId
 }: MyAgentsTabProps) => {
-  const { t } = useTranslations();
   const [agentFilter, setAgentFilter] = useState<AgentFilter>('all');
-
-  const filterOptions = [
-    { value: 'all', label: t('agents.allAgents'), icon: Users },
-    { value: 'templates', label: t('agents.templates'), icon: Globe },
-  ];
-
-
-  const filteredAgents = useMemo(() => {
-    if (agentFilter === 'templates') {
-      return [];
-    }
-    return agents;
-  }, [agents, agentFilter]);
 
   const templateAgentsCount = useMemo(() => {
     return myTemplates?.length || 0;
@@ -96,111 +106,102 @@ export const MyAgentsTab = ({
     onClearFilters();
   };
 
-  const currentFilter = filterOptions.find(filter => filter.value === agentFilter);
-  const CurrentFilterIcon = currentFilter?.icon || Users;
-
-  const getCountForFilter = (filterValue: string) => {
-    if (filterValue === 'templates') {
-      return templateAgentsCount;
-    }
-    return agents.length;
-  };
-
   const renderTemplates = () => {
-    if (templatesLoading) {
-      return <LoadingState viewMode={viewMode} />;
-    }
-
-    if (templatesError) {
-      return (
-        <div className="text-center py-16">
-          <p className="text-destructive">{t('agents.failedToLoadTemplates')}</p>
-        </div>
-      );
-    }
-
-    if (!myTemplates || myTemplates.length === 0) {
-      return (
-        <div className="text-center py-16">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center mb-6">
-            <Globe className="h-10 w-10 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold mb-3">{t('agents.noPublishedTemplatesYet')}</h3>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            {t('agents.publishAgentsToMarketplace')}
-          </p>
-        </div>
-      );
-    }
-
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {myTemplates.map((template) => {
-          const isActioning = templatesActioningId === template.template_id;
-          return (
-            <AgentCard
-              key={template.template_id}
-              mode="template"
-              data={template}
-              styling={getTemplateStyling(template)}
-              isActioning={isActioning}
-              onPrimaryAction={
-                template.is_public 
-                  ? () => onUnpublish(template.template_id, template.name)
-                  : () => onPublish(template)
-              }
-              onSecondaryAction={template.is_public ? () => {/* View in marketplace */} : undefined}
-            />
-          );
-        })}
-      </div>
+      <>
+        {templatesLoading ? (
+          <LoadingState viewMode={viewMode} />
+        ) : templatesError ? (
+          <div className="text-center py-16">
+            <p className="text-destructive">Failed to load templates</p>
+          </div>
+        ) : !myTemplates || myTemplates.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center mb-6">
+              <Globe className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">No published templates yet</h3>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Publish your agents to the marketplace to share them with the community and track their usage.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {myTemplates.map((template) => {
+                const isActioning = templatesActioningId === template.template_id;
+                return (
+                  <UnifiedAgentCard
+                    key={template.template_id}
+                    variant="template"
+                    data={{
+                      id: template.template_id,
+                      name: template.name,
+                      tags: template.tags,
+                      created_at: template.created_at,
+                      template_id: template.template_id,
+                      is_public: template.is_public,
+                      download_count: template.download_count,
+                      icon_name: template.icon_name,
+                      icon_color: template.icon_color,
+                      icon_background: template.icon_background,
+                    }}
+                    state={{
+                      isActioning: isActioning,
+                    }}
+                    actions={{
+                      onPrimaryAction: template.is_public 
+                        ? () => onUnpublish(template.template_id, template.name)
+                        : () => onPublish(template),
+                      onSecondaryAction: template.is_public ? () => {} : undefined,
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {templatesPagination && (
+              <Pagination
+                currentPage={templatesPagination.current_page}
+                totalPages={templatesPagination.total_pages}
+                totalItems={templatesPagination.total_items}
+                pageSize={templatesPageSize}
+                onPageChange={setTemplatesPage}
+                onPageSizeChange={onTemplatesPageSizeChange}
+                isLoading={templatesLoading}
+                showPageSizeSelector={true}
+                showJumpToPage={true}
+                showResultsInfo={true}
+              />
+            )}
+          </>
+        )}
+      </>
     );
   };
 
   return (
-    <div className="space-y-6 flex flex-col min-h-full">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div className="space-y-6 mt-8 flex flex-col min-h-full">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <SearchBar
-          placeholder={t('agents.searchYourAgents')}
+          placeholder="Search agents..."
           value={agentsSearchQuery}
           onChange={setAgentsSearchQuery}
         />
-        
         <div className="flex items-center gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 px-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]">
-                <CurrentFilterIcon className="h-4 w-4 mr-2 opacity-60" />
-                <span className="text-sm">{currentFilter?.label}</span>
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-medium">
-                  {getCountForFilter(agentFilter)}
-                </span>
-                <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {filterOptions.map((filter) => {
-                const Icon = filter.icon;
-                const count = getCountForFilter(filter.value);
-                return (
-                  <DropdownMenuItem
-                    key={filter.value}
-                    onClick={() => setAgentFilter(filter.value as AgentFilter)}
-                    className="cursor-pointer"
-                  >
-                    <Icon className="h-4 w-4 opacity-60" />
-                    {filter.label}
-                    <span className="ml-auto px-2 py-0.5 rounded text-xs text-muted-foreground">
-                      {count}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Select value={agentFilter} onValueChange={(value: AgentFilter) => setAgentFilter(value)}>
+            <SelectTrigger className="w-[180px] h-12 rounded-xl">
+              <SelectValue placeholder="Filter agents" />
+            </SelectTrigger>
+            <SelectContent className='rounded-xl'>
+              {filterOptions.map((filter) => (
+                <SelectItem key={filter.value} className='rounded-xl' value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
-
       <div className="flex-1">
         {agentFilter === 'templates' ? (
           renderTemplates()
@@ -208,30 +209,37 @@ export const MyAgentsTab = ({
           <>
             {agentsLoading ? (
               <LoadingState viewMode={viewMode} />
-            ) : filteredAgents.length === 0 ? (
+            ) : agents.length === 0 ? (
               <EmptyState
-                hasAgents={(agentsPagination?.total || 0) > 0}
+                hasAgents={(agentsPagination?.total_items || 0) > 0}
                 onCreateAgent={onCreateAgent}
                 onClearFilters={handleClearFilters}
               />
             ) : (
               <AgentsGrid
-                agents={filteredAgents}
+                agents={agents}
                 onEditAgent={onEditAgent}
                 onDeleteAgent={onDeleteAgent}
                 onToggleDefault={onToggleDefault}
                 deleteAgentMutation={deleteAgentMutation}
+                isDeletingAgent={isDeletingAgent}
                 onPublish={onPublishAgent}
                 publishingId={publishingAgentId}
               />
             )}
-
-            {agentsPagination && agentsPagination.pages > 1 && (
+            
+            {agentsPagination && (
               <Pagination
-                currentPage={agentsPagination.page}
-                totalPages={agentsPagination.pages}
+                currentPage={agentsPagination.current_page}
+                totalPages={agentsPagination.total_pages}
+                totalItems={agentsPagination.total_items}
+                pageSize={agentsPageSize}
                 onPageChange={setAgentsPage}
+                onPageSizeChange={onAgentsPageSizeChange}
                 isLoading={agentsLoading}
+                showPageSizeSelector={true}
+                showJumpToPage={true}
+                showResultsInfo={true}
               />
             )}
           </>

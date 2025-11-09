@@ -1,11 +1,11 @@
-// Simplified edge-flags for development
-// Remove dependency on flags/next and @vercel/edge-config that may not be installed
+import { flag } from 'flags/next';
+import { getAll } from '@vercel/edge-config';
 
 export type IMaintenanceNotice =
   | {
       enabled: true;
-      startTime: Date;
-      endTime: Date;
+      startTime: string; // Date
+      endTime: string; // Date
     }
   | {
       enabled: false;
@@ -13,26 +13,56 @@ export type IMaintenanceNotice =
       endTime?: undefined;
     };
 
-// Mock flag function for development
-function flag<T>(config: { key: string; decide: () => Promise<T> | T }) {
-  return {
-    key: config.key,
-    decide: config.decide,
-    value: async () => {
-      try {
-        return await config.decide();
-      } catch (error) {
-        console.warn(`Flag ${config.key} failed:`, error);
-        return null;
-      }
-    }
-  };
-}
-
 export const maintenanceNoticeFlag = flag({
   key: 'maintenance-notice',
   async decide() {
-    // Always return disabled in development
-    return { enabled: false } as const;
+    try {
+      if (!process.env.EDGE_CONFIG) {
+        return { enabled: false } as const;
+      }
+
+      const flags = await getAll([
+        'maintenance-notice_start-time',
+        'maintenance-notice_end-time',
+        'maintenance-notice_enabled',
+      ]);
+
+      if (!flags || Object.keys(flags).length === 0) {
+        return { enabled: false } as const;
+      }
+
+      const enabled = flags['maintenance-notice_enabled'];
+
+      if (!enabled) {
+        return { enabled: false } as const;
+      }
+
+      const startTimeRaw = flags['maintenance-notice_start-time'];
+      const endTimeRaw = flags['maintenance-notice_end-time'];
+
+      if (!startTimeRaw || !endTimeRaw) {
+        return { enabled: false } as const;
+      }
+
+      const startTime = new Date(startTimeRaw);
+      const endTime = new Date(endTimeRaw);
+
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        throw new Error(
+          `Invalid maintenance notice start or end time: ${startTimeRaw} or ${endTimeRaw}`,
+        );
+      }
+
+      return {
+        enabled: true,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      } as const;
+    } catch (cause) {
+      console.error(
+        new Error('Failed to get maintenance notice flag', { cause }),
+      );
+      return { enabled: false } as const;
+    }
   },
 });

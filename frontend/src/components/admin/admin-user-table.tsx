@@ -5,13 +5,24 @@ import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pagination } from '@/components/agents/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  useAdminUserList,
-  UserSummary,
-} from '@/hooks/react-query/admin/use-admin-users';
+import { 
+  Search, 
+  User, 
+  CreditCard, 
+  Calendar,
+  Filter,
+  TrendingUp,
+  Users,
+  Activity
+} from 'lucide-react';
+import { useAdminUserList, useAdminUserStats } from '@/hooks/admin/use-admin-users';
+import type { UserSummary } from '@/hooks/admin/use-admin-users';
+import { formatCredits, dollarsToCredits } from '@/lib/utils/credit-formatter';
 
 interface AdminUserTableProps {
   onUserSelect?: (user: UserSummary) => void;
@@ -19,17 +30,24 @@ interface AdminUserTableProps {
 
 export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
   const [searchEmail, setSearchEmail] = useState('');
+  const [tierFilter, setTierFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
   const [debouncedSearch, setDebouncedSearch] = useState(searchEmail);
-
+  
   const { data: userListResponse, isLoading, error } = useAdminUserList({
     page,
     page_size: pageSize,
     search_email: debouncedSearch || undefined,
-    sort_by: 'created_at',
-    sort_order: 'desc',
+    tier_filter: tierFilter || undefined,
+    sort_by: sortBy,
+    sort_order: sortOrder,
   });
+
+  const { data: stats } = useAdminUserStats();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -39,10 +57,6 @@ export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
 
     return () => clearTimeout(timer);
   }, [searchEmail]);
-
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -61,74 +75,66 @@ export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
       case 'tier_25_200':
         return '200 Dollar';
       default:
-        return tier ?? 'Unknown';
+        return 'Unknown';
     }
   };
 
-  const columns: DataTableColumn<UserSummary>[] = useMemo(
-    () => [
-      {
-        id: 'user',
-        header: 'User',
-        cell: (user) => (
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <div className="font-medium text-foreground">{user.email}</div>
-            <div className="text-xs text-muted-foreground">
-              Joined {formatDate(user.created_at)}
-            </div>
+  const columns: DataTableColumn<UserSummary>[] = useMemo(() => [
+    {
+      id: 'user',
+      header: 'User',
+      cell: (user) => (
+        <div className="flex flex-col gap-1 min-w-[200px]">
+          <div className="font-medium text-foreground">{user.email}</div>
+          <div className="text-xs text-muted-foreground">
+            Joined {formatDate(user.created_at)}
           </div>
-        ),
-      },
-      {
-        id: 'tier',
-        header: 'Tier',
-        cell: (user) => (
-          <Badge variant="outline" className="capitalize">
-            {tierName(user.tier)}
-          </Badge>
-        ),
-        width: 'w-42',
-      },
-      {
-        id: 'balance',
-        header: 'Credit Balance',
-        cell: (user) => (
-          <div className="text-start">
-            <div className="font-medium text-green-600">
-              {formatCurrency(user.credit_balance)}
-            </div>
+        </div>
+      ),
+    },
+    {
+      id: 'tier',
+      header: 'Tier',
+      cell: (user) => (
+        <Badge variant="outline" className="capitalize">
+          {tierName(user.tier)}
+        </Badge>
+      ),
+      width: 'w-42',
+    },
+    {
+      id: 'balance',
+      header: 'Credit Balance',
+      cell: (user) => (
+        <div className="text-start">
+          <div className="font-medium text-green-600">
+            {formatCredits(dollarsToCredits(user.credit_balance))}
           </div>
-        ),
-        width: 'w-42',
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: (user) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUserSelect?.(user);
-            }}
-          >
-            Details
-          </Button>
-        ),
-        width: 'w-32',
-      },
-    ],
-    [onUserSelect],
-  );
+        </div>
+      ),
+      width: 'w-42',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: (user) => (
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUserSelect?.(user);
+          }}
+        >
+          Details
+        </Button>
+      ),
+      width: 'w-32',
+    },
+  ], [onUserSelect]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-  };
-
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    setPage(1);
   };
 
   if (error) {
@@ -152,7 +158,7 @@ export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
         onChange={(e) => setSearchEmail(e.target.value)}
         className="pl-9"
       />
-      <Card className="border-0 shadow-none bg-transparent">
+      <Card className='border-0 shadow-none bg-transparent'>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6 space-y-3">
@@ -165,7 +171,7 @@ export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
           ) : (
             <DataTable
               columns={columns}
-              data={userListResponse?.data ?? []}
+              data={userListResponse?.data || []}
               onRowClick={onUserSelect}
               emptyMessage="No users found matching your criteria"
               getItemId={(user) => user.id}
@@ -180,11 +186,10 @@ export function AdminUserTable({ onUserSelect }: AdminUserTableProps) {
           totalItems={userListResponse.pagination.total_items}
           pageSize={userListResponse.pagination.page_size}
           onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          showJumpToPage
-          showResultsInfo
+          showPageSizeSelector={false}
+          showJumpToPage={true}
         />
       )}
     </div>
   );
-}
+} 

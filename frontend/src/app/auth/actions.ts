@@ -1,15 +1,16 @@
 'use server';
 
+import { createTrialCheckout } from '@/lib/api/billing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 async function sendWelcomeEmail(email: string, name?: string) {
   try {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const adminApiKey = process.env.ADMIN_API_KEY || process.env.KORTIX_ADMIN_API_KEY;
+    const adminApiKey = process.env.KORTIX_ADMIN_API_KEY;
     
     if (!adminApiKey) {
-      console.error('ADMIN_API_KEY not configured');
+      console.error('KORTIX_ADMIN_API_KEY not configured');
       return;
     }
     
@@ -26,7 +27,6 @@ async function sendWelcomeEmail(email: string, name?: string) {
     });
 
     if (response.ok) {
-      console.log(`Welcome email queued for ${email}`);
     } else {
       const errorData = await response.json().catch(() => ({}));
       console.error(`Failed to queue welcome email for ${email}:`, errorData);
@@ -35,6 +35,7 @@ async function sendWelcomeEmail(email: string, name?: string) {
     console.error('Error sending welcome email:', error);
   }
 }
+
 
 export async function signIn(prevState: any, formData: FormData) {
   const email = formData.get('email') as string;
@@ -89,7 +90,7 @@ export async function signUp(prevState: any, formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?returnUrl=${returnUrl}`,
+      emailRedirectTo: `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`,
     },
   });
 

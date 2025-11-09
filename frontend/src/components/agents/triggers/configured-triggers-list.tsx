@@ -2,17 +2,35 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Edit, 
-  Trash2, 
-  ExternalLink, 
+import {
+  Edit,
+  Trash2,
+  ExternalLink,
+  MessageSquare,
+  Webhook,
+  Clock,
+  Mail,
+  Github,
+  Gamepad2,
+  Activity,
   Copy
 } from 'lucide-react';
 import { TriggerConfiguration } from './types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getTriggerIcon } from './utils';
-import { truncateString, cn } from '@/lib/utils';
+import { cn, truncateString } from '@/lib/utils';
 
 interface ConfiguredTriggersListProps {
   triggers: TriggerConfiguration[];
@@ -30,6 +48,26 @@ const copyToClipboard = async (text: string) => {
   }
 };
 
+const getCronDescription = (cron: string): string => {
+  const cronDescriptions: Record<string, string> = {
+    '0 9 * * *': 'Daily at 9:00 AM',
+    '0 18 * * *': 'Daily at 6:00 PM',
+    '0 9 * * 1-5': 'Weekdays at 9:00 AM',
+    '0 10 * * 1-5': 'Weekdays at 10:00 AM',
+    '0 9 * * 1': 'Every Monday at 9:00 AM',
+    '0 9 1 * *': 'Monthly on the 1st at 9:00 AM',
+    '0 9 1 1 *': 'Yearly on Jan 1st at 9:00 AM',
+    '0 */2 * * *': 'Every 2 hours',
+    '*/30 * * * *': 'Every 30 minutes',
+    '0 0 * * *': 'Daily at midnight',
+    '0 12 * * *': 'Daily at noon',
+    '0 9 * * 0': 'Every Sunday at 9:00 AM',
+    '0 9 * * 6': 'Every Saturday at 9:00 AM',
+  };
+
+  return cronDescriptions[cron] || cron;
+};
+
 export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
   triggers,
   onEdit,
@@ -37,156 +75,145 @@ export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
   onToggle,
   isLoading = false,
 }) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [triggerToDelete, setTriggerToDelete] = React.useState<TriggerConfiguration | null>(null);
+
+  const handleDeleteClick = (trigger: TriggerConfiguration) => {
+    setTriggerToDelete(trigger);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (triggerToDelete) {
+      onRemove(triggerToDelete);
+      setTriggerToDelete(null);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-2">
         {triggers.map((trigger) => (
           <div
             key={trigger.trigger_id}
-            className="p-4 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/6 dark:border-white/8 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200"
+            className={`flex items-stretch justify-between p-4 rounded-xl border transition-all duration-200 overflow-hidden ${trigger.is_active
+              ? "bg-card hover:bg-muted/50 border-border"
+              : "bg-muted/20 hover:bg-muted/30 border-muted-foreground/30"
+              }`}
           >
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-md bg-transparent border-0 shrink-0 opacity-60">
+            <div className="flex items-stretch space-x-4 flex-1 min-w-0">
+              <div className={`h-10 min-h-10 max-h-10 w-10 rounded-xl border transition-colors flex-shrink-0 flex items-center justify-center ${trigger.is_active
+                ? "bg-muted border-border"
+                : "bg-muted/50 border-muted-foreground/20"
+                } ${trigger.is_active ? "" : "opacity-70"}`}>
                 {getTriggerIcon(trigger.trigger_type)}
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium truncate">
-                      {trigger.name}
-                    </h4>
-                    <div className={cn(
-                      "px-2 py-0.5 rounded text-xs font-medium",
-                      trigger.is_active 
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
-                        : "bg-muted text-muted-foreground border border-border"
-                    )}>
-                      {trigger.is_active ? "Ativo" : "Inativo"}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 ml-2 shrink-0">
-                    <Switch
-                      checked={trigger.is_active}
-                      onCheckedChange={() => onToggle(trigger)}
-                      disabled={isLoading}
-                      className="scale-90"
-                    />
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onEdit(trigger)}
-                          className="h-7 w-7 p-0 hover:bg-black/5 dark:hover:bg-white/5"
-                          disabled={isLoading}
-                        >
-                          <Edit className="h-3.5 w-3.5 opacity-60" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Editar gatilho</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onRemove(trigger)}
-                          className="h-7 w-7 p-0 hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
-                          disabled={isLoading}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 opacity-60" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Deletar gatilho</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
+
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center space-x-2 mb-1">
+                  <h4 className={`text-sm font-medium truncate transition-colors ${trigger.is_active ? "text-foreground" : "text-muted-foreground"
+                    }`}>
+                    {trigger.name}
+                  </h4>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={cn('h-2 w-2 rounded-full', trigger.is_active ? 'bg-green-500' : 'bg-red-500')} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{trigger.is_active ? 'Active' : 'Inactive'}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-                
+
                 {trigger.description && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className={`text-xs truncate transition-colors ${trigger.is_active ? "text-muted-foreground" : "text-muted-foreground/80"
+                    }`}>
                     {truncateString(trigger.description, 50)}
                   </p>
                 )}
-                {trigger.trigger_type === 'schedule' && trigger.config && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {trigger.config.execution_type === 'agent' && trigger.config.agent_prompt && (
-                      <p>Prompt: {truncateString(trigger.config.agent_prompt, 40)}</p>
-                    )}
-                    {trigger.config.execution_type === 'workflow' && trigger.config.workflow_id && (
-                      <p>Workflow: {trigger.config.workflow_id}</p>
-                    )}
-                  </div>
-                )}
-                {trigger.provider_id === 'composio' && trigger.config && (
-                  <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                    {trigger.config.trigger_slug && (
-                      <p>Evento: {trigger.config.trigger_slug}</p>
-                    )}
-                    {trigger.config.profile_id && (
-                      <p>Credencial: {trigger.config.profile_id}</p>
-                    )}
-                    {trigger.config.execution_type === 'workflow' && trigger.config.workflow_id && (
-                      <p>Workflow: {trigger.config.workflow_id}</p>
-                    )}
-                    {trigger.config.execution_type === 'agent' && trigger.config.agent_prompt && (
-                      <p>Prompt: {truncateString(trigger.config.agent_prompt, 40)}</p>
-                    )}
-                  </div>
-                )}
-                {trigger.webhook_url && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <code className="text-xs bg-black/[0.02] dark:bg-white/[0.03] px-2 py-1 rounded-md font-mono truncate flex-1 max-w-full border border-black/6 dark:border-white/8">
-                      {trigger.webhook_url}
-                    </code>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
-                            onClick={() => copyToClipboard(trigger.webhook_url!)}
-                          >
-                            <Copy className="h-3 w-3 opacity-60" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Copiar URL</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      {trigger.webhook_url.startsWith('http') && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/5"
-                              onClick={() => window.open(trigger.webhook_url, '_blank')}
-                            >
-                              <ExternalLink className="h-3 w-3 opacity-60" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Abrir URL</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
+                {trigger.trigger_type === 'schedule' && trigger.config && trigger.config.agent_prompt && (
+                  <div className={`text-xs mt-1 transition-colors ${trigger.is_active ? "text-muted-foreground" : "text-muted-foreground/80"
+                    }`}>
+                    <p>Prompt: {truncateString(trigger.config.agent_prompt, 40)}</p>
                   </div>
                 )}
               </div>
             </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
+                    <Switch
+                      checked={trigger.is_active}
+                      onCheckedChange={() => onToggle(trigger)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{trigger.is_active ? 'Disable' : 'Enable'} trigger</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onEdit(trigger)}
+                    className={`h-8 w-8 p-0 transition-opacity ${trigger.is_active ? "" : "opacity-70"
+                      }`}
+                    disabled={isLoading}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit trigger</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteClick(trigger)}
+                    className={`h-8 w-8 p-0 text-destructive hover:text-destructive transition-opacity ${trigger.is_active ? "" : "opacity-70"
+                      }`}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete trigger</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         ))}
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Trigger</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{triggerToDelete?.name}"? This action cannot be undone and will stop all automated runs from this trigger.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Delete Trigger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }; 

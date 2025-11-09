@@ -21,7 +21,7 @@ export function SubmitButton({
   children,
   formAction,
   errorMessage,
-  pendingText = 'Enviando...',
+  pendingText = 'Submitting...',
   ...props
 }: Props) {
   const { pending, action } = useFormStatus();

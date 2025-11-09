@@ -1,23 +1,11 @@
 import React, { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus, Calendar, User } from 'lucide-react';
-import type { ComposioToolkit, ComposioProfile } from '@/hooks/react-query/composio/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import type { ComposioToolkit, ComposioProfile } from '@/hooks/composio/utils';
 
 interface ComposioProfileSelectorProps {
   open: boolean;
@@ -44,7 +32,7 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
       onCreateNew();
       onOpenChange(false);
     } else if (selectedProfileId) {
-      const profile = existingProfiles.find((p) => p.profile_id === selectedProfileId);
+      const profile = existingProfiles.find(p => p.profile_id === selectedProfileId);
       if (profile) {
         onSelectProfile(profile);
         onOpenChange(false);
@@ -57,7 +45,9 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Select {toolkit.name} Profile</DialogTitle>
-          <DialogDescription>Choose an existing connection or create a new one</DialogDescription>
+          <DialogDescription>
+            Choose an existing connection or create a new one
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -94,9 +84,9 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
             <div className="rounded-lg bg-muted/50 p-3 space-y-1">
               <div className="text-sm font-medium">Profile Details</div>
               {(() => {
-                const profile = existingProfiles.find((p) => p.profile_id === selectedProfileId);
+                const profile = existingProfiles.find(p => p.profile_id === selectedProfileId);
                 if (!profile) return null;
-
+                
                 return (
                   <div className="text-xs text-muted-foreground space-y-1">
                     <div className="flex items-center gap-2">
@@ -105,9 +95,7 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-3 w-3" />
-                      <span>
-                        Created {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true })}
-                      </span>
+                      <span>Created {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true })}</span>
                     </div>
                   </div>
                 );
@@ -117,10 +105,16 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button onClick={handleContinue} disabled={!selectedProfileId || isLoading}>
+          <Button
+            onClick={handleContinue}
+            disabled={!selectedProfileId || isLoading}
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -139,4 +133,4 @@ export const ComposioProfileSelector: React.FC<ComposioProfileSelectorProps> = (
       </DialogContent>
     </Dialog>
   );
-};
+}; 

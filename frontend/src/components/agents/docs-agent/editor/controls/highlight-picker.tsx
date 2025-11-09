@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useEditorStore } from '@/lib/stores/use-editor-store';
+import { useEditorStore } from '@/stores/use-editor-store';
 
 const highlightColors = [
   { name: 'None', value: '' },
@@ -51,14 +51,14 @@ export function HighlightPicker() {
           size="sm"
           variant="ghost"
           className={cn(
-            'relative h-7 w-7 rounded-sm p-0 transition-colors hover:bg-muted hover:text-foreground',
+            'h-7 w-7 p-0 rounded-sm relative transition-colors hover:bg-muted hover:text-foreground',
             isActive && 'bg-muted text-foreground'
           )}
         >
           <Highlighter className="h-3.5 w-3.5" />
           {currentHighlight && (
-            <div
-              className="absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full"
+            <div 
+              className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3 h-0.5 rounded-full"
               style={{ backgroundColor: currentHighlight }}
             />
           )}
@@ -67,20 +67,20 @@ export function HighlightPicker() {
       <PopoverContent className="w-56 p-3" align="start">
         <div className="space-y-3">
           <div className="text-sm font-medium">Highlight Color</div>
-
+          
           <div className="grid grid-cols-4 gap-2">
             {highlightColors.map((color) => (
               <button
-                key={color.value || 'none'}
+                key={color.value}
                 onClick={() => setHighlight(color.value)}
                 className={cn(
                   'relative h-8 rounded-sm border transition-all hover:scale-105',
-                  color.value === ''
-                    ? 'border-gray-300 dark:border-gray-600'
-                    : 'border-gray-200 dark:border-gray-700',
+                  color.value === '' ? 'border-gray-300 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700',
                   currentHighlight === color.value && 'ring-2 ring-offset-1 ring-blue-500'
                 )}
-                style={{ backgroundColor: color.value || 'transparent' }}
+                style={{ 
+                  backgroundColor: color.value || 'transparent',
+                }}
                 aria-label={`Set highlight to ${color.name}`}
               >
                 {color.value === '' && (
@@ -90,11 +90,11 @@ export function HighlightPicker() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 border-t pt-2">
+          <div className="flex items-center gap-2 pt-2 border-t">
             <input
               type="color"
               value={currentHighlight || '#fef3c7'}
-              onChange={(event) => setHighlight(event.target.value)}
+              onChange={(e) => setHighlight(e.target.value)}
               className="h-8 w-full cursor-pointer rounded"
               aria-label="Custom highlight color"
             />
@@ -112,4 +112,3 @@ export function HighlightPicker() {
     </Popover>
   );
 }
-

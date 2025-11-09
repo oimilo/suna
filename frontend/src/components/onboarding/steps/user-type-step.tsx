@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, User, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,9 +23,9 @@ const roles = [
 
 export const UserTypeStep = () => {
   const [step, setStep] = useState<'type' | 'size' | 'role' | 'complete'>('type');
-  const [, setUserType] = useState<'individual' | 'company' | undefined>(userContext.userType);
-  const [, setCompanySize] = useState<string>(userContext.companySize || '');
-  const [, setRole] = useState<string>(userContext.role || '');
+  const [userType, setUserType] = useState<'individual' | 'company' | undefined>(userContext.userType);
+  const [companySize, setCompanySize] = useState<string>(userContext.companySize || '');
+  const [role, setRole] = useState<string>(userContext.role || '');
 
   const handleTypeSelect = (type: 'individual' | 'company') => {
     setUserType(type);
@@ -77,7 +77,7 @@ export const UserTypeStep = () => {
               className="text-center space-y-8"
             >
               <div>
-                <h1 className="text-4xl font-medium mb-3">Welcome to Prophet</h1>
+                <h1 className="text-4xl font-medium mb-3">Welcome to Kortix</h1>
                 <p className="text-lg text-muted-foreground">Choose your account type</p>
               </div>
 

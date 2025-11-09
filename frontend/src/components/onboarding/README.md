@@ -72,7 +72,7 @@ import { AgentConfiguration } from '@/components/onboarding';
 function ConfigureAgent() {
   return (
     <AgentConfiguration
-      agentId="email-assistant"
+      agentId="maya"
       showHeader={true}
       onConfigurationChange={(agentId, config) => {
         console.log(`Agent ${agentId} configured:`, config);
@@ -126,17 +126,17 @@ console.log(userContext.selectedAgents);
 
 // Update context
 updateUserContext({
-  selectedAgents: ['email-assistant', 'daily-recap', 'meeting-researcher'],
+  selectedAgents: ['maya', 'sage', 'nova'],
   userType: 'company'
 });
 ```
 
 ## 🎮 Navigation & UX
 
-### Navigation
-- CTA principal controlado pelos botões "Back" e "Continue"
-- Feedback visual para o passo atual
-- Transições suaves entre etapas
+### Keyboard Navigation
+- `←` / `→` Arrow keys for step navigation
+- Visual feedback for current step
+- Smooth transitions between steps
 
 ### Progress Tracking
 - Step-by-step progress indicator

@@ -63,20 +63,13 @@ export interface DiscordTriggerConfig {
 
 export interface ScheduleTriggerConfig {
   cron_expression: string;
-  execution_type: 'agent' | 'workflow';
   agent_prompt?: string;
-  workflow_id?: string;
-  workflow_input?: Record<string, any>;
   timezone?: string;
 }
 
 export interface EventTriggerConfig {
   profile_id?: string;
-  agent_prompt?: string;
+  agent_prompt: string;
   trigger_slug: string;
-  execution_type: 'agent' | 'workflow';
   composio_trigger_id?: string;
-  workflow_id?: string;
-  workflow_input?: Record<string, any>;
-  is_active?: boolean;
 } 

@@ -37,8 +37,8 @@ import Strike from '@tiptap/extension-strike'
 import { Mathematics } from '@tiptap/extension-mathematics'
 import 'katex/dist/katex.min.css'
 
-import { useEditorStore } from '@/lib/stores/use-editor-store';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEditorStore } from '@/stores/use-editor-store';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import debounce from 'lodash/debounce';
@@ -140,10 +140,7 @@ export const Editor = ({
     const lastSavedContent = useRef(content);
     const pendingUpdates = useRef<NodeJS.Timeout | null>(null);
     
-    const ydoc = useMemo(() => {
-      if (!autoSave) return null;
-      return new Y.Doc({ guid: documentId });
-    }, [autoSave, documentId]);
+    const ydoc = useMemo(() => autoSave ? new Y.Doc() : null, [autoSave, documentId]);
     const indexeddbProvider = useRef<IndexeddbPersistence | null>(null);
     const [isSynced, setIsSynced] = useState(false);
 
@@ -234,7 +231,9 @@ export const Editor = ({
           inline: true,
           allowBase64: true,
           HTMLAttributes: {
-            class: 'max-w-full h-auto rounded-lg',
+            class: 'w-full h-auto rounded-lg object-contain',
+            loading: 'lazy',
+            decoding: 'async',
           },
         }),
         Underline,
@@ -386,7 +385,7 @@ export const Editor = ({
         attributes: {
           style: readOnly ? `min-height: ${minHeight};` : `padding-left: 56px; padding-right: 56px; min-height: ${minHeight};`,
           class: readOnly 
-            ? editorClassName || 'focus:outline-none bg-transparent w-full'
+            ? editorClassName || 'focus:outline-none bg-transparent w-full [&_img]:w-full [&_img]:h-auto [&_img]:object-contain'
             : 'focus:outline-none bg-white dark:bg-neutral-900/0 print:border-0 bg-white flex flex-col min-h-[1054px] w-[816px] pt-10 pr-14 pb-10 cursor-text',
           spellcheck: 'true',
         },
@@ -444,20 +443,14 @@ export const Editor = ({
       }
     }, [readOnly, editor]);
 
-    const clearPendingTimeout = useCallback(() => {
-      const pending = pendingUpdates.current;
-      if (pending) {
-        clearTimeout(pending);
-        pendingUpdates.current = null;
-      }
-    }, []);
-
     useEffect(() => {
       return () => {
-        clearPendingTimeout();
+        if (pendingUpdates.current) {
+          clearTimeout(pendingUpdates.current);
+        }
         saveContent.cancel();
       };
-    }, [clearPendingTimeout, saveContent]);
+    }, [saveContent]);
 
     return (
       <div className={className}>

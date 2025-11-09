@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { FcGoogle } from "react-icons/fc";
+import { Icons } from './home/icons';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface GoogleSignInProps {
   returnUrl?: string;
@@ -17,14 +18,11 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      console.log('returnUrl', returnUrl);
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${
-            returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
-          }`,
+          redirectTo: `${window.location.origin}/auth/callback${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+            }`,
         },
       });
 
@@ -33,26 +31,28 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
       }
     } catch (error: any) {
       console.error('Google sign-in error:', error);
-      toast.error(error.message || 'Falha ao fazer login com Google');
+      toast.error(error.message || 'Failed to sign in with Google');
       setIsLoading(false);
     }
   };
 
   return (
-    <button
+    <Button
       onClick={handleGoogleSignIn}
       disabled={isLoading}
-      className="w-full h-12 flex items-center justify-center text-sm font-medium tracking-wide rounded-full bg-background text-foreground border border-border hover:bg-accent/30 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed font-sans"
+      variant="outline"
+      size="lg"
+      className="w-full h-12"
       type="button"
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin" />
       ) : (
-        <FcGoogle className="w-4 h-4 mr-2" />
+        <Icons.google className="w-4 h-4" />
       )}
-      <span className="font-medium">
-        {isLoading ? 'Entrando...' : 'Continuar com Google'}
+      <span>
+        {isLoading ? 'Signing in...' : 'Continue with Google'}
       </span>
-    </button>
+    </Button>
   );
 }

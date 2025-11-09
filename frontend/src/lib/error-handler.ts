@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { BillingError } from './api';
+import { AgentRunLimitError, ProjectLimitError, BillingError } from './api/errors';
 
 export interface ApiError extends Error {
   status?: number;
@@ -50,6 +50,14 @@ const extractErrorMessage = (error: any): string => {
     return error.detail?.message || error.message || 'Billing issue detected';
   }
 
+  if (error instanceof AgentRunLimitError) {
+    return error.detail?.message || error.message || 'Agent run limit exceeded';
+  }
+
+  if (error instanceof ProjectLimitError) {
+    return error.detail?.message || error.message || 'Project limit exceeded';
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
@@ -83,6 +91,9 @@ const shouldShowError = (error: any, context?: ErrorContext): boolean => {
     return false;
   }
   if (error instanceof BillingError) {
+    return false;
+  }
+  if (error instanceof AgentRunLimitError) {
     return false;
   }
 
@@ -130,22 +141,17 @@ export const handleApiError = (error: any, context?: ErrorContext): void => {
 
   if (error?.status >= 500) {
     toast.error(formattedMessage, {
-      description: 'Nossa equipe foi notificada e está trabalhando em uma correção.',
+      description: 'Our team has been notified and is working on a fix.',
       duration: 6000,
-    });
-  } else if (error?.status === 401) {
-    toast.error(formattedMessage, {
-      description: 'Por favor, atualize a página e faça login novamente.',
-      duration: 8000,
     });
   } else if (error?.status === 403) {
     toast.error(formattedMessage, {
-      description: 'Entre em contato com o suporte se você acredita que isso é um erro.',
+      description: 'Contact support if you believe this is an error.',
       duration: 6000,
     });
   } else if (error?.status === 429) {
     toast.warning(formattedMessage, {
-      description: 'Por favor, aguarde um momento antes de tentar novamente.',
+      description: 'Please wait a moment before trying again.',
       duration: 5000,
     });
   } else {
@@ -164,8 +170,8 @@ export const handleNetworkError = (error: any, context?: ErrorContext): void => 
     !navigator.onLine;
 
   if (isNetworkError) {
-    toast.error('Erro de conexão', {
-      description: 'Por favor, verifique sua conexão com a internet e tente novamente.',
+    toast.error('Connection error', {
+      description: 'Please check your internet connection and try again.',
       duration: 6000,
     });
   } else {

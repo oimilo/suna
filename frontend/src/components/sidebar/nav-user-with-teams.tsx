@@ -8,23 +8,32 @@ import {
   Bell,
   ChevronDown,
   ChevronsUpDown,
+  ChevronRight,
   Command,
+  CreditCard,
+  Key,
   LogOut,
+  Plus,
   Settings,
+  User,
   AudioWaveform,
-  Zap,
-  KeyRound,
-  Bot,
-  BookOpen,
-  Plug,
   Sun,
   Moon,
-  Plus,
+  KeyRound,
+  Plug,
+  Zap,
+  Shield,
+  DollarSign,
+  Users,
+  BarChart3,
+  FileText,
+  TrendingDown,
 } from 'lucide-react';
-import { useAccounts } from '@/hooks/use-accounts';
-import NewTeamForm from '@/components/basejump/new-team-form';
+import { useAccounts } from '@/hooks/account';
+import { useSubscription } from '@/hooks/billing';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +43,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import {
   SidebarMenu,
@@ -50,9 +63,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
-import { isLocalMode } from '@/lib/config';
-import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
+import { isLocalMode } from '@/lib/config';
+import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
+import { UserSettingsModal } from '@/components/settings/user-settings-modal';
+import { PlanSelectionModal } from '@/components/billing/pricing';
+import { TierBadge } from '@/components/billing/tier-badge';
 
 export function NavUserWithTeams({
   user,
@@ -61,15 +77,26 @@ export function NavUserWithTeams({
     name: string;
     email: string;
     avatar: string;
+    isAdmin?: boolean;
+    planName?: string;
+    planIcon?: string;
   };
 }) {
   const router = useRouter();
-  const { isMobile, state } = useSidebar();
+  const { isMobile } = useSidebar();
   const { data: accounts } = useAccounts();
+  const { data: subscriptionData } = useSubscription({ enabled: true });
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
-  const isCollapsed = state === 'collapsed';
+  const [showSettingsModal, setShowSettingsModal] = React.useState(false);
+  const [showPlanModal, setShowPlanModal] = React.useState(false);
+  const [settingsTab, setSettingsTab] = React.useState<'general' | 'billing' | 'usage' | 'env-manager'>('general');
   const { theme, setTheme } = useTheme();
-  
+
+  // Check if user is on free tier
+  const isFreeTier = subscriptionData?.tier_key === 'free' ||
+    subscriptionData?.tier?.name === 'free' ||
+    subscriptionData?.plan_name === 'free' ||
+    !subscriptionData?.tier_key;
 
   // Prepare personal account and team accounts
   const personalAccount = React.useMemo(
@@ -135,7 +162,7 @@ export function NavUserWithTeams({
   }, [accounts, activeTeam.account_id]);
 
   // Handle team selection
-  const handleTeamSelect = (team: any) => {
+  const handleTeamSelect = (team) => {
     setActiveTeam(team);
 
     // Navigate to the appropriate dashboard
@@ -149,6 +176,8 @@ export function NavUserWithTeams({
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
+    // Clear local storage after sign out
+    clearUserLocalStorage();
     router.push('/auth');
   };
 
@@ -168,100 +197,41 @@ export function NavUserWithTeams({
   return (
     <Dialog open={showNewTeamDialog} onOpenChange={setShowNewTeamDialog}>
       <SidebarMenu>
-        <SidebarMenuItem>
+        <SidebarMenuItem className="relative">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className={cn(
-                  'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
-                  isCollapsed && '!h-12 !w-12 !rounded-2xl !p-0 justify-center'
-                )}
+                className="bg-transparent hover:bg-transparent data-[state=open]:bg-transparent border-[1.5px] border-border h-[64px] p-3 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!h-10 group-data-[collapsible=icon]:!w-10 group-data-[collapsible=icon]:border-0"
               >
-                <Avatar className={cn('h-8 w-8 rounded-lg', isCollapsed && 'h-10 w-10 rounded-2xl')}>
+                <Avatar className="h-10 w-10 rounded-full flex-shrink-0">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
+                  <AvatarFallback className="rounded-full">
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
-                {!isCollapsed && (
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs">{user.email}</span>
-                  </div>
-                )}
-                {!isCollapsed && <ChevronsUpDown className="ml-auto size-4" />}
+                <div className="flex flex-col justify-between flex-1 min-w-0 h-10 group-data-[collapsible=icon]:hidden">
+                  <span className="truncate font-medium text-sm leading-tight">{user.name}</span>
+                  {user.planName ? (
+                    <TierBadge planName={user.planName} size="xxs" variant="default" />
+                  ) : (
+                    <span className="truncate text-xs text-muted-foreground leading-tight">{user.email}</span>
+                  )}
+                </div>
+                <ChevronsUpDown className="ml-auto size-4 flex-shrink-0 group-data-[collapsible=icon]:hidden" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-              side={isMobile ? 'bottom' : isCollapsed ? 'right' : 'top'}
-              align={isCollapsed ? 'start' : 'start'}
-              sideOffset={isCollapsed ? 8 : 4}
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 p-2"
+              side={isMobile ? 'bottom' : 'top'}
+              align="start"
+              sideOffset={4}
             >
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1.5 py-1.5 text-left text-sm">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs">{user.email}</span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setTheme(theme === 'light' ? 'dark' : 'light');
-                    }}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                    title="Alternar tema"
-                    aria-label="Alternar tema"
-                  >
-                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  </button>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link href="/agents" className="flex items-center gap-2">
-                    <Bot className="h-4 w-4" />
-                    Agentes
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/automations" className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Automações
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/knowledge" className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Base de Conhecimento
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/credentials" className="flex items-center gap-2">
-                    <Plug className="h-4 w-4" />
-                    Credenciais
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator />
-
-              {/* Teams Section - Only show if user has teams */}
-              {teamAccounts?.length > 0 && (
+              {/* Teams Section */}
+              {personalAccount && (
                 <>
-                  <DropdownMenuLabel className="text-muted-foreground text-xs">
-                    Conta Pessoal
+                  <DropdownMenuLabel className="text-muted-foreground text-xs px-2 py-1.5">
+                    Workspaces
                   </DropdownMenuLabel>
                   <DropdownMenuItem
                     key={personalAccount.account_id}
@@ -280,13 +250,18 @@ export function NavUserWithTeams({
                     <div className="flex size-6 items-center justify-center rounded-xs border">
                       <Command className="size-4 shrink-0" />
                     </div>
-                    {personalAccount.name}
-                    <DropdownMenuShortcut>⌘1</DropdownMenuShortcut>
+                    <span className="flex-1">{personalAccount.name}</span>
+                    {activeTeam.account_id === personalAccount.account_id && (
+                      <div className="size-4 flex items-center justify-center">
+                        <div className="size-1.5 rounded-full bg-primary" />
+                      </div>
+                    )}
                   </DropdownMenuItem>
-                  
-                  <DropdownMenuLabel className="text-muted-foreground text-xs mt-2">
-                    Times
-                  </DropdownMenuLabel>
+                </>
+              )}
+
+              {teamAccounts?.length > 0 && (
+                <>
                   {teamAccounts.map((team, index) => (
                     <DropdownMenuItem
                       key={team.account_id}
@@ -305,45 +280,190 @@ export function NavUserWithTeams({
                       <div className="flex size-6 items-center justify-center rounded-xs border">
                         <AudioWaveform className="size-4 shrink-0" />
                       </div>
-                      {team.name}
-                      <DropdownMenuShortcut>⌘{index + 2}</DropdownMenuShortcut>
+                      <span className="flex-1">{team.name}</span>
+                      {activeTeam.account_id === team.account_id && (
+                        <div className="size-4 flex items-center justify-center">
+                          <div className="size-1.5 rounded-full bg-primary" />
+                        </div>
+                      )}
                     </DropdownMenuItem>
                   ))}
                 </>
               )}
 
-              <DropdownMenuSeparator />
+              {/* <DropdownMenuSeparator />
+              <DialogTrigger asChild>
+                <DropdownMenuItem 
+                  className="gap-2 p-2"
+                  onClick={() => {
+                    setShowNewTeamDialog(true)
+                  }}
+                >
+                  <div className="bg-background flex size-6 items-center justify-center rounded-md border">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="text-muted-foreground font-medium">Add team</div>
+                </DropdownMenuItem>
+              </DialogTrigger> */}
+              <DropdownMenuSeparator className="my-1" />
 
-              {/* User Settings Section */}
+              {/* General Section */}
+              <DropdownMenuLabel className="text-muted-foreground text-xs px-2 py-1.5">
+                General
+              </DropdownMenuLabel>
               <DropdownMenuGroup>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowPlanModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>Plan</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="h-4 w-4" />
-                    Configurações
+                  <Link href="/knowledge" className="gap-2 p-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Knowledge Base</span>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSettingsTab('billing');
+                    setShowSettingsModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  <span>Billing</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSettingsTab('usage');
+                    setShowSettingsModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <TrendingDown className="h-4 w-4" />
+                  <span>Usage</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/credentials" className="gap-2 p-2">
+                    <Plug className="h-4 w-4" />
+                    <span>Integrations</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSettingsTab('general');
+                    setShowSettingsModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  className="gap-2 p-2"
+                >
+                  <div className="relative h-4 w-4">
+                    <Sun className="h-4 w-4 absolute rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="h-4 w-4 absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  </div>
+                  <span>Theme</span>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10' onClick={handleLogout}>
-                <LogOut className="h-4 w-4 text-destructive" />
-                Sair
+
+              {(user.isAdmin || isLocalMode()) && (
+                <>
+                  <DropdownMenuSeparator className="my-1" />
+                  <DropdownMenuLabel className="text-muted-foreground text-xs px-2 py-1.5">
+                    Advanced
+                  </DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    {user.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/billing" className="gap-2 p-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Admin Panel</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {user.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/settings/api-keys" className="gap-2 p-2">
+                          <Key className="h-4 w-4" />
+                          <span>API Keys</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {isLocalMode() && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSettingsTab('env-manager');
+                          setShowSettingsModal(true);
+                        }}
+                        className="gap-2 p-2"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                        <span>Local .Env Manager</span>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuGroup>
+                </>
+              )}
+
+              <DropdownMenuSeparator className="my-1" />
+              <DropdownMenuItem onClick={handleLogout} className="gap-2 p-2">
+                <LogOut className="h-4 w-4" />
+                <span>Log Out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Upgrade Button - Only for Free Tier */}
+          {isFreeTier && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 px-0 group-data-[collapsible=icon]:hidden z-50">
+              <Button
+                onClick={() => setShowPlanModal(true)}
+                variant="default"
+                size="lg"
+                className="w-full relative z-50"
+              >
+                Upgrade
+              </Button>
+            </div>
+          )}
         </SidebarMenuItem>
       </SidebarMenu>
 
       <DialogContent className="sm:max-w-[425px] border-subtle dark:border-white/10 bg-card-bg dark:bg-background-secondary rounded-2xl shadow-custom">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            Criar um novo time
+            Create a new team
           </DialogTitle>
           <DialogDescription className="text-foreground/70">
-            Crie um time para colaborar com outros.
+            Create a team to collaborate with others.
           </DialogDescription>
         </DialogHeader>
-        <NewTeamForm />
+        {/* Team form removed - basejump functionality deprecated */}
       </DialogContent>
+
+      {/* User Settings Modal */}
+      <UserSettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+        defaultTab={settingsTab}
+        returnUrl={typeof window !== 'undefined' ? window?.location?.href || '/' : '/'}
+      />
+
+      {/* Plan Selection Modal */}
+      <PlanSelectionModal
+        open={showPlanModal}
+        onOpenChange={setShowPlanModal}
+        returnUrl={typeof window !== 'undefined' ? window?.location?.href || '/' : '/'}
+      />
     </Dialog>
   );
 }

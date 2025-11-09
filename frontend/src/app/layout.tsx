@@ -1,74 +1,61 @@
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-
 import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
-import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, Dancing_Script, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import { Providers } from './providers';
+import { AuthProvider } from '@/components/AuthProvider';
+import { ReactQueryProvider } from './react-query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
+import { PostHogIdentify } from '@/components/posthog-identify';
+import '@/lib/polyfills';
+import { roobert } from './fonts/roobert';
+import { roobertMono } from './fonts/roobert-mono';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
-
-const dancingScript = Dancing_Script({
-  variable: '--font-dancing-script',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-});
-
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-  display: 'swap',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-jetbrains-mono',
-  subsets: ['latin'],
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
-  themeColor: 'black',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' }
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
     default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
+    template: `%s | ${siteConfig.name}`,
   },
-  description: BRANDING.description,
+  description: siteConfig.description,
   keywords: [
-    'AI',
+    'AI assistant',
+    'open source AI',
     'artificial intelligence',
+    'AI worker',
     'browser automation',
     'web scraping',
     'file management',
-    'AI assistant',
-    'open source',
-    'research',
+    'research assistant',
     'data analysis',
+    'task automation',
+    'Kortix',
+    'generalist AI',
   ],
-  authors: [{ name: BRANDING.teamName, url: BRANDING.url }],
-  creator: BRANDING.teamName,
-  publisher: BRANDING.teamName,
+  authors: [
+    { 
+      name: 'Kortix Team', 
+      url: 'https://kortix.com' 
+    }
+  ],
+  creator: 'Kortix Team',
+  publisher: 'Kortix Team',
   category: 'Technology',
-  applicationName: BRANDING.name,
+  applicationName: 'Kortix',
   formatDetection: {
     telephone: false,
     email: false,
@@ -77,62 +64,115 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   openGraph: {
-    title: BRANDING.name,
-    description: BRANDING.description,
+    type: 'website',
+    title: 'Kortix - Open Source Generalist AI Worker',
+    description: siteConfig.description,
     url: siteConfig.url,
-    siteName: BRANDING.name,
+    siteName: 'Kortix',
+    locale: 'en_US',
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: `${BRANDING.name} - Open Source Generalist AI Agent`,
+        alt: 'Kortix - Open Source Generalist AI Worker',
         type: 'image/png',
       },
     ],
-    locale: 'pt_BR',
-    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRANDING.name} - Agente de IA para automações por linguagem natural`,
-    description: BRANDING.description,
-    creator: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,
-    site: `@${BRANDING.social.twitter.split('/').pop() || 'kortixai'}`,
-    images: [
-      {
-        url: '/banner.png',
-        width: 1200,
-        height: 630,
-        alt: `${BRANDING.name} - Open Source Generalist AI Agent`,
-      },
-    ],
+    title: 'Kortix - Open Source Generalist AI Worker',
+    description: siteConfig.description,
+    creator: '@kortix',
+    site: '@kortix',
+    images: ['/banner.png'],
   },
   icons: {
-    icon: [{ url: BRANDING.logo.favicon || '/favicon.png', sizes: 'any' }],
-    shortcut: BRANDING.logo.favicon || '/favicon.png',
+    icon: [
+      { url: '/favicon.png', sizes: 'any' },
+      { url: '/favicon-light.png', sizes: 'any', media: '(prefers-color-scheme: dark)' },
+    ],
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
-  // manifest: "/manifest.json",
+  manifest: '/manifest.json',
   alternates: {
     canonical: siteConfig.url,
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${roobert.variable} ${roobertMono.variable}`}>
       <head>
-        {/* Google Tag Manager */}
+        {/* Structured Data for Organization */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Kortix',
+              alternateName: ['Suna', 'Kortix AI'],
+              url: 'https://kortix.com',
+              logo: 'https://kortix.com/favicon.png',
+              description: siteConfig.description,
+              foundingDate: '2024',
+              sameAs: [
+                'https://github.com/kortix-ai',
+                'https://x.com/kortix',
+                'https://linkedin.com/company/kortix',
+              ],
+              contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'Customer Support',
+                url: 'https://kortix.com',
+              },
+            }),
+          }}
+        />
+        
+        {/* Structured Data for Software Application */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'Kortix',
+              alternateName: 'Suna',
+              applicationCategory: 'BusinessApplication',
+              operatingSystem: 'Web, macOS, Windows, Linux',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'USD',
+              },
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: '4.8',
+                ratingCount: '1000',
+              },
+            }),
+          }}
+        />
+        
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -143,9 +183,7 @@ export default function RootLayout({
         <Script async src="https://cdn.tolt.io/tolt.js" data-tolt={process.env.NEXT_PUBLIC_TOLT_REFERRAL_ID}></Script>
       </head>
 
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased font-sans bg-background`}
-      >
+      <body className="antialiased font-sans bg-background">
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-PCHSN4M2"
@@ -162,13 +200,16 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            {children}
-            <Toaster />
-          </Providers>
+          <AuthProvider>
+            <ReactQueryProvider>
+              {children}
+              <Toaster />
+            </ReactQueryProvider>
+          </AuthProvider>
           <Analytics />
           <GoogleAnalytics gaId="G-6ETJFB3PT3" />
           <SpeedInsights />
+          <PostHogIdentify />
         </ThemeProvider>
       </body>
     </html>

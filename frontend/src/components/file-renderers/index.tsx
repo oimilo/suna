@@ -2,7 +2,7 @@
 
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { MarkdownRenderer } from './markdown-renderer';
+import { MarkdownRenderer } from './authenticated-markdown-renderer';
 import { CodeRenderer } from './code-renderer';
 import { PdfRenderer } from './pdf-renderer';
 import { ImageRenderer } from './image-renderer';
@@ -235,15 +235,10 @@ export function FileRenderer({
     return undefined;
   }, [isHtmlFile, content, project?.sandbox?.sandbox_url, tiptapHtmlContent]);
 
-  const previewTarget = filePath || fileName;
-
-  const htmlPreviewUrl = React.useMemo(() => {
-    if (isHtmlFile && project?.sandbox?.sandbox_url && previewTarget) {
-      return constructHtmlPreviewUrl(project.sandbox.sandbox_url, previewTarget);
-    }
-
-    return blobHtmlUrl;
-  }, [isHtmlFile, project?.sandbox?.sandbox_url, previewTarget, blobHtmlUrl]);
+  const htmlPreviewUrl =
+    isHtmlFile && project?.sandbox?.sandbox_url && (filePath || fileName)
+      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName)
+      : blobHtmlUrl;
 
   React.useEffect(() => {
     return () => {

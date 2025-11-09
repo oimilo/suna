@@ -11,8 +11,9 @@ import {
   useListFactors,
   useGetAAL,
   useUnenrollFactor,
-} from '@/hooks/react-query/phone-verification';
+} from '@/hooks/auth';
 import { signOut } from '@/app/auth/actions';
+import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LogOut, Loader2 } from 'lucide-react';
@@ -34,8 +35,6 @@ export function PhoneVerificationPage({
   const [isSubmittingPhone, setIsSubmittingPhone] = useState(false);
   const [hasExistingFactor, setHasExistingFactor] = useState(false);
   const router = useRouter();
-
-  console.log({ step, challengeId, hasExistingFactor });
 
   // Use React Query hooks
   const enrollMutation = useEnrollPhoneNumber();
@@ -62,20 +61,8 @@ export function PhoneVerificationPage({
         (f) => f.status === 'verified',
       );
 
-      console.log('📱 Checking existing factors:', {
-        allFactors: factors.factors,
-        phoneFactors,
-        verifiedPhoneFactor,
-        aalData,
-        isSubmittingPhone,
-      });
-
       if (verifiedPhoneFactor) {
         // User already has a verified factor - show options
-        console.log(
-          '✅ Found existing verified phone factor:',
-          verifiedPhoneFactor,
-        );
         setStep('otp');
         setFactorId(verifiedPhoneFactor.id);
         setPhoneNumber(verifiedPhoneFactor.phone || '');
@@ -87,10 +74,6 @@ export function PhoneVerificationPage({
           (f) => f.status !== 'verified',
         );
         if (unverifiedPhoneFactor) {
-          console.log(
-            '⚠️ Found unverified phone factor:',
-            unverifiedPhoneFactor,
-          );
           setFactorId(unverifiedPhoneFactor.id);
           setPhoneNumber(unverifiedPhoneFactor.phone || '');
           setStep('otp');
@@ -103,16 +86,9 @@ export function PhoneVerificationPage({
 
   const handleCreateChallengeForExistingFactor = async () => {
     try {
-      console.log('🔵 Creating challenge for existing factor:', factorId);
-
       const challengeResponse = await challengeMutation.mutateAsync({
         factor_id: factorId,
       });
-
-      console.log(
-        '✅ Challenge created for existing factor:',
-        challengeResponse,
-      );
 
       setChallengeId(challengeResponse.id);
       setSuccess('Verification code sent to your phone');
@@ -123,11 +99,7 @@ export function PhoneVerificationPage({
 
   const handleUnenrollFactor = async () => {
     try {
-      console.log('🔵 Unenrolling factor:', factorId);
-
       await unenrollMutation.mutateAsync(factorId);
-
-      console.log('✅ Factor unenrolled successfully');
 
       // Reset state and go back to phone input
       setStep('phone');
@@ -144,7 +116,6 @@ export function PhoneVerificationPage({
   const handlePhoneSubmit = async (phone: string) => {
     try {
       setIsSubmittingPhone(true);
-      console.log('🔵 Starting phone enrollment for:', phone);
 
       // Step 1: Enroll the phone number
       const enrollResponse = await enrollMutation.mutateAsync({
@@ -152,14 +123,10 @@ export function PhoneVerificationPage({
         phone_number: phone,
       });
 
-      console.log('✅ Enrollment response:', enrollResponse);
-
       // Step 2: Create a challenge (sends SMS)
       const challengeResponse = await challengeMutation.mutateAsync({
         factor_id: enrollResponse.id,
       });
-
-      console.log('✅ Challenge response:', challengeResponse);
 
       setPhoneNumber(phone);
       setFactorId(enrollResponse.id);
@@ -172,9 +139,6 @@ export function PhoneVerificationPage({
 
       // If enrollment fails because factor already exists, try to handle existing factor
       if (err instanceof Error && err.message.includes('already exists')) {
-        console.log(
-          '🔄 Factor already exists, checking for existing factors...',
-        );
         // Force refetch of factors
         window.location.reload();
       }
@@ -185,26 +149,12 @@ export function PhoneVerificationPage({
 
   const handleOtpVerify = async (otp: string) => {
     try {
-      console.log('🔵 Starting OTP verification with:', {
-        factor_id: factorId,
-        challenge_id: challengeId,
-        code: otp,
-      });
-
-      // Check status BEFORE verification
-      console.log('📊 Status BEFORE verification:', {
-        factors: factors,
-        aalData: aalData,
-      });
-
       // Verify the challenge with the OTP code - this will automatically invalidate caches
       const verifyResponse = await verifyMutation.mutateAsync({
         factor_id: factorId,
         challenge_id: challengeId,
         code: otp,
       });
-
-      console.log('✅ Verification response:', verifyResponse);
 
       // Store debug info to display
       setDebugInfo({
@@ -218,7 +168,6 @@ export function PhoneVerificationPage({
 
       // Wait a bit for cache invalidation, then redirect
       setTimeout(() => {
-        console.log('🔄 Redirecting after successful verification...');
         if (onSuccess) {
           onSuccess();
         } else {
@@ -232,14 +181,10 @@ export function PhoneVerificationPage({
 
   const handleResendCode = async () => {
     try {
-      console.log('🔵 Resending code for factor:', factorId);
-
       // Create a new challenge for the enrolled factor
       const challengeResponse = await challengeMutation.mutateAsync({
         factor_id: factorId,
       });
-
-      console.log('✅ Resend challenge response:', challengeResponse);
 
       setChallengeId(challengeResponse.id);
       setSuccess('New verification code sent');
@@ -250,6 +195,8 @@ export function PhoneVerificationPage({
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
+      // Clear local storage before sign out
+      clearUserLocalStorage();
       await signOut().catch(() => void 0);
       window.location.href = '/';
     },

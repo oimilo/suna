@@ -20,7 +20,6 @@ const eslintConfig = [
       '@next/next/no-img-element': 'warn',
       '@typescript-eslint/no-empty-object-type': 'off',
       'prefer-const': 'warn',
-      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 ];

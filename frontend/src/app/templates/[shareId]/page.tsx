@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useScroll } from 'framer-motion';
+import { motion, useScroll } from 'framer-motion';
+import { backendApi } from '@/lib/api-client';
 import {
   Download,
   Share2,
@@ -19,24 +19,26 @@ import {
   Globe,
   Terminal,
   GitBranch,
-  Loader2,
   ArrowLeft,
   Moon,
   Sun,
   FileText,
   ChevronDown,
-  ChevronUp,
+  ChevronUp
 } from 'lucide-react';
-import Link from 'next/link';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Markdown } from '@/components/ui/markdown';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import ColorThief from 'colorthief';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 
 interface MarketplaceTemplate {
   template_id: string;
@@ -99,8 +101,8 @@ const IntegrationIcon: React.FC<{
       setIsLoading(true);
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
       fetch(`${backendUrl}/composio/toolkits/${extractedSlug}/icon`)
-        .then((res) => res.json())
-        .then((data) => {
+        .then(res => res.json())
+        .then(data => {
           if (data.success && data.icon_url) {
             setLogoUrl(data.icon_url);
           }
@@ -116,13 +118,14 @@ const IntegrationIcon: React.FC<{
   const firstLetter = displayName.charAt(0).toUpperCase();
 
   const iconMap: Record<string, JSX.Element> = {
-    github: <GitBranch size={size} />,
-    browser: <Globe size={size} />,
-    terminal: <Terminal size={size} />,
-    code: <Code size={size} />,
+    'github': <GitBranch size={size} />,
+    'browser': <Globe size={size} />,
+    'terminal': <Terminal size={size} />,
+    'code': <Code size={size} />,
   };
 
-  const fallbackIcon = iconMap[qualifiedName.toLowerCase()] || iconMap[customType?.toLowerCase() || ''];
+  const fallbackIcon = iconMap[qualifiedName.toLowerCase()] ||
+    iconMap[customType?.toLowerCase() || ''];
 
   if (isLoading) {
     return (
@@ -135,17 +138,15 @@ const IntegrationIcon: React.FC<{
 
   if (logoUrl) {
     return (
-      <Image
+      <img
         src={logoUrl}
         alt={displayName}
-        width={size}
-        height={size}
-        className="rounded object-cover"
+        className="rounded"
+        style={{ width: size, height: size }}
         onError={() => {
           setLogoUrl(null);
           setHasError(true);
         }}
-        unoptimized
       />
     );
   }
@@ -164,10 +165,11 @@ const IntegrationIcon: React.FC<{
   );
 };
 
+
+
 export default function TemplateSharePage() {
-  const EMPTY_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
   const params = useParams();
-  const templateId = params.shareId as string;
+  const templateId = params.shareId as string; // Note: keeping shareId param name for URL compatibility
   const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [colorPalette, setColorPalette] = useState<string[]>([]);
@@ -178,6 +180,7 @@ export default function TemplateSharePage() {
   const { scrollY } = useScroll();
   const [hasScrolled, setHasScrolled] = useState(false);
 
+  // Helper functions and variables for navigation
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -187,6 +190,7 @@ export default function TemplateSharePage() {
     }
   };
 
+  // Scroll detection for navbar
   useEffect(() => {
     const unsubscribe = scrollY.on('change', (latest) => {
       setHasScrolled(latest > 10);
@@ -194,21 +198,25 @@ export default function TemplateSharePage() {
     return unsubscribe;
   }, [scrollY]);
 
+  // Navigation state management
   useEffect(() => {
     const handleScroll = () => {
       const sections = ['system-prompt', 'integrations', 'triggers', 'tools'];
       let currentSection = '';
 
+      // Find the section that's currently in view
       for (const section of sections) {
         const element = document.getElementById(section);
         if (element) {
           const rect = element.getBoundingClientRect();
+          // Use a smaller offset for better responsiveness
           if (rect.top <= 200 && rect.bottom >= 100) {
             currentSection = section;
           }
         }
       }
 
+      // If no section is in the main view area, find the closest one
       if (!currentSection) {
         let minDistance = Infinity;
         for (const section of sections) {
@@ -242,35 +250,52 @@ export default function TemplateSharePage() {
       if (!response.ok) {
         throw new Error('Template not found');
       }
-      return (await response.json()) as MarketplaceTemplate;
+      return response.json() as Promise<MarketplaceTemplate>;
     },
     enabled: !!templateId,
   });
 
-  const rgbToHex = (r: number, g: number, b: number) =>
-    '#' + [r, g, b].map((x) => {
+  const rgbToHex = (r: number, g: number, b: number) => {
+    return '#' + [r, g, b].map(x => {
       const hex = x.toString(16);
       return hex.length === 1 ? '0' + hex : hex;
     }).join('');
+  };
 
   useEffect(() => {
     if (template?.icon_name && template?.icon_background) {
+      // For icons, use the icon background color as the primary color
       const iconBg = template.icon_background || '#e5e5e5';
       const iconColor = template.icon_color || '#000000';
-      setColorPalette([iconBg, iconColor, '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e']);
+      // Create a palette based on the icon colors
+      setColorPalette([
+        iconBg,
+        iconColor,
+        '#6366f1',
+        '#8b5cf6',
+        '#ec4899',
+        '#f43f5e'
+      ]);
       if (imageRef.current && imageLoaded) {
         const colorThief = new ColorThief();
         try {
           const palette = colorThief.getPalette(imageRef.current, 6);
           const colors = palette.map((rgb: number[]) => rgbToHex(rgb[0], rgb[1], rgb[2]));
+          console.log('Extracted colors (hex):', colors);
           setColorPalette(colors);
-        } catch (err) {
-          console.error('Error extracting colors:', err);
-          setColorPalette(['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#facc15']);
+        } catch (error) {
+          console.error('Error extracting colors:', error);
+          setColorPalette([
+            '#6366f1', '#8b5cf6', '#ec4899',
+            '#f43f5e', '#f97316', '#facc15'
+          ]);
         }
       }
     } else {
-      setColorPalette(['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#facc15']);
+      setColorPalette([
+        '#6366f1', '#8b5cf6', '#ec4899',
+        '#f43f5e', '#f97316', '#facc15'
+      ]);
     }
   }, [template?.icon_name, template?.icon_background, template?.icon_color, imageLoaded]);
 
@@ -289,18 +314,19 @@ export default function TemplateSharePage() {
     }
   };
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen">
         <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <KortixLoader size="large" />
         </div>
       </div>
     );
@@ -312,9 +338,7 @@ export default function TemplateSharePage() {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-2">Template not found</h2>
-            <p className="text-muted-foreground mb-4">
-              The template you're looking for doesn't exist or has been removed.
-            </p>
+            <p className="text-muted-foreground mb-4">The template you're looking for doesn't exist or has been removed.</p>
             <Button onClick={() => router.push('/agents?tab=my-agents')} className="rounded-lg">
               Browse Agents
             </Button>
@@ -333,33 +357,36 @@ export default function TemplateSharePage() {
     .filter(([_, enabled]) => enabled)
     .map(([toolName]) => toolName);
 
+  // Navigation helper variables
   const hasIntegrations = integrations.length > 0;
   const hasTriggers = triggerRequirements.length > 0;
   const hasTools = customTools.length > 0 || agentpressTools.length > 0;
 
-  const getDefaultAvatar = () => (
-    <AgentAvatar
-      iconName={template.icon_name}
-      iconColor={template.icon_color}
-      backgroundColor={template.icon_background}
-      agentName={template.name}
-      size={28}
-    />
-  );
+  const getDefaultAvatar = () => {
+    return (
+      <AgentAvatar
+        iconName={template.icon_name}
+        iconColor={template.icon_color}
+        backgroundColor={template.icon_background}
+        agentName={template.name}
+        size={28}
+      />
+    );
+  };
 
-  const [color1, color2, color3, color4, color5, color6] =
-    colorPalette.length >= 6
-      ? colorPalette
-      : ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#facc15'];
+  const [color1, color2, color3, color4, color5, color6] = colorPalette.length >= 6
+    ? colorPalette
+    : ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#facc15'];
 
   const gradientStyle = {
     background: `radial-gradient(circle at 30% 20%, ${color2}90 0%, transparent 35%), radial-gradient(circle at 70% 80%, ${color3}80 0%, transparent 35%), radial-gradient(circle at 10% 60%, ${color1}85 0%, transparent 40%), radial-gradient(circle at 50% 50%, ${color4}70 0%, transparent 50%)`,
     filter: 'blur(80px) saturate(250%)',
     opacity: 1,
-  } as React.CSSProperties;
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Top Navigation Bar */}
       <header
         className={cn(
           'sticky z-50 flex justify-center transition-all duration-300',
@@ -378,14 +405,7 @@ export default function TemplateSharePage() {
             <div className="flex h-14 items-center">
               <div className="flex items-center">
                 <Link href="/" className="flex items-center">
-                  <Image
-                    src={resolvedTheme === 'dark' ? '/branco.svg' : '/preto.svg'}
-                    alt="Prophet"
-                    width={120}
-                    height={24}
-                    className="h-6 w-auto opacity-70"
-                    priority
-                  />
+                  <KortixLogo size={24} />
                 </Link>
               </div>
               <div className="flex items-center space-x-3 ml-auto">
@@ -399,7 +419,12 @@ export default function TemplateSharePage() {
                   <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   <span className="sr-only">Toggle theme</span>
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 rounded-md">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleShare}
+                  className="h-8 w-8 rounded-md"
+                >
                   <Share2 className="h-4 w-4" />
                   <span className="sr-only">Share</span>
                 </Button>
@@ -416,6 +441,7 @@ export default function TemplateSharePage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <div className="w-full max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-4">
@@ -444,21 +470,19 @@ export default function TemplateSharePage() {
                       size={120}
                     />
                   </div>
-                  <Image
+                  <img
                     ref={imageRef}
-                    src={template.metadata?.preview_image_url || EMPTY_IMAGE_PLACEHOLDER}
+                    src={""}
                     alt={template.name}
-                    fill
-                    className="object-cover"
+                    className="w-full h-full object-cover"
                     crossOrigin="anonymous"
-                    onLoadingComplete={() => setImageLoaded(true)}
-                    unoptimized={!!template.metadata?.preview_image_url}
+                    onLoad={() => setImageLoaded(true)}
                   />
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">{template.name}</h1>
+                  <h1 className="text-3xl font-medium tracking-tight">{template.name}</h1>
                   {template.is_kortix_team && (
                     <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
                       <Sparkles className="w-3 h-3 mr-1" />
@@ -473,157 +497,129 @@ export default function TemplateSharePage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <User className="w-4 h-4" />
-                    <span>
-                      Created by <span className="text-foreground font-medium">{template.creator_name || 'Anonymous'}</span>
-                    </span>
+                    <span>Created by <span className="text-foreground font-medium">{template.creator_name || 'Anonymous'}</span></span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Download className="w-4 h-4" />
-                    <span>
-                      {template.download_count.toLocaleString()} installs since{' '}
-                      {template.marketplace_published_at ? formatDate(template.marketplace_published_at) : 'release'}
-                    </span>
+                    <span><span className="text-foreground font-medium">{template.download_count}</span> installs</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    <span>Updated {formatDate(template.updated_at)}</span>
+                    <span>{formatDate(template.created_at)}</span>
                   </div>
                 </div>
-
-                {template.tags && template.tags.length > 0 && (
+                {template.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {template.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="rounded-full">
-                        <Tag className="w-3 h-3 mr-1" />
+                    {template.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 )}
 
-                <div className="rounded-xl border bg-muted/40 p-4">
-                  <h3 className="text-sm font-semibold mb-3">Includes</h3>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
+              </div>
+
+              {/* Content Navigation */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Sections</h3>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => scrollToSection('system-prompt')}
+                    className="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  >
+                    <FileText className="w-4 h-4" />
+                    System Prompt
+                  </button>
+                  {hasIntegrations && (
+                    <button
+                      onClick={() => scrollToSection('integrations')}
+                      className="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
                       <Plug className="w-4 h-4" />
-                      <span>{integrations.length} integrations</span>
-                    </div>
-                    <div className="flex items-center gap-2">
+                      Integrations
+                    </button>
+                  )}
+                  {hasTriggers && (
+                    <button
+                      onClick={() => scrollToSection('triggers')}
+                      className="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
                       <Zap className="w-4 h-4" />
-                      <span>{triggerRequirements.length} automation triggers</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Wrench className="w-4 h-4" />
-                      <span>{customTools.length + agentpressTools.length} custom tools</span>
-                    </div>
-                  </div>
-                </div>
+                      Triggers
+                    </button>
+                  )}
+
+                </nav>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <nav className="sticky top-16 z-40 bg-background/60 backdrop-blur-md border-b border-border/40 py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('rounded-full', activeSection === 'system-prompt' && 'bg-primary/10 text-primary')}
-                    onClick={() => scrollToSection('system-prompt')}
-                  >
-                    <FileText className="w-4 h-4 mr-2" /> Prompt
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('rounded-full', activeSection === 'integrations' && 'bg-primary/10 text-primary')}
-                    onClick={() => scrollToSection('integrations')}
-                  >
-                    <Plug className="w-4 h-4 mr-2" /> Integrations
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('rounded-full', activeSection === 'triggers' && 'bg-primary/10 text-primary')}
-                    onClick={() => scrollToSection('triggers')}
-                  >
-                    <Zap className="w-4 h-4 mr-2" /> Automations
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('rounded-full', activeSection === 'tools' && 'bg-primary/10 text-primary')}
-                    onClick={() => scrollToSection('tools')}
-                  >
-                    <Wrench className="w-4 h-4 mr-2" /> Tools
-                  </Button>
-                </div>
-                <Button size="sm" className="rounded-full" onClick={handleInstall}>
-                  <Download className="w-4 h-4 mr-2" /> Install
-                </Button>
-              </div>
-            </nav>
-
             <Card id="system-prompt" className="bg-transparent border-0 shadow-none">
               <CardHeader className="px-0">
-                <CardTitle className="text-xl">System Prompt</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  System Prompt
+                </CardTitle>
                 <CardDescription>
-                  The instructions that define this agent's personality, tone, and behaviour
+                  The core instructions that define this agent's behavior
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-0">
-                <div className="relative">
-                  <div
-                    className={cn(
-                      'rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none overflow-hidden transition-all duration-300',
-                      isPromptExpanded ? 'max-h-[1000px]' : 'max-h-64',
-                    )}
-                  >
-                    <Markdown className="max-w-none text-left leading-relaxed">
-                      {template.system_prompt || 'No system prompt provided.'}
-                    </Markdown>
-                    {!isPromptExpanded && (
-                      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-muted/80 to-transparent pointer-events-none" />
-                    )}
-                  </div>
-                  <div className="flex justify-center mt-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-full"
-                      onClick={() => setIsPromptExpanded((prev) => !prev)}
-                    >
-                      {isPromptExpanded ? (
-                        <>
-                          Show Less
-                          <ChevronUp className="w-4 h-4 ml-2" />
-                        </>
-                      ) : (
-                        <>
-                          Show More
-                          <ChevronDown className="w-4 h-4 ml-2" />
-                        </>
+                <div className="rounded-lg border bg-muted/10 p-6">
+                  <div className="relative">
+                    <div className={cn(
+                      "transition-all duration-300 overflow-hidden",
+                      !isPromptExpanded && "max-h-[600px]"
+                    )}>
+                      <Markdown className="prose prose-sm dark:prose-invert max-w-none">
+                        {template.system_prompt || 'No system prompt available'}
+                      </Markdown>
+                      {!isPromptExpanded && template.system_prompt && template.system_prompt.length > 10000 && (
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-muted/10 to-transparent pointer-events-none" />
                       )}
-                    </Button>
+                    </div>
+                    {template.system_prompt && template.system_prompt.length > 10000 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+                        className="mt-4 w-full justify-between text-muted-foreground hover:text-foreground"
+                      >
+                        <span>
+                          {isPromptExpanded ? 'Show less' : `Show more (${template.system_prompt.length.toLocaleString()} characters)`}
+                        </span>
+                        {isPromptExpanded ? (
+                          <ChevronUp className="h-4 w-4 ml-2" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {hasIntegrations && (
+            {integrations.length > 0 && (
               <Card id="integrations" className="bg-transparent border-0 shadow-none">
                 <CardHeader className="px-0">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Plug className="w-5 h-5" />
-                    Integrations Required
+                    Integrations
                   </CardTitle>
-                  <CardDescription>Connect these services to unlock the agent's full capabilities</CardDescription>
+                  <CardDescription>
+                    External services and APIs this agent can connect to
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="px-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {integrations.map((integration: any, index: number) => (
-                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background">
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-background"
+                      >
                         <IntegrationIcon
                           qualifiedName={integration.qualified_name}
                           displayName={integration.display_name || integration.qualified_name}
@@ -634,8 +630,10 @@ export default function TemplateSharePage() {
                           <p className="font-medium text-sm truncate">
                             {integration.display_name || integration.qualified_name}
                           </p>
-                          {integration.toolkit_slug && (
-                            <p className="text-xs text-muted-foreground">Toolkit: {integration.toolkit_slug}</p>
+                          {integration.enabled_tools?.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {integration.enabled_tools.length} tools
+                            </p>
                           )}
                         </div>
                       </div>
@@ -644,15 +642,16 @@ export default function TemplateSharePage() {
                 </CardContent>
               </Card>
             )}
-
-            {hasTriggers && (
+            {triggerRequirements.length > 0 && (
               <Card id="triggers" className="bg-transparent border-0 shadow-none">
                 <CardHeader className="px-0">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Zap className="w-5 h-5" />
-                    Automation Triggers
+                    Event Triggers
                   </CardTitle>
-                  <CardDescription>Automated triggers that can activate this agent</CardDescription>
+                  <CardDescription>
+                    Automated triggers that can activate this agent
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="px-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -661,13 +660,14 @@ export default function TemplateSharePage() {
                       const triggerName = trigger.display_name?.match(/\(([^)]+)\)/)?.[1] || trigger.display_name;
 
                       return (
-                        <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background">
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-background"
+                        >
                           <IntegrationIcon
                             qualifiedName={trigger.qualified_name}
                             displayName={appName || trigger.qualified_name}
-                            customType={
-                              trigger.custom_type || (trigger.qualified_name?.startsWith('composio.') ? 'composio' : undefined)
-                            }
+                            customType={trigger.custom_type || (trigger.qualified_name?.startsWith('composio.') ? 'composio' : undefined)}
                             toolkitSlug={trigger.toolkit_slug}
                           />
                           <div className="flex-1 min-w-0">
@@ -675,7 +675,9 @@ export default function TemplateSharePage() {
                               {triggerName || trigger.display_name || trigger.qualified_name}
                             </p>
                             {appName && triggerName && (
-                              <p className="text-xs text-muted-foreground">{appName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {appName}
+                              </p>
                             )}
                           </div>
                           <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
@@ -686,7 +688,6 @@ export default function TemplateSharePage() {
                 </CardContent>
               </Card>
             )}
-
             {customTools.length > 0 && (
               <Card id="tools" className="bg-transparent border-0 shadow-none">
                 <CardHeader className="px-0">
@@ -694,12 +695,17 @@ export default function TemplateSharePage() {
                     <Wrench className="w-5 h-5" />
                     Custom Tools
                   </CardTitle>
-                  <CardDescription>Specialized tools built for this agent</CardDescription>
+                  <CardDescription>
+                    Specialized tools built for this agent
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="px-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {customTools.map((tool: any, index: number) => (
-                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background">
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-background"
+                      >
                         <IntegrationIcon
                           qualifiedName={tool.qualified_name}
                           displayName={tool.display_name || tool.qualified_name}
@@ -722,36 +728,35 @@ export default function TemplateSharePage() {
                 </CardContent>
               </Card>
             )}
-
-            {agentpressTools.length > 0 && (
-              <Card className="bg-transparent border-0 shadow-none">
-                <CardHeader className="px-0">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Wrench className="w-5 h-5" />
-                    Built-in Capabilities
-                  </CardTitle>
-                  <CardDescription>AgentPress tools enabled for this template</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {agentpressTools.map((toolName) => (
-                      <div key={toolName} className="flex items-center gap-3 p-3 rounded-lg border bg-background">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted">
-                          <Code className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm capitalize">{toolName.replace(/_/g, ' ')}</p>
-                          <p className="text-xs text-muted-foreground">Enabled by default</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* 
+            <Card className="bg-muted/30 border-muted/50">
+              <CardContent className="p-8 text-center">
+                <h3 className="text-2xl font-medium mb-4">Ready to get started?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Install this agent template and customize it for your specific needs
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    size="lg"
+                    onClick={handleInstall}
+                  >
+                    <Download className="h-4 w-4" />
+                    Install Now
+                  </Button>
+                  <Button 
+                    size="lg"
+                    variant="outline"
+                    onClick={() => router.push('/agents?tab=my-agents')}
+                  >
+                    Browse More Agents
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            */}
           </div>
         </div>
       </div>
     </div>
   );
-}
+} 

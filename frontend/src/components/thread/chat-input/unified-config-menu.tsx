@@ -15,9 +15,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2, Plug, Brain, LibraryBig, Zap, Workflow } from 'lucide-react';
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { useAgents } from '@/hooks/agents/use-agents';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
-import type { ModelOption } from '@/hooks/use-model-selection';
+import type { ModelOption } from '@/hooks/agents';
 import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
@@ -26,7 +26,7 @@ export type SubscriptionStatus = 'no_subscription' | 'active';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
-import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
+import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
@@ -149,7 +149,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     // Check if we can load more
     const canLoadMore = useMemo(() => {
         if (!agentsResponse?.pagination) return false;
-    return agentsResponse.pagination.page < agentsResponse.pagination.pages;
+        return agentsResponse.pagination.current_page < agentsResponse.pagination.total_pages;
     }, [agentsResponse?.pagination]);
 
     const handleLoadMore = useCallback(() => {
@@ -336,12 +336,11 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         <SpotlightCard className="transition-colors cursor-pointer bg-transparent">
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent w-full">
-                                    <div className="flex-shrink-0">
-                                        <ModelProviderIcon
-                                            modelId={selectedModel}
-                                            size={32}
-                                        />
-                                    </div>
+                                    <ModelProviderIcon
+                                        modelId={selectedModel}
+                                        size={32}
+                                        className="flex-shrink-0"
+                                    />
                                     <span className="flex-1 truncate font-medium text-left">
                                         {modelOptions.find(m => m.id === selectedModel)?.label || 'Select Model'}
                                     </span>
@@ -366,12 +365,11 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                                                 setIsOpen(false);
                                                             }}
                                                         >
-                                                            <div className="flex-shrink-0">
-                                                                <ModelProviderIcon
-                                                                    modelId={model.id}
-                                                                    size={32}
-                                                                />
-                                                            </div>
+                                                            <ModelProviderIcon
+                                                                modelId={model.id}
+                                                                size={32}
+                                                                className="flex-shrink-0"
+                                                            />
                                                             <span className="flex-1 truncate font-medium">{model.label}</span>
                                                             {isActive && (
                                                                 <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
@@ -398,7 +396,6 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                     { action: 'knowledge' as const, icon: Brain },
                                     { action: 'integrations' as const, icon: LibraryBig },
                                     { action: 'triggers' as const, icon: Zap },
-                                    { action: 'playbooks' as const, icon: Workflow },
                                 ].map(({ action, icon: Icon }) => (
                                     <Button
                                         key={action}

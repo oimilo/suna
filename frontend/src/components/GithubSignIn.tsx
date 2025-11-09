@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { Icons } from './home/icons';
-import { FaGithub } from "react-icons/fa";
-import { useAuthMethodTracking } from '@/lib/stores/auth-tracking';
+// Using proper GitHub brand icon from Icons component
+import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface GitHubSignInProps {
   returnUrl?: string;
@@ -21,7 +22,7 @@ interface AuthMessage {
 export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { resolvedTheme } = useTheme();
-  
+
   const { wasLastMethod, markAsUsed } = useAuthMethodTracking('github');
 
   const cleanupAuthState = useCallback(() => {
@@ -45,7 +46,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
   const handleError = useCallback(
     (data: AuthMessage) => {
       cleanupAuthState();
-      toast.error(data.message || 'Falha no login com GitHub. Por favor, tente novamente.');
+      toast.error(data.message || 'GitHub sign-in failed. Please try again.');
     },
     [cleanupAuthState],
   );
@@ -109,7 +110,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
 
       if (!popup) {
         throw new Error(
-          'Popup foi bloqueado. Por favor, habilite popups e tente novamente.',
+          'Popup was blocked. Please enable popups and try again.',
         );
       }
 
@@ -125,7 +126,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
           setTimeout(() => {
             if (sessionStorage.getItem('isGitHubAuthInProgress')) {
               cleanupAuthState();
-              toast.error('Login com GitHub foi cancelado ou não foi concluído.');
+              toast.error('GitHub sign-in was cancelled or not completed.');
             }
           }, 500);
         }
@@ -139,32 +140,34 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Falha ao iniciar login com GitHub',
+          : 'Failed to start GitHub sign-in',
       );
     }
   };
 
   return (
     <div className="relative">
-      <button
+      <Button
         onClick={handleGitHubSignIn}
         disabled={isLoading}
-        className="w-full h-12 flex items-center justify-center text-sm font-medium tracking-wide rounded-full bg-background text-foreground border border-border hover:bg-accent/30 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed font-sans"
+        variant="outline"
+        size="lg"
+        className="w-full h-12"
         aria-label={
-          isLoading ? 'Entrando com GitHub...' : 'Entrar com GitHub'
+          isLoading ? 'Signing in with GitHub...' : 'Sign in with GitHub'
         }
         type="button"
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
-          <FaGithub className="w-4 h-4 mr-2" />
+          <Icons.github className="w-4 h-4" />
         )}
-        <span className="font-medium">
-          {isLoading ? 'Entrando...' : 'Continuar com GitHub'}
+        <span>
+          {isLoading ? 'Signing in...' : 'Continue with GitHub'}
         </span>
-      </button>
-      
+      </Button>
+
       {wasLastMethod && (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background shadow-sm">
           <div className="w-full h-full bg-green-500 rounded-full animate-pulse" />

@@ -1,5 +1,4 @@
 // Shared types for onboarding
-import type { ComponentType } from 'react';
 export interface UserContext {
   name?: string;
   email?: string;
@@ -16,20 +15,13 @@ export interface UserContext {
   };
   invitedTeammates?: string[];
   selectedAgents?: string[];
-  persona?: {
-    goal?: string;
-    focus?: string;
-    tone?: string;
-    profile?: string;
-    interests?: string[];
-  };
 }
 
 export interface OnboardingStep {
   id: string;
   title: string;
   description: string;
-  component: ComponentType;
+  component: React.ComponentType;
   canSkip?: boolean;
   actionLabel?: string;
 }

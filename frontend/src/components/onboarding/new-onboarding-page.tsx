@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Sparkles, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { 
@@ -20,12 +20,13 @@ import { userContext } from './shared/context';
 interface NewOnboardingPageProps {
   className?: string;
   onComplete?: () => void;
+  onClose?: () => void;
 }
 
-export function NewOnboardingPage({ className, onComplete }: NewOnboardingPageProps) {
+export function NewOnboardingPage({ className, onComplete, onClose }: NewOnboardingPageProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
-  const [, forceContextRefresh] = useState(0);
+  const [contextVersion, setContextVersion] = useState(0);
 
   const currentStepData = getStepByIndex(currentStepIndex);
   const progress = getProgressPercentage(currentStepIndex);
@@ -34,9 +35,9 @@ export function NewOnboardingPage({ className, onComplete }: NewOnboardingPagePr
   const canSkip = canSkipStep(currentStepIndex);
 
   // Force re-render when context changes
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
-      forceContextRefresh((value) => value + 1);
+      setContextVersion(v => v + 1);
     }, 100);
     return () => clearInterval(interval);
   }, []);
@@ -60,6 +61,11 @@ export function NewOnboardingPage({ className, onComplete }: NewOnboardingPagePr
   const handleComplete = () => {
     setIsOpen(false);
     onComplete?.();
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose?.();
   };
 
   const canProceed = canProceedFromStep(currentStepIndex, userContext);

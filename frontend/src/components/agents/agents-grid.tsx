@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { getAgentAvatar } from '../../lib/utils/get-agent-style';
-import { UnifiedAgentCard, type BaseAgentData } from '@/components/ui/unified-agent-card';
-import { usePtTranslations } from '@/hooks/use-pt-translations';
+import { Settings, Trash2, Star, MessageCircle, Wrench, Globe, GlobeLock, Download, Shield, AlertTriangle, GitBranch } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
+import { useCreateTemplate, useUnpublishTemplate } from '@/hooks/secure-mcp/use-secure-mcp';
+import { toast } from 'sonner';
+import { UnifiedAgentCard } from '@/components/ui/unified-agent-card';
+import { AgentAvatar } from '../thread/content/agent-avatar';
+import { AgentConfigurationDialog } from './agent-configuration-dialog';
+import { isStagingMode } from '@/lib/config';
 
 interface Agent {
   agent_id: string;
   name: string;
-  description?: string;
   is_default: boolean;
   is_public?: boolean;
   marketplace_published_at?: string;
@@ -25,14 +23,7 @@ interface Agent {
   created_at: string;
   updated_at?: string;
   configured_mcps?: Array<{ name: string }>;
-  mcp_requirements?: Array<{
-    qualified_name: string;
-    display_name: string;
-    custom_type?: string;
-  }>;
   agentpress_tools?: Record<string, any>;
-  avatar?: string;
-  avatar_color?: string;
   template_id?: string;
   current_version_id?: string;
   version_count?: number;
@@ -48,23 +39,170 @@ interface Agent {
       system_prompt_editable?: boolean;
       tools_editable?: boolean;
       name_editable?: boolean;
-      description_editable?: boolean;
       mcps_editable?: boolean;
     };
   };
+  // Icon system fields
+  icon_name?: string | null;
+  icon_color?: string | null;
+  icon_background?: string | null;
 }
-
-type AgentConfigTab = 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
 
 interface AgentsGridProps {
   agents: Agent[];
-  onEditAgent: (agentId: string, tab?: AgentConfigTab) => void;
+  onEditAgent: (agentId: string) => void;
   onDeleteAgent: (agentId: string) => void;
   onToggleDefault: (agentId: string, currentDefault: boolean) => void;
-  deleteAgentMutation: { isPending: boolean };
+  deleteAgentMutation?: { isPending: boolean }; // Made optional as we'll track per-agent state
+  isDeletingAgent?: (agentId: string) => boolean;
   onPublish?: (agent: Agent) => void;
   publishingId?: string | null;
 }
+
+interface AgentModalProps {
+  agent: Agent | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onCustomize: (agentId: string) => void;
+  onChat: (agentId: string) => void;
+  onPublish: (agentId: string) => void;
+  onUnpublish: (agentId: string) => void;
+  isPublishing: boolean;
+  isUnpublishing: boolean;
+}
+
+const AgentModal: React.FC<AgentModalProps> = ({ 
+  agent, 
+  isOpen, 
+  onClose, 
+  onCustomize, 
+  onChat, 
+  onPublish, 
+  onUnpublish, 
+  isPublishing, 
+  isUnpublishing 
+}) => {
+  if (!agent) return null;
+
+  const isSunaAgent = agent.metadata?.is_suna_default || false;
+  
+  const truncateDescription = (text?: string, maxLength = 120) => {
+    if (!text || text.length <= maxLength) return text || 'Try out this agent';
+    return text.substring(0, maxLength) + '...';
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none">
+        <DialogTitle className="sr-only">Agent actions</DialogTitle>
+        <div className="relative">
+          <div className={`p-4 h-24 flex items-start justify-start relative`}>
+            <AgentAvatar
+              iconName={agent.icon_name}
+              iconColor={agent.icon_color}
+              backgroundColor={agent.icon_background}
+              agentName={agent.name}
+              isSunaDefault={isSunaAgent}
+              size={64}
+            />
+          </div>
+
+          <div className="p-4 space-y-2">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-xl font-semibold text-foreground">
+                  {agent.name}
+                </h2>
+                {!isSunaAgent && agent.current_version && (
+                  <Badge variant="outline" className="text-xs">
+                    <GitBranch className="h-3 w-3" />
+                    {agent.current_version.version_name}
+                  </Badge>
+                )}
+                {agent.is_public && (
+                  <Badge variant="outline" className="text-xs">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Published
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={() => onCustomize(agent.agent_id)}
+                variant="outline"
+                className="flex-1 gap-2"
+              >
+                <Wrench className="h-4 w-4" />
+                Customize
+              </Button>
+              <Button
+                onClick={() => onChat(agent.agent_id)}
+                className="flex-1 gap-2 bg-primary hover:bg-primary/90"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Chat
+              </Button>
+            </div>
+            {!isSunaAgent && isStagingMode && (
+              <div className="pt-2">
+                {agent.is_public ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Published as secure template</span>
+                      <div className="flex items-center gap-1">
+                        <Download className="h-3 w-3" />
+                        {agent.download_count || 0} downloads
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => onUnpublish(agent.agent_id)}
+                      disabled={isUnpublishing}
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      {isUnpublishing ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          Making Private...
+                        </>
+                      ) : (
+                        <>
+                          <GlobeLock className="h-4 w-4" />
+                          Make Private
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => onPublish(agent.agent_id)}
+                    disabled={isPublishing}
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    {isPublishing ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Publishing...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4" />
+                        Publish as Template
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export const AgentsGrid: React.FC<AgentsGridProps> = ({ 
   agents, 
@@ -72,143 +210,186 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
   onDeleteAgent, 
   onToggleDefault,
   deleteAgentMutation,
+  isDeletingAgent,
   onPublish,
   publishingId: externalPublishingId
 }) => {
-  const { t } = usePtTranslations();
-  const [agentPendingDeletion, setAgentPendingDeletion] = useState<Agent | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [configAgentId, setConfigAgentId] = useState<string | null>(null);
+  const router = useRouter();
+  
+  const unpublishAgentMutation = useUnpublishTemplate();
 
-  const handleCustomize = (agentId: string, tab: AgentConfigTab = 'instructions') => {
-    onEditAgent(agentId, tab);
+  const handleAgentClick = (agent: Agent) => {
+    setSelectedAgent(agent);
   };
 
-  const handlePublish = (agent: Agent) => {
-    if (onPublish) {
+  const handleCustomize = (agentId: string) => {
+    setSelectedAgent(null);
+    setConfigAgentId(agentId);
+    setShowConfigDialog(true);
+  };
+
+  const handleChat = (agentId: string) => {
+    router.push(`/dashboard?agent_id=${agentId}`);
+    setSelectedAgent(null);
+  };
+
+  const handlePublish = (agentId: string) => {
+    const agent = agents.find(a => a.agent_id === agentId);
+    if (agent && onPublish) {
       onPublish(agent);
+      setSelectedAgent(null);
     }
   };
 
-  const getAgentStyling = (agent: Agent) => {
-    if (agent.avatar && agent.avatar_color) {
-      return {
-        avatar: agent.avatar,
-        color: agent.avatar_color,
-      };
+  const handleUnpublish = async (agentId: string) => {
+    try {
+      setUnpublishingId(agentId);
+      await unpublishAgentMutation.mutateAsync(agentId);
+      toast.success('Agent made private');
+      setSelectedAgent(null);
+    } catch (error: any) {
+      toast.error('Failed to make agent private');
+    } finally {
+      setUnpublishingId(null);
     }
-    return getAgentAvatar(agent.agent_id);
   };
+
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {agents.map((agent) => {
-          // Converte configured_mcps para mcp_requirements se necessário
-          const mcpRequirements =
-            agent.mcp_requirements ||
-            (agent.configured_mcps && agent.configured_mcps.length > 0
-              ? agent.configured_mcps.map((mcp: any) => ({
-                  qualified_name: typeof mcp === 'string' ? mcp : mcp.name || mcp.qualified_name,
-                  display_name: typeof mcp === 'string' ? mcp : mcp.name || mcp.display_name,
-                  custom_type: typeof mcp === 'object' ? mcp.type : undefined,
-                }))
-              : undefined);
-
-          const styling = getAgentStyling(agent);
-          const baseData: BaseAgentData = {
-            id: agent.agent_id,
-            name: agent.name,
-            description: agent.description,
-            tags: agent.tags,
-            created_at: agent.created_at,
-            agent_id: agent.agent_id,
-            is_default: agent.is_default,
-            is_public: agent.is_public,
-            marketplace_published_at: agent.marketplace_published_at,
-            download_count: agent.download_count,
-            current_version: agent.current_version,
-            metadata: agent.metadata,
-            icon_name: agent.avatar ?? styling.avatar,
-            icon_color: agent.avatar_color ?? undefined,
-            icon_background: styling.color,
-            mcp_requirements: mcpRequirements,
-            agentpress_tools: agent.agentpress_tools,
+          const agentData = {
+            ...agent,
+            id: agent.agent_id
           };
-
+          
+          const isDeleting = isDeletingAgent?.(agent.agent_id) || false;
+          const isGloballyDeleting = deleteAgentMutation?.isPending || false;
+          
           return (
-            <div key={agent.agent_id} className="relative flex flex-col h-full">
-              <UnifiedAgentCard
-                variant="agent"
-                data={baseData}
-                actions={{
-                  onPrimaryAction: (data, e) => {
-                    e?.stopPropagation();
-                    handleCustomize(data.agent_id || agent.agent_id, 'instructions');
-                  },
-                  onClick: (data) => handleCustomize(data.agent_id || agent.agent_id, 'instructions'),
-                  onSecondaryAction: agent.is_public
-                    ? undefined
-                    : (data, e) => {
-                        e?.stopPropagation();
-                        handlePublish(agent);
-                      },
-                  onDeleteAction: agent.is_default
-                    ? undefined
-                    : (data, e) => {
-                        e?.stopPropagation();
-                        setAgentPendingDeletion(agent);
-                      },
-                  onOpenTriggers: (data, e) => {
-                    e?.stopPropagation();
-                    handleCustomize(data.agent_id || agent.agent_id, 'triggers');
-                  },
-                  onOpenWorkflows: (data, e) => {
-                    e?.stopPropagation();
-                    handleCustomize(data.agent_id || agent.agent_id, 'workflows');
-                  },
-                }}
-                state={{
-                  isActioning: externalPublishingId === agent.agent_id,
-                }}
-              />
+            <div key={agent.agent_id} className="relative group flex flex-col h-full">
+              {isDeleting && (
+                <div className="absolute inset-0 bg-destructive/10 backdrop-blur-sm rounded-lg z-20 flex items-center justify-center">
+                  <div className="bg-background/95 backdrop-blur-sm rounded-lg px-4 py-3 flex items-center gap-2 shadow-lg border">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                    <span className="text-sm font-medium text-destructive">Deleting...</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className={`transition-all duration-200 ${isDeleting ? 'opacity-60 scale-95' : ''}`}>
+                <UnifiedAgentCard
+                  variant="agent"
+                  data={{
+                    id: agent.agent_id,
+                    name: agent.name,
+                    tags: agent.tags,
+                    created_at: agent.created_at,
+                    agent_id: agent.agent_id,
+                    is_default: agent.is_default,
+                    is_public: agent.is_public,
+                    marketplace_published_at: agent.marketplace_published_at,
+                    download_count: agent.download_count,
+                    current_version: agent.current_version,
+                    metadata: agent.metadata,
+                    icon_name: agent.icon_name,
+                    icon_color: agent.icon_color,
+                    icon_background: agent.icon_background,
+                  }}
+                  actions={{
+                    onClick: () => !isDeleting && handleAgentClick(agent),
+                  }}
+                />
+              </div>
+              <div className={`absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity ${isDeleting ? 'pointer-events-none' : ''}`}>
+                {!agent.is_default && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+                        disabled={isDeleting || isGloballyDeleting}
+                        title="Delete agent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {isDeleting ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-md">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl">Delete Agent</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
+                          {agent.is_public && (
+                            <span className="block mt-2 text-amber-600 dark:text-amber-400">
+                              Note: This agent is currently published to the marketplace and will be removed from there as well.
+                            </span>
+                          )}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteAgent(agent.agent_id);
+                          }}
+                          disabled={isDeleting || isGloballyDeleting}
+                          className="bg-destructive hover:bg-destructive/90 text-white"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                              Deleting...
+                            </>
+                          ) : (
+                            'Delete'
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
-      <AlertDialog open={!!agentPendingDeletion} onOpenChange={(open) => !open && setAgentPendingDeletion(null)}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">{t('agents.deleteConfirmation.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {agentPendingDeletion
-                ? `${t('agents.deleteConfirmation.description')} "${agentPendingDeletion.name}"? ${t('agents.deleteConfirmation.warning')}`
-                : t('agents.deleteConfirmation.description')}
-              {agentPendingDeletion?.is_public && (
-                <span className="block mt-2 text-amber-600 dark:text-amber-400">
-                  Note: This agent is currently published to the marketplace and will be removed from there as well.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAgentMutation.isPending}>
-              {t('common.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (agentPendingDeletion) {
-                  onDeleteAgent(agentPendingDeletion.agent_id);
-                }
-                setAgentPendingDeletion(null);
-              }}
-              disabled={deleteAgentMutation.isPending}
-              className="bg-destructive hover:bg-destructive/90 text-white"
-            >
-              {deleteAgentMutation.isPending ? t('thread.deleteConfirmation.deleting') : t('common.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AgentModal
+        agent={selectedAgent}
+        isOpen={!!selectedAgent}
+        onClose={() => setSelectedAgent(null)}
+        onCustomize={handleCustomize}
+        onChat={handleChat}
+        onPublish={handlePublish}
+        onUnpublish={handleUnpublish}
+        isPublishing={externalPublishingId === selectedAgent?.agent_id}
+        isUnpublishing={unpublishingId === selectedAgent?.agent_id}
+      />
+      
+      {configAgentId && (
+        <AgentConfigurationDialog
+          open={showConfigDialog}
+          onOpenChange={setShowConfigDialog}
+          agentId={configAgentId}
+          onAgentChange={(newAgentId) => {
+            setConfigAgentId(newAgentId);
+          }}
+        />
+      )}
     </>
   );
 };

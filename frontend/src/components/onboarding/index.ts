@@ -1,8 +1,7 @@
 // Active onboarding components
 export { OnboardingProvider } from './onboarding-provider';
-export { useOnboarding, usePostSubscriptionOnboarding } from '@/hooks/use-onboarding';
-export type { OnboardingStep } from '@/hooks/use-onboarding';
-export { OnboardingDevControls } from './OnboardingDevControls';
+export { useOnboarding, usePostSubscriptionOnboarding } from '@/hooks/onboarding';
+export type { OnboardingStep } from '@/hooks/onboarding';
 
 // Main onboarding page
 export { NewOnboardingPage } from './new-onboarding-page';
@@ -11,11 +10,12 @@ export { NewOnboardingPage } from './new-onboarding-page';
 export { CEOIntroStep } from './steps/ceo-intro-step';
 export { UserTypeStep } from './steps/user-type-step';
 export { SmartContextStep } from './steps/smart-context-step';
-export { PersonalitySelectionStep } from './steps/personality-selection-step';
+export { WorkforceSelectionStep } from './steps/workforce-selection-step';
 export { TeamInvitationStep } from './steps/team-invitation-step';
 export { CompletionStep as NewCompletionStep } from './steps/completion-step';
 
 // Agent configuration
+export { MultiAgentConfigurationStep } from './agent-config/multi-agent-configuration';
 export { AgentConfiguration } from './agent-config/agent-configuration';
 
 // Shared components

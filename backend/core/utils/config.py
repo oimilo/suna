@@ -321,12 +321,10 @@ class Configuration:
     SUPABASE_JWT_SECRET: str
     
     # Redis configuration
-    REDIS_URL: Optional[str] = None
     REDIS_HOST: Optional[str] = "localhost"
     REDIS_PORT: Optional[int] = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
-    REDIS_USE_TLS: Optional[bool] = None
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
@@ -491,9 +489,9 @@ class Configuration:
         if self.ENV_MODE == EnvMode.PRODUCTION:
             return 'https://kortix.com'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'https://staging.kortix.com'
+            return 'http://localhost:3000'
+            # return 'https://staging.suna.so'
         else:
-            # Local mode
             return 'http://localhost:3000'
     
     def _generate_admin_api_key(self) -> str:

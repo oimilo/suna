@@ -1,4 +1,4 @@
-# Prophet Frontend
+# Kortix Frontend
 
 ## Quick Setup
 

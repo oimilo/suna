@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Calendar, Sparkles, AlertTriangle } from 'lucide-react';
-
+import { useTrialStatus, useCancelTrial } from '@/hooks/billing';
 import { useAuth } from '@/components/AuthProvider';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,9 +21,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCancelTrial } from '@/hooks/react-query/billing/use-cancel-trial';
-import { useTrialStatus } from '@/hooks/react-query/billing/use-trial-status';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, AlertTriangle, Calendar } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 
 export function TrialManagement() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -30,50 +34,54 @@ export function TrialManagement() {
   if (isLoading || !trialStatus) {
     return null;
   }
-
   if (trialStatus.trial_status !== 'active') {
     return null;
   }
-
-  const trialEndsAt = trialStatus.trial_ends_at ? new Date(trialStatus.trial_ends_at) : null;
 
   const handleCancelTrial = async () => {
     try {
       await cancelTrialMutation.mutateAsync();
       setShowCancelDialog(false);
     } catch (error) {
-      console.error('Não foi possível cancelar o teste gratuito:', error);
+      console.error('Failed to cancel trial:', error);
     }
   };
 
+  const trialEndsAt = trialStatus.trial_ends_at ? new Date(trialStatus.trial_ends_at) : null;
+
   return (
     <>
-      <Card className="border-primary/30 bg-primary/5">
+      <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle>Período de teste ativo</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <CardTitle>Free Trial Active</CardTitle>
+            </div>
           </div>
           <CardDescription>
-            Você está aproveitando o teste gratuito com créditos promocionais.
+            You're currently on a 7-day free trial with $5 in credits
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3 text-sm">
-            <Calendar className="h-4 w-4 text-primary" />
-            <div>
-              <p className="text-muted-foreground">Teste encerra em</p>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-1">
+              <p className="text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Trial ends
+              </p>
               <p className="font-medium">
-                {trialEndsAt
-                  ? format(trialEndsAt, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
-                  : 'Data não informada'}
+                {trialEndsAt ? format(trialEndsAt, 'MMM d, yyyy') : 'Unknown'}
               </p>
             </div>
           </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowCancelDialog(true)} disabled={cancelTrialMutation.isPending}>
-              Cancelar teste agora
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelDialog(true)}
+              disabled={cancelTrialMutation.isPending}
+            >
+              Cancel Trial
             </Button>
           </div>
         </CardContent>
@@ -84,31 +92,45 @@ export function TrialManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Cancelar período de teste?
+              Cancel Free Trial?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm">
-              <p>Ao cancelar o teste gratuito você perderá o acesso imediato aos recursos premium.</p>
-              <ul className="space-y-1">
-                <li>• Os créditos promocionais restantes serão removidos.</li>
-                <li>• Não será possível iniciar um novo teste gratuito no futuro.</li>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Are you sure you want to cancel your free trial? This action cannot be undone.
+              </p>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive mt-0.5">•</span>
+                  <span>You will immediately lose access to all platform features</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive mt-0.5">•</span>
+                  <span>Your remaining trial credits will be removed</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive mt-0.5">•</span>
+                  <span>You won't be able to start another trial</span>
+                </li>
               </ul>
+              <p className="text-muted-foreground text-sm pt-2">
+                To continue using Kortix after cancelling, you'll need to purchase a subscription.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={cancelTrialMutation.isPending}>
-              Manter teste
+              Keep Trial
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancelTrial}
-              className="bg-destructive hover:bg-destructive/90"
               disabled={cancelTrialMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
             >
-              {cancelTrialMutation.isPending ? 'Cancelando...' : 'Cancelar teste'}
+              {cancelTrialMutation.isPending ? 'Cancelling...' : 'Cancel Trial'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
-}
-
+} 
