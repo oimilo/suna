@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useEditorStore } from '@/lib/stores/use-editor-store';
+import { cn } from '@/lib/utils';
+import { useEditorStore } from '@/stores/use-editor-store';
 
 export function ImageDialog() {
   const { editor } = useEditorStore();
@@ -44,63 +45,62 @@ export function ImageDialog() {
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 w-7 rounded-sm p-0 transition-colors hover:bg-muted hover:text-foreground"
+          className="h-7 w-7 p-0 rounded-sm transition-colors hover:bg-muted hover:text-foreground"
         >
           <ImageIcon className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Inserir imagem</DialogTitle>
+          <DialogTitle>Insert Image</DialogTitle>
           <DialogDescription>
-            Adicione uma imagem ao documento via URL.
+            Add an image to your document via URL.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="image-url" className="text-right">
+            <Label htmlFor="url" className="text-right">
               URL
             </Label>
             <Input
-              id="image-url"
+              id="url"
               value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://exemplo.com/imagem.jpg"
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
               className="col-span-3"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="image-alt" className="text-right">
-              Alt
+            <Label htmlFor="alt" className="text-right">
+              Alt Text
             </Label>
             <Input
-              id="image-alt"
+              id="alt"
               value={alt}
-              onChange={(event) => setAlt(event.target.value)}
-              placeholder="Descrição da imagem"
+              onChange={(e) => setAlt(e.target.value)}
+              placeholder="Image description"
               className="col-span-3"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="image-title" className="text-right">
-              Título
+            <Label htmlFor="title" className="text-right">
+              Title
             </Label>
             <Input
-              id="image-title"
+              id="title"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Título opcional"
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Image title (optional)"
               className="col-span-3"
             />
           </div>
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit}>
-            Inserir imagem
+            Insert Image
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
-
+} 

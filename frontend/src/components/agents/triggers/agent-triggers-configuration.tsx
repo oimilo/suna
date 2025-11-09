@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Zap } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfiguredTriggersList } from './configured-triggers-list';
-import { TriggerConfigDialog } from './trigger-config-dialog';
+import { TriggerCreationDialog } from '../../triggers/trigger-creation-dialog';
 import { TriggerConfiguration, TriggerProvider } from './types';
 import { 
   useAgentTriggers, 
@@ -13,7 +13,7 @@ import {
   useDeleteTrigger, 
   useToggleTrigger,
   useTriggerProviders 
-} from '@/hooks/react-query/triggers';
+} from '@/hooks/triggers';
 import { toast } from 'sonner';
 import { OneClickIntegrations } from './one-click-integrations';
 
@@ -59,9 +59,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
         triggerId: trigger.trigger_id,
         agentId: trigger.agent_id
       });
-      toast.success('Gatilho excluído com sucesso');
+      toast.success('Task deleted successfully');
     } catch (error) {
-      toast.error('Falha ao excluir gatilho');
+      toast.error('Failed to delete trigger');
       console.error('Error deleting trigger:', error);
     }
   };
@@ -76,7 +76,7 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
           config: config.config,
           is_active: config.is_active,
         });
-        toast.success('Gatilho atualizado com sucesso');
+        toast.success('Trigger updated successfully');
       } else {
         await createTriggerMutation.mutateAsync({
           agentId,
@@ -85,10 +85,10 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
           description: config.description,
           config: config.config,
         });
-        toast.success('Gatilho criado com sucesso');
+        toast.success('Trigger created successfully');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Falha ao salvar gatilho');
+      toast.error(error.message || 'Failed to save trigger');
       console.error('Error saving trigger:', error);
     }
     setConfiguringProvider(null);
@@ -101,9 +101,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
         triggerId: trigger.trigger_id,
         isActive: !trigger.is_active,
       });
-      toast.success(`Gatilho ${!trigger.is_active ? 'ativado' : 'desativado'}`);
+      toast.success(`Trigger ${!trigger.is_active ? 'enabled' : 'disabled'}`);
     } catch (error) {
-      toast.error('Falha ao alternar gatilho');
+      toast.error('Failed to toggle trigger');
       console.error('Error toggling trigger:', error);
     }
   };
@@ -116,9 +116,9 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
             <Zap className="h-5 w-5 text-destructive" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-destructive">Erro ao Carregar Gatilhos</h3>
+            <h3 className="text-lg font-semibold text-destructive">Error Loading Triggers</h3>
             <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Falha ao carregar gatilhos'}
+              {error instanceof Error ? error.message : 'Failed to load triggers'}
             </p>
           </div>
         </div>
@@ -127,46 +127,43 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto space-y-4">
-        <OneClickIntegrations agentId={agentId} />
-        
-        {triggers.length > 0 && (
-          <ConfiguredTriggersList
-            triggers={triggers}
-            onEdit={handleEditTrigger}
-            onRemove={handleRemoveTrigger}
-            onToggle={handleToggleTrigger}
-            isLoading={deleteTriggerMutation.isPending || toggleTriggerMutation.isPending}
-          />
-        )}
+    <div className="space-y-4">
+      <OneClickIntegrations agentId={agentId} />
+      
+      {triggers.length > 0 && (
+        <ConfiguredTriggersList
+          triggers={triggers}
+          onEdit={handleEditTrigger}
+          onRemove={handleRemoveTrigger}
+          onToggle={handleToggleTrigger}
+          isLoading={deleteTriggerMutation.isPending || toggleTriggerMutation.isPending}
+        />
+      )}
 
-        {!isLoading && triggers.length === 0 && (
-          <div className="text-center py-12 px-6 bg-muted/30 rounded-xl border-2 border-dashed border-border">
-            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4 border">
-              <Zap className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h4 className="text-sm font-semibold text-foreground">
-              Nenhum gatilho configurado
-            </h4>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Clique em um provedor de gatilho acima para começar
-            </p>
+      {!isLoading && triggers.length === 0 && (
+        <div className="text-center py-12 px-6 bg-muted/30 rounded-xl border-2 border-dashed border-border">
+          <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4 border">
+            <Zap className="h-6 w-6 text-muted-foreground" />
           </div>
-        )}
-      </div>
+          <h4 className="text-sm font-semibold text-foreground">
+            No triggers configured
+          </h4>
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+            Click on a trigger provider above to get started
+          </p>
+        </div>
+      )}
       
       {configuringProvider && (
-        <Dialog open={!!configuringProvider} onOpenChange={() => setConfiguringProvider(null)}>
-          <TriggerConfigDialog
-            provider={configuringProvider}
-            existingConfig={editingTrigger}
-            onSave={handleSaveTrigger}
-            onCancel={() => setConfiguringProvider(null)}
-            isLoading={createTriggerMutation.isPending || updateTriggerMutation.isPending}
-            agentId={agentId}
-          />
-        </Dialog>
+        <TriggerCreationDialog
+          open={!!configuringProvider}
+          onOpenChange={() => setConfiguringProvider(null)}
+          type={configuringProvider.provider_id === 'schedule' ? 'schedule' : 'event'}
+          isEditMode={!!editingTrigger}
+          existingTrigger={editingTrigger}
+          onTriggerCreated={handleSaveTrigger}
+          onTriggerUpdated={handleSaveTrigger}
+        />
       )}
     </div>
   );

@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Shield, ExternalLink, ChevronRight, Sparkles } from 'lucide-react';

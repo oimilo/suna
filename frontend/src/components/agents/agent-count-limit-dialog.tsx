@@ -1,25 +1,16 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { AlertTriangle } from 'lucide-react';
+import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
+import { PricingSection } from '@/components/billing/pricing';
 
 interface AgentCountLimitDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentCount: number;
   limit: number;
-  tierName?: string;
+  tierName: string;
 }
 
 export const AgentCountLimitDialog: React.FC<AgentCountLimitDialogProps> = ({
@@ -29,36 +20,52 @@ export const AgentCountLimitDialog: React.FC<AgentCountLimitDialogProps> = ({
   limit,
   tierName,
 }) => {
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-warning" />
-            Limite de agentes atingido
-          </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              Você já possui <strong>{currentCount}</strong> agente
-              {currentCount !== 1 ? 's' : ''} configurado
-              {currentCount !== 1 ? 's' : ''} e o limite do seu plano atual é de
-              {' '}<strong>{limit}</strong>.
-            </p>
-            <p>
-              {tierName
-                ? 'Considere atualizar o plano ou liberar espaço removendo algum agente que não esteja em uso.'
-                : 'Para continuar criando novos agentes, faça upgrade de plano ou remova um agente existente.'}
-            </p>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Link href="/settings/billing">Ir para billing</Link>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-};
+  const returnUrl = typeof window !== 'undefined' ? window.location.href : '/';
 
+  const getNextTierRecommendation = () => {
+    if (tierName === 'free' || tierName === 'none') {
+      return {
+        name: 'Plus',
+        price: '$20/month',
+        agentLimit: 5,
+      };
+    } else if (tierName.includes('tier_2_20')) {
+      return {
+        name: 'Pro',
+        price: '$50/month',
+        agentLimit: 20,
+      };
+    } else if (tierName.includes('tier_6_50')) {
+      return {
+        name: 'Business',
+        price: '$200/month',
+        agentLimit: 100,
+      };
+    }
+    return null;
+  };
+
+  const nextTier = getNextTierRecommendation();
+
+  return (
+    <UpgradeDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={AlertTriangle}
+      title="Agent Limit Reached"
+      description="You've reached the maximum number of agents allowed on your current plan."
+      theme="warning"
+      size="xl"
+      contentClassName="w-full max-w-full pb-4"
+    >
+      <div className="w-full">
+        <PricingSection
+          returnUrl={returnUrl}
+          showTitleAndTabs={false}
+          insideDialog={true}
+          noPadding={true}
+        />
+      </div>
+    </UpgradeDialog>
+  );
+}; 

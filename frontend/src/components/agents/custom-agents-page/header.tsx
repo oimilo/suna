@@ -6,19 +6,11 @@ import { PageHeader } from '@/components/ui/page-header';
 
 export const AgentsPageHeader = () => {
   return (
-    <PageHeader icon={Bot} transparent>
+    <PageHeader icon={Bot}>
       <div className="space-y-4">
         <div className="text-4xl font-semibold tracking-tight">
-          <span className="text-primary">Agentes IA</span> = <span className="text-primary">Funcionários IA</span>
+          <span className="text-primary">AI Agents</span>
         </div>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Explore e crie seus próprios agentes personalizados que combinam{' '}
-          <span className="text-foreground font-medium">integrações</span>,{' '}
-          <span className="text-foreground font-medium">instruções</span>,{' '}
-          <span className="text-foreground font-medium">conhecimento</span>,{' '}
-          <span className="text-foreground font-medium">gatilhos</span> e{' '}
-          <span className="text-foreground font-medium">fluxos de trabalho</span>.
-        </p>
       </div>
     </PageHeader>
   );

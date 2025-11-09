@@ -21,13 +21,13 @@ export const EmptyState = ({ hasAgents, onCreateAgent, onClearFilters }: EmptySt
         </div>
         <div className="space-y-3">
           <h2 className="text-2xl font-semibold text-foreground">
-            {!hasAgents ? 'Nenhum agente ainda' : 'Nenhum agente encontrado'}
+            {!hasAgents ? 'No agents yet' : 'No agents found'}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {!hasAgents ? (
-              'Crie seu primeiro agente para começar a automatizar tarefas com instruções e ferramentas personalizadas. Configure recursos personalizados do AgentPress para ajustar o agente de acordo com suas necessidades.'
+              'Create your first agent to start automating tasks with custom instructions and tools. Configure custom AgentPress capabilities to fine tune agent according to your needs.'
             ) : (
-              'Nenhum agente corresponde aos seus critérios de pesquisa e filtro atuais. Tente ajustar seus filtros ou termos de pesquisa.'
+              'No agents match your current search and filter criteria. Try adjusting your filters or search terms.'
             )}
           </p>
         </div>
@@ -38,7 +38,7 @@ export const EmptyState = ({ hasAgents, onCreateAgent, onClearFilters }: EmptySt
             className="mt-4"
           >
             <Plus className="h-5 w-5" />
-            Criar seu primeiro agente
+            Create your first agent
           </Button>
         ) : (
           <Button 
@@ -46,7 +46,7 @@ export const EmptyState = ({ hasAgents, onCreateAgent, onClearFilters }: EmptySt
             onClick={onClearFilters}
             className="mt-4"
           >
-            Limpar filtros
+            Clear filters
           </Button>
         )}
       </div>

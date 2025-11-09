@@ -39,6 +39,7 @@ interface UpgradePlan {
 
 export interface PricingTier {
   name: string;
+  tierKey?: string;
   price: string;
   yearlyPrice?: string; // Add yearly price support
   description: string;
@@ -69,6 +70,7 @@ export const siteConfig = {
     twitter: BRANDING.social.twitter,
     discord: BRANDING.social.discord,
     github: BRANDING.social.github,
+    linkedin: BRANDING.social.linkedin,
     instagram: BRANDING.social.instagram,
   },
   nav: {
@@ -116,6 +118,7 @@ export const siteConfig = {
   cloudPricingItems: [
     {
       name: 'Free',
+      tierKey: config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey,
       price: 'R$ 0',
       description: 'Para experimentar o Prophet',
       buttonText: 'Começar Grátis',
@@ -128,11 +131,12 @@ export const siteConfig = {
         '1 agente customizado',
         'Suporte comunitário',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.FREE.priceId,
+      stripePriceId: null,
       upgradePlans: [],
     },
     {
       name: 'Plus',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_2_20.tierKey,
       price: '$20',
       yearlyPrice: '$204',
       originalYearlyPrice: '$240',
@@ -149,13 +153,14 @@ export const siteConfig = {
         'Premium AI Models',
         'Community support',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan - replaced by new Pro plan
     },
     {
       name: 'Pro',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_6_50.tierKey,
       price: '$50',
       yearlyPrice: '$510',
       originalYearlyPrice: '$600',
@@ -172,13 +177,14 @@ export const siteConfig = {
         'Premium AI Models',
         'Community support',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan - replaced by new Pro Max plan
     },
     {
       name: 'Business',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_12_100.tierKey,
       price: '$100',
       yearlyPrice: '$1020',
       originalYearlyPrice: '$1200',
@@ -194,13 +200,14 @@ export const siteConfig = {
         'Premium AI Models',
         'Community support',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan
     },
     {
       name: 'Pro',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_2_20.tierKey,
       price: 'R$ 99',
       yearlyPrice: 'R$ 990',
       originalYearlyPrice: 'R$ 1188',
@@ -222,6 +229,7 @@ export const siteConfig = {
     },
     {
       name: 'Pro Max',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_6_50.tierKey,
       price: 'R$ 249',
       yearlyPrice: 'R$ 2490',
       originalYearlyPrice: 'R$ 2988',
@@ -244,6 +252,7 @@ export const siteConfig = {
     },
     {
       name: 'Enterprise',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_25_200.tierKey,
       price: 'Custom',
       description: 'Para grandes organizações',
       buttonText: 'Falar com Vendas',
@@ -265,6 +274,7 @@ export const siteConfig = {
     },
     {
       name: 'Enterprise',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_50_400.tierKey,
       price: '$400',
       yearlyPrice: '$4080',
       originalYearlyPrice: '$4800',
@@ -283,13 +293,14 @@ export const siteConfig = {
         'Custom integrations',
         'Dedicated account manager',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan
     },
     {
       name: 'Scale',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_125_800.tierKey,
       price: '$800',
       yearlyPrice: '$8160',
       originalYearlyPrice: '$9600',
@@ -309,13 +320,14 @@ export const siteConfig = {
         'Dedicated account manager',
         'Custom SLA',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan
     },
     {
       name: 'Premium',
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_200_1000.tierKey,
       price: '$1000',
       yearlyPrice: '$10200',
       originalYearlyPrice: '$12000',
@@ -336,8 +348,8 @@ export const siteConfig = {
         'Custom SLA',
         'White-label options',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000_YEARLY.priceId,
+      stripePriceId: null,
+      yearlyStripePriceId: null,
       upgradePlans: [],
       hidden: true,  // Legacy plan
     },

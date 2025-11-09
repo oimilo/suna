@@ -1,11 +1,12 @@
 'use client';
 
-import { OnboardingStep } from '@/hooks/use-onboarding';
+import { OnboardingStep } from '@/hooks/onboarding';
 import { CEOIntroStep } from './steps/ceo-intro-step';
 import { UserTypeStep } from './steps/user-type-step';
 import { SmartContextStep } from './steps/smart-context-step';
-import { PersonalitySelectionStep } from './steps/personality-selection-step';
-import { PersonaSummaryStep } from './steps/persona-summary-step';
+import { WorkforceSelectionStep } from './steps/workforce-selection-step';
+import { MultiAgentConfigurationStep } from './agent-config/multi-agent-configuration';
+import { TeamInvitationStep } from './steps/team-invitation-step';
 import { CompletionStep } from './steps/completion-step';
 
 // Fixed onboarding steps - clean, organized flow
@@ -27,20 +28,20 @@ export const onboardingSteps: OnboardingStep[] = [
     actionLabel: 'Continue'
   },
   {
-    id: 'persona-selection',
-    title: 'Personalize',
-    description: 'Escolha o foco e o tom do seu workspace',
-    content: <PersonalitySelectionStep />,
-    canSkip: false,
-    actionLabel: 'Avançar'
+    id: 'workforce-selection',
+    title: 'Choose Agents',
+    description: 'Select your AI workforce',
+    content: <WorkforceSelectionStep />,
+    canSkip: true,
+    actionLabel: 'Configure Agents'
   },
   {
-    id: 'persona-summary',
-    title: 'Resumo',
-    description: 'Confirme preferências e integrações',
-    content: <PersonaSummaryStep />,
-    canSkip: false,
-    actionLabel: 'Continuar'
+    id: 'agent-configuration',
+    title: 'Configure Agents',
+    description: 'Customize your AI team',
+    content: <MultiAgentConfigurationStep />,
+    canSkip: true,
+    actionLabel: 'Continue Setup'
   },
   // {
   //   id: 'team-invitation',
@@ -112,10 +113,9 @@ export const canProceedFromStep = (stepIndex: number, context?: any): boolean =>
       }
       return false;
     
-    case 'persona-selection':
-      return Boolean(context?.persona?.goal && context.persona.focus && context.persona.tone);
-    case 'persona-summary':
-      return Boolean(context?.persona?.goal && context.persona?.profile);
+    case 'workforce-selection':
+      // Require at least one agent selected
+      return context?.selectedAgents && context.selectedAgents.length > 0;
     
     default:
       return true;

@@ -3,19 +3,15 @@ import { BRANDING } from '@/lib/branding';
 import { HeroVideoSection } from '@/components/home/sections/hero-video-section';
 import { siteConfig } from '@/lib/site';
 import { ArrowRight, Github, X, AlertCircle, Square } from 'lucide-react';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import {
-  BillingError,
-} from '@/lib/api';
-import { useInitiateAgentMutation } from '@/hooks/react-query/dashboard/use-initiate-agent';
-import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
-import { generateThreadName } from '@/lib/actions/threads';
+import { AgentRunLimitError, BillingError } from '@/lib/api/errors';
+import { useInitiateAgentMutation } from '@/hooks/dashboard/use-initiate-agent';
+import { useThreadQuery } from '@/hooks/threads/use-threads';
 import GoogleSignIn from '@/components/GoogleSignIn';
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { useAgents } from '@/hooks/agents/use-agents';
 import {
   Dialog,
   DialogContent,
@@ -24,21 +20,16 @@ import {
   DialogTitle,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { BillingErrorAlert } from '@/components/billing/usage-limit-alert';
-import { useBillingError } from '@/hooks/useBillingError';
-import { useAccounts } from '@/hooks/use-accounts';
-import { isLocalMode, config } from '@/lib/config';
+import { isLocalMode } from '@/lib/config';
 import { toast } from 'sonner';
-import { useModal } from '@/hooks/use-modal-store';
 import GitHubSignIn from '@/components/GithubSignIn';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { createQueryHook } from '@/hooks/use-query';
-import { agentKeys } from '@/hooks/react-query/agents/keys';
-import { getAgents } from '@/hooks/react-query/agents/utils';
-import { usePtTranslations } from '@/hooks/use-pt-translations';
 import { FloatingPills } from './floating-pills';
 import { AppLogosSlider } from './app-logos-slider';
+import { useBillingModal } from '@/hooks/billing/use-billing-modal';
+import { PlanSelectionModal } from '@/components/billing/pricing/plan-selection-modal';
+import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
@@ -59,7 +50,6 @@ const rotatingTexts = [
 
 export function HeroSection() {
   const { hero } = siteConfig;
-  const tablet = useMediaQuery('(max-width: 1024px)');
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -68,37 +58,40 @@ export function HeroSection() {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const { billingError, handleBillingError, clearBillingError } =
-    useBillingError();
-  const { data: accounts } = useAccounts();
-  const personalAccount = accounts?.find((account) => account.personal_account);
-  const { onOpen } = useModal();
   const initiateAgentMutation = useInitiateAgentMutation();
   const [initiatedThreadId, setInitiatedThreadId] = useState<string | null>(null);
   const threadQuery = useThreadQuery(initiatedThreadId || '');
   const chatInputRef = useRef<ChatInputHandles>(null);
-  const { t } = usePtTranslations();
+  const {
+    showModal: showBillingModal,
+    creditsExhausted,
+    openModal: openBillingModal,
+    closeModal: closeBillingModal,
+  } = useBillingModal();
+  const [agentLimitData, setAgentLimitData] = useState<{
+    runningCount: number;
+    runningThreadIds: string[];
+  } | null>(null);
+  const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
 
-  // Fetch agents for selection
-  const { data: agentsResponse } = createQueryHook(
-    agentKeys.list({
+  const { data: agentsResponse } = useAgents(
+    {
       limit: 100,
       sort_by: 'name',
-      sort_order: 'asc'
-    }),
-    () => getAgents({
-      limit: 100,
-      sort_by: 'name',
-      sort_order: 'asc'
-    }),
+      sort_order: 'asc',
+    },
     {
       enabled: !!user && !isLoading,
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
     }
-  )();
+  );
 
-  const agents = agentsResponse?.agents || [];
+  const agents = agentsResponse?.agents ?? [];
+
+  useEffect(() => {
+    if (!selectedAgentId && agents.length > 0) {
+      setSelectedAgentId(agents[0].agent_id);
+    }
+  }, [agents, selectedAgentId]);
 
   // Auth dialog state
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -193,8 +186,17 @@ export function HeroSection() {
       setInputValue('');
     } catch (error: any) {
       if (error instanceof BillingError) {
-        console.log('Billing error:', error.detail);
-        onOpen("paymentRequiredDialog");
+        openBillingModal(error);
+      } else if (error instanceof AgentRunLimitError) {
+        const detail = error.detail ?? {
+          running_thread_ids: [],
+          running_count: 0,
+        };
+        setAgentLimitData({
+          runningCount: detail.running_count ?? 0,
+          runningThreadIds: detail.running_thread_ids ?? [],
+        });
+        setShowAgentLimitDialog(true);
       } else {
         const isConnectionError =
           error instanceof TypeError &&
@@ -405,15 +407,20 @@ export function HeroSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Billing Error Alert here */}
-      <BillingErrorAlert
-        message={billingError?.message}
-        currentUsage={billingError?.currentUsage}
-        limit={billingError?.limit}
-        accountId={personalAccount?.account_id}
-        onDismiss={clearBillingError}
-        isOpen={!!billingError}
+      <PlanSelectionModal
+        open={showBillingModal}
+        onOpenChange={closeBillingModal}
+        creditsExhausted={creditsExhausted}
       />
+
+      {agentLimitData && (
+        <AgentRunLimitDialog
+          open={showAgentLimitDialog}
+          onOpenChange={setShowAgentLimitDialog}
+          runningCount={agentLimitData.runningCount}
+          runningThreadIds={agentLimitData.runningThreadIds}
+        />
+      )}
     </section>
   );
 }

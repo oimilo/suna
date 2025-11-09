@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,13 +8,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ChevronDownIcon, LayoutGridIcon, Plus } from 'lucide-react';
-import { useEditorStore } from '@/lib/stores/use-editor-store';
+import { useEditorStore } from '@/stores/use-editor-store';
 
 interface TableDropdownProps {
   setDropdownOpen: (open: boolean) => void;
 }
 
-export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
+export default function InsertTableDropdown({
+  setDropdownOpen,
+}: TableDropdownProps) {
   const { editor } = useEditorStore();
   const [open, setOpen] = useState(false);
 
@@ -24,7 +26,7 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
   const [selectedCols, setSelectedCols] = useState(0);
 
   const cellSize = 24;
-  const cellStyle: React.CSSProperties = {
+  const cellStyle = {
     width: cellSize,
     height: cellSize,
     border: '1px solid #ccc',
@@ -42,11 +44,23 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
       editor
         .chain()
         .focus()
-        .insertTable({ rows: selectedRows, cols: selectedCols, withHeaderRow: true })
+        .insertTable({
+          rows: selectedRows,
+          cols: selectedCols,
+          withHeaderRow: true,
+        })
         .run();
     }
     setOpen(false);
     setDropdownOpen(false);
+  };
+
+  const expandColumns = () => {
+    setMaxCols((prev) => prev + 1);
+  };
+
+  const expandRows = () => {
+    setMaxRows((prev) => prev + 1);
   };
 
   return (
@@ -58,7 +72,11 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
       }}
     >
       <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="ghost" className="flex h-8 items-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="flex items-center gap-1 h-8"
+        >
           <LayoutGridIcon className="h-4 w-4" />
           <ChevronDownIcon className="h-4 w-4" />
         </Button>
@@ -74,7 +92,8 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
             >
               {Array.from({ length: maxRows }).map((_, rowIndex) =>
                 Array.from({ length: maxCols }).map((_, colIndex) => {
-                  const isSelected = rowIndex < selectedRows && colIndex < selectedCols;
+                  const isSelected =
+                    rowIndex < selectedRows && colIndex < selectedCols;
                   return (
                     <div
                       key={`${rowIndex}-${colIndex}`}
@@ -82,7 +101,9 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
                         ...cellStyle,
                         backgroundColor: isSelected ? '#bde4ff' : 'transparent',
                       }}
-                      onMouseEnter={() => handleMouseEnterCell(rowIndex, colIndex)}
+                      onMouseEnter={() =>
+                        handleMouseEnterCell(rowIndex, colIndex)
+                      }
                       onClick={handleCellClick}
                     />
                   );
@@ -101,7 +122,7 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setMaxCols((prev) => prev + 1)}
+                onClick={expandColumns}
                 style={{ marginBottom: 2 }}
               >
                 <Plus size={16} />
@@ -114,17 +135,16 @@ export function InsertTableDropdown({ setDropdownOpen }: TableDropdownProps) {
                 bottom: -30,
               }}
             >
-              <Button size="sm" variant="outline" onClick={() => setMaxRows((prev) => prev + 1)}>
+              <Button size="sm" variant="outline" onClick={expandRows}>
                 <Plus size={16} />
               </Button>
             </div>
           </div>
           <div className="mt-2 text-sm">
-            {selectedRows} x {selectedCols} tabela
+            {selectedRows} x {selectedCols} Table
           </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
-

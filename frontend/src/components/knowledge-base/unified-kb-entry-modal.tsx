@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { FileNameValidator, useNameValidation } from '@/lib/validation';
 import { cn } from '@/lib/utils';
-import { type Folder } from '@/hooks/react-query/knowledge-base/use-folders';
+import { type Folder } from '@/hooks/knowledge-base/use-folders';
 
 interface FileUploadStatus {
     file: File;
@@ -87,31 +87,6 @@ export function UnifiedKbEntryModal({
     
     // Validation for filename
     const filenameValidation = useNameValidation(filename, 'file');
-
-    // Automatically select the first available folder when opening the modal
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-
-        if (!selectedFolder && folders.length > 0) {
-            setSelectedFolder(folders[0].folder_id);
-        }
-    }, [isOpen, folders, selectedFolder]);
-
-    // Reset transient state when closing the modal so repeated opens start fresh
-    useEffect(() => {
-        if (!isOpen) {
-            setSelectedFolder('');
-            setSelectedFiles([]);
-            setUploadStatuses([]);
-            setFilename('');
-            setContent('');
-            setGitUrl('');
-            setGitBranch('main');
-            setActiveTab(defaultTab);
-        }
-    }, [isOpen, defaultTab]);
 
     const handleFolderCreation = async () => {
         if (!folderValidation.isValid) {

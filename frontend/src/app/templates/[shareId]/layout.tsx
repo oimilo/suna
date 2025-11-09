@@ -1,16 +1,11 @@
-import type { Metadata } from 'next';
+import { backendApi } from '@/lib/api-client';
+import { Metadata } from 'next';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ shareId: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
   const { shareId: templateId } = await params;
 
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/templates/public/${templateId}`,
-    );
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${templateId}`);
 
     if (!response.ok) {
       throw new Error('Template not found');
@@ -18,10 +13,8 @@ export async function generateMetadata({
 
     const template = await response.json();
 
-    const title = `${template.name} - AI Agent Template | Prophet`;
-    const description =
-      template.description ||
-      'Discover and install this AI agent template to enhance your workflow with powerful automation capabilities.';
+    const title = `${template.name} - AI Agent Template | Kortix`;
+    const description = template.description || 'Discover and install this AI agent template to enhance your workflow with powerful automation capabilities.';
 
     const ogImage = `${process.env.NEXT_PUBLIC_URL}/api/og/template?shareId=${templateId}`;
 
@@ -39,7 +32,7 @@ export async function generateMetadata({
             width: 1200,
             height: 630,
             alt: template.name,
-          },
+          }
         ],
       },
       twitter: {
@@ -48,18 +41,14 @@ export async function generateMetadata({
         description,
         images: [ogImage],
       },
-    } satisfies Metadata;
+    };
   } catch (error) {
-    const fallbackTitle = 'AI Agent Template | Prophet';
-    const fallbackDescription =
-      'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.';
-
     return {
-      title: fallbackTitle,
-      description: fallbackDescription,
+      title: 'AI Agent Template | Kortix',
+      description: 'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.',
       openGraph: {
-        title: fallbackTitle,
-        description: fallbackDescription,
+        title: 'AI Agent Template | Kortix',
+        description: 'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.',
         type: 'website',
         url: `${process.env.NEXT_PUBLIC_URL}/templates/${templateId}`,
         images: [
@@ -67,11 +56,11 @@ export async function generateMetadata({
             url: `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`,
             width: 1200,
             height: 630,
-            alt: 'Prophet AI Agent Template',
-          },
+            alt: 'Kortix AI Agent Template',
+          }
         ],
       },
-    } satisfies Metadata;
+    };
   }
 }
 
@@ -81,4 +70,4 @@ export default function TemplateLayout({
   children: React.ReactNode;
 }) {
   return <>{children}</>;
-}
+} 

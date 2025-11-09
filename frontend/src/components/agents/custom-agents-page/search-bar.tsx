@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface SearchBarProps {
   placeholder: string;
@@ -11,15 +12,15 @@ interface SearchBarProps {
   className?: string;
 }
 
-export const SearchBar = ({ placeholder, value, onChange, className = '' }: SearchBarProps) => {
+export const SearchBar = ({ placeholder, value, onChange, className }: SearchBarProps) => {
   return (
-    <div className={`relative flex-1 max-w-md ${className}`}>
-      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground opacity-60" />
+    <div className={cn("relative flex-1 max-w-2xl", className)}>
+      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-10 h-10 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border-black/6 dark:border-white/8 focus:border-black/10 dark:focus:border-white/12 transition-all"
+        className="pl-12 h-12 rounded-xl bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all"
       />
     </div>
   );

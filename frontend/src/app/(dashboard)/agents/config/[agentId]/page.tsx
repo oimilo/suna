@@ -1,243 +1,41 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Save, Eye } from 'lucide-react';
+import { useAgent } from '@/hooks/agents/use-agents';
+import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle } from 'lucide-react';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUpdateAgent } from '@/hooks/react-query/agents/use-agents';
-import { BRANDING } from '@/lib/branding';
-import { useCreateAgentVersion, useActivateAgentVersion } from '@/hooks/react-query/agents/use-agent-versions';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { getAgentAvatar } from '../../../../../lib/utils/get-agent-style';
-import { AgentPreview } from '../../../../../components/agents/agent-preview';
-import { AgentVersionSwitcher } from '@/components/agents/agent-version-switcher';
-import { CreateVersionButton } from '@/components/agents/create-version-button';
-import { useAgentVersionData } from '../../../../../hooks/use-agent-version-data';
-import { useSearchParams } from 'next/navigation';
-import { useAgentVersionStore } from '../../../../../lib/stores/agent-version-store';
 import { cn } from '@/lib/utils';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { AgentAvatar } from '@/components/thread/content/agent-avatar';
+import { AgentEditorDialog } from '@/components/agents/config/agent-editor-dialog';
+import { TriggersScreen } from './screens/triggers-screen';
+import { InstructionsScreen } from './screens/instructions-screen';
+import { KnowledgeScreen } from './screens/knowledge-screen';
+import { ToolsScreen } from './screens/tools-screen';
+import { IntegrationsScreen } from './screens/integrations-screen';
+import { useUpdateAgent } from '@/hooks/agents/use-agents';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { AgentHeader, VersionAlert, AgentBuilderTab, ConfigurationTab } from '@/components/agents/config';
-import { UpcomingRunsDropdown } from '@/components/agents/upcoming-runs-dropdown';
+type ConfigView = 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations';
 
-interface FormData {
-  name: string;
-  description: string;
-  system_prompt: string;
-  agentpress_tools: any;
-  configured_mcps: any[];
-  custom_mcps: any[];
-  is_default: boolean;
-  avatar: string;
-  avatar_color: string;
-}
-
-export default function AgentConfigurationPage() {
+export default function AgentConfigPage() {
   const params = useParams();
-  const agentId = params.agentId as string;
+  const router = useRouter();
   const queryClient = useQueryClient();
-  // Removido uso de sidebar context para permitir links compartilhados
-  const isPinned = false;
-  const setIsPinned = () => {};
+  const agentId = params.agentId as string;
+  const [activeView, setActiveView] = useState<ConfigView>('triggers');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  const { agent, versionData, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  const initialAccordion = searchParams.get('accordion');
-  const { hasUnsavedChanges, setHasUnsavedChanges } = useAgentVersionStore();
-  
+  const { data: agent, isLoading } = useAgent(agentId);
   const updateAgentMutation = useUpdateAgent();
-  const createVersionMutation = useCreateAgentVersion();
-  const activateVersionMutation = useActivateAgentVersion();
-
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    description: '',
-    system_prompt: '',
-    agentpress_tools: {},
-    configured_mcps: [],
-    custom_mcps: [],
-    is_default: false,
-    avatar: '',
-    avatar_color: '',
-  });
-
-  const [originalData, setOriginalData] = useState<FormData>(formData);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  // Initialize active tab from URL param, default to 'configuration'
-  const initialTab = tabParam === 'agent-builder' ? 'agent-builder' : 'configuration';
-  const [activeTab, setActiveTab] = useState(initialTab);
-
-  useEffect(() => {
-    if (!agent) return;
-    let configSource = agent;
-    if (versionData) {
-      configSource = versionData;
-    } 
-    else if (agent.current_version) {
-      configSource = agent.current_version;
-    }
-    
-    const initialData: FormData = {
-      name: agent.name || '',
-      description: agent.description || '',
-      system_prompt: configSource.system_prompt || '',
-      agentpress_tools: configSource.agentpress_tools || {},
-      configured_mcps: configSource.configured_mcps || [],
-      custom_mcps: configSource.custom_mcps || [],
-      is_default: agent.is_default || false,
-      avatar: agent.avatar || '',
-      avatar_color: agent.avatar_color || '',
-    };
-    
-    setFormData(initialData);
-    setOriginalData(initialData);
-  }, [agent, versionData]);
-
-  useEffect(() => {
-    const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
-    setHasUnsavedChanges(hasChanges);
-  }, [formData, originalData, setHasUnsavedChanges]);
-
-  const handleSave = useCallback(async () => {
-    if (!agent || isViewingOldVersion) return;
-    
-    const isProphetAgent = agent?.metadata?.is_suna_default || false;
-    const restrictions = agent?.metadata?.restrictions || {};
-    
-    if (isProphetAgent) {
-      if (restrictions.name_editable === false && formData.name !== originalData.name) {
-        toast.error("Não é possível salvar alterações", {
-          description: `O nome de ${BRANDING.name} não pode ser modificado.`,
-        });
-        return;
-      }
-      if (restrictions.system_prompt_editable === false && formData.system_prompt !== originalData.system_prompt) {
-        toast.error("Não é possível salvar alterações", {
-          description: `O prompt do sistema de ${BRANDING.name} não pode ser modificado.`,
-        });
-        return;
-      }
-      if (restrictions.tools_editable === false && JSON.stringify(formData.agentpress_tools) !== JSON.stringify(originalData.agentpress_tools)) {
-        toast.error("Não é possível salvar alterações", {
-          description: `As ferramentas padrão de ${BRANDING.name} não podem ser modificadas.`,
-        });
-        return;
-      }
-    }
-    
-    setIsSaving(true);
-    try {
-      const normalizedCustomMcps = (formData.custom_mcps || []).map(mcp => ({
-        name: mcp.name || 'Unnamed MCP',
-        type: mcp.type || mcp.customType || 'sse',
-        config: mcp.config || {},
-        enabledTools: Array.isArray(mcp.enabledTools) ? mcp.enabledTools : [],
-      }));
-      const newVersion = await createVersionMutation.mutateAsync({
-        agentId,
-        data: {
-          system_prompt: formData.system_prompt,
-          configured_mcps: formData.configured_mcps,
-          custom_mcps: normalizedCustomMcps,
-          agentpress_tools: formData.agentpress_tools,
-          description: 'Manual save'
-        }
-      });
-      const updatedAgent = await updateAgentMutation.mutateAsync({
-        agentId,
-        name: formData.name,
-        description: formData.description,
-        is_default: formData.is_default,
-        avatar: formData.avatar,
-        avatar_color: formData.avatar_color
-      });
-      queryClient.setQueryData(['agent', agentId], {
-        ...updatedAgent,
-        current_version: newVersion,
-        current_version_id: newVersion.versionId
-      });
-      
-      setOriginalData(formData);
-      toast.success('Alterações salvas com sucesso');
-    } catch (error) {
-      console.error('Save error:', error);
-      toast.error('Falha ao salvar alterações');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [agent, formData, originalData, isViewingOldVersion, agentId, createVersionMutation, updateAgentMutation, queryClient]);
-
-  const handleFieldChange = useCallback((field: keyof FormData, value: any) => {
-    if (isViewingOldVersion) {
-      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
-      return;
-    }
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, [isViewingOldVersion]);
-
-  const handleMCPChange = useCallback((updates: { configured_mcps: any[]; custom_mcps: any[] }) => {
-    if (isViewingOldVersion) {
-      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      configured_mcps: updates.configured_mcps,
-      custom_mcps: updates.custom_mcps
-    }));
-  }, [isViewingOldVersion]);
-
-  const handleStyleChange = useCallback((emoji: string, color: string) => {
-    if (isViewingOldVersion) {
-      toast.error('Não é possível editar versões antigas. Por favor, ative esta versão primeiro para fazer alterações.');
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      avatar: emoji,
-      avatar_color: color
-    }));
-  }, [isViewingOldVersion]);
-
-  const handleActivateVersion = useCallback(async (versionId: string) => {
-    try {
-      await activateVersionMutation.mutateAsync({ agentId, versionId });
-    } catch (error) {
-      toast.error('Falha ao ativar versão');
-    }
-  }, [agentId, activateVersionMutation]);
-
-  useEffect(() => {
-    if (isViewingOldVersion && activeTab === 'agent-builder') {
-      setActiveTab('configuration');
-    }
-  }, [isViewingOldVersion, activeTab]);
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertDescription>
-            {error.message || 'Falha ao carregar configuração do agente'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Carregando configuração do agente...</p>
-        </div>
+        <KortixLoader size="large" />
       </div>
     );
   }
@@ -245,292 +43,170 @@ export default function AgentConfigurationPage() {
   if (!agent) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Alert className="max-w-md">
-          <AlertDescription>Agente não encontrado</AlertDescription>
-        </Alert>
+        <p className="text-muted-foreground">Agent not found</p>
       </div>
     );
   }
 
-  const displayData = isViewingOldVersion && versionData ? {
-    name: agent?.name || '',
-    description: agent?.description || '',
-    system_prompt: versionData.system_prompt || '',
-    agentpress_tools: versionData.agentpress_tools || {},
-    configured_mcps: versionData.configured_mcps || [],
-    custom_mcps: versionData.custom_mcps || [],
-    is_default: agent?.is_default || false,
-    avatar: agent?.avatar || '',
-    avatar_color: agent?.avatar_color || '',
-  } : formData;
+  const handleEditorSave = async (data: {
+    name: string;
+    iconName: string | null;
+    iconColor: string;
+    backgroundColor: string;
+  }) => {
+    try {
+      await updateAgentMutation.mutateAsync({
+        agentId,
+        name: data.name,
+        icon_name: data.iconName,
+        icon_color: data.iconColor,
+        icon_background: data.backgroundColor,
+      });
 
-  const currentStyle = displayData.avatar && displayData.avatar_color
-    ? { avatar: displayData.avatar, color: displayData.avatar_color }
-    : getAgentAvatar(agentId);
-
-  const previewAgent = {
-    ...agent,
-    ...displayData,
-    agent_id: agentId,
+      queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
+      toast.success('Agent updated successfully!');
+    } catch (error) {
+      console.error('Failed to update agent:', error);
+      toast.error('Failed to update agent');
+    }
   };
 
+  const menuItems = [
+    { id: 'instructions' as const, label: 'Instructions', icon: Brain },
+    { id: 'tools' as const, label: 'Tools', icon: Wrench },
+    { id: 'integrations' as const, label: 'Integrations', icon: Server },
+    { id: 'knowledge' as const, label: 'Knowledge', icon: BookOpen },
+    { id: 'triggers' as const, label: 'Triggers', icon: Zap },
+  ];
+
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <div className="flex-1 flex overflow-hidden">
-        <div className="hidden lg:flex w-full h-full">
-          <div className="w-2/5 border-r border-border/40 bg-background h-full flex flex-col">
-            <div className="h-full flex flex-col">
-              <div className="flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    {/* Version control and upcoming runs hidden for cleaner UI */}
-                    <div className="flex items-center gap-2">
-                      {/* {!agent?.metadata?.is_suna_default && (
-                        <AgentVersionSwitcher
-                          agentId={agentId}
-                          currentVersionId={agent?.current_version_id}
-                          currentFormData={{
-                            system_prompt: formData.system_prompt,
-                            configured_mcps: formData.configured_mcps,
-                            custom_mcps: formData.custom_mcps,
-                            agentpress_tools: formData.agentpress_tools
-                          }}
-                        />
-                      )}
-                      <CreateVersionButton
-                        agentId={agentId}
-                        currentFormData={{
-                          system_prompt: formData.system_prompt,
-                          configured_mcps: formData.configured_mcps,
-                          custom_mcps: formData.custom_mcps,
-                          agentpress_tools: formData.agentpress_tools
-                        }}
-                        hasChanges={hasUnsavedChanges && !isViewingOldVersion}
-                        onVersionCreated={() => {
-                          setOriginalData(formData);
-                        }}
-                      />
-                      <UpcomingRunsDropdown agentId={agentId} /> */}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {hasUnsavedChanges && !isViewingOldVersion && (
-                        <Button
-                          size="sm"
-                          onClick={handleSave}
-                          disabled={isSaving}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                        >
-                          {isSaving ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Save className="h-3 w-3" />
-                          )}
-                          Salvar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {isViewingOldVersion && (
-                    <VersionAlert
-                      versionData={versionData}
-                      isActivating={activateVersionMutation.isPending}
-                      onActivateVersion={handleActivateVersion}
-                    />
-                  )}
-                  <AgentHeader
-                    agentId={agentId}
-                    displayData={displayData}
-                    currentStyle={currentStyle}
-                    isViewingOldVersion={isViewingOldVersion}
-                    onFieldChange={handleFieldChange}
-                    onStyleChange={handleStyleChange}
-                    agentMetadata={agent?.metadata}
-                    isPinned={isPinned}
-                    setIsPinned={setIsPinned}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                  />
-                </div>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                  <TabsContent value="agent-builder" className="flex-1 h-0 m-0">
-                    <AgentBuilderTab
-                      agentId={agentId}
-                      displayData={displayData}
-                      currentStyle={currentStyle}
-                      isViewingOldVersion={isViewingOldVersion}
-                      onFieldChange={handleFieldChange}
-                      onStyleChange={handleStyleChange}
-                      activeTab={activeTab}
-                      onTabChange={setActiveTab}
-                    />
-                  </TabsContent>
-                  <TabsContent value="configuration" className="flex-1 h-0 m-0 overflow-y-auto">
-                    <ConfigurationTab
-                      agentId={agentId}
-                      displayData={displayData}
-                      versionData={versionData}
-                      isViewingOldVersion={isViewingOldVersion}
-                      onFieldChange={handleFieldChange}
-                      onMCPChange={handleMCPChange}
-                      initialAccordion={initialAccordion}
-                      agentMetadata={agent?.metadata}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          </div>
-          <div className="w-3/5 bg-muted/30 overflow-y-auto">
-            <div className="h-full">
-              {previewAgent && (
-                <AgentPreview 
-                  agent={previewAgent} 
-                  agentMetadata={agent?.metadata}
-                  onFieldChange={handleFieldChange}
-                  onStyleChange={handleStyleChange}
-                  isViewingOldVersion={isViewingOldVersion}
-                  currentStyle={currentStyle}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="lg:hidden flex flex-col h-full w-full">
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  {/* Version control and upcoming runs hidden for cleaner UI */}
-                  <div className="flex items-center gap-2">
-                    {/* <AgentVersionSwitcher
-                      agentId={agentId}
-                      currentVersionId={agent?.current_version_id}
-                      currentFormData={{
-                        system_prompt: formData.system_prompt,
-                        configured_mcps: formData.configured_mcps,
-                        custom_mcps: formData.custom_mcps,
-                        agentpress_tools: formData.agentpress_tools
-                      }}
-                    />
-                    <CreateVersionButton
-                      agentId={agentId}
-                      currentFormData={{
-                        system_prompt: formData.system_prompt,
-                        configured_mcps: formData.configured_mcps,
-                        custom_mcps: formData.custom_mcps,
-                        agentpress_tools: formData.agentpress_tools
-                      }}
-                      hasChanges={hasUnsavedChanges && !isViewingOldVersion}
-                      onVersionCreated={() => {
-                        setOriginalData(formData);
-                      }}
-                    />
-                    <UpcomingRunsDropdown agentId={agentId} /> */}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasUnsavedChanges && !isViewingOldVersion && (
-                      <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Save className="h-3 w-3" />
-                        )}
-                        Salvar
-                      </Button>
-                    )}
-                  </div>
-                </div>
+    <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-background md:px-7 md:pt-7">
+      {/* Left Sidebar Menu */}
+      <div className="bg-background flex w-full md:w-48 md:flex-col md:pr-4 px-4 pt-20 md:px-0 md:pt-0 gap-2">
+        {/* Back button - desktop only */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push('/agents?tab=my-agents')}
+          className="justify-start -ml-2 mb-6 text-foreground hover:bg-transparent hidden md:flex"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
 
-                {isViewingOldVersion && (
-                  <VersionAlert
-                    versionData={versionData}
-                    isActivating={activateVersionMutation.isPending}
-                    onActivateVersion={handleActivateVersion}
-                  />
+        {/* Back button - mobile (icon only) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push('/agents?tab=my-agents')}
+          className="h-12 w-12 p-0 cursor-pointer hover:bg-muted/60 hover:border-[1.5px] hover:border-border md:hidden"
+        >
+          <ChevronLeft className="!h-5 !w-5" />
+        </Button>
+
+        {/* Menu items - desktop */}
+        <div className="space-y-1 hidden md:block">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <SpotlightCard
+                key={item.id}
+                className={cn(
+                  "transition-colors cursor-pointer",
+                  isActive ? "bg-muted" : "bg-transparent"
                 )}
-
-                <AgentHeader
-                  agentId={agentId}
-                  displayData={displayData}
-                  currentStyle={currentStyle}
-                  isViewingOldVersion={isViewingOldVersion}
-                  onFieldChange={handleFieldChange}
-                  onStyleChange={handleStyleChange}
-                  agentMetadata={agent?.metadata}
-                  isPinned={isPinned}
-                  setIsPinned={setIsPinned}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                <TabsContent value="agent-builder" className="flex-1 h-0 m-0">
-                  <AgentBuilderTab
-                    agentId={agentId}
-                    displayData={displayData}
-                    currentStyle={currentStyle}
-                    isViewingOldVersion={isViewingOldVersion}
-                    onFieldChange={handleFieldChange}
-                    onStyleChange={handleStyleChange}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                  />
-                </TabsContent>
-                <TabsContent value="configuration" className="flex-1 h-0 m-0 overflow-y-auto">
-                  <ConfigurationTab
-                    agentId={agentId}
-                    displayData={displayData}
-                    versionData={versionData}
-                    isViewingOldVersion={isViewingOldVersion}
-                    onFieldChange={handleFieldChange}
-                    onMCPChange={handleMCPChange}
-                    initialAccordion={initialAccordion}
-                    agentMetadata={agent?.metadata}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-
-          <Drawer open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-            <DrawerTrigger asChild>
-              <Button 
-                className="fixed bottom-6 right-6 rounded-full shadow-lg h-14 w-14 bg-primary hover:bg-primary/90"
-                size="icon"
               >
-                <Eye className="h-5 w-5" />
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent className="h-[85vh]">
-              <DrawerHeader className="border-b">
-                <DrawerTitle>Agent Preview</DrawerTitle>
-              </DrawerHeader>
-              <div className="flex-1 overflow-y-auto p-4">
-                {previewAgent && (
-                  <AgentPreview 
-                    agent={previewAgent} 
-                    agentMetadata={agent?.metadata}
-                    onFieldChange={handleFieldChange}
-                    onStyleChange={handleStyleChange}
-                    isViewingOldVersion={isViewingOldVersion}
-                    currentStyle={currentStyle}
-                  />
+                <button
+                  onClick={() => setActiveView(item.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 text-sm",
+                    isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              </SpotlightCard>
+            );
+          })}
+        </div>
+
+        {/* Menu items - mobile (icon only) */}
+        <div className="flex gap-2 md:hidden md:space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-12 w-12 p-0 cursor-pointer hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
+                  isActive ? 'bg-muted/60 border-[1.5px] border-border' : ''
                 )}
-              </div>
-            </DrawerContent>
-          </Drawer>
+                onClick={() => setActiveView(item.id)}
+              >
+                <Icon className="!h-5 !w-5" />
+              </Button>
+            );
+          })}
         </div>
       </div>
+
+      {/* Right Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden w-full md:w-0 md:pl-1 md:pr-1 md:min-w-0 px-4 md:px-0">
+        {/* Agent Header */}
+        <div className="flex items-center justify-between pt-12 pb-6 w-full">
+          <div
+            className="flex items-center gap-3 cursor-pointer group/header"
+            onClick={() => setIsEditorOpen(true)}
+          >
+            <div className="relative">
+              <AgentAvatar
+                agent={agent}
+                size={48}
+                className="border-[1.5px] transition-all group-hover/header:ring-2 group-hover/header:ring-primary/20"
+              />
+
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold text-foreground">{agent?.name}</h1>
+                <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover/header:opacity-100 transition-opacity" />
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={() => router.push(`/dashboard?agent_id=${agentId}`)}
+            className="gap-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Start Chat
+          </Button>
+        </div>
+
+        {/* Dynamic Content Based on Active View */}
+        {activeView === 'instructions' && <InstructionsScreen agentId={agentId} />}
+        {activeView === 'tools' && <ToolsScreen agentId={agentId} />}
+        {activeView === 'integrations' && <IntegrationsScreen agentId={agentId} />}
+        {activeView === 'knowledge' && <KnowledgeScreen agentId={agentId} />}
+        {activeView === 'triggers' && <TriggersScreen agentId={agentId} />}
+      </div>
+
+      {/* Agent Editor Dialog */}
+      <AgentEditorDialog
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        agentName={agent?.name}
+        currentIconName={agent?.icon_name || undefined}
+        currentIconColor={agent?.icon_color || '#000000'}
+        currentBackgroundColor={agent?.icon_background || '#F3F4F6'}
+        onSave={handleEditorSave}
+      />
     </div>
   );
-} 
+}

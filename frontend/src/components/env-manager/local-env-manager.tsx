@@ -91,7 +91,7 @@ export function LocalEnvManager() {
       setNewApiKeys([]);
     },
     onError: () => {
-      toast.error('Falha ao atualizar chaves de API');
+      toast.error('Failed to update API keys');
     }
   });
 
@@ -118,7 +118,7 @@ export function LocalEnvManager() {
     return <Card>
       <CardHeader>
         <CardTitle>Local .Env Manager</CardTitle>
-        <CardDescription>Carregando...</CardDescription>
+        <CardDescription>Loading...</CardDescription>
       </CardHeader>
     </Card>;
   }

@@ -1,11 +1,8 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 
 interface AuthMessage {
   type: 'github-auth-success' | 'github-auth-error';
@@ -188,7 +185,7 @@ export default function GitHubOAuthPopup() {
     <main className="flex flex-col items-center justify-center h-screen bg-background p-8">
       <div className="flex flex-col items-center gap-4 text-center max-w-sm">
         {status !== 'error' && (
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <KortixLoader size="large" />
         )}
 
         <div className="space-y-2">

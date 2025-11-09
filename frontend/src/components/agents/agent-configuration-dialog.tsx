@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Settings,
   Wrench,
   Server,
   BookOpen,
@@ -41,39 +42,31 @@ import {
   ChevronDown,
   Search,
   Info,
-  GitBranch,
-  Cpu,
-  Clock3,
-  Star,
-  Workflow,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 
-import { useAgentVersionData } from '@/hooks/use-agent-version-data';
-import { useUpdateAgent, useAgents } from '@/hooks/react-query/agents/use-agents';
-import { useUpdateAgentMCPs } from '@/hooks/react-query/agents/use-update-agent-mcps';
-import { useExportAgent } from '@/hooks/react-query/agents/use-agent-export-import';
+import { useAgentVersionData } from '@/hooks/agents';
+import { useUpdateAgent, useAgents } from '@/hooks/agents/use-agents';
+import { useUpdateAgentMCPs } from '@/hooks/agents/use-update-agent-mcps';
+import { useExportAgent } from '@/hooks/agents/use-agent-export-import';
 import { ExpandableMarkdownEditor } from '@/components/ui/expandable-markdown-editor';
 import { AgentModelSelector } from './config/model-selector';
 import { GranularToolConfiguration } from './tools/granular-tool-configuration';
 import { AgentMCPConfiguration } from './agent-mcp-configuration';
-import { AgentKnowledgeBaseManager } from './knowledge-base/agent-knowledge-base-manager';
+import { AgentKnowledgeBaseManager } from './knowledge-base/agent-kb-tree';
 import { AgentTriggersConfiguration } from './triggers/agent-triggers-configuration';
-import { AgentWorkflowsConfiguration } from './workflows/agent-workflows-configuration';
 import { AgentAvatar } from '../thread/content/agent-avatar';
 import { AgentIconEditorDialog } from './config/agent-icon-editor-dialog';
 import { AgentVersionSwitcher } from './agent-version-switcher';
-import { formatDistanceToNow } from 'date-fns';
 
 interface AgentConfigurationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
-  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'workflows' | 'triggers';
+  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
   onAgentChange?: (agentId: string) => void;
 }
 
@@ -89,7 +82,11 @@ export function AgentConfigurationDialog({
   const queryClient = useQueryClient();
 
   const { agent, versionData, isViewingOldVersion, isLoading, error } = useAgentVersionData({ agentId });
-  const { data: agentsResponse } = useAgents();
+  const { data: agentsResponse, refetch: refetchAgents } = useAgents({}, { 
+    enabled: !!onAgentChange,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always'
+  });
   const agents = agentsResponse?.agents || [];
 
   const updateAgentMutation = useUpdateAgent();
@@ -100,6 +97,11 @@ export function AgentConfigurationDialog({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [isIconEditorOpen, setIsIconEditorOpen] = useState(false);
+  
+  // Debug state changes
+  useEffect(() => {
+    console.log('Icon editor open state changed:', isIconEditorOpen);
+  }, [isIconEditorOpen]);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -133,10 +135,9 @@ export function AgentConfigurationDialog({
       configSource = {
         ...agent,
         ...versionData,
-        // Fallback to agent fields when not present in version data
-        icon_name: (versionData as any).icon_name || agent.icon_name,
-        icon_color: (versionData as any).icon_color || agent.icon_color,
-        icon_background: (versionData as any).icon_background || agent.icon_background,
+        icon_name: versionData.icon_name || agent.icon_name,
+        icon_color: versionData.icon_color || agent.icon_color,
+        icon_background: versionData.icon_background || agent.icon_background,
       };
     }
 
@@ -158,52 +159,11 @@ export function AgentConfigurationDialog({
     setEditName(configSource.name || '');
   }, [agent, versionData]);
 
-  const isProphetAgent = agent?.metadata?.is_suna_default || false;
+  const isSunaAgent = agent?.metadata?.is_suna_default || false;
   const restrictions = agent?.metadata?.restrictions || {};
-  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isProphetAgent;
-  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isProphetAgent;
-  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isProphetAgent;
-  const isDefaultEditable = !isViewingOldVersion && (restrictions.default_editable !== false) && !isProphetAgent;
-
-  const enabledToolCount = useMemo(() => {
-    if (!formData.agentpress_tools) {
-      return 0;
-    }
-
-    return Object.values(formData.agentpress_tools).reduce((acc, value) => {
-      if (typeof value === 'object' && value !== null) {
-        return value.enabled ? acc + 1 : acc;
-      }
-      return value ? acc + 1 : acc;
-    }, 0);
-  }, [formData.agentpress_tools]);
-
-  const totalIntegrationCount = useMemo(() => {
-    const configured = Array.isArray(formData.configured_mcps) ? formData.configured_mcps.length : 0;
-    const custom = Array.isArray(formData.custom_mcps) ? formData.custom_mcps.length : 0;
-    return configured + custom;
-  }, [formData.configured_mcps, formData.custom_mcps]);
-
-  const lastUpdatedLabel = useMemo(() => {
-    const source = versionData?.updated_at || agent?.updated_at || agent?.created_at;
-    if (!source) {
-      return 'No updates yet';
-    }
-
-    try {
-      return formatDistanceToNow(new Date(source), { addSuffix: true });
-    } catch (error) {
-      console.warn('Failed to parse date for agent timeline', error);
-      return 'Recently';
-    }
-  }, [versionData?.updated_at, agent?.updated_at, agent?.created_at]);
-
-  const viewingVersionLabel = useMemo(() => {
-    if (!versionData) return 'Current configuration';
-    if (versionData.version_name) return versionData.version_name;
-    if (versionData.version_number) return `Version ${versionData.version_number}`;
-    return 'Current configuration';
-  }, [versionData]);
+  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isSunaAgent;
+  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isSunaAgent;
+  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isSunaAgent;
 
   const hasChanges = useMemo(() => {
     return JSON.stringify(formData) !== JSON.stringify(originalFormData);
@@ -270,9 +230,9 @@ export function AgentConfigurationDialog({
     }
 
     if (!isNameEditable) {
-      if (isProphetAgent) {
+      if (isSunaAgent) {
         toast.error("Name cannot be edited", {
-          description: "Prophet's name is managed centrally and cannot be changed.",
+          description: "Suna's name is managed centrally and cannot be changed.",
         });
       }
       setEditName(formData.name);
@@ -286,9 +246,9 @@ export function AgentConfigurationDialog({
 
   const handleSystemPromptChange = (value: string) => {
     if (!isSystemPromptEditable) {
-      if (isProphetAgent) {
+      if (isSunaAgent) {
         toast.error("System prompt cannot be edited", {
-          description: "Prophet's system prompt is managed centrally.",
+          description: "Suna's system prompt is managed centrally.",
         });
       }
       return;
@@ -303,30 +263,15 @@ export function AgentConfigurationDialog({
 
   const handleToolsChange = (tools: Record<string, boolean | { enabled: boolean; description: string }>) => {
     if (!areToolsEditable) {
-      if (isProphetAgent) {
+      if (isSunaAgent) {
         toast.error("Tools cannot be edited", {
-          description: "Prophet's tools are managed centrally.",
+          description: "Suna's tools are managed centrally.",
         });
       }
       return;
     }
 
     setFormData(prev => ({ ...prev, agentpress_tools: tools }));
-  };
-
-  const handleDefaultToggle = (checked: boolean) => {
-    if (!isDefaultEditable) {
-      if (isProphetAgent) {
-        toast.error('Default status cannot be changed', {
-          description: "Prophet's status is managed centrally.",
-        });
-      } else if (isViewingOldVersion) {
-        toast.error('Default status cannot be changed while viewing an older version.');
-      }
-      return;
-    }
-
-    setFormData(prev => ({ ...prev, is_default: checked }));
   };
 
   const handleMCPChange = async (updates: { configured_mcps: any[]; custom_mcps: any[] }) => {
@@ -425,281 +370,224 @@ export function AgentConfigurationDialog({
   }
 
   const tabItems = [
+    // { id: 'general', label: 'General', icon: Settings, disabled: false },
     { id: 'instructions', label: 'Instructions', icon: Brain, disabled: false },
     { id: 'tools', label: 'Tools', icon: Wrench, disabled: false },
     { id: 'integrations', label: 'Integrations', icon: Server, disabled: false },
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen, disabled: false },
-    { id: 'workflows', label: 'Workflows', icon: Workflow, disabled: false },
     { id: 'triggers', label: 'Triggers', icon: Zap, disabled: false },
   ];
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl w-full h-[90vh] overflow-hidden p-0 flex flex-col bg-background/98">
-          <DialogHeader className="px-6 pt-6 pb-5 flex-shrink-0 border-b border-border/60">
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap items-start justify-between gap-6">
-                <div className="flex items-start gap-4 min-w-0">
-                  <div className="flex-shrink-0">
-                    {isProphetAgent ? (
+        <DialogContent className="max-w-5xl h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex-shrink-0"
+                >
+                  {isSunaAgent ? (
+                    <AgentAvatar
+                      isSunaDefault={true}
+                      agentName={formData.name}
+                      size={40}
+                      className="ring-1 ring-border"
+                    />
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🎯 Icon clicked in config dialog - opening editor');
+                        console.log('Current formData:', { 
+                          icon_name: formData.icon_name, 
+                          icon_color: formData.icon_color, 
+                          icon_background: formData.icon_background 
+                        });
+                        setIsIconEditorOpen(true);
+                      }}
+                      className="cursor-pointer transition-all hover:scale-105 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
+                      type="button"
+                      title="Click to customize agent icon"
+                    >
                       <AgentAvatar
-                        isSunaDefault={true}
+                        iconName={formData.icon_name}
+                        iconColor={formData.icon_color}
+                        backgroundColor={formData.icon_background}
                         agentName={formData.name}
-                        size={44}
-                        className="ring-1 ring-border shadow-sm"
+                        size={40}
+                        className="ring-1 ring-border hover:ring-foreground/20 transition-all"
                       />
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setIsIconEditorOpen(true);
-                        }}
-                        className="cursor-pointer transition-all hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
-                        type="button"
-                        title="Click to customize agent icon"
-                      >
-                        <AgentAvatar
-                          iconName={formData.icon_name}
-                          iconColor={formData.icon_color}
-                          backgroundColor={formData.icon_background}
-                          agentName={formData.name}
-                          size={44}
-                          className="ring-1 ring-border hover:ring-primary/30 transition-all shadow-sm"
-                        />
-                      </button>
-                    )}
-                  </div>
+                    </button>
+                  )}
+                </div>
 
-                  <div className="min-w-0 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {isEditingName ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            ref={nameInputRef}
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleNameSave();
-                              } else if (e.key === 'Escape') {
-                                setEditName(formData.name);
-                                setIsEditingName(false);
-                              }
-                            }}
-                            className="h-9 w-64 bg-background/80"
-                            maxLength={50}
-                          />
-                          <Button
-                            size="icon"
-                            variant="secondary"
-                            className="h-8 w-8"
-                            onClick={handleNameSave}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    {isEditingName ? (
+                      // Name editing mode (takes priority over everything)
+                      <div className="flex items-center gap-2">
+                        <Input
+                          ref={nameInputRef}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleNameSave();
+                            } else if (e.key === 'Escape') {
+                              setEditName(formData.name);
+                              setIsEditingName(false);
+                            }
+                          }}
+                          className="h-8 w-64"
+                          maxLength={50}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={handleNameSave}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setEditName(formData.name);
+                            setIsEditingName(false);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : onAgentChange ? (
+                      // When agent switching is enabled, show a sleek inline agent selector
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-2 hover:bg-muted/50 rounded-md px-2 py-1 transition-colors group">
+                              <DialogTitle className="text-xl font-semibold truncate">
+                                {isLoading ? 'Loading...' : formData.name || 'Agent'}
+                              </DialogTitle>
+                              <ChevronDown className="h-4 w-4 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent 
+                            className="w-80 p-0" 
+                            align="start"
+                            sideOffset={4}
                           >
-                            <Check className="h-4 w-4" />
-                          </Button>
+                            <div className="p-3 border-b">
+                              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Search className="h-4 w-4" />
+                                Switch Agent
+                              </div>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto">
+                              {agents.map((agent: any) => (
+                                <DropdownMenuItem
+                                  key={agent.agent_id}
+                                  onClick={() => onAgentChange(agent.agent_id)}
+                                  className="p-3 flex items-center gap-3 cursor-pointer"
+                                >
+                                  <AgentAvatar
+                                    iconName={agent.icon_name}
+                                    iconColor={agent.icon_color}
+                                    backgroundColor={agent.icon_background}
+                                    agentName={agent.name}
+                                    isSunaDefault={agent.metadata?.is_suna_default}
+                                    size={24}
+                                    className="flex-shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium truncate">{agent.name}</div>
+                                    {agent.description && (
+                                      <div className="text-xs text-muted-foreground truncate">
+                                        {agent.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {agent.agent_id === agentId && (
+                                    <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        {/* Add edit button for name editing when agent switching is enabled */}
+                        {isNameEditable && (
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8"
+                            className="h-6 w-6 flex-shrink-0"
                             onClick={() => {
-                              setEditName(formData.name);
-                              setIsEditingName(false);
+                              setIsEditingName(true);
+                              setTimeout(() => {
+                                nameInputRef.current?.focus();
+                                nameInputRef.current?.select();
+                              }, 0);
                             }}
                           >
-                            <X className="h-4 w-4" />
+                            <Edit3 className="h-3 w-3" />
                           </Button>
-                        </div>
-                      ) : onAgentChange ? (
-                        <div className="flex items-center gap-2 min-w-0">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-1.5 transition hover:bg-muted/60 focus:outline-none">
-                                <DialogTitle className="text-xl font-semibold truncate">
-                                  {isLoading ? 'Loading...' : formData.name || 'Agent'}
-                                </DialogTitle>
-                                <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-60" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              className="w-80 p-0 z-[220]"
-                              align="start"
-                              sideOffset={4}
-                            >
-                              <div className="p-3 border-b">
-                                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                  <Search className="h-4 w-4" />
-                                  Switch Agent
-                                </div>
-                              </div>
-                              <div className="max-h-60 overflow-y-auto">
-                                {agents.map((agent: any) => (
-                                  <DropdownMenuItem
-                                    key={agent.agent_id}
-                                    onClick={() => onAgentChange(agent.agent_id)}
-                                    className="p-3 flex items-center gap-3 cursor-pointer"
-                                  >
-                                    <AgentAvatar
-                                      iconName={agent.icon_name}
-                                      iconColor={agent.icon_color}
-                                      backgroundColor={agent.icon_background}
-                                      agentName={agent.name}
-                                      isSunaDefault={agent.metadata?.is_suna_default}
-                                      size={24}
-                                      className="flex-shrink-0"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium truncate">{agent.name}</div>
-                                      {agent.description && (
-                                        <div className="text-xs text-muted-foreground truncate">
-                                          {agent.description}
-                                        </div>
-                                      )}
-                                    </div>
-                                    {agent.agent_id === agentId && (
-                                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                                    )}
-                                  </DropdownMenuItem>
-                                ))}
-                              </div>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          {isNameEditable && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={() => {
-                                setIsEditingName(true);
-                                setTimeout(() => {
-                                  nameInputRef.current?.focus();
-                                  nameInputRef.current?.select();
-                                }, 0);
-                              }}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <DialogTitle className="text-xl font-semibold truncate">
-                            {isLoading ? 'Loading...' : formData.name || 'Agent'}
-                          </DialogTitle>
-                          {isNameEditable && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                setIsEditingName(true);
-                                setTimeout(() => {
-                                  nameInputRef.current?.focus();
-                                  nameInputRef.current?.select();
-                                }, 0);
-                              }}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {formData.is_default && (
-                        <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
-                          Default
-                        </Badge>
-                      )}
-                      {isProphetAgent && (
-                        <Badge variant="outline" className="border-blue-400/40 text-blue-300">
-                          Managed
-                        </Badge>
-                      )}
-                      {isViewingOldVersion && (
-                        <Badge variant="outline" className="border-amber-400/40 text-amber-300">
-                          Read only
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <GitBranch className="h-3 w-3" />
-                        {viewingVersionLabel}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock3 className="h-3 w-3" />
-                        Updated {lastUpdatedLabel}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <AgentVersionSwitcher
-                    agentId={agentId}
-                    currentVersionId={agent?.current_version_id || null}
-                    currentFormData={{
-                      system_prompt: formData.system_prompt,
-                      configured_mcps: formData.configured_mcps,
-                      custom_mcps: formData.custom_mcps,
-                      agentpress_tools: formData.agentpress_tools,
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleExport}
-                    disabled={exportMutation.isPending}
-                  >
-                    {exportMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
+                      </div>
                     ) : (
-                      <Download className="h-4 w-4" />
+                      // Static title mode (no agent switching available)
+                      <div className="flex items-center gap-2">
+                        <DialogTitle className="text-xl font-semibold">
+                          {isLoading ? 'Loading...' : formData.name || 'Agent'}
+                        </DialogTitle>
+                        {isNameEditable && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setIsEditingName(true);
+                              setTimeout(() => {
+                                nameInputRef.current?.focus();
+                                nameInputRef.current?.select();
+                              }, 0);
+                            }}
+                          >
+                            <Edit3 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     )}
-                    <span className="text-sm font-medium">Export</span>
-                  </Button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-5 text-sm">
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Model</span>
-                  <AgentModelSelector
-                    value={formData.model}
-                    onChange={handleModelChange}
-                    disabled={isViewingOldVersion}
-                    className="min-w-[160px]"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Default agent</span>
-                  <Switch
-                    checked={Boolean(formData.is_default)}
-                    onCheckedChange={handleDefaultToggle}
-                    disabled={!isDefaultEditable}
-                    aria-label="Toggle default agent status"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Wrench className="h-4 w-4" />
-                  <span>
-                    <span className="font-medium text-foreground">{enabledToolCount}</span> tools
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Server className="h-4 w-4" />
-                  <span>
-                    <span className="font-medium text-foreground">{totalIntegrationCount}</span> integrations
-                  </span>
-                </div>
+              <div className="flex items-center gap-2">
+                <AgentVersionSwitcher
+                  agentId={agentId}
+                  currentVersionId={agent?.current_version_id || null}
+                  currentFormData={{
+                    system_prompt: formData.system_prompt,
+                    configured_mcps: formData.configured_mcps,
+                    custom_mcps: formData.custom_mcps,
+                    agentpress_tools: formData.agentpress_tools,
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleExport}
+                  disabled={exportMutation.isPending}
+                >
+                  {exportMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </div>
           </DialogHeader>
@@ -708,13 +596,9 @@ export function AgentConfigurationDialog({
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <div className="sticky top-0 z-20 bg-background/95 px-6 pt-3 pb-2 border-b border-border/50">
-                <TabsList className="flex flex-wrap gap-2 rounded-full bg-muted/40 p-1">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="flex-1 flex flex-col min-h-0">
+              <div className='flex items-center justify-center w-full'>
+                <TabsList className="mt-4 w-[95%] flex-shrink-0">
                   {tabItems.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -723,8 +607,7 @@ export function AgentConfigurationDialog({
                         value={tab.id}
                         disabled={tab.disabled}
                         className={cn(
-                          'rounded-full px-4 py-1.5 text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
-                          tab.disabled && 'opacity-50 cursor-not-allowed'
+                          tab.disabled && "opacity-50 cursor-not-allowed"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -734,63 +617,64 @@ export function AgentConfigurationDialog({
                   })}
                 </TabsList>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <TabsContent
-                  value="instructions"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
-                  <div className="flex flex-col flex-1 min-h-0 gap-4">
-                    {isProphetAgent && (
-                      <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
-                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    <div className="flex flex-col flex-1 min-h-0 gap-3">
-                      <Label className="text-base font-semibold">System Prompt</Label>
-                      <ExpandableMarkdownEditor
-                        value={formData.system_prompt}
-                        onSave={handleSystemPromptChange}
-                        disabled={!isSystemPromptEditable}
-                        placeholder="Define how your agent should behave..."
-                        className="flex-1 min-h-[280px]"
+              <div className="flex-1 overflow-auto">
+                {/* <TabsContent value="general" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 gap-6">
+                    <div className="flex-shrink-0">
+                      <Label className="text-base font-semibold mb-3 block">Model</Label>
+                      <AgentModelSelector
+                        value={formData.model}
+                        onChange={handleModelChange}
+                        disabled={isViewingOldVersion}
+                        variant="default"
                       />
                     </div>
-                  </div>
-                </TabsContent>
 
-                <TabsContent
-                  value="tools"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
-                  <div className="flex flex-col flex-1 min-h-0 gap-4">
-                    {isProphetAgent && (
-                      <Alert className="bg-blue-50/40 border-blue-200/60 dark:bg-blue-950/20 dark:border-blue-900">
-                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    <div className="flex-1 min-h-0">
-                      <GranularToolConfiguration
-                        tools={formData.agentpress_tools}
-                        onToolsChange={handleToolsChange}
-                        disabled={!areToolsEditable}
-                        isProphetAgent={isProphetAgent}
-                        isLoading={isLoading}
-                      />
-                    </div>
                   </div>
-                </TabsContent>
+                </TabsContent> */}
 
-                <TabsContent
-                  value="integrations"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
+                <TabsContent value="instructions" className="p-6 mt-0 flex flex-col h-full">
                   <div className="flex flex-col flex-1 min-h-0">
+                    {isSunaAgent && (
+                      <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
+                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
+                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <Label className="text-base font-semibold mb-3 block flex-shrink-0">System Prompt</Label>
+                    <ExpandableMarkdownEditor
+                      value={formData.system_prompt}
+                      onSave={handleSystemPromptChange}
+                      disabled={!isSystemPromptEditable}
+                      placeholder="Define how your agent should behave..."
+                      className="flex-1 h-[90%]"
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="tools" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
+                    {isSunaAgent && (
+                      <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
+                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
+                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <GranularToolConfiguration
+                      tools={formData.agentpress_tools}
+                      onToolsChange={handleToolsChange}
+                      disabled={!areToolsEditable}
+                      isSunaAgent={isSunaAgent}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="integrations" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
                     <AgentMCPConfiguration
                       configuredMCPs={formData.configured_mcps}
                       customMCPs={formData.custom_mcps}
@@ -800,36 +684,22 @@ export function AgentConfigurationDialog({
                         configured_mcps: formData.configured_mcps,
                         custom_mcps: formData.custom_mcps,
                         system_prompt: formData.system_prompt,
-                        agentpress_tools: formData.agentpress_tools,
+                        agentpress_tools: formData.agentpress_tools
                       }}
                       saveMode="callback"
+                      isLoading={updateAgentMCPsMutation.isPending}
                     />
                   </div>
                 </TabsContent>
 
-                <TabsContent
-                  value="workflows"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
-                  <div className="flex flex-col flex-1 min-h-0">
-                    <AgentWorkflowsConfiguration agentId={agentId} agentName={formData.name || 'Agent'} />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
-                  value="knowledge"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
-                  <div className="flex flex-col flex-1 min-h-0">
+                <TabsContent value="knowledge" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
                     <AgentKnowledgeBaseManager agentId={agentId} agentName={formData.name || 'Agent'} />
                   </div>
                 </TabsContent>
 
-                <TabsContent
-                  value="triggers"
-                  className="flex h-full flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5"
-                >
-                  <div className="flex flex-col flex-1 min-h-0">
+                <TabsContent value="triggers" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
                     <AgentTriggersConfiguration agentId={agentId} />
                   </div>
                 </TabsContent>
@@ -837,7 +707,7 @@ export function AgentConfigurationDialog({
             </Tabs>
           )}
 
-          <DialogFooter className="px-6 py-4 border-t border-border/60 bg-background/95 backdrop-blur-sm flex-shrink-0">
+          <DialogFooter className="px-6 py-4 border-t bg-background flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => handleClose(false)}
@@ -867,7 +737,10 @@ export function AgentConfigurationDialog({
 
       <AgentIconEditorDialog
         isOpen={isIconEditorOpen}
-        onClose={() => setIsIconEditorOpen(false)}
+        onClose={() => {
+          console.log('Icon editor dialog closing');
+          setIsIconEditorOpen(false);
+        }}
         currentIconName={formData.icon_name}
         currentIconColor={formData.icon_color}
         currentBackgroundColor={formData.icon_background}

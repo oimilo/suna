@@ -1,4 +1,6 @@
 'use client';
+
+import { Suspense } from 'react';
 import { CTASection } from '@/components/home/sections/cta-section';
 import { FAQSection } from '@/components/home/sections/faq-section';
 import { FooterSection } from '@/components/home/sections/footer-section';
@@ -8,13 +10,13 @@ import { PricingSection } from '@/components/home/sections/pricing-section';
 import { IntegrationsSection } from '@/components/home/sections/integrations-section';
 import { HowItWorksSection } from '@/components/home/sections/how-it-works-section';
 // import { SocialProofSection } from '@/components/home/sections/social-proof-section';
-import { ModalProviders } from '@/providers/modal-providers';
 import { BackgroundAALChecker } from '@/components/auth/background-aal-checker';
+
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <>
-      <ModalProviders />
+    <Suspense fallback={null}>
       <BackgroundAALChecker>
         <main className="flex flex-col items-center justify-center min-h-screen w-full relative overflow-hidden">
           {/* Dark background with purple light spots - Builder.io inspired */}
@@ -86,6 +88,6 @@ export default function Home() {
           </div>
         </main>
       </BackgroundAALChecker>
-    </>
+    </Suspense>
   );
 }

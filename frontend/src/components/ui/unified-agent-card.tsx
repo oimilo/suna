@@ -2,23 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import {
-  Check,
-  Plus,
-  Download,
-  CheckCircle,
-  Loader2,
-  Globe,
-  GlobeLock,
-  GitBranch,
-  Trash2,
-  MoreVertical,
-  User,
-  ArrowRight,
-  Plug,
-  Zap,
-  Workflow,
-} from 'lucide-react';
+import { Check, Plus, Download, CheckCircle, Loader2, Globe, GlobeLock, GitBranch, Trash2, MoreVertical, User, ArrowRight } from 'lucide-react';
+import { DynamicIcon } from 'lucide-react/dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,20 +24,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { MiloLogo } from '@/components/sidebar/brand-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
-import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
-import Image from 'next/image';
+import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 
-export type AgentCardVariant =
-  | 'onboarding'
-  | 'marketplace'
-  | 'template'
-  | 'agent'
-  | 'showcase'
-  | 'dashboard'
-  | 'compact';
+// Unified agent card variants
+export type AgentCardVariant = 
+  | 'onboarding'      // Selection card for onboarding
+  | 'marketplace'     // Marketplace template card
+  | 'template'        // User template card
+  | 'agent'          // User agent card
+  | 'showcase'       // Home page showcase
+  | 'dashboard'      // Dashboard quick access
+  | 'compact';       // Compact version
 
+// Base agent data interface
 export interface BaseAgentData {
   id: string;
   name: string;
@@ -62,16 +48,24 @@ export interface BaseAgentData {
   icon?: string;
   role?: string;
   capabilities?: string[];
+  
+  // Icon/avatar data
   icon_name?: string;
   icon_color?: string;
   icon_background?: string;
+  
+  // Marketplace specific
   creator_id?: string;
   creator_name?: string;
   is_kortix_team?: boolean;
   download_count?: number;
   marketplace_published_at?: string;
+  
+  // Template specific
   template_id?: string;
   is_public?: boolean;
+  
+  // Agent specific
   agent_id?: string;
   is_default?: boolean;
   current_version?: {
@@ -84,6 +78,7 @@ export interface BaseAgentData {
     centrally_managed?: boolean;
     restrictions?: Record<string, boolean>;
   };
+
   mcp_requirements?: Array<{
     qualified_name: string;
     display_name: string;
@@ -94,16 +89,16 @@ export interface BaseAgentData {
   agentpress_tools?: Record<string, any>;
 }
 
+// Action handlers
 export interface AgentCardActions {
   onPrimaryAction?: (data: BaseAgentData, e?: React.MouseEvent) => void;
   onSecondaryAction?: (data: BaseAgentData, e?: React.MouseEvent) => void;
   onDeleteAction?: (data: BaseAgentData, e?: React.MouseEvent) => void;
   onClick?: (data: BaseAgentData) => void;
   onToggle?: (agentId: string) => void;
-  onOpenTriggers?: (data: BaseAgentData, e?: React.MouseEvent) => void;
-  onOpenWorkflows?: (data: BaseAgentData, e?: React.MouseEvent) => void;
 }
 
+// Card state
 export interface AgentCardState {
   isSelected?: boolean;
   isRecommended?: boolean;
@@ -111,27 +106,35 @@ export interface AgentCardState {
   isDeleting?: boolean;
 }
 
+// Main props interface
 export interface UnifiedAgentCardProps {
   variant: AgentCardVariant;
   data: BaseAgentData;
   actions?: AgentCardActions;
   state?: AgentCardState;
+  
+  // Styling
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  
+  // Animation
   delay?: number;
+  
+  // Context
   currentUserId?: string;
 }
 
-const CardAvatar: React.FC<{
+// Avatar component
+const CardAvatar: React.FC<{ 
   data: BaseAgentData;
   size?: number;
   variant: AgentCardVariant;
 }> = ({ data, size = 48, variant }) => {
-  const isProphetDefaultAgent = data.metadata?.is_suna_default === true;
-
+  const isSunaAgent = data.metadata?.is_suna_default === true;
+  
   if (variant === 'showcase') {
     return (
-      <motion.div
+      <motion.div 
         className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300"
         whileHover={{ rotate: [0, -10, 10, 0] }}
         transition={{ duration: 0.5 }}
@@ -140,11 +143,17 @@ const CardAvatar: React.FC<{
       </motion.div>
     );
   }
-
-  if (isProphetDefaultAgent) {
-    return <AgentAvatar isSunaDefault={true} size={size} className="border" />;
+  
+  if (isSunaAgent) {
+    return (
+      <AgentAvatar
+        isSunaDefault={true}
+        size={size}
+        className="border"
+      />
+    );
   }
-
+  
   if (data.icon_name) {
     return (
       <AgentAvatar
@@ -156,19 +165,27 @@ const CardAvatar: React.FC<{
       />
     );
   }
-
-  return <AgentAvatar agentName={data.name} size={size} className="border" />;
+  
+  // Fallback avatar
+  return (
+    <AgentAvatar
+      agentName={data.name}
+      size={size}
+      className="border"
+    />
+  );
 };
 
-const MarketplaceBadge: React.FC<{
-  isMiloTeam?: boolean;
+// Badge components
+const MarketplaceBadge: React.FC<{ 
+  isKortixTeam?: boolean; 
   isOwner?: boolean;
-}> = ({ isMiloTeam, isOwner }) => (
+}> = ({ isKortixTeam, isOwner }) => (
   <div className="flex gap-1 flex-wrap">
-    {isMiloTeam && (
+    {isKortixTeam && (
       <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-950 dark:text-blue-300">
         <CheckCircle className="h-3 w-3 mr-1" />
-        Milo
+        Kortix
       </Badge>
     )}
     {isOwner && (
@@ -182,401 +199,559 @@ const MarketplaceBadge: React.FC<{
 const TemplateBadge: React.FC<{ isPublic?: boolean }> = ({ isPublic }) => {
   if (isPublic) {
     return (
-      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-0 dark:bg-emerald-950 dark:text-emerald-300">
-        <Globe className="h-3 w-3 mr-1" />
+      <Badge variant="default" className="bg-green-100 text-green-700 border-0 dark:bg-green-950 dark:text-green-300">
+        <Globe className="h-3 w-3" />
         Public
       </Badge>
     );
   }
   return (
-    <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">
-      <GlobeLock className="h-3 w-3 mr-1" />
+    <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 dark:bg-gray-800 dark:text-gray-300">
+      <GlobeLock className="h-3 w-3" />
       Private
     </Badge>
   );
 };
 
-const DownloadStats: React.FC<{ count?: number }> = ({ count = 0 }) => (
-  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-    <Download className="h-3 w-3" />
-    {count} downloads
+const AgentBadges: React.FC<{ data: BaseAgentData, isSunaAgent: boolean }> = ({ data, isSunaAgent }) => (
+  <div className="flex gap-1">
+    {!isSunaAgent && data.current_version && (
+      <Badge variant="outline" className="text-xs">
+        <GitBranch className="h-3 w-3 mr-1" />
+        {data.current_version.version_name}
+      </Badge>
+    )}
+    {!isSunaAgent && data.is_public && (
+      <Badge variant="default" className="bg-green-100 text-green-700 border-0 dark:bg-green-950 dark:text-green-300 text-xs">
+        <Globe className="h-3 w-3 mr-1" />
+        Published
+      </Badge>
+    )}
   </div>
 );
 
-const IntegrationsList: React.FC<{ data: BaseAgentData }> = ({ data }) => {
-  const { data: toolkitIconResult } = useComposioToolkitIcon(
-    data.mcp_requirements?.[0]?.toolkit_slug || '',
-    { enabled: !!data.mcp_requirements?.[0]?.toolkit_slug },
-  );
-  const toolkitIcon = toolkitIconResult?.icon_url;
+// Tag list component
+const TagList: React.FC<{ tags?: string[]; maxTags?: number }> = ({ tags, maxTags = 3 }) => (
+  <div className="flex flex-wrap gap-1 min-h-[1.25rem]">
+    {tags && tags.length > 0 && (
+      <>
+        {tags.slice(0, maxTags).map(tag => (
+          <Badge key={tag} variant="outline" className="text-xs border-border/50">
+            {tag}
+          </Badge>
+        ))}
+        {tags.length > maxTags && (
+          <Badge variant="outline" className="text-xs border-border/50">
+            +{tags.length - maxTags}
+          </Badge>
+        )}
+      </>
+    )}
+  </div>
+);
 
-  if (!data.mcp_requirements || data.mcp_requirements.length === 0) {
-    return <span className="text-xs text-muted-foreground italic">Nenhuma integração necessária</span>;
+// Integration logo component
+const extractAppInfo = (qualifiedName: string, customType?: string) => {
+  if (qualifiedName?.startsWith('composio.')) {
+    const extractedSlug = qualifiedName.substring(9);
+    if (extractedSlug) {
+      return { type: 'composio', slug: extractedSlug };
+    }
+  }
+  
+  if (customType === 'composio') {
+    if (qualifiedName?.startsWith('composio.')) {
+      const extractedSlug = qualifiedName.substring(9);
+      if (extractedSlug) {
+        return { type: 'composio', slug: extractedSlug };
+      }
+    }
+  }
+  
+  return null;
+};
+
+const IntegrationLogo: React.FC<{ 
+  qualifiedName: string; 
+  displayName: string; 
+  customType?: string;
+  toolkitSlug?: string;
+}> = ({ qualifiedName, displayName, customType, toolkitSlug }) => {
+  let appInfo = extractAppInfo(qualifiedName, customType);
+  
+  if (!appInfo && toolkitSlug) {
+    appInfo = { type: 'composio', slug: toolkitSlug };
+  }
+  
+  const { data: composioIconData } = useComposioToolkitIcon(
+    appInfo?.type === 'composio' ? appInfo.slug : '',
+    { enabled: appInfo?.type === 'composio' }
+  );
+  
+  let logoUrl: string | undefined;
+  if (appInfo?.type === 'composio') {
+    logoUrl = composioIconData?.icon_url;
   }
 
-  const firstRequirement = data.mcp_requirements[0];
-  const remaining = data.mcp_requirements.length - 1;
+  const firstLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <div className="flex items-center gap-1">
-        {toolkitIcon ? (
-          <Image
-            src={toolkitIcon}
-            alt={firstRequirement.display_name}
-            width={16}
-            height={16}
-            className="h-4 w-4 rounded-sm border object-cover"
-            unoptimized
-          />
-        ) : (
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-sm border">
-            <Plug className="h-3 w-3" />
-          </span>
-        )}
-        <span>{firstRequirement.display_name || firstRequirement.qualified_name}</span>
+    <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 overflow-hidden rounded-md">
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={displayName}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            target.nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      ) : null}
+      <div className={logoUrl ? "hidden" : "flex w-full h-full items-center justify-center bg-muted rounded-md text-xs font-medium text-muted-foreground"}>
+        {firstLetter}
       </div>
-      {remaining > 0 && <span className="text-xs text-muted-foreground/80">+{remaining}</span>}
     </div>
   );
 };
 
-const ShowcaseCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state, delay = 0 }) => (
-  <motion.div
-    className={cn(
-      'group relative flex h-full flex-col items-center justify-between rounded-3xl border border-border bg-card/60 p-8 text-center shadow-sm backdrop-blur transition-all hover:shadow-lg',
-      state?.isSelected && 'border-primary/80 shadow-primary/10',
-    )}
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.35, ease: 'easeOut' }}
-  >
-    {state?.isRecommended && (
-      <span className="absolute right-4 top-4 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow">
-        Recomendado
-      </span>
-    )}
-    <CardAvatar data={data} variant="showcase" size={72} />
-    <div className="space-y-2">
-      <h3 className="text-lg font-semibold">{data.name}</h3>
-      {data.description && <p className="text-sm text-muted-foreground">{data.description}</p>}
-    </div>
-    <Button className="mt-4 gap-2" size="sm" onClick={(e) => actions?.onPrimaryAction?.(data, e)}>
-      <ArrowRight className="h-4 w-4" />
-      Experimentar
-    </Button>
-  </motion.div>
-);
-
-const DashboardCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state }) => (
-  <Card
-    className={cn(
-      'relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-border/60 bg-card/80 transition-all hover:border-border hover:shadow-md',
-      state?.isSelected && 'border-primary shadow-primary/10',
-    )}
-    onClick={() => actions?.onClick?.(data)}
-  >
-    <CardContent className="flex flex-col gap-4 p-5">
-      <div className="flex items-start gap-3">
-        <CardAvatar data={data} variant="dashboard" size={48} />
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
-            {data.metadata?.is_suna_default && (
-              <Badge variant="secondary" className="gap-1 text-[0.65rem]">
-                <MiloLogo size={12} />
-                Default
-              </Badge>
-            )}
-          </div>
-          {data.description && <p className="line-clamp-2 text-sm text-muted-foreground">{data.description}</p>}
-        </div>
-      </div>
-      {data.capabilities && data.capabilities.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {data.capabilities.map((capability) => (
-            <Badge key={capability} variant="outline" className="rounded-full border-dashed text-xs">
-              {capability}
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div className="mt-auto flex items-center justify-between border-t border-dashed border-border/60 pt-4 text-xs text-muted-foreground">
-        <span>{data.role || 'Assistente Personalizado'}</span>
-        <Button variant="ghost" size="sm" className="h-7 gap-2" onClick={(e) => actions?.onPrimaryAction?.(data, e)}>
-          Configurar
-          <ArrowRight className="h-3 w-3" />
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const MarketplaceCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state, currentUserId }) => {
-  const isOwner = data.creator_id && currentUserId && data.creator_id === currentUserId;
-
+// Integration logos display
+const IntegrationLogos: React.FC<{ data: BaseAgentData; maxLogos?: number }> = ({ data, maxLogos = 4 }) => {
+  const tools = data.mcp_requirements || [];
+  const toolRequirements = tools.filter(req => req.source === 'tool' || !req.source);
+  const integrations = toolRequirements.filter(tool => !tool.custom_type || tool.custom_type !== 'sse');
+  
+  if (integrations.length === 0) return null;
+  
+  const displayIntegrations = integrations.slice(0, maxLogos);
+  const remainingCount = integrations.length - maxLogos;
+  
   return (
-    <Card
-      className={cn(
-        'group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/60 bg-card/80 transition-all hover:-translate-y-1 hover:border-border hover:shadow-xl',
-        state?.isSelected && 'border-primary/80 shadow-primary/20',
-      )}
-    >
-      <div className="p-6 space-y-5">
-        <div className="flex items-start gap-4">
-          <CardAvatar data={data} variant="marketplace" size={52} />
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
-                {data.creator_name && <p className="text-xs text-muted-foreground">por {data.creator_name}</p>}
-              </div>
-              <MarketplaceBadge isMiloTeam={data.is_kortix_team} isOwner={isOwner} />
-            </div>
-            {data.description && <p className="line-clamp-3 text-sm text-muted-foreground">{data.description}</p>}
-          </div>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {displayIntegrations.map((integration, index) => (
+        <IntegrationLogo
+          key={`int-${index}`}
+          qualifiedName={integration.qualified_name}
+          displayName={integration.display_name}
+          customType={integration.custom_type}
+          toolkitSlug={integration.toolkit_slug}
+        />
+      ))}
+      {remainingCount > 0 && (
+        <div className="w-5 h-5 rounded-md bg-muted flex items-center justify-center">
+          <span className="text-[10px] font-medium text-muted-foreground">+{remainingCount}</span>
         </div>
-        {data.mcp_requirements && data.mcp_requirements.length > 0 && (
-          <div className="rounded-2xl border border-dashed border-border/60 bg-muted/40 p-3">
-            <p className="mb-2 text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Integrações</p>
-            <IntegrationsList data={data} />
-          </div>
-        )}
+      )}
+    </div>
+  );
+};
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <DownloadStats count={data.download_count} />
-          {data.tags && data.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {data.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} variant="outline" className="rounded-full border-dashed text-xs">
-                  #{tag}
-                </Badge>
+// Capabilities list for onboarding
+const CapabilitiesList: React.FC<{ capabilities?: string[]; maxCapabilities?: number }> = ({ 
+  capabilities, 
+  maxCapabilities = 3 
+}) => (
+  <div className="flex flex-wrap gap-1">
+    {capabilities && capabilities.length > 0 && (
+      <>
+        {capabilities.slice(0, maxCapabilities).map((capability) => (
+          <Badge key={capability} variant="outline" className="text-xs">
+            {capability}
+          </Badge>
+        ))}
+        {capabilities.length > maxCapabilities && (
+          <Badge variant="outline" className="text-xs">
+            +{capabilities.length - maxCapabilities} more
+          </Badge>
+        )}
+      </>
+    )}
+  </div>
+);
+
+// Main unified agent card component
+export const UnifiedAgentCard: React.FC<UnifiedAgentCardProps> = ({
+  variant,
+  data,
+  actions = {},
+  state = {},
+  className,
+  size = 'md',
+  delay = 0,
+  currentUserId
+}) => {
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  
+  const {
+    onPrimaryAction,
+    onSecondaryAction,
+    onDeleteAction,
+    onClick,
+    onToggle
+  } = actions;
+  
+  const {
+    isSelected = false,
+    isRecommended = false,
+    isActioning = false,
+    isDeleting = false
+  } = state;
+  
+  const isSunaAgent = data.metadata?.is_suna_default === true;
+  const isOwner = currentUserId && data.creator_id === currentUserId;
+  
+  // Handle delete confirmation
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    setShowDeleteDialog(false);
+    onDeleteAction?.(data);
+  };
+  
+  // Render different variants
+  const renderShowcaseCard = () => (
+    <motion.div className="flex flex-col items-start justify-end relative group cursor-pointer hover:bg-accent/30 transition-colors duration-300">
+      <div className="relative flex size-full items-center justify-center h-full overflow-hidden">
+        <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20"></div>
+        
+        <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-8 text-center">
+          <CardAvatar data={data} variant={variant} />
+          
+          <div className="space-y-3">
+            <h3 className="text-xl font-semibold tracking-tighter group-hover:text-primary transition-colors">
+              {data.name}
+            </h3>
+            <p className="text-sm text-primary/70 font-medium uppercase tracking-wider">
+              {data.role}
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+              {data.description}
+            </p>
+          </div>
+
+          <motion.button
+            className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-all duration-300"
+            initial={{ y: 10 }}
+            whileHover={{ y: 0 }}
+            onClick={() => onClick?.(data)}
+          >
+            Try {data.name} 
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+  
+  const renderDashboardCard = () => (
+    <div
+      className={cn(
+        'group h-38 relative bg-muted/80 dark:bg-muted/20 rounded-3xl overflow-hidden transition-all duration-300 border cursor-pointer flex flex-col w-full border-border/50',
+        'hover:border-primary/20',
+        className
+      )}
+      onClick={() => onClick?.(data)}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="h-full relative flex flex-col overflow-hidden w-full p-4 gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <CardAvatar data={data} size={40} variant={variant} />
+          </div>
+          <h3 className="text-base font-semibold text-foreground line-clamp-1 flex-1 min-w-0">
+            {data.name}
+          </h3>
+        </div>
+      </div>
+      <div className='p-4'>
+      <IntegrationLogos data={data} maxLogos={6} />
+      </div>
+    </div>
+  );
+  
+  const renderOnboardingCard = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay }}
+      className="relative"
+    >
+      <Card 
+        className={cn(
+          'cursor-pointer transition-all duration-200 relative overflow-hidden',
+          isSelected 
+            ? 'border-2 border-foreground bg-background' 
+            : 'border border-border hover:border-muted-foreground/30',
+          className
+        )}
+        onClick={() => onToggle?.(data.id)}
+      >
+        <CardContent className="p-4 space-y-3">
+          {/* Header with name and selection */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-0.5 flex-1 min-w-0">
+              <h3 className="font-semibold text-sm leading-tight">{data.name}</h3>
+              <p className="text-xs text-muted-foreground leading-tight">{data.role}</p>
+            </div>
+            
+            {/* Selection indicator */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              
+              {isSelected ? (
+                <div className="flex items-center justify-center w-4 h-4 rounded-full bg-foreground text-background">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </div>
+              ) : (
+                <Plus className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+          
+          {/* Description */}
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+            {data.description}
+          </p>
+          
+          {/* Capabilities - compact */}
+          {data.capabilities && data.capabilities.length > 0 && (
+            <div className="space-y-1">
+              {data.capabilities.slice(0, 3).map((capability) => (
+                <div key={capability} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="mt-1 w-0.5 h-0.5 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                  <span className="leading-tight">{capability}</span>
+                </div>
               ))}
+              {data.capabilities.length > 3 && (
+                <div className="text-[11px] text-muted-foreground pl-2">
+                  +{data.capabilities.length - 3} more
+                </div>
+              )}
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-border/80 bg-card/60 px-6 py-4">
-        <Button
-          className="gap-2"
-          size="sm"
-          onClick={(e) => actions?.onPrimaryAction?.(data, e)}
-          disabled={state?.isActioning}
-        >
-          {state?.isActioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Instalar
-        </Button>
-        <button
-          onClick={() => actions?.onClick?.(data)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground"
-        >
-          Ver detalhes
-        </button>
-      </div>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
-};
-
-const TemplateCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state }) => (
-  <Card
-    className={cn(
-      'group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/70 bg-card/80 transition-all hover:-translate-y-1 hover:border-border hover:shadow-lg',
-      state?.isSelected && 'border-primary/80 shadow-primary/20',
-    )}
-  >
-    <div className="p-6 space-y-5">
-      <div className="flex items-start gap-4">
-        <CardAvatar data={data} variant='template' size={48} />
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
-            <TemplateBadge isPublic={data.is_public} />
+  
+  const renderStandardCard = () => {
+    const cardClassName = cn(
+      'group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 border cursor-pointer flex flex-col border-border/50 hover:border-primary/20',
+      className
+    );
+    
+    const renderBadge = () => {
+      switch (variant) {
+        case 'marketplace':
+          return <MarketplaceBadge isKortixTeam={data.is_kortix_team} isOwner={isOwner} />;
+        case 'template':
+          return <TemplateBadge isPublic={data.is_public} />;
+        case 'agent':
+          return <AgentBadges data={data} isSunaAgent={isSunaAgent} />;
+        default:
+          return null;
+      }
+    };
+    
+    const renderMetadata = () => {
+      if (variant === 'marketplace') {
+        return (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              <span>{data.creator_name || 'Anonymous'}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Download className="h-3 w-3" />
+              <span>{data.download_count || 0} installs</span>
+            </div>
           </div>
-          {data.description && <p className="line-clamp-2 text-sm text-muted-foreground">{data.description}</p>}
-        </div>
-      </div>
-      {data.tags && data.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {data.tags.slice(0, 4).map((tag) => (
-            <Badge key={tag} variant="outline" className="rounded-full border-dashed text-xs">
-              #{tag}
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div className="border-t border-border/80 bg-muted/40 px-6 py-4">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <DownloadStats count={data.download_count} />
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 text-xs"
-            onClick={(e) => actions?.onSecondaryAction?.(data, e)}
-            disabled={!data.is_public}
-          >
-            Ver no marketplace
-          </Button>
-          <Button
-            variant={data.is_public ? 'outline' : 'default'}
-            size="sm"
-            className="h-8 px-3 text-xs"
-            onClick={(e) => actions?.onPrimaryAction?.(data, e)}
-            disabled={state?.isActioning}
-          >
-            {state?.isActioning ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : data.is_public ? (
-              <>
-                <GlobeLock className="h-4 w-4 mr-2" />
-                Tornar privado
-              </>
-            ) : (
-              <>
-                <Globe className="h-4 w-4 mr-2" />
-                Publicar
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  </Card>
-);
-
-const AgentCardComponent: React.FC<UnifiedAgentCardProps> = ({ data, actions, state }) => (
-  <Card
-    className={cn(
-      'group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/70 bg-card/80 transition-all hover:-translate-y-1 hover:border-border hover:shadow-xl',
-      state?.isSelected && 'border-primary/80 shadow-primary/20',
-    )}
-    onClick={() => actions?.onClick?.(data)}
-  >
-    <div className="p-6 space-y-4">
-      <div className="flex items-start gap-4">
-        <CardAvatar data={data} variant="agent" size={48} />
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold leading-tight">{data.name}</h3>
-            {data.metadata?.is_suna_default && (
-              <Badge variant="secondary" className="gap-1 text-[0.65rem]">
-                <MiloLogo size={12} />
-                Default
-              </Badge>
-            )}
-            {data.is_default && (
-              <Badge variant="outline" className="gap-1 text-[0.65rem]">
-                <Check className="h-3 w-3" />
-                Padrão
-              </Badge>
-            )}
+        );
+      }
+      
+      if ((variant === 'template' || variant === 'agent') && data.is_public && data.download_count && data.download_count > 0) {
+        return (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Download className="h-3 w-3" />
+            <span>{data.download_count} downloads</span>
           </div>
-          {data.description && <p className="line-clamp-2 text-sm text-muted-foreground">{data.description}</p>}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={(e) => actions?.onPrimaryAction?.(data, e)}>Configurar</DropdownMenuItem>
-            {actions?.onOpenTriggers && (
-              <DropdownMenuItem onClick={(e) => actions.onOpenTriggers?.(data, e)}>
-                <Zap className="h-3.5 w-3.5 mr-2" /> Gatilhos
-              </DropdownMenuItem>
-            )}
-            {actions?.onOpenWorkflows && (
-              <DropdownMenuItem onClick={(e) => actions.onOpenWorkflows?.(data, e)}>
-                <Workflow className="h-3.5 w-3.5 mr-2" /> Fluxos de trabalho
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={(e) => actions?.onSecondaryAction?.(data, e)} disabled={!data.is_public}>
-              Ver no marketplace
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => actions?.onDeleteAction?.(data, e)}
-              className={cn('text-red-600', !actions?.onDeleteAction && 'opacity-50 pointer-events-none')}
-              disabled={!actions?.onDeleteAction}
+        );
+      }
+      
+      return null;
+    };
+    
+    const renderActions = () => {
+      if (variant === 'marketplace') {
+        return (
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            <Button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onPrimaryAction?.(data, e);
+              }}
+              disabled={isActioning}
+              className="flex-1"
+              size="sm"
             >
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      {data.current_version && (
-        <div className="flex items-center gap-2 rounded-xl border border-dashed border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          <GitBranch className="h-3 w-3" />
-          Versão {data.current_version.version_name ?? data.current_version.version_number}
+              {isActioning ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Installing...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Install
+                </>
+              )}
+            </Button>
+            
+            {isOwner && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="px-2"
+                    disabled={isActioning}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleDeleteClick}>
+                    <Trash2 className="h-4 w-4" />
+                    Delete Template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        );
+      }
+      
+      if (variant === 'template') {
+        return (
+          <div className="space-y-2">
+            <Button
+              onClick={(e) => onPrimaryAction?.(data, e)}
+              disabled={isActioning}
+              variant={data.is_public ? "outline" : "default"}
+              className="w-full"
+              size="sm"
+            >
+              {isActioning ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {data.is_public ? 'Unpublishing...' : 'Publishing...'}
+                </>
+              ) : (
+                <>
+                  {data.is_public ? (
+                    <>
+                      <GlobeLock className="h-3 w-3" />
+                      Make Private
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-3 w-3" />
+                      Publish to Marketplace
+                    </>
+                  )}
+                </>
+              )}
+            </Button>
+          </div>
+        );
+      }
+      
+      return null;
+    };
+    
+    return (
+      <div className={cardClassName} onClick={() => onClick?.(data)}>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="relative p-6 flex flex-col flex-1">
+          <div className="flex items-start justify-between mb-4">
+            <CardAvatar data={data} variant={variant} />
+            <div className="flex items-center gap-2">
+              {renderBadge()}
+            </div>
+          </div>
+          
+          <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-1">
+            {data.name}
+          </h3>
+          
+          <div className="flex-1 flex flex-col">
+            <div className="min-h-[1.25rem] mb-3">
+              <TagList tags={data.tags} />
+            </div>
+            
+            <div className="mt-auto">
+              <div className="mb-3">
+                {renderMetadata()}
+              </div>
+              {renderActions()}
+            </div>
+          </div>
         </div>
-      )}
-      {data.mcp_requirements && data.mcp_requirements.length > 0 && (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-muted/40 p-3">
-          <p className="mb-2 text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Integrações</p>
-          <IntegrationsList data={data} />
-        </div>
-      )}
-    </div>
-    <div className="border-t border-border/80 bg-muted/40 px-6 py-4">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <User className="h-3 w-3" />
-          {data.agentpress_tools ? Object.keys(data.agentpress_tools).length : 0} ferramentas
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-2"
-          onClick={(e) => actions?.onPrimaryAction?.(data, e)}
-        >
-          Configurar
-          <ArrowRight className="h-3 w-3" />
-        </Button>
+        
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Template</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "<strong>{data.name}</strong>"? This will permanently remove it from the marketplace and cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmDelete();
+                }}
+                className="bg-destructive hover:bg-destructive/90 text-white"
+              >
+                {isActioning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Template'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </div>
-  </Card>
-);
-
-const CompactCard: React.FC<UnifiedAgentCardProps> = ({ data, actions, state }) => (
-  <button
-    type="button"
-    className={cn(
-      'group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 text-left transition-all hover:border-border hover:bg-card',
-      state?.isSelected && 'border-primary/70 bg-primary/5',
-    )}
-    onClick={() => actions?.onClick?.(data)}
-  >
-    <CardAvatar data={data} variant="compact" size={36} />
-    <div className="flex-1">
-      <p className="text-sm font-medium">{data.name}</p>
-      {data.description && <p className="line-clamp-1 text-xs text-muted-foreground">{data.description}</p>}
-    </div>
-    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1" />
-  </button>
-);
-
-export const UnifiedAgentCard: React.FC<UnifiedAgentCardProps> = (props) => {
-  const { variant } = props;
-
+    );
+  };
+  
+  // Render based on variant
   switch (variant) {
     case 'showcase':
-      return <ShowcaseCard {...props} />;
+      return renderShowcaseCard();
     case 'dashboard':
     case 'compact':
-      return <DashboardCard {...props} />;
-    case 'marketplace':
-      return <MarketplaceCard {...props} />;
-    case 'template':
-      return <TemplateCard {...props} />;
-    case 'agent':
-      return <AgentCardComponent {...props} />;
+      return renderDashboardCard();
+    case 'onboarding':
+      return renderOnboardingCard();
     default:
-      return <CompactCard {...props} />;
+      return renderStandardCard();
   }
 };
 
+// Export legacy component names for backward compatibility
 export const AgentCard = UnifiedAgentCard;
 export default UnifiedAgentCard;

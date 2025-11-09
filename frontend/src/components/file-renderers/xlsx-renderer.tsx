@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/AuthProvider';
-import { fetchFileContent } from '@/hooks/react-query/files/use-file-queries';
+import { fetchFileContent } from '@/hooks/files/use-file-queries';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -132,7 +132,7 @@ export function XlsxRenderer({
       filtered = filtered.filter((row: any) =>
         Object.entries(row)
           .filter(([key]) => !hiddenColumns.has(key))
-          .some(([, value]) => String(value).toLowerCase().includes(searchTerm.toLowerCase()))
+          .some(([, value]) => value != null && String(value).toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     if (sortConfig.column && sortConfig.direction) {

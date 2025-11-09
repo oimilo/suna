@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -29,6 +30,7 @@ import {
   CreditCard,
   History,
   DollarSign,
+  Calendar,
   Activity,
   AlertCircle,
   CheckCircle,
@@ -38,18 +40,15 @@ import {
   MessageSquare,
   ExternalLink,
 } from 'lucide-react';
-import {
-  useAdminUserDetails,
-  useAdminUserThreads,
-  useAdminUserActivity,
-  UserSummary,
-} from '@/hooks/react-query/admin/use-admin-users';
+import { useAdminUserDetails, useAdminUserThreads, useAdminUserActivity } from '@/hooks/admin/use-admin-users';
 import {
   useUserBillingSummary,
   useAdjustCredits,
   useProcessRefund,
   useAdminUserTransactions,
-} from '@/hooks/react-query/admin/use-admin-billing';
+} from '@/hooks/billing';
+import type { UserSummary } from '@/hooks/admin/use-admin-users';
+import { formatCredits, dollarsToCredits, formatCreditsWithSign } from '@/lib/utils/credit-formatter';
 
 interface AdminUserDetailsDialogProps {
   user: UserSummary | null;
@@ -94,21 +93,6 @@ export function AdminUserDetailsDialog({
   const adjustCreditsMutation = useAdjustCredits();
   const processRefundMutation = useProcessRefund();
 
-  const primaryEmail =
-    userDetails?.user?.billing_customers?.[0]?.email ??
-    user?.email ??
-    'unknown';
-  const currentBalance =
-    billingSummary?.credit_account?.balance ?? user?.credit_balance ?? 0;
-  const totalPurchased =
-    billingSummary?.credit_account?.lifetime_purchased ?? user?.total_purchased ?? 0;
-  const totalUsed =
-    billingSummary?.credit_account?.lifetime_used ?? user?.total_used ?? 0;
-  const subscriptionStatus =
-    (billingSummary?.subscription as Record<string, any> | null)?.status ??
-    user?.subscription_status ??
-    undefined;
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -117,10 +101,6 @@ export function AdminUserDetailsDialog({
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
   };
 
   const handleAdjustCredits = async () => {
@@ -139,7 +119,7 @@ export function AdminUserDetailsDialog({
       });
 
       toast.success(
-        `Credits adjusted successfully. New balance: ${formatCurrency(result.new_balance)}`,
+        `Credits adjusted successfully. New balance: ${formatCredits(dollarsToCredits(result.new_balance))}`
       );
 
       refetchBilling();
@@ -168,7 +148,7 @@ export function AdminUserDetailsDialog({
       });
 
       toast.success(
-        `Refund processed. New balance: ${formatCurrency(result.new_balance)}`,
+        `Refund processed. New balance: ${formatCredits(dollarsToCredits(result.new_balance))}`
       );
 
       refetchBilling();
@@ -235,9 +215,9 @@ export function AdminUserDetailsDialog({
             <User className="h-5 w-5" />
             User Details - {user.email}
           </DialogTitle>
-            <DialogDescription>
-              Manage user account, billing, and perform admin actions
-            </DialogDescription>
+          <DialogDescription>
+            Manage user account, billing, and perform admin actions
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
@@ -268,7 +248,7 @@ export function AdminUserDetailsDialog({
                     <CardContent className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Email</p>
-                        <p className="font-mono text-sm break-all">{primaryEmail}</p>
+                        <p className="font-mono text-sm">{user.email}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">User ID</p>
@@ -297,27 +277,27 @@ export function AdminUserDetailsDialog({
                     <CardContent className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Current Balance</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          {formatCurrency(currentBalance)}
+                        <p className="text-2xl font-medium text-green-600">
+                          {formatCredits(dollarsToCredits(user.credit_balance))}
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Purchased</p>
-                          <p className="font-medium">{formatCurrency(totalPurchased)}</p>
+                          <p className="font-medium">{formatCredits(dollarsToCredits(user.total_purchased))}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Used</p>
-                          <p className="font-medium">{formatCurrency(totalUsed)}</p>
+                          <p className="font-medium">{formatCredits(dollarsToCredits(user.total_used))}</p>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Subscription</p>
                         <Badge
-                          variant={getSubscriptionBadgeVariant(subscriptionStatus ?? undefined)}
+                          variant={getSubscriptionBadgeVariant(user.subscription_status)}
                           className="capitalize"
                         >
-                          {subscriptionStatus || 'None'}
+                          {user.subscription_status || 'None'}
                         </Badge>
                       </div>
                     </CardContent>
@@ -355,9 +335,7 @@ export function AdminUserDetailsDialog({
                                   <p className="text-sm font-medium text-muted-foreground">Direct Thread</p>
                                 )}
                                 {thread.is_public && (
-                                  <Badge variant="outline" className="text-xs">
-                                    Public
-                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">Public</Badge>
                                 )}
                               </div>
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -391,7 +369,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userThreads.pagination.has_previous}
-                              onClick={() => setThreadsPage((p) => Math.max(1, p - 1))}
+                              onClick={() => setThreadsPage(p => Math.max(1, p - 1))}
                             >
                               Previous
                             </Button>
@@ -402,7 +380,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userThreads.pagination.has_next}
-                              onClick={() => setThreadsPage((p) => p + 1)}
+                              onClick={() => setThreadsPage(p => p + 1)}
                             >
                               Next
                             </Button>
@@ -446,11 +424,10 @@ export function AdminUserDetailsDialog({
                             </div>
                             <div className="text-right">
                               <p className={`font-semibold ${getTransactionColor(transaction.type)}`}>
-                                {transaction.amount > 0 ? '+' : ''}
-                                {formatCurrency(Math.abs(transaction.amount))}
+                                {formatCreditsWithSign(dollarsToCredits(transaction.amount), { showDecimals: true })}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Balance: {formatCurrency(transaction.balance_after)}
+                                Balance: {formatCredits(dollarsToCredits(transaction.balance_after), { showDecimals: true })}
                               </p>
                             </div>
                           </div>
@@ -461,7 +438,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userTransactions.pagination.has_prev}
-                              onClick={() => setTransactionsPage((p) => Math.max(1, p - 1))}
+                              onClick={() => setTransactionsPage(p => Math.max(1, p - 1))}
                             >
                               Previous
                             </Button>
@@ -472,7 +449,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userTransactions.pagination.has_next}
-                              onClick={() => setTransactionsPage((p) => p + 1)}
+                              onClick={() => setTransactionsPage(p => p + 1)}
                             >
                               Next
                             </Button>
@@ -503,34 +480,37 @@ export function AdminUserDetailsDialog({
                       </div>
                     ) : userActivity && userActivity.data?.length > 0 ? (
                       <div className="space-y-2">
-                        {userActivity.data.map((item: any) => (
+                        {userActivity.data.map((activity: any) => (
                           <div
-                            key={item.id}
+                            key={activity.id}
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium">{item.agent_name}</p>
+                                <p className="text-sm font-medium">{activity.agent_name}</p>
                                 <Badge
-                                  variant={
-                                    item.status === 'completed'
-                                      ? 'default'
-                                      : item.status === 'failed'
-                                      ? 'destructive'
-                                      : 'secondary'
-                                  }
+                                  variant={activity.status === 'completed' ? 'default' : activity.status === 'failed' ? 'destructive' : 'secondary'}
                                   className="text-xs"
                                 >
-                                  {item.status}
+                                  {activity.status}
                                 </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {formatDate(item.created_at)}
+                                {formatDate(activity.created_at)} • Thread: {activity.thread_name || activity.thread_id.slice(-8)}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
-                                {item.thread_id || 'Thread not available'}
-                              </p>
+                              {activity.error && (
+                                <p className="text-xs text-red-600 mt-1 truncate">
+                                  Error: {activity.error}
+                                </p>
+                              )}
                             </div>
+                            {activity.credit_cost > 0 && (
+                              <div className="text-right ml-2">
+                                <p className="text-sm font-medium text-muted-foreground">
+                                  {formatCredits(dollarsToCredits(activity.credit_cost), { showDecimals: true })}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         ))}
                         {userActivity.pagination && userActivity.pagination.total_pages > 1 && (
@@ -539,7 +519,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userActivity.pagination.has_prev}
-                              onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                              onClick={() => setActivityPage(p => Math.max(1, p - 1))}
                             >
                               Previous
                             </Button>
@@ -550,7 +530,7 @@ export function AdminUserDetailsDialog({
                               variant="outline"
                               size="sm"
                               disabled={!userActivity.pagination.has_next}
-                              onClick={() => setActivityPage((p) => p + 1)}
+                              onClick={() => setActivityPage(p => p + 1)}
                             >
                               Next
                             </Button>
@@ -593,7 +573,7 @@ export function AdminUserDetailsDialog({
                         />
                       </div>
                       <div>
-                        <Label htmlFor="refund-reason">Refund Reason</Label>
+                        <Label htmlFor="refund-reason mb-2">Refund Reason</Label>
                         <Textarea
                           id="refund-reason"
                           placeholder="Service outage compensation"
@@ -643,84 +623,6 @@ export function AdminUserDetailsDialog({
                       </Button>
                     </CardContent>
                   </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <History className="h-4 w-4" />
-                        Adjust Credits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="p-3 border border-blue-200 dark:border-blue-950 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                          <p className="text-sm text-blue-700">
-                            Adjust credits directly for the user's account.
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="adjust-amount">Amount (USD)</Label>
-                        <Input
-                          id="adjust-amount"
-                          type="number"
-                          step="0.01"
-                          placeholder="100.00"
-                          value={adjustAmount}
-                          onChange={(e) => setAdjustAmount(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="adjust-reason">Reason</Label>
-                        <Textarea
-                          id="adjust-reason"
-                          placeholder="Customer success credit grant"
-                          value={adjustReason}
-                          onChange={(e) => setAdjustReason(e.target.value)}
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="adjust-expiring" className="cursor-pointer flex items-center gap-2">
-                            {adjustIsExpiring ? (
-                              <Clock className="h-4 w-4 text-orange-500" />
-                            ) : (
-                              <Infinity className="h-4 w-4 text-blue-500" />
-                            )}
-                            <span className="font-medium">
-                              {adjustIsExpiring ? 'Expiring Credits' : 'Non-Expiring Credits'}
-                            </span>
-                          </Label>
-                        </div>
-                        <Switch
-                          id="adjust-expiring"
-                          checked={!adjustIsExpiring}
-                          onCheckedChange={(checked) => setAdjustIsExpiring(!checked)}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground -mt-2">
-                        {adjustIsExpiring
-                          ? 'Credits will expire at the end of the billing cycle'
-                          : 'Non-expiring credits remain available until used'}
-                      </p>
-                      <Button
-                        onClick={handleAdjustCredits}
-                        disabled={adjustCreditsMutation.isPending}
-                        className="w-full"
-                      >
-                        {adjustCreditsMutation.isPending ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Applying...
-                          </>
-                        ) : (
-                          'Adjust Credits'
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
                 </div>
               </TabsContent>
             </Tabs>
@@ -735,4 +637,4 @@ export function AdminUserDetailsDialog({
       </DialogContent>
     </Dialog>
   );
-}
+} 

@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const templateResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/templates/public/${shareId}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${shareId}`
     );
 
     if (!templateResponse.ok) {
@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     }
 
     const template = await templateResponse.json();
-
     return new ImageResponse(
       (
         <div
@@ -43,7 +42,7 @@ export async function GET(request: NextRequest) {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundImage: 'radial-gradient(circle at 1px 1px, #ffffff10 1px, transparent 1px)',
+              backgroundImage: `radial-gradient(circle at 1px 1px, #ffffff10 1px, transparent 1px)`,
               backgroundSize: '40px 40px',
             }}
           />
@@ -69,7 +68,9 @@ export async function GET(request: NextRequest) {
                   border: '1px solid #3b82f640',
                 }}
               >
-                <span style={{ color: '#93c5fd', fontSize: '14px', fontWeight: 600 }}>✨ Official Template</span>
+                <span style={{ color: '#93c5fd', fontSize: '14px', fontWeight: 600 }}>
+                  ✨ Official Template
+                </span>
               </div>
             )}
             <div
@@ -166,7 +167,7 @@ export async function GET(request: NextRequest) {
                 bottom: '40px',
               }}
             >
-              <span style={{ color: '#64748b', fontSize: '20px' }}>Prophet</span>
+              <span style={{ color: '#64748b', fontSize: '20px' }}>Kortix</span>
               <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
       {
         width: 1200,
         height: 630,
-      },
+      }
     );
   } catch (error) {
     console.error('OG Image generation error:', error);
@@ -199,26 +200,35 @@ export async function GET(request: NextRequest) {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '24px',
-              color: '#e2e8f0',
+              justifyContent: 'center',
+              textAlign: 'center',
             }}
           >
             <div
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '64px',
+                fontSize: '80px',
+                marginBottom: '24px',
               }}
             >
               🤖
             </div>
-            <h1 style={{ fontSize: '48px', fontWeight: 700 }}>Prophet Templates</h1>
-            <p style={{ fontSize: '20px', color: '#94a3b8', maxWidth: '800px', textAlign: 'center' }}>
-              Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.
+            <h1
+              style={{
+                fontSize: '48px',
+                fontWeight: 700,
+                color: '#ffffff',
+                marginBottom: '16px',
+              }}
+            >
+              AI Agent Template
+            </h1>
+            <p
+              style={{
+                fontSize: '20px',
+                color: '#94a3b8',
+              }}
+            >
+              Discover powerful AI agents on Kortix
             </p>
           </div>
         </div>
@@ -226,7 +236,7 @@ export async function GET(request: NextRequest) {
       {
         width: 1200,
         height: 630,
-      },
+      }
     );
   }
-}
+} 

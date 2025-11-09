@@ -1,10 +1,9 @@
 import { headers } from 'next/headers';
 import { ImageResponse } from 'next/og';
-import { BRANDING } from '@/lib/branding';
 
 // Configuration exports
 export const runtime = 'edge';
-export const alt = `${BRANDING.company} ${BRANDING.name}`;
+export const alt = 'Kortix';
 export const size = {
   width: 1200,
   height: 630,
@@ -32,7 +31,7 @@ export default async function Image() {
           }}
         >
           <img
-            src={`${baseUrl}/meta.png`}
+            src={`${baseUrl}/banner.png`}
             alt={alt}
             style={{
               width: '100%',

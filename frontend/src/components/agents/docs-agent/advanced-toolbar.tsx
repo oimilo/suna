@@ -22,9 +22,9 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Quote, Code,
   Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
-  Table as TableIcon,
+  Link as LinkIcon, Image as ImageIcon, Table as TableIcon,
   Undo, Redo, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  ChevronDown,
+  ChevronDown, Palette, Highlighter, Type, Plus,
   Superscript, Subscript, RemoveFormatting, Minus,
   IndentIncrease, IndentDecrease, ListTodo, Youtube,
   FileText, Download, Upload, Printer, Search,
@@ -35,12 +35,7 @@ import { cn } from '@/lib/utils';
 import type { Editor } from '@tiptap/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ColorPicker } from './editor/controls/color-picker';
-import { HighlightPicker } from './editor/controls/highlight-picker';
-import { FontSelector } from './editor/controls/font-selector';
-import { LinkDialog } from './editor/controls/link-dialog';
-import { ImageDialog } from './editor/controls/image-dialog';
-import { InsertTableDropdown } from './editor/controls/table-dropdown';
+import { HexColorPicker } from 'react-colorful';
 
 interface AdvancedToolbarProps {
   editor: Editor;
@@ -55,11 +50,12 @@ export function AdvancedToolbar({
   wordCount = 0,
   characterCount = 0 
 }: AdvancedToolbarProps) {
+  const [textColor, setTextColor] = useState('#000000');
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [fontSize, setFontSize] = useState(16);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
-  const [, setTableDropdownOpen] = useState(false);
 
   const ToolbarButton = ({ 
     onClick, 
@@ -105,6 +101,17 @@ export function AdvancedToolbar({
     { label: 'Huge', value: 32 },
   ];
 
+  const fontFamilies = [
+    { label: 'Default', value: 'sans-serif' },
+    { label: 'Serif', value: 'serif' },
+    { label: 'Mono', value: 'monospace' },
+    { label: 'Arial', value: 'Arial' },
+    { label: 'Times New Roman', value: 'Times New Roman' },
+    { label: 'Georgia', value: 'Georgia' },
+    { label: 'Courier New', value: 'Courier New' },
+    { label: 'Verdana', value: 'Verdana' },
+  ];
+
   const headingLevels = [
     { level: 1, icon: Heading1, label: 'Heading 1' },
     { level: 2, icon: Heading2, label: 'Heading 2' },
@@ -113,6 +120,24 @@ export function AdvancedToolbar({
     { level: 5, icon: Heading5, label: 'Heading 5' },
     { level: 6, icon: Heading6, label: 'Heading 6' },
   ];
+
+  const insertLink = useCallback(() => {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('Enter URL:', previousUrl);
+    if (url === null) return;
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }, [editor]);
+
+  const insertImage = useCallback(() => {
+    const url = window.prompt('Enter image URL:');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }, [editor]);
 
   const insertYoutube = useCallback(() => {
     const url = window.prompt('Enter YouTube URL:');
@@ -125,21 +150,16 @@ export function AdvancedToolbar({
     }
   }, [editor]);
 
+  const insertTable = useCallback(() => {
+    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  }, [editor]);
+
   const insertHorizontalRule = useCallback(() => {
     editor.chain().focus().setHorizontalRule().run();
   }, [editor]);
 
   const insertPageBreak = useCallback(() => {
-    const chain = editor.chain().focus();
-    const chainWithPageBreak = chain as unknown as { setPageBreak?: () => { run: () => void } };
-
-    if (chainWithPageBreak.setPageBreak) {
-      chainWithPageBreak.setPageBreak().run();
-      return;
-    }
-
-    const commandsWithPageBreak = editor.commands as unknown as { setPageBreak?: () => void };
-    commandsWithPageBreak.setPageBreak?.();
+    editor.chain().focus().setPageBreak().run();
   }, [editor]);
 
   const addColumnBefore = () => editor.chain().focus().addColumnBefore().run();
@@ -154,6 +174,16 @@ export function AdvancedToolbar({
   const toggleHeaderColumn = () => editor.chain().focus().toggleHeaderColumn().run();
   const toggleHeaderRow = () => editor.chain().focus().toggleHeaderRow().run();
   const toggleHeaderCell = () => editor.chain().focus().toggleHeaderCell().run();
+
+  const applyTextColor = (color: string) => {
+    setTextColor(color);
+    editor.chain().focus().setColor(color).run();
+  };
+
+  const applyBackgroundColor = (color: string) => {
+    setBackgroundColor(color);
+    editor.chain().focus().setHighlight({ color: color }).run();
+  };
 
   const handleFind = () => {
     if (!findText) return;
@@ -185,10 +215,6 @@ export function AdvancedToolbar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => window.print()}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
@@ -196,9 +222,6 @@ export function AdvancedToolbar({
                   Export as
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  {/* <DropdownMenuItem onClick={() => onExport?.('pdf')}>
-                    PDF
-                  </DropdownMenuItem> */}
                   <DropdownMenuItem onClick={() => onExport?.('docx')}>
                     Word Document
                   </DropdownMenuItem>
@@ -255,7 +278,26 @@ export function AdvancedToolbar({
         </div>
         <Separator orientation="vertical" className="h-6 mx-1" />
         <div className="flex items-center gap-1">
-          <FontSelector />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1 w-32 justify-between">
+                <Type className="h-4 w-4" />
+                <span className="text-xs">Font</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {fontFamilies.map((font) => (
+                <DropdownMenuItem
+                  key={font.value}
+                  onClick={() => editor.chain().focus().setFontFamily(font.value).run()}
+                  style={{ fontFamily: font.value }}
+                >
+                  {font.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1">
@@ -324,8 +366,44 @@ export function AdvancedToolbar({
         </div>
         <Separator orientation="vertical" className="h-6 mx-1" />
         <div className="flex items-center gap-1">
-          <ColorPicker />
-          <HighlightPicker />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1">
+                <Palette className="h-4 w-4" />
+                <div className="w-4 h-1 rounded" style={{ backgroundColor: textColor }} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-2">
+                <Label>Text Color</Label>
+                <HexColorPicker color={textColor} onChange={applyTextColor} />
+                <Input
+                  value={textColor}
+                  onChange={(e) => applyTextColor(e.target.value)}
+                  placeholder="#000000"
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1">
+                <Highlighter className="h-4 w-4" />
+                <div className="w-4 h-1 rounded" style={{ backgroundColor }} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-2">
+                <Label>Highlight Color</Label>
+                <HexColorPicker color={backgroundColor} onChange={applyBackgroundColor} />
+                <Input
+                  value={backgroundColor}
+                  onChange={(e) => applyBackgroundColor(e.target.value)}
+                  placeholder="#ffffff"
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <Separator orientation="vertical" className="h-6 mx-1" />
         <div className="flex items-center gap-1">
@@ -425,43 +503,46 @@ export function AdvancedToolbar({
           />
         </div>
         <Separator orientation="vertical" className="h-6 mx-1" />
-        <div className="flex items-center gap-1">
-          <LinkDialog />
-          <ImageDialog />
-          <ToolbarButton
-            onClick={insertYoutube}
-            icon={Youtube}
-            title="YouTube"
-          />
-          <InsertTableDropdown setDropdownOpen={setTableDropdownOpen} />
-          <ToolbarButton
-            onClick={insertHorizontalRule}
-            icon={Minus}
-            title="Horizontal Rule"
-          />
-          <ToolbarButton
-            onClick={() =>
-              editor
-                .chain()
-                .focus()
-                .insertContent('📅 ' + new Date().toLocaleDateString())
-                .run()
-            }
-            icon={Calendar}
-            title="Insert Date"
-          />
-          <ToolbarButton
-            onClick={() =>
-              editor
-                .chain()
-                .focus()
-                .insertContent('🕐 ' + new Date().toLocaleTimeString())
-                .run()
-            }
-            icon={Clock}
-            title="Insert Time"
-          />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1">
+              <Plus className="h-4 w-4" />
+              Insert
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align='end'>
+            <DropdownMenuItem onClick={insertLink}>
+              <LinkIcon className="h-4 w-4" />
+              Link
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={insertImage}>
+              <ImageIcon className="h-4 w-4" />
+              Image
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={insertYoutube}>
+              <Youtube className="h-4 w-4" />
+              YouTube Video
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={insertTable}>
+              <TableIcon className="h-4 w-4" />
+              Table
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={insertHorizontalRule}>
+              <Minus className="h-4 w-4" />
+              Horizontal Rule
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => editor.chain().focus().insertContent('📅 ' + new Date().toLocaleDateString()).run()}>
+              <Calendar className="h-4 w-4" />
+              Date
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => editor.chain().focus().insertContent('🕐 ' + new Date().toLocaleTimeString()).run()}>
+              <Clock className="h-4 w-4" />
+              Time
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {editor.isActive('table') && (
           <>
             <Separator orientation="vertical" className="h-6 mx-1" />

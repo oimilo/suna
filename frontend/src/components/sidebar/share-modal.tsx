@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Share2, Link, Link2Off, Check, Globe, Loader2 } from "lucide-react"
+import { Copy, Link, Link2Off, Check, Globe, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useThreadQuery, useUpdateThreadMutation, useUpdateProject } from "@/hooks/react-query"
+import { useThreadQuery, useUpdateThreadMutation } from "@/hooks/threads/use-threads";
+import { useUpdateProject } from "@/hooks/threads/use-project";
 import type { JSX } from "react"
 import { Skeleton } from "../ui/skeleton"
 
@@ -72,11 +73,6 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
 
   const { data: threadData, isLoading: isChecking } = useThreadQuery(threadId || "")
 
-  const generateShareLink = useCallback(() => {
-    if (!threadId) return ""
-    return `${process.env.NEXT_PUBLIC_URL || window.location.origin}/share/${threadId}`
-  }, [threadId])
-
   useEffect(() => {
     if (threadData?.is_public) {
       const publicUrl = generateShareLink()
@@ -84,7 +80,12 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
     } else {
       setShareLink(null)
     }
-  }, [threadData, generateShareLink])
+  }, [threadData])
+
+  const generateShareLink = () => {
+    if (!threadId) return ""
+    return `${process.env.NEXT_PUBLIC_URL || window.location.origin}/share/${threadId}`
+  }
 
   const createShareLink = async () => {
     if (!threadId) return
@@ -95,10 +96,10 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
       await updatePublicStatus(true)
       const generatedLink = generateShareLink()
       setShareLink(generatedLink)
-      toast.success("Link compartilhável criado com sucesso")
+      toast.success("Shareable link created successfully")
     } catch (error) {
       console.error("Error creating share link:", error)
-      toast.error("Falha ao criar link compartilhável")
+      toast.error("Failed to create shareable link")
     } finally {
       setIsLoading(false)
     }
@@ -112,17 +113,16 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
     try {
       await updatePublicStatus(false)
       setShareLink(null)
-      toast.success("Link compartilhável removido")
+      toast.success("Shareable link removed")
     } catch (error) {
       console.error("Error removing share link:", error)
-      toast.error("Falha ao remover link compartilhável")
+      toast.error("Failed to remove shareable link")
     } finally {
       setIsLoading(false)
     }
   }
 
   const updatePublicStatus = async (isPublic: boolean) => {
-    console.log("Updating public status for thread:", threadId, "and project:", projectId, "to", isPublic)
     if (!threadId || !projectId) return
 
     await updateProjectMutation.mutateAsync({
@@ -139,7 +139,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
     if (shareLink) {
       setIsCopying(true)
       navigator.clipboard.writeText(shareLink)
-      toast.success("Link copiado para a área de transferência")
+      toast.success("Link copied to clipboard")
       setTimeout(() => {
         setIsCopying(false)
       }, 500)
@@ -192,8 +192,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Compartilhar Conversa
+            Share Chat
           </DialogTitle>
         </DialogHeader>
 
@@ -205,23 +204,23 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
               <Alert>
                 <Globe className="h-4 w-4" />
                 <AlertDescription>
-                  Esta conversa é publicamente acessível. Qualquer pessoa com o link pode visualizar esta conversa.
+                  This chat is publicly accessible. Anyone with the link can view this conversation.
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-2">
-                <Label htmlFor="share-link">Link de compartilhamento</Label>
+                <Label htmlFor="share-link">Share link</Label>
                 <div className="flex space-x-2">
                   <Input id="share-link" value={shareLink} readOnly className="font-mono text-sm" />
                   <Button variant="outline" size="icon" onClick={copyToClipboard} disabled={isCopying}>
                     {isCopying ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    <span className="sr-only">Copiar link</span>
+                    <span className="sr-only">Copy link</span>
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label>Compartilhar nas redes sociais</Label>
+                <Label>Share on social</Label>
                 <div className="flex space-x-2">
                   {socialOptions.map((option, index) => (
                     <Button
@@ -244,30 +243,26 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
                 disabled={isLoading}
               >
                 <Link2Off className="h-4 w-4" />
-                {isLoading ? "Removendo..." : "Remover link"}
+                {isLoading ? "Removing..." : "Remove link"}
               </Button>
             </>
           ) : (
             <div className="text-center space-y-4">
-              <div className="mx-auto w-12 h-12 bg-muted-foreground/20 rounded-full flex items-center justify-center">
-                <Share2 className="h-6 w-6" />
-              </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Compartilhar esta conversa</h3>
                 <p className="text-sm text-muted-foreground">
-                  Crie um link compartilhável que permite que outros visualizem esta conversa publicamente.
+                  Create a shareable link that allows others to view this conversation publicly.
                 </p>
               </div>
               <Button onClick={createShareLink} disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Criando...
+                    Creating...
                   </>
                 ) : (
                   <>
                     <Link className="h-4 w-4" />
-                    Criar link compartilhável
+                    Create shareable link
                   </>
                 )}
               </Button>
