@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { isLocalMode, isStagingMode } from '@/lib/config';
+import { BRANDING } from '@/lib/branding';
 import { cn } from '@/lib/utils';
 
 interface KortixLogoProps {
@@ -30,7 +30,7 @@ export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixL
     return (
       <Image
         src="/logomark-white.svg"
-        alt="Kortix"
+        alt={BRANDING.name}
         width={size}
         height={size}
         className={cn(`${shouldInvert ? '' : 'invert'} flex-shrink-0`, className)}
@@ -42,8 +42,8 @@ export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixL
   // Default symbol variant behavior (unchanged)
   return (
     <Image
-      src="/kortix-symbol.svg"
-      alt="Kortix"
+      src="/symbol.svg"
+      alt={BRANDING.name}
       width={size}
       height={size}
       className={cn(`${shouldInvert ? 'invert' : ''} flex-shrink-0`, className)}

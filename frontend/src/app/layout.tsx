@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
+import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
@@ -43,19 +44,20 @@ export const metadata: Metadata = {
     'research assistant',
     'data analysis',
     'task automation',
-    'Kortix',
+    'Prophet',
+    'Milo',
     'generalist AI',
   ],
   authors: [
-    { 
-      name: 'Kortix Team', 
-      url: 'https://kortix.com' 
-    }
+    {
+      name: BRANDING.teamName,
+      url: BRANDING.companyUrl,
+    },
   ],
-  creator: 'Kortix Team',
-  publisher: 'Kortix Team',
+  creator: BRANDING.teamName,
+  publisher: BRANDING.teamName,
   category: 'Technology',
-  applicationName: 'Kortix',
+  applicationName: BRANDING.name,
   formatDetection: {
     telephone: false,
     email: false,
@@ -75,27 +77,27 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    title: 'Kortix - Open Source Generalist AI Worker',
+    title: `${BRANDING.name} - Open Source Generalist AI Worker`,
     description: siteConfig.description,
     url: siteConfig.url,
-    siteName: 'Kortix',
+    siteName: BRANDING.name,
     locale: 'en_US',
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: 'Kortix - Open Source Generalist AI Worker',
+        alt: `${BRANDING.name} - Open Source Generalist AI Worker`,
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kortix - Open Source Generalist AI Worker',
+    title: `${BRANDING.name} - Open Source Generalist AI Worker`,
     description: siteConfig.description,
-    creator: '@kortix',
-    site: '@kortix',
+    creator: '@prophetbuild',
+    site: '@prophetbuild',
     images: ['/banner.png'],
   },
   icons: {
@@ -128,21 +130,21 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: 'Kortix',
-              alternateName: ['Suna', 'Kortix AI'],
-              url: 'https://kortix.com',
-              logo: 'https://kortix.com/favicon.png',
+              name: BRANDING.company,
+              alternateName: [BRANDING.name, `${BRANDING.company} ${BRANDING.name}`],
+              url: BRANDING.companyUrl,
+              logo: `${BRANDING.companyUrl.replace(/\/$/, '')}/favicon.png`,
               description: siteConfig.description,
               foundingDate: '2024',
               sameAs: [
-                'https://github.com/kortix-ai',
-                'https://x.com/kortix',
-                'https://linkedin.com/company/kortix',
-              ],
+                BRANDING.social.github,
+                BRANDING.social.twitter,
+                BRANDING.social.linkedin,
+              ].filter(Boolean),
               contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'Customer Support',
-                url: 'https://kortix.com',
+                url: BRANDING.companyUrl,
               },
             }),
           }}
@@ -155,8 +157,8 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: 'Kortix',
-              alternateName: 'Suna',
+              name: BRANDING.name,
+              alternateName: BRANDING.company,
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, macOS, Windows, Linux',
               offers: {

@@ -331,7 +331,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': fe_checkout_url,  # Use embedded checkout URL (session.url is None for embedded mode)
-                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Prophet-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
                 'converting_from_trial': True,
@@ -463,7 +463,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': fe_checkout_url,  # Use embedded checkout URL (session.url is None for embedded mode)
-                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Prophet-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
             }
