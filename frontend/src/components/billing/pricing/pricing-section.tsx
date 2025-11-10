@@ -275,9 +275,10 @@ function PricingTier({
           break;
         case 'upgraded':
         case 'updated':
-          const upgradeMessage = response.details?.is_upgrade
-            ? `Subscription upgraded from $${response.details.current_price} to $${response.details.new_price}`
-            : 'Subscription updated successfully';
+          const upgradeMessage = response.message ??
+            (response.details?.is_upgrade
+              ? `Subscription upgraded from $${response.details.current_price} to $${response.details.new_price}`
+              : 'Subscription updated successfully');
           toast.success(upgradeMessage);
           posthog.capture('plan_upgraded');
           // Invalidate all billing queries immediately after upgrade
