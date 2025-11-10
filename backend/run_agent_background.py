@@ -23,11 +23,29 @@ from core.utils.retry import retry
 import sentry_sdk
 from typing import Dict, Any
 
-redis_host = os.getenv('REDIS_HOST', 'redis')
-redis_port = int(os.getenv('REDIS_PORT', 6379))
+redis_url = os.getenv("REDIS_URL")
+redis_host = os.getenv("REDIS_HOST", "redis")
+redis_port = int(os.getenv("REDIS_PORT", 6379))
+redis_password = os.getenv("REDIS_PASSWORD", "")
+redis_use_tls = os.getenv("REDIS_USE_TLS", "").lower() == "true" or os.getenv("REDIS_SSL", "").lower() == "true"
 
-logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+if redis_url:
+    logger.info(f"🔧 Configuring Dramatiq broker with Redis URL configuration")
+    redis_broker = RedisBroker(url=redis_url, middleware=[dramatiq.middleware.AsyncIO()])
+else:
+    logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
+    broker_kwargs = {
+        "host": redis_host,
+        "port": redis_port,
+        "password": redis_password or None,
+        "middleware": [dramatiq.middleware.AsyncIO()],
+    }
+
+    if redis_use_tls:
+        broker_kwargs["ssl"] = True
+        broker_kwargs["ssl_cert_reqs"] = None
+
+    redis_broker = RedisBroker(**broker_kwargs)
 
 dramatiq.set_broker(redis_broker)
 
