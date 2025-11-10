@@ -16,26 +16,113 @@ from core.utils.logger import logger
 from core.credentials import EncryptionService
 
 
+MAX_DISCOVERED_TOOLS = int(os.getenv("MCP_MAX_DISCOVERED_TOOLS", "40"))
+MAX_SCHEMA_PROPERTIES = int(os.getenv("MCP_MAX_SCHEMA_PROPERTIES", "6"))
+MAX_PROPERTY_DESCRIPTION_CHARS = int(os.getenv("MCP_MAX_PROPERTY_DESCRIPTION_CHARS", "160"))
+
+
+def _truncate_text(value: Optional[str], max_length: int) -> Optional[str]:
+    if not value or not isinstance(value, str):
+        return value
+    value = value.strip()
+    if len(value) <= max_length:
+        return value
+    return value[:max_length].rstrip() + "…"
+
+
+def _coerce_schema(schema: Any) -> Dict[str, Any]:
+    if schema is None:
+        return {}
+    if isinstance(schema, dict):
+        return schema
+    if hasattr(schema, "model_dump"):
+        return schema.model_dump()
+    if hasattr(schema, "__dict__"):
+        return dict(schema.__dict__)
+    try:
+        return json.loads(json.dumps(schema))
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
+    schema_dict = _coerce_schema(schema)
+    if not schema_dict:
+        return {}
+
+    summary: Dict[str, Any] = {}
+
+    schema_type = schema_dict.get("type")
+    if isinstance(schema_type, str):
+        summary["type"] = schema_type
+
+    required = schema_dict.get("required")
+    if isinstance(required, list):
+        summary["required"] = required[:MAX_SCHEMA_PROPERTIES]
+        if len(required) > MAX_SCHEMA_PROPERTIES:
+            summary["required_truncated"] = len(required) - MAX_SCHEMA_PROPERTIES
+
+    properties = schema_dict.get("properties")
+    if isinstance(properties, dict) and properties:
+        property_names = list(properties.keys())
+        summary["property_names"] = property_names[:MAX_SCHEMA_PROPERTIES]
+        summary["property_count"] = len(property_names)
+        if len(property_names) > MAX_SCHEMA_PROPERTIES:
+            summary["property_names_truncated"] = len(property_names) - MAX_SCHEMA_PROPERTIES
+
+        property_details: Dict[str, Dict[str, Optional[str]]] = {}
+        for name in property_names[:MAX_SCHEMA_PROPERTIES]:
+            raw_prop = properties.get(name)
+            prop_dict = _coerce_schema(raw_prop)
+            property_details[name] = {
+                "type": prop_dict.get("type"),
+                "description": _truncate_text(
+                    prop_dict.get("description"),
+                    MAX_PROPERTY_DESCRIPTION_CHARS
+                )
+                if isinstance(prop_dict.get("description"), str)
+                else None,
+            }
+
+        if property_details:
+            summary["property_details"] = property_details
+
+    additional_properties = schema_dict.get("additionalProperties")
+    if isinstance(additional_properties, dict):
+        summary["allows_additional_properties"] = True
+
+    if not summary:
+        return {"note": "Schema metadata unavailable"}
+    return summary
+
+
 class MCPException(Exception):
     pass
+
 
 class MCPConnectionError(MCPException):
     pass
 
+
 class MCPToolNotFoundError(MCPException):
     pass
+
 
 class MCPToolExecutionError(MCPException):
     pass
 
+
 class MCPProviderError(MCPException):
     pass
+
 
 class MCPConfigurationError(MCPException):
     pass
 
+
 class MCPAuthenticationError(MCPException):
     pass
+
 
 class CustomMCPError(MCPException):
     pass
@@ -295,83 +382,6 @@ class MCPService:
         
         return None
 
-
-MAX_DISCOVERED_TOOLS = int(os.getenv("MCP_MAX_DISCOVERED_TOOLS", "40"))
-MAX_SCHEMA_PROPERTIES = int(os.getenv("MCP_MAX_SCHEMA_PROPERTIES", "6"))
-MAX_PROPERTY_DESCRIPTION_CHARS = int(os.getenv("MCP_MAX_PROPERTY_DESCRIPTION_CHARS", "160"))
-
-
-def _truncate_text(value: Optional[str], max_length: int) -> Optional[str]:
-    if not value or not isinstance(value, str):
-        return value
-    value = value.strip()
-    if len(value) <= max_length:
-        return value
-    return value[:max_length].rstrip() + "…"
-
-
-def _coerce_schema(schema: Any) -> Dict[str, Any]:
-    if schema is None:
-        return {}
-    if isinstance(schema, dict):
-        return schema
-    if hasattr(schema, "model_dump"):
-        return schema.model_dump()
-    if hasattr(schema, "__dict__"):
-        return dict(schema.__dict__)
-    try:
-        return json.loads(json.dumps(schema))
-    except (TypeError, json.JSONDecodeError):
-        return {}
-
-
-def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
-    schema_dict = _coerce_schema(schema)
-    if not schema_dict:
-        return {}
-
-    summary: Dict[str, Any] = {}
-
-    schema_type = schema_dict.get("type")
-    if isinstance(schema_type, str):
-        summary["type"] = schema_type
-
-    required = schema_dict.get("required")
-    if isinstance(required, list):
-        summary["required"] = required[:MAX_SCHEMA_PROPERTIES]
-        if len(required) > MAX_SCHEMA_PROPERTIES:
-            summary["required_truncated"] = len(required) - MAX_SCHEMA_PROPERTIES
-
-    properties = schema_dict.get("properties")
-    if isinstance(properties, dict) and properties:
-        property_names = list(properties.keys())
-        summary["property_names"] = property_names[:MAX_SCHEMA_PROPERTIES]
-        summary["property_count"] = len(property_names)
-        if len(property_names) > MAX_SCHEMA_PROPERTIES:
-            summary["property_names_truncated"] = len(property_names) - MAX_SCHEMA_PROPERTIES
-
-        property_details: Dict[str, Dict[str, Optional[str]]] = {}
-        for name in property_names[:MAX_SCHEMA_PROPERTIES]:
-            raw_prop = properties.get(name)
-            prop_dict = _coerce_schema(raw_prop)
-            property_details[name] = {
-                "type": prop_dict.get("type"),
-                "description": _truncate_text(prop_dict.get("description"), MAX_PROPERTY_DESCRIPTION_CHARS)
-                if isinstance(prop_dict.get("description"), str)
-                else None,
-            }
-
-        if property_details:
-            summary["property_details"] = property_details
-
-    additional_properties = schema_dict.get("additionalProperties")
-    if isinstance(additional_properties, dict):
-        summary["allows_additional_properties"] = True
-
-    if not summary:
-        return {"note": "Schema metadata unavailable"}
-    return summary
-
     async def discover_custom_tools(self, request_type: str, config: Dict[str, Any]) -> CustomMCPConnectionResult:
         if request_type == "http":
             return await self._discover_http_tools(config)
@@ -379,18 +389,18 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
             return await self._discover_sse_tools(config)
         else:
             raise CustomMCPError(f"Unsupported request type: {request_type}")
-    
+
     async def _discover_http_tools(self, config: Dict[str, Any]) -> CustomMCPConnectionResult:
         url = config.get("url")
         if not url:
             raise CustomMCPError("URL is required for HTTP MCP connections")
-        
+
         try:
             async with streamablehttp_client(url) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
-                    
+
                     all_tools = list(tool_result.tools)
                     tools_info: List[Dict[str, Any]] = []
                     for index, tool in enumerate(all_tools):
@@ -408,7 +418,7 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
                     message = f"Connected via HTTP ({total_tools} tools discovered)"
                     if returned_tools < total_tools:
                         message += f"; returning first {returned_tools} tools to keep context manageable"
-                    
+
                     return CustomMCPConnectionResult(
                         success=True,
                         qualified_name=f"custom_http_{url.split('/')[-1]}",
@@ -420,7 +430,7 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
                         total_tools=total_tools,
                         returned_tools=returned_tools
                     )
-        
+
         except Exception as e:
             self._logger.error(f"Error connecting to HTTP MCP server: {str(e)}")
             return CustomMCPConnectionResult(
@@ -434,18 +444,18 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
                 total_tools=0,
                 returned_tools=0
             )
-    
+
     async def _discover_sse_tools(self, config: Dict[str, Any]) -> CustomMCPConnectionResult:
         url = config.get("url")
         if not url:
             raise CustomMCPError("URL is required for SSE MCP connections")
-        
+
         try:
             async with sse_client(url) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
-                    
+
                     all_tools = list(tool_result.tools)
                     tools_info: List[Dict[str, Any]] = []
                     for index, tool in enumerate(all_tools):
@@ -463,7 +473,7 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
                     message = f"Connected via SSE ({total_tools} tools discovered)"
                     if returned_tools < total_tools:
                         message += f"; returning first {returned_tools} tools to keep context manageable"
-                    
+
                     return CustomMCPConnectionResult(
                         success=True,
                         qualified_name=f"custom_sse_{url.split('/')[-1]}",
@@ -475,7 +485,7 @@ def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
                         total_tools=total_tools,
                         returned_tools=returned_tools
                     )
-        
+
         except Exception as e:
             self._logger.error(f"Error connecting to SSE MCP server: {str(e)}")
             return CustomMCPConnectionResult(
