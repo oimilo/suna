@@ -153,7 +153,9 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-medium text-foreground">{trigger.name}</h1>
+              <h1 className="text-2xl font-medium text-foreground break-words leading-tight">
+                {trigger.name}
+              </h1>
               <Badge
                 variant={trigger.is_active ? "highlight" : "secondary"}
                 className="text-xs"
@@ -162,7 +164,9 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
               </Badge>
             </div>
             {trigger.description && (
-              <p className="text-muted-foreground text-sm leading-relaxed">{trigger.description}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed break-words whitespace-pre-wrap">
+                {trigger.description}
+              </p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -289,21 +293,29 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
         <div className="border rounded-lg p-6 bg-card">
           <h3 className="font-medium text-foreground mb-4">Technical Details</h3>
           <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Type</span>
-              <span className="text-sm font-mono text-foreground">{trigger.trigger_type}</span>
+            <div className="flex justify-between items-start gap-4 py-2 border-b last:border-b-0">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Type</span>
+              <span className="text-sm font-mono text-foreground text-right break-all">
+                {trigger.trigger_type}
+              </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Provider</span>
-              <span className="text-sm font-mono text-foreground">{trigger.provider_id}</span>
+            <div className="flex justify-between items-start gap-4 py-2 border-b last:border-b-0">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Provider</span>
+              <span className="text-sm font-mono text-foreground text-right break-all">
+                {trigger.provider_id}
+              </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Created</span>
-              <span className="text-sm text-foreground">{new Date(trigger.created_at).toLocaleDateString()}</span>
+            <div className="flex justify-between items-start gap-4 py-2 border-b last:border-b-0">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Created</span>
+              <span className="text-sm text-foreground text-right break-words">
+                {new Date(trigger.created_at).toLocaleDateString()}
+              </span>
             </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-muted-foreground">Last Updated</span>
-              <span className="text-sm text-foreground">{new Date(trigger.updated_at).toLocaleDateString()}</span>
+            <div className="flex justify-between items-start gap-4 py-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Last Updated</span>
+              <span className="text-sm text-foreground text-right break-words">
+                {new Date(trigger.updated_at).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </div>
