@@ -305,8 +305,8 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://kortix.ai"
-    OR_APP_NAME: Optional[str] = "Kortix AI"
+    OR_SITE_URL: Optional[str] = "https://www.prophet.build"
+    OR_APP_NAME: Optional[str] = "Prophet AI"
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
@@ -477,9 +477,9 @@ class Configuration:
         Get the frontend URL based on environment.
         
         Returns:
-        - Production: 'https://kortix.com' (or FRONTEND_URL_ENV if set)
-        - Staging: 'https://staging.kortix.com' (or FRONTEND_URL_ENV if set)
-        - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
+        - Production: 'https://www.prophet.build' (or FRONTEND_URL/FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.prophet.build' (or FRONTEND_URL/FRONTEND_URL_ENV if set)
+        - Local: FRONTEND_URL/FRONTEND_URL_ENV or 'http://localhost:3000'
         """
         # Check for environment variable override first
         if self.FRONTEND_URL_ENV:
@@ -487,10 +487,9 @@ class Configuration:
         
         # Environment-based defaults
         if self.ENV_MODE == EnvMode.PRODUCTION:
-            return 'https://kortix.com'
+            return 'https://www.prophet.build'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'http://localhost:3000'
-            # return 'https://staging.suna.so'
+            return 'https://staging.prophet.build'
         else:
             return 'http://localhost:3000'
     
