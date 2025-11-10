@@ -539,7 +539,8 @@ async def discover_composio_tools(
             "profile_id": profile_id,
             "toolkit_name": config.get('toolkit_name', 'Unknown'),
             "tools": result.tools,
-            "total_tools": len(result.tools)
+            "total_tools": result.total_tools,
+            "returned_tools": result.returned_tools
         }
         
     except HTTPException:

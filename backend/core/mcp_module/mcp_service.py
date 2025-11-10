@@ -69,6 +69,8 @@ class CustomMCPConnectionResult:
     config: Dict[str, Any]
     url: str
     message: str
+    total_tools: int
+    returned_tools: int
 
 
 @dataclass
@@ -293,6 +295,83 @@ class MCPService:
         
         return None
 
+
+MAX_DISCOVERED_TOOLS = int(os.getenv("MCP_MAX_DISCOVERED_TOOLS", "40"))
+MAX_SCHEMA_PROPERTIES = int(os.getenv("MCP_MAX_SCHEMA_PROPERTIES", "6"))
+MAX_PROPERTY_DESCRIPTION_CHARS = int(os.getenv("MCP_MAX_PROPERTY_DESCRIPTION_CHARS", "160"))
+
+
+def _truncate_text(value: Optional[str], max_length: int) -> Optional[str]:
+    if not value or not isinstance(value, str):
+        return value
+    value = value.strip()
+    if len(value) <= max_length:
+        return value
+    return value[:max_length].rstrip() + "…"
+
+
+def _coerce_schema(schema: Any) -> Dict[str, Any]:
+    if schema is None:
+        return {}
+    if isinstance(schema, dict):
+        return schema
+    if hasattr(schema, "model_dump"):
+        return schema.model_dump()
+    if hasattr(schema, "__dict__"):
+        return dict(schema.__dict__)
+    try:
+        return json.loads(json.dumps(schema))
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _summarize_input_schema(schema: Any) -> Dict[str, Any]:
+    schema_dict = _coerce_schema(schema)
+    if not schema_dict:
+        return {}
+
+    summary: Dict[str, Any] = {}
+
+    schema_type = schema_dict.get("type")
+    if isinstance(schema_type, str):
+        summary["type"] = schema_type
+
+    required = schema_dict.get("required")
+    if isinstance(required, list):
+        summary["required"] = required[:MAX_SCHEMA_PROPERTIES]
+        if len(required) > MAX_SCHEMA_PROPERTIES:
+            summary["required_truncated"] = len(required) - MAX_SCHEMA_PROPERTIES
+
+    properties = schema_dict.get("properties")
+    if isinstance(properties, dict) and properties:
+        property_names = list(properties.keys())
+        summary["property_names"] = property_names[:MAX_SCHEMA_PROPERTIES]
+        summary["property_count"] = len(property_names)
+        if len(property_names) > MAX_SCHEMA_PROPERTIES:
+            summary["property_names_truncated"] = len(property_names) - MAX_SCHEMA_PROPERTIES
+
+        property_details: Dict[str, Dict[str, Optional[str]]] = {}
+        for name in property_names[:MAX_SCHEMA_PROPERTIES]:
+            raw_prop = properties.get(name)
+            prop_dict = _coerce_schema(raw_prop)
+            property_details[name] = {
+                "type": prop_dict.get("type"),
+                "description": _truncate_text(prop_dict.get("description"), MAX_PROPERTY_DESCRIPTION_CHARS)
+                if isinstance(prop_dict.get("description"), str)
+                else None,
+            }
+
+        if property_details:
+            summary["property_details"] = property_details
+
+    additional_properties = schema_dict.get("additionalProperties")
+    if isinstance(additional_properties, dict):
+        summary["allows_additional_properties"] = True
+
+    if not summary:
+        return {"note": "Schema metadata unavailable"}
+    return summary
+
     async def discover_custom_tools(self, request_type: str, config: Dict[str, Any]) -> CustomMCPConnectionResult:
         if request_type == "http":
             return await self._discover_http_tools(config)
@@ -312,13 +391,23 @@ class MCPService:
                     await session.initialize()
                     tool_result = await session.list_tools()
                     
-                    tools_info = []
-                    for tool in tool_result.tools:
+                    all_tools = list(tool_result.tools)
+                    tools_info: List[Dict[str, Any]] = []
+                    for index, tool in enumerate(all_tools):
+                        if index >= MAX_DISCOVERED_TOOLS:
+                            break
                         tools_info.append({
                             "name": tool.name,
                             "description": tool.description,
-                            "inputSchema": tool.inputSchema
+                            "inputSchema": _summarize_input_schema(getattr(tool, "inputSchema", None))
                         })
+
+                    total_tools = len(all_tools)
+                    returned_tools = len(tools_info)
+
+                    message = f"Connected via HTTP ({total_tools} tools discovered)"
+                    if returned_tools < total_tools:
+                        message += f"; returning first {returned_tools} tools to keep context manageable"
                     
                     return CustomMCPConnectionResult(
                         success=True,
@@ -327,7 +416,9 @@ class MCPService:
                         tools=tools_info,
                         config=config,
                         url=url,
-                        message=f"Connected via HTTP ({len(tools_info)} tools)"
+                        message=message,
+                        total_tools=total_tools,
+                        returned_tools=returned_tools
                     )
         
         except Exception as e:
@@ -339,7 +430,9 @@ class MCPService:
                 tools=[],
                 config=config,
                 url=url,
-                message=f"Failed to connect: {str(e)}"
+                message=f"Failed to connect: {str(e)}",
+                total_tools=0,
+                returned_tools=0
             )
     
     async def _discover_sse_tools(self, config: Dict[str, Any]) -> CustomMCPConnectionResult:
@@ -353,13 +446,23 @@ class MCPService:
                     await session.initialize()
                     tool_result = await session.list_tools()
                     
-                    tools_info = []
-                    for tool in tool_result.tools:
+                    all_tools = list(tool_result.tools)
+                    tools_info: List[Dict[str, Any]] = []
+                    for index, tool in enumerate(all_tools):
+                        if index >= MAX_DISCOVERED_TOOLS:
+                            break
                         tools_info.append({
                             "name": tool.name,
                             "description": tool.description,
-                            "inputSchema": tool.inputSchema
+                            "inputSchema": _summarize_input_schema(getattr(tool, "inputSchema", None))
                         })
+
+                    total_tools = len(all_tools)
+                    returned_tools = len(tools_info)
+
+                    message = f"Connected via SSE ({total_tools} tools discovered)"
+                    if returned_tools < total_tools:
+                        message += f"; returning first {returned_tools} tools to keep context manageable"
                     
                     return CustomMCPConnectionResult(
                         success=True,
@@ -368,7 +471,9 @@ class MCPService:
                         tools=tools_info,
                         config=config,
                         url=url,
-                        message=f"Connected via SSE ({len(tools_info)} tools)"
+                        message=message,
+                        total_tools=total_tools,
+                        returned_tools=returned_tools
                     )
         
         except Exception as e:
@@ -380,7 +485,9 @@ class MCPService:
                 tools=[],
                 config=config,
                 url=url,
-                message=f"Failed to connect: {str(e)}"
+                message=f"Failed to connect: {str(e)}",
+                total_tools=0,
+                returned_tools=0
             )
 
     async def _get_server_url(self, qualified_name: str, config: Dict[str, Any], provider: str) -> str:
