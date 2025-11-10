@@ -25,6 +25,7 @@ from .idempotency import (
     generate_subscription_modify_idempotency_key
 )
 from .stripe_circuit_breaker import StripeAPIWrapper
+from .free_tier_service import free_tier_service
 
 class SubscriptionService:
     def __init__(self):
@@ -226,6 +227,67 @@ class SubscriptionService:
             trial_status = credit_account.data[0].get('trial_status')
             current_tier = credit_account.data[0].get('tier')
         
+        target_tier = get_tier_by_price_id(price_id)
+        is_free_tier = target_tier and target_tier.name == 'free'
+
+        if is_free_tier:
+            logger.info(f"[FREE TIER] Handling free tier selection for account {account_id}")
+
+            if existing_subscription_id:
+                logger.info(f"[FREE TIER] Account {account_id} already has subscription {existing_subscription_id}, evaluating downgrade path")
+
+                if current_tier == 'free':
+                    logger.info(f"[FREE TIER] Account {account_id} is already on free tier - no change")
+                    return {
+                        'status': 'no_change',
+                        'message': 'You are already on the free plan.'
+                    }
+
+                # Schedule downgrade to free tier for existing paid subscription
+                try:
+                    downgrade_result = await self.schedule_tier_downgrade(
+                        account_id=account_id,
+                        target_tier_key='free',
+                        commitment_type='monthly'
+                    )
+
+                    logger.info(f"[FREE TIER] Scheduled downgrade to free tier for {account_id}")
+
+                    return {
+                        'status': 'downgrade_scheduled',
+                        'message': downgrade_result.get('message'),
+                        'effective_date': downgrade_result.get('scheduled_date'),
+                        'details': {
+                            'effective_date': downgrade_result.get('scheduled_date'),
+                            'current_price': downgrade_result.get('current_tier', {}).get('monthly_credits'),
+                            'new_price': downgrade_result.get('target_tier', {}).get('monthly_credits'),
+                        }
+                    }
+                except HTTPException as e:
+                    raise e
+                except Exception as e:
+                    logger.error(f"[FREE TIER] Failed to schedule downgrade for {account_id}: {e}")
+                    raise HTTPException(status_code=500, detail=f"Failed to schedule downgrade: {str(e)}")
+
+            # No existing subscription - create free tier without Stripe checkout
+            free_result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
+
+            if not free_result.get('success'):
+                logger.error(f"[FREE TIER] Failed to activate free tier for {account_id}: {free_result.get('error')}")
+                raise HTTPException(status_code=500, detail=free_result.get('error') or "Failed to activate free plan.")
+
+            await Cache.invalidate(f"subscription_tier:{account_id}")
+            await Cache.invalidate(f"credit_balance:{account_id}")
+            await Cache.invalidate(f"credit_summary:{account_id}")
+
+            logger.info(f"[FREE TIER] Activated free tier subscription {free_result.get('subscription_id')} for {account_id}")
+
+            return {
+                'status': 'updated',
+                'subscription_id': free_result.get('subscription_id'),
+                'message': 'Free plan activated successfully.'
+            }
+
         # Always use timestamp in idempotency key to allow retries with different parameters
         import time
         timestamp = int(time.time() * 1000)  # Millisecond precision
