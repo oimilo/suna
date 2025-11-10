@@ -71,8 +71,24 @@ class ScheduleProvider(TriggerProvider):
     
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
-            # Note: webhook_url removed - scheduled triggers may need alternative configuration
-            webhook_url = f"http://localhost:8000/api/triggers/{trigger.trigger_id}/webhook"
+            base_url = config.WEBHOOK_BASE_URL
+            if not base_url:
+                env_override = os.getenv("WEBHOOK_BASE_URL")
+                if env_override:
+                    base_url = env_override
+            if base_url:
+                base_url = base_url.rstrip("/")
+            if not base_url:
+                if config.ENV_MODE == EnvMode.LOCAL:
+                    base_url = "http://localhost:8000"
+                else:
+                    logger.error(
+                        "WEBHOOK_BASE_URL is not configured for scheduler in %s mode",
+                        config.ENV_MODE.value if hasattr(config.ENV_MODE, "value") else config.ENV_MODE,
+                    )
+                    return False
+
+            webhook_url = f"{base_url}/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')
 
