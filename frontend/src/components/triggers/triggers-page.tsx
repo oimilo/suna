@@ -121,8 +121,10 @@ const TriggerListItem = ({
             <Icon className="h-5 w-5 text-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <h3 className="font-medium text-foreground truncate">{trigger.name}</h3>
+            <div className="flex items-center gap-2 mb-0.5 min-w-0">
+              <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1 break-all">
+                {trigger.name}
+              </h3>
               <Badge
                 variant={trigger.is_active ? "highlight" : "secondary"}
                 className="text-xs"
@@ -131,7 +133,7 @@ const TriggerListItem = ({
               </Badge>
             </div>
             {trigger.description && (
-              <p className="text-sm text-muted-foreground truncate">
+              <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                 {trigger.description}
               </p>
             )}
