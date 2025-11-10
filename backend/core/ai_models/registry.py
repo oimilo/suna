@@ -2,9 +2,11 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-# SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
+# Prefer direct Anthropic access whenever an API key is available.
+# Override by setting USE_BEDROCK=true to force Bedrock in specific scenarios.
+USE_BEDROCK = os.getenv("USE_BEDROCK", "").lower() == "true"
+
+SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY) and not USE_BEDROCK
 
 if SHOULD_USE_ANTHROPIC:
     FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
