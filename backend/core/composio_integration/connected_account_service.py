@@ -60,7 +60,8 @@ class ConnectedAccountService:
         self, 
         auth_config_id: str, 
         user_id: str,
-        initiation_fields: Optional[Dict[str, str]] = None
+        initiation_fields: Optional[Dict[str, str]] = None,
+        auth_scheme: str = "OAUTH2"
     ) -> ConnectedAccount:
         try:
             print("[DEBUG] Auth config id: ", auth_config_id)
@@ -87,7 +88,7 @@ class ConnectedAccountService:
                 connection={
                     "user_id": user_id,
                     "state": {
-                        "authScheme": "OAUTH2",
+                        "authScheme": auth_scheme,
                         "val": state_val,
                     }
                 }
@@ -104,11 +105,11 @@ class ConnectedAccountService:
                 val_dict = self._extract_val_dict(val_obj)
                 
                 connection_data = ConnectionState(
-                    auth_scheme=connection_data_dict.get('auth_scheme', 'OAUTH2'),
+                    auth_scheme=connection_data_dict.get('auth_scheme', auth_scheme or 'OAUTH2'),
                     val=val_dict
                 )
             else:
-                connection_data = ConnectionState()
+                connection_data = ConnectionState(auth_scheme=auth_scheme or "OAUTH2")
             
             deprecated_obj = getattr(response, 'deprecated', None)
             deprecated_value = self._extract_deprecated_value(deprecated_obj)

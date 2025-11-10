@@ -92,7 +92,7 @@ export function DashboardContent() {
   const selectedAgent = selectedAgentId
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
-  const displayName = selectedAgent?.name || 'Suna';
+  const displayName = selectedAgent?.name || 'Prophet';
   const agentAvatar = undefined;
   const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
 
@@ -301,7 +301,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Kortix Super Worker
+                    Prophet Super Worker
                   </button>
                   <button
                     onClick={() => {
@@ -325,7 +325,7 @@ export function DashboardContent() {
 
             {/* Centered content area */}
             <div className="flex-1 flex items-start justify-center pt-[30vh]">
-              {/* Super Worker View - Suna only */}
+              {/* Super Worker View - Prophet only */}
               {viewMode === 'super-worker' && (
                 <div className="w-full animate-in fade-in-0 duration-300">
                   {/* Title and chat input - Fixed position */}

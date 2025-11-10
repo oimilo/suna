@@ -498,7 +498,7 @@ export function useKortixTeamTemplates() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error('You must be logged in to view Kortix templates');
+        throw new Error('You must be logged in to view Milo templates');
       }
 
       const response = await fetch(`${API_URL}/templates/kortix-all`, {

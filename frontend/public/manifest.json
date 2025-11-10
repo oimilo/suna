@@ -1,7 +1,7 @@
 {
-  "name": "Kortix - Open Source Generalist AI Worker",
-  "short_name": "Kortix",
-  "description": "Open Source Generalist AI Worker. Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.",
+  "name": "Prophet - Open Source Generalist AI Worker",
+  "short_name": "Prophet",
+  "description": "Open Source Generalist AI Worker. Prophet is a fully open source AI assistant from Milo that helps you accomplish real-world tasks with ease through natural conversation.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
