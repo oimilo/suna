@@ -71,6 +71,11 @@ class XMLToolParser:
         # Find function_calls blocks
         function_calls_matches = self.FUNCTION_CALLS_PATTERN.findall(content)
         
+        # Fallback: if no explicit <function_calls> wrapper, attempt to parse entire content
+        if not function_calls_matches and '<invoke' in content:
+            logger.debug("XMLToolParser fallback: parsing invoke blocks without <function_calls> wrapper")
+            function_calls_matches = [content]
+        
         for fc_content in function_calls_matches:
             # Find all invoke blocks within this function_calls block
             invoke_matches = self.INVOKE_PATTERN.findall(fc_content)
