@@ -1,5 +1,6 @@
 import { backendApi } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
+import { buildSandboxProxyUrl } from "@/lib/utils/url";
 import { toast } from "sonner";
 
 export enum DownloadFormat {
@@ -7,6 +8,11 @@ export enum DownloadFormat {
   PPTX = 'pptx',
   GOOGLE_SLIDES = 'google-slides',
 }
+
+type SandboxReference = {
+  sandbox_url?: string;
+  id?: string;
+};
 
 /**
  * Utility functions for handling presentation slide file paths
@@ -97,12 +103,21 @@ export function createPresentationViewerToolContent(
  */
 export async function downloadPresentation(
   format: DownloadFormat,
-  sandboxUrl: string, 
-  presentationPath: string, 
+  sandbox: SandboxReference,
+  presentationPath: string,
   presentationName: string
 ): Promise<void> {
   try {
-    const response = await fetch(`${sandboxUrl}/presentation/convert-to-${format}`, {
+    const baseUrl = buildSandboxProxyUrl({
+      sandboxId: sandbox.id,
+      sandboxUrl: sandbox.sandbox_url,
+    });
+
+    if (!baseUrl) {
+      throw new Error('Sandbox URL is required to download the presentation.');
+    }
+
+    const response = await fetch(`${baseUrl}/presentation/convert-to-${format}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,12 +148,13 @@ export async function downloadPresentation(
   }
 }
 
-export const handleGoogleAuth = async (presentationPath: string, sandboxUrl: string) => {
+export const handleGoogleAuth = async (presentationPath: string, sandboxUrl: string, sandboxId?: string) => {
   try {
     // Store intent to upload to Google Slides after OAuth
     sessionStorage.setItem('google_slides_upload_intent', JSON.stringify({
       presentation_path: presentationPath,
-      sandbox_url: sandboxUrl
+      sandbox_url: sandboxUrl,
+      sandbox_id: sandboxId
     }));
     
     // Pass the current URL to the backend so it can be included in the OAuth state
@@ -162,8 +178,8 @@ export const handleGoogleAuth = async (presentationPath: string, sandboxUrl: str
 };
 
 
-export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationPath: string) => {
-  if (!sandboxUrl || !presentationPath) {
+export const handleGoogleSlidesUpload = async (sandbox: SandboxReference, presentationPath: string) => {
+  if (!sandbox?.sandbox_url || !presentationPath) {
     throw new Error('Missing required parameters');
   }
   
@@ -174,7 +190,7 @@ export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationP
     // Use proper backend API client with authentication and extended timeout for PPTX generation
     const response = await backendApi.post('/presentation-tools/convert-and-upload-to-slides', {
       presentation_path: presentationPath,
-      sandbox_url: sandboxUrl,
+      sandbox_url: sandbox.sandbox_url,
     }, {
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -192,7 +208,8 @@ export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationP
       toast.info('Redirecting to Google authentication...', {
         duration: 3000,
       });
-      handleGoogleAuth(presentationPath, sandboxUrl);
+      handleGoogleAuth(presentationPath, sandbox.sandbox_url as string, sandbox.id);
+      handleGoogleAuth(presentationPath, sandbox.sandbox_url as string, sandbox.id);
       return {
         success: false,
         redirected_to_auth: true,

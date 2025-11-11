@@ -270,6 +270,14 @@ async def create_thread(
                 token = vnc_link.token
             elif "token='" in str(vnc_link):
                 token = str(vnc_link).split("token='")[1].split("'")[0]
+
+            preview_token = None
+            if hasattr(website_link, 'token'):
+                preview_token = website_link.token
+            elif "token='" in str(website_link):
+                preview_token = str(website_link).split("token='")[1].split("'")[0]
+
+            preview_token_generated_at = datetime.now(timezone.utc).isoformat()
         except Exception as e:
             logger.error(f"Error creating sandbox: {str(e)}")
             await client.table('projects').delete().eq('project_id', project_id).execute()
@@ -287,7 +295,9 @@ async def create_thread(
                 'pass': sandbox_pass, 
                 'vnc_preview': vnc_url,
                 'sandbox_url': website_url, 
-                'token': token
+                'token': token,
+                'preview_token': preview_token,
+                'preview_token_generated_at': preview_token_generated_at,
             }
         }).eq('project_id', project_id).execute()
 

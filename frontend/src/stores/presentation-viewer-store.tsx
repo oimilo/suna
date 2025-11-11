@@ -7,9 +7,10 @@ interface PresentationViewerState {
   isOpen: boolean;
   presentationName?: string;
   sandboxUrl?: string;
+  sandboxId?: string;
   initialSlide?: number;
   
-  openPresentation: (presentationName: string, sandboxUrl: string, initialSlide?: number) => void;
+  openPresentation: (presentationName: string, sandboxUrl: string, sandboxId?: string, initialSlide?: number) => void;
   closePresentation: () => void;
 }
 
@@ -21,11 +22,12 @@ export const usePresentationViewerStore = create<PresentationViewerState>()(
       sandboxUrl: undefined,
       initialSlide: undefined,
       
-      openPresentation: (presentationName: string, sandboxUrl: string, initialSlide: number = 1) => {
+      openPresentation: (presentationName: string, sandboxUrl: string, sandboxId: string | undefined = undefined, initialSlide: number = 1) => {
         set({
           isOpen: true,
           presentationName,
           sandboxUrl,
+          sandboxId,
           initialSlide,
         });
       },
@@ -35,6 +37,7 @@ export const usePresentationViewerStore = create<PresentationViewerState>()(
           isOpen: false,
           presentationName: undefined,
           sandboxUrl: undefined,
+          sandboxId: undefined,
           initialSlide: undefined,
         });
       },
@@ -64,6 +67,7 @@ export function usePresentationViewer() {
       isOpen: store.isOpen,
       presentationName: store.presentationName,
       sandboxUrl: store.sandboxUrl,
+      sandboxId: store.sandboxId,
       initialSlide: store.initialSlide,
     },
     openPresentation: store.openPresentation,
@@ -73,7 +77,7 @@ export function usePresentationViewer() {
 
 // Component wrapper to render the FullScreenPresentationViewer
 export function PresentationViewerWrapper() {
-  const { isOpen, presentationName, sandboxUrl, initialSlide, closePresentation } = usePresentationViewerStore();
+  const { isOpen, presentationName, sandboxUrl, sandboxId, initialSlide, closePresentation } = usePresentationViewerStore();
   
   return (
     <FullScreenPresentationViewer
@@ -81,6 +85,7 @@ export function PresentationViewerWrapper() {
       onClose={closePresentation}
       presentationName={presentationName}
       sandboxUrl={sandboxUrl}
+      sandboxId={sandboxId}
       initialSlide={initialSlide}
     />
   );

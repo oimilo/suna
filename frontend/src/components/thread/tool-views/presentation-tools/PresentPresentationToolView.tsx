@@ -87,13 +87,13 @@ export function PresentPresentationToolView({
 
   // Download handlers
   const handleDownload = async (format: DownloadFormat) => {
-    if (!project?.sandbox?.sandbox_url || !presentationName) return;
+    if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !presentationName) return;
 
     setIsDownloading(true);
     try {
       if (format === DownloadFormat.GOOGLE_SLIDES) {
         const result = await handleGoogleSlidesUpload(
-          project.sandbox.sandbox_url, 
+          { sandbox_url: project?.sandbox?.sandbox_url, id: project?.sandbox?.id },
           `/workspace/${presentationPath}`
         );
         // If redirected to auth, don't show error
@@ -102,7 +102,7 @@ export function PresentPresentationToolView({
         }
       } else {
         await downloadPresentation(format,
-          project.sandbox.sandbox_url, 
+          { sandbox_url: project?.sandbox?.sandbox_url, id: project?.sandbox?.id }, 
           `/workspace/${presentationPath}`, 
           presentationName
         );

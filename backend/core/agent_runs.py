@@ -399,6 +399,14 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
         elif "token='" in str(vnc_link):
             token = str(vnc_link).split("token='")[1].split("'")[0]
 
+        preview_token = None
+        if hasattr(website_link, 'token'):
+            preview_token = website_link.token
+        elif "token='" in str(website_link):
+            preview_token = str(website_link).split("token='")[1].split("'")[0]
+
+        preview_token_generated_at = datetime.now(timezone.utc).isoformat()
+
         # Update project with sandbox info
         update_result = await client.table('projects').update({
             'sandbox': {
@@ -406,7 +414,9 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
                 'pass': sandbox_pass,
                 'vnc_preview': vnc_url,
                 'sandbox_url': website_url,
-                'token': token
+            'token': token,
+            'preview_token': preview_token,
+            'preview_token_generated_at': preview_token_generated_at
             }
         }).eq('project_id', project_id).execute()
 

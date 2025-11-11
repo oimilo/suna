@@ -1,6 +1,7 @@
 from typing import Optional
 import uuid
 import asyncio
+from datetime import datetime, timezone
 
 from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.tool import Tool
@@ -25,6 +26,8 @@ class SandboxToolsBase(Tool):
         self._sandbox_id = None
         self._sandbox_pass = None
         self._sandbox_url = None
+        self._sandbox_preview_token = None
+        self._sandbox_preview_token_generated_at = None
 
     async def _ensure_sandbox(self) -> AsyncSandbox:
         """Ensure we have a valid sandbox instance, retrieving it from the project if needed.
@@ -63,12 +66,16 @@ class SandboxToolsBase(Tool):
                         vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
                         website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                         token = vnc_link.token if hasattr(vnc_link, 'token') else (str(vnc_link).split("token='")[1].split("'")[0] if "token='" in str(vnc_link) else None)
+                        preview_token = website_link.token if hasattr(website_link, 'token') else (str(website_link).split("token='")[1].split("'")[0] if "token='" in str(website_link) else None)
+                        preview_token_generated_at = datetime.now(timezone.utc).isoformat()
                     except Exception:
                         # If preview link extraction fails, still proceed but leave fields None
                         logger.warning(f"Failed to extract preview links for sandbox {sandbox_id}", exc_info=True)
                         vnc_url = None
                         website_url = None
                         token = None
+                        preview_token = None
+                        preview_token_generated_at = None
 
                     # Persist sandbox metadata to project record
                     update_result = await client.table('projects').update({
@@ -77,7 +84,9 @@ class SandboxToolsBase(Tool):
                             'pass': sandbox_pass,
                             'vnc_preview': vnc_url,
                             'sandbox_url': website_url,
-                            'token': token
+                            'token': token,
+                            'preview_token': preview_token,
+                            'preview_token_generated_at': preview_token_generated_at
                         }
                     }).eq('project_id', self.project_id).execute()
 
@@ -93,12 +102,16 @@ class SandboxToolsBase(Tool):
                     self._sandbox_id = sandbox_id
                     self._sandbox_pass = sandbox_pass
                     self._sandbox_url = website_url
+                    self._sandbox_preview_token = preview_token
+                    self._sandbox_preview_token_generated_at = preview_token_generated_at
                     self._sandbox = await get_or_start_sandbox(self._sandbox_id)
                 else:
                     # Use existing sandbox metadata
                     self._sandbox_id = sandbox_info['id']
                     self._sandbox_pass = sandbox_info.get('pass')
                     self._sandbox_url = sandbox_info.get('sandbox_url')
+                    self._sandbox_preview_token = sandbox_info.get('preview_token')
+                    self._sandbox_preview_token_generated_at = sandbox_info.get('preview_token_generated_at')
                     self._sandbox = await get_or_start_sandbox(self._sandbox_id)
 
             except Exception as e:
@@ -127,6 +140,16 @@ class SandboxToolsBase(Tool):
         if self._sandbox_url is None:
             raise RuntimeError("Sandbox URL not initialized. Call _ensure_sandbox() first.")
         return self._sandbox_url
+
+    @property
+    def sandbox_preview_token(self) -> Optional[str]:
+        """Get the sandbox preview token (may be None for public previews)."""
+        return self._sandbox_preview_token
+
+    @property
+    def sandbox_preview_token_generated_at(self) -> Optional[str]:
+        """Get ISO timestamp when the preview token was generated."""
+        return self._sandbox_preview_token_generated_at
 
     def clean_path(self, path: str) -> str:
         """Clean and normalize a path to be relative to /workspace."""

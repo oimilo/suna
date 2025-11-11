@@ -139,13 +139,13 @@ export function ExportToolView({
 
   // Download handlers
   const handleDownload = async (downloadFormat: DownloadFormat) => {
-    if (!project?.sandbox?.sandbox_url || !presentationName) return;
+    if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !presentationName) return;
 
     setIsDownloading(true);
     try {
       await downloadPresentation(
         downloadFormat,
-        project.sandbox.sandbox_url, 
+        { sandbox_url: project?.sandbox?.sandbox_url, id: project?.sandbox?.id }, 
         `/workspace/presentations/${presentationName}`, 
         presentationName
       );

@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { constructHtmlPreviewUrl } from '@/lib/utils/url';
+import { buildSandboxProxyUrl, constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { downloadPresentation, DownloadFormat, handleGoogleSlidesUpload } from '../utils/presentation-utils';
 
 interface SlideMetadata {
@@ -45,6 +45,7 @@ interface FullScreenPresentationViewerProps {
   onClose: () => void;
   presentationName?: string;
   sandboxUrl?: string;
+  sandboxId?: string;
   initialSlide?: number;
 }
 
@@ -53,6 +54,7 @@ export function FullScreenPresentationViewer({
   onClose,
   presentationName,
   sandboxUrl,
+  sandboxId,
   initialSlide = 1,
 }: FullScreenPresentationViewerProps) {
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
@@ -83,7 +85,7 @@ export function FullScreenPresentationViewer({
 
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    if (!presentationName || !sandboxUrl) return;
+    if (!presentationName || (!sandboxUrl && !sandboxId)) return;
     
     setIsLoading(true);
     setError(null);
@@ -93,10 +95,19 @@ export function FullScreenPresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(presentationName);
       
-      const metadataUrl = constructHtmlPreviewUrl(
-        sandboxUrl, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
-      );
+      const metadataUrl =
+        constructHtmlPreviewUrl({
+          sandboxId,
+          sandboxUrl,
+          filePath: `presentations/${sanitizedPresentationName}/metadata.json`,
+        }) ??
+        (sandboxUrl
+          ? `${sandboxUrl.replace(/\/$/, '')}/presentations/${sanitizedPresentationName}/metadata.json`
+          : undefined);
+
+      if (!metadataUrl) {
+        throw new Error('Sandbox preview URL indisponível para carregar metadata da apresentação.');
+      }
       
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
@@ -150,7 +161,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [presentationName, sandboxUrl, backgroundRetryInterval]);
+  }, [presentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
@@ -265,7 +276,7 @@ export function FullScreenPresentationViewer({
 
   // Download handlers
   const handleDownload = async (format: DownloadFormat) => {
-    if (!sandboxUrl || !presentationName) return;
+    if (!presentationName || (!sandboxUrl && !sandboxId)) return;
 
     const setDownloadState = format === DownloadFormat.PDF ? setIsDownloadingPDF : 
                            format === DownloadFormat.PPTX ? setIsDownloadingPPTX : 
@@ -274,13 +285,21 @@ export function FullScreenPresentationViewer({
     setDownloadState(true);
     try {
       if (format === DownloadFormat.GOOGLE_SLIDES) {
-        const result = await handleGoogleSlidesUpload(sandboxUrl, `/workspace/presentations/${presentationName}`);
+        const result = await handleGoogleSlidesUpload(
+          { sandbox_url: sandboxUrl, id: sandboxId },
+          `/workspace/presentations/${presentationName}`
+        );
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected
         }
       } else {
-        await downloadPresentation(format, sandboxUrl, `/workspace/presentations/${presentationName}`, presentationName);
+        await downloadPresentation(
+          format,
+          { sandbox_url: sandboxUrl, id: sandboxId },
+          `/workspace/presentations/${presentationName}`,
+          presentationName
+        );
       }
     } catch (error) {
       console.error(`Error downloading ${format}:`, error);
@@ -330,7 +349,7 @@ export function FullScreenPresentationViewer({
         }
       }, [containerRef, scale]);
 
-      if (!sandboxUrl) {
+      if (!sandboxUrl && !sandboxId) {
         return (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -341,9 +360,38 @@ export function FullScreenPresentationViewer({
         );
       }
 
-      const slideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path);
+      const fallbackBase = sandboxUrl ? sandboxUrl.replace(/\/$/, '') : undefined;
+      const slideUrl =
+        constructHtmlPreviewUrl({
+          sandboxId,
+          sandboxUrl,
+          filePath: slide.file_path,
+        }) ??
+        (fallbackBase
+          ? `${fallbackBase}/${slide.file_path.replace(/^\/workspace\//, '')}`
+          : undefined);
+
+      if (!slideUrl) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Preview indisponível no momento.</p>
+            </div>
+          </div>
+        );
+      }
+
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
+      const editorUrl =
+        buildSandboxProxyUrl({
+          sandboxId,
+          sandboxUrl,
+          relativePath: `api/html/${slide.file_path}/editor`,
+        }) ??
+        (sandboxUrl ? `${sandboxUrl}/api/html/${slide.file_path}/editor` : undefined);
+      const iframeSrc = showEditor && editorUrl ? editorUrl : slideUrlWithCacheBust;
 
       return (
         <div className="w-full h-full flex items-center justify-center bg-transparent">
@@ -361,7 +409,7 @@ export function FullScreenPresentationViewer({
           >
             <iframe
               key={`slide-${slide.number}-${refreshTimestamp}-${showEditor}`} // Key with stable timestamp ensures iframe refreshes when metadata changes
-              src={showEditor ? `${sandboxUrl}/api/html/${slide.file_path}/editor` : slideUrlWithCacheBust}
+              src={iframeSrc}
               title={`Slide ${slide.number}: ${slide.title}`}
               className="border-0 rounded-xl"
               sandbox="allow-same-origin allow-scripts allow-modals"
@@ -391,14 +439,14 @@ export function FullScreenPresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [sandboxUrl, refreshTimestamp, showEditor]);
+  }, [sandboxUrl, sandboxId, refreshTimestamp, showEditor]);
 
   // Render slide iframe with proper scaling
   const renderSlide = useMemo(() => {
-    if (!currentSlideData || !sandboxUrl) return null;
+    if (!currentSlideData || (!sandboxUrl && !sandboxId)) return null;
 
     return <SlideIframe slide={currentSlideData} />;
-  }, [currentSlideData, sandboxUrl, SlideIframe]);
+  }, [currentSlideData, sandboxUrl, sandboxId, SlideIframe]);
 
   if (!isOpen) return null;
 

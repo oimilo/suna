@@ -141,7 +141,7 @@ export function PresentationViewer({
 
   // Load metadata.json for the presentation with retry logic
   const loadMetadata = async (retryCount = 0, maxRetries = 5) => {
-    if (!extractedPresentationName || !project?.sandbox?.sandbox_url) return;
+    if (!extractedPresentationName || (!project?.sandbox?.sandbox_url && !project?.sandbox?.id)) return;
     
     setIsLoadingMetadata(true);
     setError(null);
@@ -151,10 +151,19 @@ export function PresentationViewer({
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
-      const metadataUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
-      );
+      const metadataUrl =
+        constructHtmlPreviewUrl({
+          sandboxId: project?.sandbox?.id,
+          sandboxUrl: project?.sandbox?.sandbox_url,
+          filePath: `presentations/${sanitizedPresentationName}/metadata.json`,
+        }) ??
+        (project?.sandbox?.sandbox_url
+          ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/presentations/${sanitizedPresentationName}/metadata.json`
+          : undefined);
+
+      if (!metadataUrl) {
+        throw new Error('Não foi possível construir a URL de metadata da apresentação.');
+      }
       
       // Add cache-busting parameter to ensure fresh data
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
@@ -221,7 +230,7 @@ export function PresentationViewer({
       setBackgroundRetryInterval(null);
     }
     loadMetadata();
-  }, [extractedPresentationName, project?.sandbox?.sandbox_url, toolContent]);
+  }, [extractedPresentationName, project?.sandbox?.sandbox_url, project?.sandbox?.id, toolContent]);
 
   // Cleanup background retry interval on unmount
   useEffect(() => {
@@ -409,7 +418,7 @@ export function PresentationViewer({
         }
       }, [containerRef, scale]);
 
-      if (!project?.sandbox?.sandbox_url) {
+      if (!project?.sandbox?.sandbox_url && !project?.sandbox?.id) {
         return (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -420,7 +429,26 @@ export function PresentationViewer({
         );
       }
 
-      const slideUrl = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
+      const slideUrl =
+        constructHtmlPreviewUrl({
+          sandboxId: project?.sandbox?.id,
+          sandboxUrl: project?.sandbox?.sandbox_url,
+          filePath: slide.file_path,
+        }) ??
+        (project?.sandbox?.sandbox_url
+          ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/${slide.file_path.replace(/^\/workspace\//, '')}`
+          : undefined);
+
+      if (!slideUrl) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Preview indisponível no momento.</p>
+            </div>
+          </div>
+        );
+      }
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
 
@@ -466,7 +494,7 @@ export function PresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [project?.sandbox?.sandbox_url, refreshTimestamp]);
+  }, [project?.sandbox?.sandbox_url, project?.sandbox?.id, refreshTimestamp]);
 
   // Render individual slide using the original approach
   const renderSlidePreview = useCallback((slide: SlideMetadata & { number: number }) => {
@@ -475,18 +503,26 @@ export function PresentationViewer({
 
   const handleDownload = async (setIsDownloading: (isDownloading: boolean) => void, format: DownloadFormat) => {
     
-    if (!project?.sandbox?.sandbox_url || !extractedPresentationName) return;
+    if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !extractedPresentationName) return;
 
     setIsDownloading(true);
     try{
       if (format === DownloadFormat.GOOGLE_SLIDES){
-        const result = await handleGoogleSlidesUpload(project!.sandbox!.sandbox_url, `/workspace/presentations/${extractedPresentationName}`);
+        const result = await handleGoogleSlidesUpload(
+          project!.sandbox!,
+          `/workspace/presentations/${extractedPresentationName}`
+        );
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected
         }
       } else{
-        await downloadPresentation(format, project.sandbox.sandbox_url, `/workspace/presentations/${extractedPresentationName}`, extractedPresentationName);
+        await downloadPresentation(
+          format,
+          project.sandbox!,
+          `/workspace/presentations/${extractedPresentationName}`,
+          extractedPresentationName
+        );
       }
     } catch (error) {
       console.error('Error downloading PDF:', error);

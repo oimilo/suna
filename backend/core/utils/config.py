@@ -330,6 +330,11 @@ class Configuration:
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
+    DAYTONA_PROXY_ORIGIN: Optional[str] = None
+    DAYTONA_PREVIEW_PATH_PREFIX: Optional[str] = "/preview"
+    DAYTONA_PREVIEW_SKIP_WARNING: bool = True
+    DAYTONA_PREVIEW_DISABLE_CORS: bool = False
+    DAYTONA_PREVIEW_TOKEN_TTL: Optional[int] = 900
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
@@ -470,6 +475,20 @@ class Configuration:
         if self.ENV_MODE == EnvMode.STAGING:
             return self.STRIPE_PRODUCT_ID_STAGING
         return self.STRIPE_PRODUCT_ID_PROD
+    
+    @property
+    def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
+        """
+        Base URL (origin + path prefix) exposed via Daytona proxy.
+        Returns None if the proxy origin is not configured.
+        """
+        if not self.DAYTONA_PROXY_ORIGIN:
+            return None
+        origin = self.DAYTONA_PROXY_ORIGIN.rstrip("/")
+        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "").strip()
+        if not path_prefix or path_prefix == "/":
+            return origin
+        return f"{origin}/{path_prefix.lstrip('/')}"
     
     @property
     def FRONTEND_URL(self) -> str:
