@@ -479,11 +479,14 @@ class Configuration:
     @property
     def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
         """
-        Base URL (origin + path prefix) exposed via Daytona proxy.
-        Returns None if the proxy origin is not configured.
+        Base URL (origin + path prefix) exposta via Daytona proxy.
+        Retorna um fallback padrão quando as variáveis não estão configuradas.
         """
         if not self.DAYTONA_PROXY_ORIGIN:
-            return None
+            default_origin = {
+                EnvMode.PRODUCTION: "https://www.prophet.build",
+            }.get(self.ENV_MODE, "http://localhost:8000")
+            return f"{default_origin.rstrip('/')}/preview"
         origin = self.DAYTONA_PROXY_ORIGIN.rstrip("/")
         path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "").strip()
         if not path_prefix or path_prefix == "/":
