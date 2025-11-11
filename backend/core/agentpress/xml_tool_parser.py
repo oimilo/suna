@@ -73,7 +73,7 @@ class XMLToolParser:
         
         # Fallback: if no explicit <function_calls> wrapper, attempt to parse entire content
         if not function_calls_matches and '<invoke' in content:
-            logger.debug("XMLToolParser fallback: parsing invoke blocks without <function_calls> wrapper")
+            logger.info("XMLToolParser fallback triggered: parsing invoke blocks without <function_calls> wrapper")
             function_calls_matches = [content]
         
         for fc_content in function_calls_matches:
