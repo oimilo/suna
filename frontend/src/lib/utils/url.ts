@@ -1,6 +1,26 @@
-const previewProxyBase = process.env.NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL
-  ? process.env.NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL.replace(/\/$/, '')
-  : undefined;
+const computePreviewProxyBase = (): string | undefined => {
+  const envValue = process.env.NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL?.replace(/\/$/, '');
+  if (envValue) {
+    return envValue;
+  }
+
+  const environment =
+    process.env.NEXT_PUBLIC_ENV_MODE ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV ||
+    process.env.NODE_ENV;
+
+  if (environment === 'development') {
+    return 'http://localhost:8000/preview';
+  }
+
+  if (environment === 'preview' || environment === 'staging') {
+    return 'https://www.prophet.build/preview';
+  }
+
+  return 'https://www.prophet.build/preview';
+};
+
+const previewProxyBase = computePreviewProxyBase();
 
 type ProxyUrlOptions = {
   sandboxId?: string;
