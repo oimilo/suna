@@ -4,20 +4,29 @@ const computePreviewProxyBase = (): string | undefined => {
     return envValue;
   }
 
-  const environment =
-    process.env.NEXT_PUBLIC_ENV_MODE ||
-    process.env.NEXT_PUBLIC_VERCEL_ENV ||
-    process.env.NODE_ENV;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (backendUrl) {
+    try {
+      const url = new URL(backendUrl);
+      const isLocal =
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        url.hostname.endsWith('.local');
 
-  if (environment === 'development') {
-    return 'http://localhost:8000/preview';
+      if (isLocal) {
+        url.pathname = '/preview';
+        return url.toString().replace(/\/$/, '');
+      }
+
+      const sanitizedPath = url.pathname.replace(/\/$/, '');
+      url.pathname = `${sanitizedPath}${sanitizedPath ? '/' : ''}preview`;
+      return url.toString().replace(/\/$/, '');
+    } catch (error) {
+      console.warn('Failed to derive preview base from BACKEND_URL:', error);
+    }
   }
 
-  if (environment === 'preview' || environment === 'staging') {
-    return 'https://www.prophet.build/preview';
-  }
-
-  return 'https://www.prophet.build/preview';
+  return 'https://prophet.build/api/preview';
 };
 
 const previewProxyBase = computePreviewProxyBase();

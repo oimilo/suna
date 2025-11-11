@@ -482,16 +482,21 @@ class Configuration:
         Base URL (origin + path prefix) exposta via Daytona proxy.
         Retorna um fallback padrão quando as variáveis não estão configuradas.
         """
+        # Determine base origin
         if not self.DAYTONA_PROXY_ORIGIN:
-            default_origin = {
-                EnvMode.PRODUCTION: "https://www.prophet.build",
+            origin = {
+                EnvMode.PRODUCTION: "https://prophet.build",
             }.get(self.ENV_MODE, "http://localhost:8000")
-            return f"{default_origin.rstrip('/')}/preview"
-        origin = self.DAYTONA_PROXY_ORIGIN.rstrip("/")
-        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "").strip()
-        if not path_prefix or path_prefix == "/":
-            return origin
-        return f"{origin}/{path_prefix.lstrip('/')}"
+        else:
+            origin = self.DAYTONA_PROXY_ORIGIN
+
+        origin = origin.rstrip("/")
+
+        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
+        if not path_prefix.startswith("/"):
+            path_prefix = f"/{path_prefix}"
+
+        return f"{origin}{path_prefix.rstrip('/')}"
     
     @property
     def FRONTEND_URL(self) -> str:
@@ -538,6 +543,16 @@ class Configuration:
         
         # Load configuration from environment variables
         self._load_from_env()
+        
+        # Ensure Daytona preview prefix aligns with environment defaults
+        default_preview_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
+        if not default_preview_prefix.startswith("/"):
+            default_preview_prefix = f"/{default_preview_prefix}"
+        
+        if self.ENV_MODE == EnvMode.PRODUCTION and default_preview_prefix == "/preview":
+            self.DAYTONA_PREVIEW_PATH_PREFIX = "/api/preview"
+        else:
+            self.DAYTONA_PREVIEW_PATH_PREFIX = default_preview_prefix
         
         # Auto-generate admin API key if not present
         if not self.KORTIX_ADMIN_API_KEY:
