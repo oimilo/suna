@@ -322,6 +322,15 @@ if not preview_prefix.startswith("/"):
 
 app.include_router(daytona_proxy.router, prefix=preview_prefix)
 
+# Backwards compatibility for legacy /preview path (pre-commit bb31384a)
+if preview_prefix != "/preview":
+    logger.warning(
+        "Registering legacy preview prefix '/preview' for backwards compatibility. "
+        "Update frontend envs to use %s.",
+        preview_prefix,
+    )
+    app.include_router(daytona_proxy.router, prefix="/preview")
+
 
 if __name__ == "__main__":
     import uvicorn
