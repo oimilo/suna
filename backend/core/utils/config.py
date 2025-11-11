@@ -485,7 +485,7 @@ class Configuration:
         # Determine base origin
         if not self.DAYTONA_PROXY_ORIGIN:
             origin = {
-                EnvMode.PRODUCTION: "https://prophet.build",
+                EnvMode.PRODUCTION: "https://prophet-milo-f3hr5.ondigitalocean.app",
             }.get(self.ENV_MODE, "http://localhost:8000")
         else:
             origin = self.DAYTONA_PROXY_ORIGIN
@@ -545,7 +545,7 @@ class Configuration:
         self._load_from_env()
         
         # Ensure Daytona preview prefix aligns with environment defaults
-        default_preview_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
+        default_preview_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/api/preview").strip()
         if not default_preview_prefix.startswith("/"):
             default_preview_prefix = f"/{default_preview_prefix}"
         
