@@ -33,6 +33,7 @@ import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
+from core.routes import daytona_proxy
 
 
 if sys.platform == "win32":
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
             instance_id
         )
         
+        daytona_proxy.initialize(db)
         
         sandbox_api.initialize(db)
         
@@ -313,6 +315,12 @@ async def health_check_docker():
 
 
 app.include_router(api_router, prefix="/api")
+
+preview_prefix = config.DAYTONA_PREVIEW_PATH_PREFIX or "/preview"
+if not preview_prefix.startswith("/"):
+    preview_prefix = f"/{preview_prefix}"
+
+app.include_router(daytona_proxy.router, prefix=preview_prefix)
 
 
 if __name__ == "__main__":

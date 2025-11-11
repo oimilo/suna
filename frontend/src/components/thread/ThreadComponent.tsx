@@ -270,13 +270,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
         try {
           const uploadData = JSON.parse(uploadIntent);
-          const { presentation_path, sandbox_url } = uploadData;
+          const { presentation_path, sandbox_url, sandbox_id } = uploadData;
 
-          if (presentation_path && sandbox_url) {
+          if (presentation_path && (sandbox_url || sandbox_id)) {
             // Handle upload in async function
             (async () => {
               const uploadPromise = handleGoogleSlidesUpload(
-                sandbox_url,
+                { sandbox_url, id: sandbox_id },
                 presentation_path
               );
 

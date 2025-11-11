@@ -233,12 +233,15 @@ export function FileRenderer({
       return URL.createObjectURL(blob);
     }
     return undefined;
-  }, [isHtmlFile, content, project?.sandbox?.sandbox_url, tiptapHtmlContent]);
+  }, [isHtmlFile, content, project?.sandbox?.sandbox_url, project?.sandbox?.id, tiptapHtmlContent]);
 
-  const htmlPreviewUrl =
-    isHtmlFile && project?.sandbox?.sandbox_url && (filePath || fileName)
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName)
-      : blobHtmlUrl;
+  const htmlPreviewUrl = isHtmlFile
+    ? constructHtmlPreviewUrl({
+        sandboxId: project?.sandbox?.id,
+        sandboxUrl: project?.sandbox?.sandbox_url,
+        filePath: filePath || fileName,
+      }) ?? blobHtmlUrl
+    : blobHtmlUrl;
 
   React.useEffect(() => {
     return () => {

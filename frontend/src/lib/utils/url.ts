@@ -1,29 +1,69 @@
+const previewProxyBase = process.env.NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL
+  ? process.env.NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL.replace(/\/$/, '')
+  : undefined;
+
+type ProxyUrlOptions = {
+  sandboxId?: string;
+  sandboxUrl?: string;
+  relativePath?: string;
+  encodePathSegments?: boolean;
+};
+
+const trimLeadingSlash = (value: string): string => value.replace(/^\/+/, '');
+
+const encodePath = (path: string, encodeSegments: boolean): string => {
+  if (!path) return '';
+  if (!encodeSegments) return trimLeadingSlash(path);
+
+  return trimLeadingSlash(path)
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+};
+
+export function buildSandboxProxyUrl({
+  sandboxId,
+  sandboxUrl,
+  relativePath,
+  encodePathSegments = false,
+}: ProxyUrlOptions): string | undefined {
+  const normalizedPath = encodePath(relativePath ?? '', encodePathSegments);
+  const pathSuffix = normalizedPath ? `/${normalizedPath}` : '';
+
+  if (previewProxyBase && sandboxId) {
+    return `${previewProxyBase}/${sandboxId}${pathSuffix}`;
+  }
+
+  if (sandboxUrl) {
+    const base = sandboxUrl.replace(/\/$/, '');
+    return `${base}${pathSuffix}`;
+  }
+
+  return undefined;
+}
+
 /**
- * Constructs a preview URL for HTML files in the sandbox environment.
- * Properly handles URL encoding of file paths by encoding each path segment individually.
- *
- * @param sandboxUrl - The base URL of the sandbox
- * @param filePath - The path to the HTML file (can include /workspace/ prefix)
- * @returns The properly encoded preview URL, or undefined if inputs are invalid
+ * Constructs a preview URL for HTML files in the sandbox environment using the Daytona proxy when available.
  */
-export function constructHtmlPreviewUrl(
-  sandboxUrl: string | undefined,
-  filePath: string | undefined,
-): string | undefined {
-  if (!sandboxUrl || !filePath) {
+export function constructHtmlPreviewUrl({
+  sandboxId,
+  sandboxUrl,
+  filePath,
+}: {
+  sandboxId?: string;
+  sandboxUrl?: string;
+  filePath?: string;
+}): string | undefined {
+  if (!filePath) {
     return undefined;
   }
 
-  // Remove /workspace/ prefix if present
   const processedPath = filePath.replace(/^\/workspace\//, '');
 
-  // Split the path into segments and encode each segment individually
-  const pathSegments = processedPath
-    .split('/')
-    .map((segment) => encodeURIComponent(segment));
-
-  // Join the segments back together with forward slashes
-  const encodedPath = pathSegments.join('/');
-
-  return `${sandboxUrl}/${encodedPath}`;
+  return buildSandboxProxyUrl({
+    sandboxId,
+    sandboxUrl,
+    relativePath: processedPath,
+    encodePathSegments: true,
+  });
 }

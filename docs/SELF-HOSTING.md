@@ -130,6 +130,13 @@ As part of the setup, you'll need to:
    - Name: `milo/prophet:0.1.3`
    - Image name: `milo/prophet:0.1.3`
    - Entrypoint: `/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf`
+4. (Opcional, mas recomendado) Configurar o **Daytona Preview Proxy** para remover o aviso de segurança nos previews:
+   - Defina `DAYTONA_PROXY_ORIGIN` com o domínio público que irá servir os previews (`https://preview.suaempresa.com`, por exemplo).
+   - Ajuste `DAYTONA_PREVIEW_PATH_PREFIX` se quiser usar um prefixo diferente de `/preview`.
+   - Os cabeçalhos automáticos podem ser controlados via `DAYTONA_PREVIEW_SKIP_WARNING` (default `true`) e `DAYTONA_PREVIEW_DISABLE_CORS` (default `false`).
+   - Use `DAYTONA_PREVIEW_TOKEN_TTL` para definir por quantos segundos o backend deve reutilizar tokens de preview emitidos pelo Daytona (padrão `900`).
+   - Esses valores são aplicados pelo backend quando o proxy está ativo e alinham-se ao guia oficial de Customer Proxy da Daytona.
+   - No frontend, configure `NEXT_PUBLIC_DAYTONA_PREVIEW_BASE_URL` apontando para o mesmo domínio + prefixo do proxy (ex.: `https://preview.suaempresa.com/preview`). O setup local já preenche `http://localhost:8000/preview`.
 
 ### 5. Supabase Cron Configuration
 

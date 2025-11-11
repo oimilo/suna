@@ -536,17 +536,18 @@ export function GetProjectStructureView({
   }, []);
 
   const handleFileClick = useCallback(async (filePath: string) => {
-    if (!project?.sandbox?.sandbox_url || !projectData) return;
+    if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !projectData) return;
     
     setSelectedFile(filePath);
     setLoadingFile(true);
     setFileContent('');
 
     try {
-      const fileUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        `${projectData.projectName}/${filePath}`
-      );
+      const fileUrl = constructHtmlPreviewUrl({
+        sandboxId: project?.sandbox?.id,
+        sandboxUrl: project?.sandbox?.sandbox_url,
+        filePath: `${projectData.projectName}/${filePath}`,
+      });
 
       if (fileUrl) {
         const response = await fetch(fileUrl);
@@ -568,12 +569,14 @@ export function GetProjectStructureView({
   }, [project, projectData]);
 
   const isHtmlFile = selectedFile?.endsWith('.html');
-  const previewUrl = isHtmlFile && project?.sandbox?.sandbox_url && projectData
-    ? constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url,
-        `${projectData.projectName}/${selectedFile}`
-      )
-    : undefined;
+  const previewUrl =
+    isHtmlFile && projectData
+      ? constructHtmlPreviewUrl({
+          sandboxId: project?.sandbox?.id,
+          sandboxUrl: project?.sandbox?.sandbox_url,
+          filePath: `${projectData.projectName}/${selectedFile}`,
+        })
+      : undefined;
 
   const language = selectedFile ? getLanguageFromFileName(selectedFile) : 'plaintext';
 

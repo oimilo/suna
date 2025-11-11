@@ -129,15 +129,15 @@ export function DocsToolView({
 
   const handleExport = useCallback(async (format: ExportFormat | 'google-docs') => {
     if (format === 'google-docs') {
-      if (!project?.sandbox?.sandbox_url || !data?.document?.path) {
-        console.error('Missing sandbox URL or document path for Google Docs export');
+      if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !data?.document?.path) {
+        console.error('Missing sandbox reference or document path for Google Docs export');
         return;
       }
       
       setIsExporting(true);
       try {
         const result = await handleGoogleDocsUpload(
-          project.sandbox.sandbox_url,
+          { sandbox_url: project?.sandbox?.sandbox_url, id: project?.sandbox?.id },
           data.document.path
         );
         if (result?.redirected_to_auth) {

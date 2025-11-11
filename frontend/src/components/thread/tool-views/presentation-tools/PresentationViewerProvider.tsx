@@ -3,7 +3,7 @@ import { usePresentationViewer } from '@/hooks/files';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 
 interface PresentationViewerContextType {
-  openPresentation: (presentationName: string, sandboxUrl: string, initialSlide?: number) => void;
+  openPresentation: (presentationName: string, sandboxUrl: string, sandboxId?: string, initialSlide?: number) => void;
   closePresentation: () => void;
 }
 
@@ -20,6 +20,7 @@ export function PresentationViewerProvider({ children }: { children: React.React
         onClose={closePresentation}
         presentationName={viewerState.presentationName}
         sandboxUrl={viewerState.sandboxUrl}
+        sandboxId={viewerState.sandboxId}
         initialSlide={viewerState.initialSlide}
       />
     </PresentationViewerContext.Provider>
