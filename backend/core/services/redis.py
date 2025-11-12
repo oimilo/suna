@@ -13,7 +13,8 @@ _initialized = False
 _init_lock = asyncio.Lock()
 
 # Constants
-REDIS_KEY_TTL = 3600 * 24  # 24 hour TTL as safety mechanism
+# Shorter TTL keeps transient locks/heartbeats from piling up and slowing SCAN/EVALSHA calls.
+REDIS_KEY_TTL = 3600 * 4  # 4 hour TTL as safety mechanism
 
 
 def initialize():
