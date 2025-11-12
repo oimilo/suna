@@ -38,17 +38,17 @@ class XMLToolParser:
     
     # Regex patterns for extracting XML blocks
     FUNCTION_CALLS_PATTERN = re.compile(
-        r'<function_calls>(.*?)</function_calls>',
+        r'<function_calls\b[^>]*>(.*?)</function_calls\s*>',
         re.DOTALL | re.IGNORECASE
     )
     
     INVOKE_PATTERN = re.compile(
-        r'<invoke\s+name=["\']([^"\']+)["\']>(.*?)</invoke>',
+        r'<invoke\b[^>]*name=["\']([^"\']+)["\'][^>]*>(.*?)</invoke\s*>',
         re.DOTALL | re.IGNORECASE
     )
     
     PARAMETER_PATTERN = re.compile(
-        r'<parameter\s+name=["\']([^"\']+)["\']>(.*?)</parameter>',
+        r'<parameter\b[^>]*name=["\']([^"\']+)["\'][^>]*>(.*?)</parameter\s*>',
         re.DOTALL | re.IGNORECASE
     )
     
@@ -122,7 +122,7 @@ class XMLToolParser:
         
         # Extract the raw XML for this specific invoke
         invoke_pattern = re.compile(
-            rf'<invoke\s+name=["\']{re.escape(function_name)}["\']>.*?</invoke>',
+            rf'<invoke\b[^>]*name=["\']{re.escape(function_name)}["\'][^>]*>.*?</invoke\s*>',
             re.DOTALL | re.IGNORECASE
         )
         raw_xml_match = invoke_pattern.search(full_block)
