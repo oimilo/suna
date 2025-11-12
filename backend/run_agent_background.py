@@ -338,8 +338,8 @@ async def _cleanup_redis_run_lock(agent_run_id: str):
     except Exception as e:
         logger.warning(f"Failed to clean up Redis run lock key {run_lock_key}: {str(e)}")
 
-# TTL for Redis response lists (24 hours)
-REDIS_RESPONSE_LIST_TTL = 3600 * 24
+# TTL for Redis response lists (shorter to reduce lingering large payloads)
+REDIS_RESPONSE_LIST_TTL = 3600 * 6
 
 async def _cleanup_redis_response_list(agent_run_id: str):
     """Set TTL on the Redis response list."""
