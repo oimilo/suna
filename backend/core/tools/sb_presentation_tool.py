@@ -105,6 +105,73 @@ class SandboxPresentationTool(SandboxToolsBase):
         metadata_path = f"{presentation_path}/metadata.json"
         await self.sandbox.fs.upload_file(json.dumps(metadata, indent=2).encode(), metadata_path)
 
+    def _extract_slide_title(self, slide_html: Optional[str]) -> Optional[str]:
+        """Extract a human-friendly title from slide HTML content"""
+        if not slide_html:
+            return None
+
+        # Prefer the <title> tag if available
+        title_match = re.search(r'<title[^>]*>(.*?)</title>', slide_html, re.IGNORECASE | re.DOTALL)
+        if title_match:
+            extracted = re.sub(r'\s+', ' ', title_match.group(1)).strip()
+            if extracted:
+                return extracted
+
+        # Fallback to the first heading tag (h1/h2)
+        heading_match = re.search(r'<h[12][^>]*>(.*?)</h[12]>', slide_html, re.IGNORECASE | re.DOTALL)
+        if heading_match:
+            extracted = re.sub(r'\s+', ' ', heading_match.group(1)).strip()
+            if extracted:
+                return extracted
+
+        return None
+
+    async def ensure_slide_metadata(
+        self,
+        presentation_name: str,
+        slide_number: int,
+        slide_filename: str,
+        slide_html: Optional[str] = None,
+        presentation_title: Optional[str] = None,
+    ) -> Dict:
+        """Ensure slide metadata exists and is up to date for a given slide"""
+        await self._ensure_sandbox()
+        safe_name, presentation_path = await self._ensure_presentation_dir(presentation_name)
+
+        metadata = await self._load_presentation_metadata(presentation_path)
+        metadata["presentation_name"] = presentation_name
+
+        if presentation_title:
+            metadata["title"] = presentation_title
+
+        slides = metadata.setdefault("slides", {})
+        slide_key = str(slide_number)
+        existing_entry = slides.get(slide_key, {})
+
+        created_at = existing_entry.get("created_at") or datetime.now().isoformat()
+        title = existing_entry.get("title")
+
+        extracted_title = self._extract_slide_title(slide_html)
+        if extracted_title:
+            title = extracted_title
+
+        if not title:
+            title = presentation_title or existing_entry.get("filename") or f"Slide {slide_number}"
+
+        normalized_filename = slide_filename or existing_entry.get("filename") or f"slide_{slide_number:02d}.html"
+
+        slides[slide_key] = {
+            "title": title,
+            "filename": normalized_filename,
+            "file_path": f"{self.presentations_dir}/{safe_name}/{normalized_filename}",
+            "preview_url": f"/workspace/{self.presentations_dir}/{safe_name}/{normalized_filename}",
+            "created_at": created_at,
+            "updated_at": datetime.now().isoformat(),
+        }
+
+        await self._save_presentation_metadata(presentation_path, metadata)
+        return slides[slide_key]
+
     def _load_template_metadata(self, template_name: str) -> Dict:
         """Load metadata from a template on the backend filesystem"""
         metadata_path = os.path.join(self.templates_dir, template_name, "metadata.json")

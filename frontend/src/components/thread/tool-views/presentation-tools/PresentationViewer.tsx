@@ -39,6 +39,7 @@ import { LoadingState } from '../shared/LoadingState';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 import { DownloadFormat } from '../utils/presentation-utils';
 import posthog from 'posthog-js';
+import { captureClientException } from '@/lib/monitoring/sentry';
 
 interface SlideMetadata {
   title: string;
@@ -89,10 +90,11 @@ export function PresentationViewer({
   // Extract presentation info from tool data
   const { toolResult } = extractToolData(toolContent);
   let extractedPresentationName: string | undefined;
-  let extractedPresentationPath: string | undefined;
   let currentSlideNumber: number | undefined;
-  let presentationTitle: string | undefined;
+  let presentationTitleFromOutput: string | undefined;
   let toolExecutionError: string | undefined;
+  let fallbackAttachments: string[] = [];
+  let fallbackPresentationTitle: string | undefined;
 
   if (toolResult && toolResult.toolOutput && toolResult.toolOutput !== 'STREAMING') {
     try {
@@ -122,9 +124,18 @@ export function PresentationViewer({
       // Only extract data if we have a valid parsed object
       if (output && typeof output === 'object') {
         extractedPresentationName = output.presentation_name;
-        extractedPresentationPath = output.presentation_path;
         currentSlideNumber = output.slide_number;
-        presentationTitle = output.presentation_title || output.title;
+        presentationTitleFromOutput = output.presentation_title || output.title;
+        fallbackPresentationTitle = presentationTitleFromOutput || fallbackPresentationTitle;
+
+        if (Array.isArray(output.attachments)) {
+          fallbackAttachments = output.attachments;
+        } else if (typeof output.attachments === 'string') {
+          fallbackAttachments = output.attachments
+            .split(',')
+            .map((item: string) => item.trim())
+            .filter((item: string) => item.length > 0);
+        }
       }
     } catch (e) {
       console.error('Failed to process tool output:', e);
@@ -152,7 +163,7 @@ export function PresentationViewer({
     
     let metadataUrl: string | undefined;
     let lastMetadataRequestUrl: string | undefined;
-
+    
     try {
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
@@ -244,6 +255,19 @@ export function PresentationViewer({
           errorMessage,
         });
       }
+
+      void captureClientException(err, {
+        tags: {
+          feature: 'presentation-viewer',
+        },
+        extra: {
+          sandboxId: project?.sandbox?.id ?? null,
+          presentationName: extractedPresentationName ?? null,
+          retryAttempts: retryCount + 1,
+          metadataUrl: metadataUrl ?? null,
+          lastRequestUrl: lastMetadataRequestUrl ?? null,
+        },
+      });
       
       // Start background retry every 10 seconds
       if (!backgroundRetryInterval) {
@@ -288,13 +312,62 @@ export function PresentationViewer({
     }
   }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide]);
 
-  const slides = metadata ? Object.entries(metadata.slides)
+  const metadataSlides = metadata ? Object.entries(metadata.slides)
       .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
     .sort((a, b) => a.number - b.number) : [];
 
+  const fallbackSlides = !metadata
+    ? fallbackAttachments.map((attachment, index) => {
+        const normalizedPath = attachment
+          .replace(/^\/workspace\//, '')
+          .replace(/^\.\/+/, '')
+          .trim();
+        const filename =
+          normalizedPath.split('/').pop() ||
+          `slide_${String(index + 1).padStart(2, '0')}.html`;
+        const inferredTitle = filename
+          .replace(/\.[^.]+$/, '')
+          .replace(/[_-]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const previewPath = normalizedPath.startsWith('presentations/')
+          ? `/workspace/${normalizedPath}`
+          : `/workspace/${normalizedPath}`;
+
+        return {
+          number: index + 1,
+          title: inferredTitle || `Slide ${index + 1}`,
+          filename,
+          file_path: normalizedPath,
+          preview_url: previewPath,
+          created_at: new Date().toISOString(),
+        };
+      })
+    : [];
+
+  const combinedSlides =
+    metadata && metadataSlides.length > 0 ? metadataSlides : fallbackSlides;
+
+  const resolvedPresentationTitle =
+    metadata?.title ||
+    metadata?.presentation_name ||
+    fallbackPresentationTitle ||
+    presentationTitleFromOutput ||
+    extractedPresentationName ||
+    toolTitle;
+
+  const hasFallbackSlides = !metadata && fallbackSlides.length > 0;
+  const shouldShowErrorState =
+    !!toolExecutionError || (!!error && !hasFallbackSlides);
+
   // Additional effect to scroll when slides are actually rendered
   useEffect(() => {
-    if (slides.length > 0 && currentSlideNumber && metadata && !hasScrolledToCurrentSlide) {
+    if (
+      combinedSlides.length > 0 &&
+      currentSlideNumber &&
+    metadata &&
+      !hasScrolledToCurrentSlide
+    ) {
       // Extra delay to ensure DOM is fully rendered
       const timer = setTimeout(() => {
         scrollToCurrentSlide(100);
@@ -303,19 +376,19 @@ export function PresentationViewer({
 
       return () => clearTimeout(timer);
     }
-  }, [slides.length, currentSlideNumber, metadata, hasScrolledToCurrentSlide]);
+  }, [combinedSlides.length, currentSlideNumber, metadata, hasScrolledToCurrentSlide]);
 
   // Scroll-based slide detection with proper edge handling
   useEffect(() => {
-    if (!slides.length) return;
+    if (!metadataSlides.length) return;
 
     // Initialize with first slide
-    setVisibleSlide(slides[0].number);
+    setVisibleSlide(metadataSlides[0].number);
 
     const handleScroll = () => {
       
       const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-      if (!scrollArea || slides.length === 0) return;
+      if (!scrollArea || metadataSlides.length === 0) return;
 
       const { scrollTop, scrollHeight, clientHeight } = scrollArea;
       const scrollViewportRect = scrollArea.getBoundingClientRect();
@@ -323,21 +396,21 @@ export function PresentationViewer({
 
       // Check if we're at the very top (first slide)
       if (scrollTop <= 10) {
-        setVisibleSlide(slides[0].number);
+        setVisibleSlide(metadataSlides[0].number);
         return;
       }
 
       // Check if we're at the very bottom (last slide)
       if (scrollTop + clientHeight >= scrollHeight - 10) {
-        setVisibleSlide(slides[slides.length - 1].number);
+        setVisibleSlide(metadataSlides[metadataSlides.length - 1].number);
         return;
       }
 
       // For middle slides, find the slide closest to the viewport center
-      let closestSlide = slides[0];
+      let closestSlide = metadataSlides[0];
       let smallestDistance = Infinity;
 
-      slides.forEach((slide) => {
+      metadataSlides.forEach((slide) => {
         const slideElement = document.getElementById(`slide-${slide.number}`);
         if (!slideElement) return;
 
@@ -378,7 +451,7 @@ export function PresentationViewer({
         scrollArea.removeEventListener('scroll', debouncedHandleScroll);
       }
     };
-  }, [slides]);
+  }, [metadataSlides]);
 
   // Helper function to scroll to current slide
   const scrollToCurrentSlide = (delay: number = 200) => {
@@ -575,20 +648,25 @@ export function PresentationViewer({
             </div>
             <div>
               <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                {metadata?.title || metadata?.presentation_name || toolTitle}
+                {resolvedPresentationTitle}
               </CardTitle>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Export actions */}
-            {metadata && slides.length > 0 && !isStreaming && (
+            {metadata && metadataSlides.length > 0 && !isStreaming && (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setFullScreenInitialSlide(visibleSlide || currentSlideNumber || slides[0]?.number || 1);
+                    setFullScreenInitialSlide(
+                      visibleSlide ||
+                        currentSlideNumber ||
+                        metadataSlides[0]?.number ||
+                        1,
+                    );
                     setIsFullScreenOpen(true);
                   }}
                   className="h-8 w-8 p-0"
@@ -675,7 +753,7 @@ export function PresentationViewer({
             filePath={retryAttempt > 0 ? `Retrying... (attempt ${retryAttempt + 1})` : "Loading slides..."}
             showProgress={true}
           />
-        ) : error || toolExecutionError || !metadata ? (
+        ) : shouldShowErrorState ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-rose-100 to-rose-50 shadow-inner dark:from-rose-800/40 dark:to-rose-900/60">
               <AlertTriangle className="h-10 w-10 text-rose-400 dark:text-rose-600" />
@@ -726,7 +804,7 @@ export function PresentationViewer({
               </div>
             )}
           </div>
-        ) : slides.length === 0 ? (
+        ) : combinedSlides.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60">
               <Presentation className="h-10 w-10 text-blue-400 dark:text-blue-600" />
@@ -741,7 +819,15 @@ export function PresentationViewer({
         ) : (
           <ScrollArea className="h-full">
             <div className="space-y-4 p-4">
-              {slides.map((slide) => (
+              {!metadata && hasFallbackSlides && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="text-xs leading-relaxed">
+                    Não foi possível carregar os metadados da apresentação. Exibindo visualização diretamente a partir dos arquivos anexados.
+                  </span>
+                </div>
+              )}
+              {combinedSlides.map((slide) => (
                 <div 
                   key={slide.number} 
                   id={`slide-${slide.number}`} 
@@ -795,9 +881,9 @@ export function PresentationViewer({
 
       <div className="px-4 py-2 h-9 bg-muted/20 border-t border-border/40 flex justify-between items-center">
         <div className="text-xs text-muted-foreground">
-          {slides.length > 0 && visibleSlide && (
+          {combinedSlides.length > 0 && visibleSlide && (
             <span className="font-mono">
-              {visibleSlide}/{slides.length}
+              {visibleSlide}/{combinedSlides.length}
             </span>
           )}
         </div>
@@ -819,7 +905,13 @@ export function PresentationViewer({
         }}
         presentationName={extractedPresentationName}
         sandboxUrl={project?.sandbox?.sandbox_url}
-        initialSlide={fullScreenInitialSlide || visibleSlide || currentSlideNumber || slides[0]?.number || 1}
+        initialSlide={
+          fullScreenInitialSlide ||
+          visibleSlide ||
+          currentSlideNumber ||
+          combinedSlides[0]?.number ||
+          1
+        }
       />
     </Card>
   );
