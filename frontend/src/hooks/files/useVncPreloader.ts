@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Project } from '@/lib/api/projects';
+import { buildSandboxProxyUrl } from '@/lib/utils/url';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -17,8 +17,14 @@ interface VncPreloaderResult {
   preloadedIframe: HTMLIFrameElement | null;
 }
 
+type SandboxPreviewInfo = {
+  id?: string;
+  vnc_preview?: string;
+  pass?: string;
+};
+
 export function useVncPreloader(
-  sandbox: { vnc_preview?: string; pass?: string } | null, 
+  sandbox: SandboxPreviewInfo | null, 
   options: VncPreloaderOptions = {}
 ): VncPreloaderResult {
   const { maxRetries = 5, initialDelay = 1000, timeoutMs = 5000 } = options;
@@ -113,14 +119,32 @@ export function useVncPreloader(
     document.body.appendChild(iframe);
   }, [status, retryCount, maxRetries, timeoutMs]);
 
+  const resolveVncUrl = useCallback((): string | undefined => {
+    if (!sandbox?.vnc_preview || !sandbox?.pass) {
+      return undefined;
+    }
+
+    const base =
+      buildSandboxProxyUrl({
+        sandboxId: sandbox.id,
+        sandboxUrl: sandbox.vnc_preview,
+      }) ?? sandbox.vnc_preview;
+
+    const normalizedBase = base.replace(/\/$/, '');
+
+    return `${normalizedBase}/vnc_lite.html?password=${encodeURIComponent(
+      sandbox.pass,
+    )}&autoconnect=true&scale=local`;
+  }, [sandbox?.id, sandbox?.vnc_preview, sandbox?.pass]);
+
   const retry = useCallback(() => {
-    if (sandbox?.vnc_preview && sandbox?.pass) {
-      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    const vncUrl = resolveVncUrl();
+    if (vncUrl) {
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
     }
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
+  }, [resolveVncUrl, startPreloading]);
 
   useEffect(() => {
     // Reset status when sandbox changes
@@ -135,7 +159,10 @@ export function useVncPreloader(
       return;
     }
 
-    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    const vncUrl = resolveVncUrl();
+    if (!vncUrl) {
+      return;
+    }
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -162,7 +189,7 @@ export function useVncPreloader(
       
       isRetryingRef.current = false;
     };
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
+  }, [sandbox?.vnc_preview, sandbox?.pass, resolveVncUrl, startPreloading, initialDelay, status]);
 
   return {
     status,
