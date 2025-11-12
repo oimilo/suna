@@ -211,7 +211,7 @@ def _should_refresh_preview_token(sandbox_info: Dict[str, Any]) -> bool:
     ttl_seconds = config.DAYTONA_PREVIEW_TOKEN_TTL
     if not ttl_seconds:
         return False
-
+    preview_token = sandbox_info.get("preview_token") or sandbox_info.get("token")
     generated_raw = sandbox_info.get("preview_token_generated_at")
     if not preview_token:
         return generated_raw is None
