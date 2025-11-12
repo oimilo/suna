@@ -25,7 +25,7 @@ class WorkspaceDirMiddleware(BaseHTTPMiddleware):
 app = FastAPI()
 app.add_middleware(WorkspaceDirMiddleware)
 
-# Include routers
+# Include routers (registered before static mount to ensure POST endpoints stay reachable)
 app.include_router(pdf_router)
 app.include_router(editor_router)
 app.include_router(pptx_router)

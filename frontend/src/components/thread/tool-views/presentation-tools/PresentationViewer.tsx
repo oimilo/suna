@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
@@ -36,6 +38,7 @@ import { CodeBlockCode } from '@/components/ui/code-block';
 import { LoadingState } from '../shared/LoadingState';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 import { DownloadFormat } from '../utils/presentation-utils';
+import posthog from 'posthog-js';
 
 interface SlideMetadata {
   title: string;
@@ -147,11 +150,14 @@ export function PresentationViewer({
     setError(null);
     setRetryAttempt(retryCount);
     
+    let metadataUrl: string | undefined;
+    let lastMetadataRequestUrl: string | undefined;
+
     try {
       // Sanitize the presentation name to match backend directory creation
       const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
       
-      const metadataUrl =
+      const resolvedMetadataUrl =
         constructHtmlPreviewUrl({
           sandboxId: project?.sandbox?.id,
           sandboxUrl: project?.sandbox?.sandbox_url,
@@ -161,12 +167,15 @@ export function PresentationViewer({
           ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/presentations/${sanitizedPresentationName}/metadata.json`
           : undefined);
 
-      if (!metadataUrl) {
+      if (!resolvedMetadataUrl) {
         throw new Error('Não foi possível construir a URL de metadata da apresentação.');
       }
+
+      metadataUrl = resolvedMetadataUrl;
       
       // Add cache-busting parameter to ensure fresh data
-      const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
+      const urlWithCacheBust = `${resolvedMetadataUrl}?t=${Date.now()}`;
+      lastMetadataRequestUrl = urlWithCacheBust;
       
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
@@ -211,6 +220,30 @@ export function PresentationViewer({
       // All retries exhausted, set error and start background retry
       setError('Failed to load presentation metadata after multiple attempts');
       setIsLoadingMetadata(false);
+
+      if (typeof window !== 'undefined' && typeof posthog?.capture === 'function') {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : (() => {
+                  try {
+                    return JSON.stringify(err);
+                  } catch {
+                    return 'Unknown error';
+                  }
+                })();
+
+        posthog.capture('presentation_metadata_fetch_failed', {
+          sandboxId: project?.sandbox?.id ?? null,
+          presentationName: extractedPresentationName ?? null,
+          retryAttempts: retryCount + 1,
+          metadataUrl: metadataUrl ?? null,
+          lastRequestUrl: lastMetadataRequestUrl ?? null,
+          errorMessage,
+        });
+      }
       
       // Start background retry every 10 seconds
       if (!backgroundRetryInterval) {
