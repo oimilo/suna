@@ -204,33 +204,70 @@ class TrialService:
         if not TRIAL_ENABLED:
             # When trials are disabled, give free tier immediately instead of rejecting
             logger.info(f"[TRIAL] Trials disabled - giving free tier immediately for account {account_id}")
-            from .free_tier_service import free_tier_service
             
-            result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
-            
-            if not result.get('success'):
-                logger.error(f"[TRIAL] Failed to give free tier to {account_id}: {result.get('error')}")
-                raise HTTPException(status_code=500, detail=result.get('error') or "Failed to activate free plan")
-            
-            # Record trial history
             try:
-                await client.from_('trial_history').upsert({
+                # Check if account already has free tier
+                account_result = await client.from_('credit_accounts').select(
+                    'tier, balance'
+                ).eq('account_id', account_id).execute()
+                
+                if account_result.data and len(account_result.data) > 0:
+                    current_tier = account_result.data[0].get('tier')
+                    if current_tier == 'free':
+                        logger.info(f"[TRIAL] Account {account_id} already has free tier")
+                        return {
+                            'checkout_url': success_url,
+                            'fe_checkout_url': success_url,
+                            'session_id': None,
+                            'client_secret': None,
+                        }
+                
+                # Give free tier directly without Stripe
+                from .config import FREE_TIER_INITIAL_CREDITS
+                
+                # Update credit account to free tier
+                await client.from_('credit_accounts').upsert({
                     'account_id': account_id,
-                    'started_at': datetime.now(timezone.utc).isoformat(),
-                    'ended_at': None,
-                    'converted_to_paid': False,
-                    'status': 'converted'
+                    'tier': 'free',
+                    'balance': float(FREE_TIER_INITIAL_CREDITS),
+                    'non_expiring_credits': float(FREE_TIER_INITIAL_CREDITS),
+                    'expiring_credits': 0.00,
+                    'trial_status': 'none',
+                    'last_grant_date': datetime.now(timezone.utc).isoformat()
                 }, on_conflict='account_id').execute()
+                
+                # Add credits to ledger
+                await credit_manager.add_credits(
+                    account_id=account_id,
+                    amount=FREE_TIER_INITIAL_CREDITS,
+                    is_expiring=False,
+                    description='Welcome to Prophet! Free tier initial credits',
+                    type='tier_grant'
+                )
+                
+                # Record trial history
+                try:
+                    await client.from_('trial_history').upsert({
+                        'account_id': account_id,
+                        'started_at': datetime.now(timezone.utc).isoformat(),
+                        'ended_at': None,
+                        'converted_to_paid': False,
+                        'status': 'converted'
+                    }, on_conflict='account_id').execute()
+                except Exception as e:
+                    logger.warning(f"[TRIAL] Failed to record trial history: {e}")
+                
+                logger.info(f"[TRIAL] ✅ Successfully gave free tier to account {account_id}")
+                return {
+                    'checkout_url': success_url,  # Redirect to success URL
+                    'fe_checkout_url': success_url,
+                    'session_id': None,
+                    'client_secret': None,
+                }
+                
             except Exception as e:
-                logger.warning(f"[TRIAL] Failed to record trial history: {e}")
-            
-            logger.info(f"[TRIAL] ✅ Successfully gave free tier to account {account_id}")
-            return {
-                'checkout_url': success_url,  # Redirect to success URL
-                'fe_checkout_url': success_url,
-                'session_id': result.get('subscription_id'),
-                'client_secret': None,
-            }
+                logger.error(f"[TRIAL] Failed to give free tier to {account_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to activate free plan: {str(e)}")
         
         # Check if trial history already exists
         trial_history_result = await client.from_('trial_history')\
