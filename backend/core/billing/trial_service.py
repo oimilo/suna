@@ -202,8 +202,35 @@ class TrialService:
         logger.info(f"[TRIAL SECURITY] Trial activation attempt for account {account_id}")
         
         if not TRIAL_ENABLED:
-            logger.warning(f"[TRIAL SECURITY] Trial attempt rejected - trials disabled for account {account_id}")
-            raise HTTPException(status_code=400, detail="Trials are not currently enabled")
+            # When trials are disabled, give free tier immediately instead of rejecting
+            logger.info(f"[TRIAL] Trials disabled - giving free tier immediately for account {account_id}")
+            from .free_tier_service import free_tier_service
+            
+            result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
+            
+            if not result.get('success'):
+                logger.error(f"[TRIAL] Failed to give free tier to {account_id}: {result.get('error')}")
+                raise HTTPException(status_code=500, detail=result.get('error') or "Failed to activate free plan")
+            
+            # Record trial history
+            try:
+                await client.from_('trial_history').upsert({
+                    'account_id': account_id,
+                    'started_at': datetime.now(timezone.utc).isoformat(),
+                    'ended_at': None,
+                    'converted_to_paid': False,
+                    'status': 'converted'
+                }, on_conflict='account_id').execute()
+            except Exception as e:
+                logger.warning(f"[TRIAL] Failed to record trial history: {e}")
+            
+            logger.info(f"[TRIAL] ✅ Successfully gave free tier to account {account_id}")
+            return {
+                'checkout_url': success_url,  # Redirect to success URL
+                'fe_checkout_url': success_url,
+                'session_id': result.get('subscription_id'),
+                'client_secret': None,
+            }
         
         # Check if trial history already exists
         trial_history_result = await client.from_('trial_history')\
