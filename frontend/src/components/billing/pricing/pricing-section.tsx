@@ -27,7 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { SubscriptionInfo } from '@/lib/api/billing';
 import { createCheckoutSession, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse } from '@/lib/api/billing';
 import { toast } from 'sonner';
-import { isLocalMode } from '@/lib/config';
+import { config, isLocalMode } from '@/lib/config';
 import { useSubscription, useScheduleDowngrade } from '@/hooks/billing';
 import { useSubscriptionCommitment } from '@/hooks/billing';
 import { useAuth } from '@/components/AuthProvider';
@@ -336,15 +336,28 @@ function PricingTier({
     (p) => p.tierKey === currentSubscription?.tier_key || p.tierKey === currentSubscription?.tier?.name,
   );
 
+  const normalizeTierKey = (value?: string | null) => value?.toString().toLowerCase();
+  const freeTierKey = config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey.toLowerCase();
+  const tierKeyNormalized = normalizeTierKey(tier.tierKey) || tier.name.toLowerCase();
+  const currentTierKeyNormalized =
+    normalizeTierKey(currentSubscription?.tier_key) ||
+    normalizeTierKey(currentSubscription?.tier?.name) ||
+    normalizeTierKey(currentTier?.tierKey);
+  const isFreeTierCard = tierKeyNormalized === freeTierKey;
+  const userIsOnFreeTier = currentTierKeyNormalized === freeTierKey;
+
   const userPlanName = currentSubscription?.plan_name || 'none';
 
   // Check if this is the current plan - must match BOTH tier_key AND billing period
-  const isSameTier = currentSubscription?.tier_key === tier.tierKey ||
+  const isSameTier =
+    (currentTierKeyNormalized && tierKeyNormalized
+      ? currentTierKeyNormalized === tierKeyNormalized
+      : currentSubscription?.tier_key === tier.tierKey) ||
     currentSubscription?.tier?.name === tier.tierKey;
   const isSameBillingPeriod = currentBillingPeriod === billingPeriod;
-
-  const isCurrentActivePlan = isAuthenticated && isSameTier && isSameBillingPeriod &&
+  const hasActivePaidSubscription = isSameTier && isSameBillingPeriod &&
     currentSubscription?.subscription?.status === 'active';
+  const isCurrentActivePlan = isAuthenticated && (hasActivePaidSubscription || (isFreeTierCard && userIsOnFreeTier));
 
   const isScheduled = isAuthenticated && (currentSubscription as any)?.has_schedule;
   const isScheduledTargetPlan =

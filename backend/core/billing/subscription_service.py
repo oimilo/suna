@@ -233,15 +233,16 @@ class SubscriptionService:
         if is_free_tier:
             logger.info(f"[FREE TIER] Handling free tier selection for account {account_id}")
 
+            # If account already on free tier (with or without Stripe subscription), do nothing
+            if current_tier == 'free':
+                logger.info(f"[FREE TIER] Account {account_id} already has free tier - no change")
+                return {
+                    'status': 'no_change',
+                    'message': 'You are already on the free plan.'
+                }
+
             if existing_subscription_id:
                 logger.info(f"[FREE TIER] Account {account_id} already has subscription {existing_subscription_id}, evaluating downgrade path")
-
-                if current_tier == 'free':
-                    logger.info(f"[FREE TIER] Account {account_id} is already on free tier - no change")
-                    return {
-                        'status': 'no_change',
-                        'message': 'You are already on the free plan.'
-                    }
 
                 # Schedule downgrade to free tier for existing paid subscription
                 try:
@@ -269,8 +270,8 @@ class SubscriptionService:
                     logger.error(f"[FREE TIER] Failed to schedule downgrade for {account_id}: {e}")
                     raise HTTPException(status_code=500, detail=f"Failed to schedule downgrade: {str(e)}")
 
-            # No existing subscription - create free tier without Stripe checkout
-            free_result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
+            # No existing subscription - give free tier directly (idempotent)
+            free_result = await free_tier_service.give_free_tier_directly(account_id)
 
             if not free_result.get('success'):
                 logger.error(f"[FREE TIER] Failed to activate free tier for {account_id}: {free_result.get('error')}")
@@ -280,12 +281,15 @@ class SubscriptionService:
             await Cache.invalidate(f"credit_balance:{account_id}")
             await Cache.invalidate(f"credit_summary:{account_id}")
 
-            logger.info(f"[FREE TIER] Activated free tier subscription {free_result.get('subscription_id')} for {account_id}")
+            message = free_result.get('message') or 'Free plan activated successfully.'
+            status = 'no_change' if 'already' in message.lower() else 'updated'
+
+            logger.info(f"[FREE TIER] Free tier ensured for {account_id} (status={status})")
 
             return {
-                'status': 'updated',
-                'subscription_id': free_result.get('subscription_id'),
-                'message': 'Free plan activated successfully.'
+                'status': status,
+                'subscription_id': None,
+                'message': message
             }
 
         # Always use timestamp in idempotency key to allow retries with different parameters
