@@ -17,11 +17,16 @@ async def initialize_account(
         db = DBConnection()
         await db.initialize()
         
-        result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
+        # Give free tier directly without Stripe (for new signups)
+        result = await free_tier_service.give_free_tier_directly(account_id)
         
         if not result.get('success'):
-            logger.error(f"[SETUP] Failed to create free tier for {account_id}: {result.get('error')}")
-            raise HTTPException(status_code=500, detail="Failed to initialize free tier")
+            logger.warning(f"[SETUP] Failed to give free tier directly, trying with Stripe: {result.get('error')}")
+            # Fallback to Stripe method if direct method fails (for backwards compatibility)
+            result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
+            if not result.get('success'):
+                logger.error(f"[SETUP] Failed to create free tier for {account_id}: {result.get('error')}")
+                raise HTTPException(status_code=500, detail="Failed to initialize free tier")
         
         logger.info(f"[SETUP] Installing Suna agent for {account_id}")
         suna_service = SunaDefaultAgentService(db)
