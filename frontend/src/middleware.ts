@@ -133,15 +133,51 @@ export async function middleware(request: NextRequest) {
 
       const hasUsedTrial = !!trialHistory;
 
-      if (!creditAccount) {
+      // If no credit account or tier is 'none', try to give free tier automatically
+      if (!creditAccount || (creditAccount.tier === 'none' || !creditAccount.tier)) {
+        try {
+          // Call API to ensure free tier (this gives free tier without Stripe)
+          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+          if (backendUrl) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              const response = await fetch(`${backendUrl}/setup/ensure-free-tier`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (response.ok) {
+                // Free tier was given, refresh credit account check
+                const { data: updatedCreditAccount } = await supabase
+                  .from('credit_accounts')
+                  .select('tier, trial_status, trial_ends_at')
+                  .eq('account_id', accountId)
+                  .single();
+                
+                if (updatedCreditAccount && updatedCreditAccount.tier === 'free') {
+                  // User now has free tier, allow access
+                  return supabaseResponse;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error ensuring free tier:', error);
+          // Continue with normal flow if API call fails
+        }
+        
+        // If still no credit account or tier is 'none', redirect based on trial history
         if (hasUsedTrial) {
           const url = request.nextUrl.clone();
           url.pathname = '/subscription';
           return NextResponse.redirect(url);
         } else {
-          const url = request.nextUrl.clone();
-          url.pathname = '/activate-trial';
-          return NextResponse.redirect(url);
+          // For new users without tier, give them free tier access (don't redirect to activate-trial)
+          // activate-trial is only for paid trial with credit card
+          return supabaseResponse;
         }
       }
 
