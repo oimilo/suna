@@ -74,6 +74,7 @@ export type AgentsParams = {
   has_agentpress_tools?: boolean;
   tools?: string;
   content_type?: string;
+  include_config?: boolean;
 };
 
 export type ThreadAgentResponse = {
@@ -170,6 +171,8 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
       throw new Error('You must be logged in to get agents');
     }
 
+    const includeConfig = params.include_config ?? true;
+
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
@@ -181,6 +184,9 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
     if (params.has_agentpress_tools !== undefined) queryParams.append('has_agentpress_tools', params.has_agentpress_tools.toString());
     if (params.tools) queryParams.append('tools', params.tools);
     if (params.content_type) queryParams.append('content_type', params.content_type);
+    if (includeConfig) {
+      queryParams.append('include_config', 'true');
+    }
 
     const url = `${API_URL}/agents${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 

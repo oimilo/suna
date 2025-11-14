@@ -314,7 +314,7 @@ async def convert_presentation_to_pdf(request: ConvertRequest):
         metadata_path = presentation_path / "metadata.json"
         if not metadata_path.exists():
             raise HTTPException(status_code=400, detail=f"metadata.json not found in: {presentation_path}")
-
+        
         # Create converter
         converter = PresentationToPDFAPI(str(presentation_path))
         
