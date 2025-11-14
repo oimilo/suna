@@ -34,8 +34,14 @@ export const useAgentSelectionStore = create<AgentSelectionState>()(
       },
 
       initializeFromAgents: (agents: Agent[], threadAgentId?: string, onAgentSelect?: (agentId: string | undefined) => void) => {
-        if (get().hasInitialized) {
-          return;
+        const state = get();
+        if (state.hasInitialized) {
+          const current = state.selectedAgentId;
+          const currentStillExists = current ? agents.some(agent => agent.agent_id === current) : false;
+          
+          if (currentStillExists) {
+            return;
+          }
         }
 
         let selectedId: string | undefined;

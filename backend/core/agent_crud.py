@@ -454,7 +454,8 @@ async def get_agents(
     has_mcp_tools: Optional[bool] = Query(None, description="Filter by agents with MCP tools"),
     has_agentpress_tools: Optional[bool] = Query(None, description="Filter by agents with AgentPress tools"),
     tools: Optional[str] = Query(None, description="Comma-separated list of tools to filter by"),
-    content_type: Optional[str] = Query(None, description="Content type filter: 'agents', 'templates', or None for agents only")
+    content_type: Optional[str] = Query(None, description="Content type filter: 'agents', 'templates', or None for agents only"),
+    include_config: Optional[bool] = Query(False, description="If true, load agent configurations for each result")
 ):
     try:
         from .agent_service import AgentService, AgentFilters
@@ -487,7 +488,8 @@ async def get_agents(
         paginated_result = await agent_service.get_agents_paginated(
             user_id=user_id,
             pagination_params=pagination_params,
-            filters=filters
+            filters=filters,
+            include_config=include_config or False
         )
         
         agent_responses = []

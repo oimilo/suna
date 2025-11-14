@@ -36,7 +36,8 @@ class AgentService:
         self,
         user_id: str,
         pagination_params: PaginationParams,
-        filters: AgentFilters
+        filters: AgentFilters,
+        include_config: bool = False
     ) -> PaginatedResponse[Dict[str, Any]]:
         try:
             logger.debug(f"Fetching content for user {user_id} with filters: {filters.__dict__}")
@@ -46,7 +47,7 @@ class AgentService:
                 return await self._get_user_templates_paginated(user_id, pagination_params, filters)
             else:
                 # Default behavior: show only agents (content_type == "agents" or None)
-                return await self._get_only_agents_paginated(user_id, pagination_params, filters)
+                return await self._get_only_agents_paginated(user_id, pagination_params, filters, include_config)
                 
         except Exception as e:
             logger.error(f"Error fetching content for user {user_id}: {e}", exc_info=True)
@@ -56,7 +57,8 @@ class AgentService:
         self,
         user_id: str,
         pagination_params: PaginationParams,
-        filters: AgentFilters
+        filters: AgentFilters,
+        include_config: bool = False
     ) -> PaginatedResponse[Dict[str, Any]]:
         """Get only agents (not templates) with pagination"""
         base_query = self._build_base_query(user_id, filters)
@@ -67,6 +69,7 @@ class AgentService:
             filters.has_agentpress_tools is not None or 
             len(filters.tools) > 0 or
             filters.sort_by == "tools_count"
+        ) or include_config
         )
         
         if needs_post_processing:
