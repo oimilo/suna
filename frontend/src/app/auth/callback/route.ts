@@ -44,7 +44,30 @@ export async function GET(request: NextRequest) {
             .eq('account_id', accountData.id)
             .single();
 
-          if (creditAccount && (creditAccount.tier === 'none' || !creditAccount.stripe_subscription_id)) {
+          // If no credit account or tier is 'none', ensure free tier automatically
+          if (!creditAccount || creditAccount.tier === 'none' || !creditAccount.tier) {
+            try {
+              const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+              if (backendUrl && data.session?.access_token) {
+                const response = await fetch(`${backendUrl}/setup/ensure-free-tier`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${data.session.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (response.ok) {
+                  // Free tier was given, continue to dashboard
+                  return NextResponse.redirect(`${baseUrl}${next}`)
+                }
+              }
+            } catch (error) {
+              console.error('Error ensuring free tier in callback:', error);
+              // Continue anyway - middleware will handle it
+            }
+            
+            // If API call failed or no backend URL, redirect to setting-up page
             return NextResponse.redirect(`${baseUrl}/setting-up`);
           }
         }
