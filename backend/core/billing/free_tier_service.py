@@ -1,13 +1,70 @@
 from typing import Dict, Optional
+from datetime import datetime, timezone
 import stripe
 from core.services.supabase import DBConnection
 from core.utils.config import config
 from core.utils.logger import logger
 from .config import FREE_TIER_INITIAL_CREDITS
+from .credit_manager import credit_manager
 
 class FreeTierService:
     def __init__(self):
         self.stripe = stripe
+    
+    async def give_free_tier_directly(self, account_id: str) -> Dict:
+        """
+        Give free tier directly without Stripe subscription.
+        This is used for automatic free tier assignment on login/signup.
+        """
+        db = DBConnection()
+        client = await db.client
+        
+        try:
+            logger.info(f"[FREE TIER] Giving free tier directly to account {account_id}")
+            
+            # Check if account already has free tier
+            account_result = await client.from_('credit_accounts').select(
+                'tier, balance'
+            ).eq('account_id', account_id).execute()
+            
+            if account_result.data and len(account_result.data) > 0:
+                current_tier = account_result.data[0].get('tier')
+                if current_tier == 'free':
+                    logger.info(f"[FREE TIER] Account {account_id} already has free tier")
+                    return {'success': True, 'message': 'Already has free tier'}
+            
+            # Give free tier directly - use upsert to create if doesn't exist
+            await client.from_('credit_accounts').upsert({
+                'account_id': account_id,
+                'tier': 'free',
+                'balance': float(FREE_TIER_INITIAL_CREDITS),
+                'non_expiring_credits': float(FREE_TIER_INITIAL_CREDITS),
+                'expiring_credits': 0.00,
+                'trial_status': 'none',
+                'last_grant_date': datetime.now(timezone.utc).isoformat()
+            }, on_conflict='account_id').execute()
+            
+            # Add credits to ledger
+            try:
+                await credit_manager.add_credits(
+                    account_id=account_id,
+                    amount=FREE_TIER_INITIAL_CREDITS,
+                    is_expiring=False,
+                    description='Welcome to Prophet! Free tier initial credits',
+                    type='tier_grant'
+                )
+            except Exception as credit_error:
+                logger.warning(f"[FREE TIER] Failed to add credits to ledger (non-critical): {credit_error}")
+            
+            logger.info(f"[FREE TIER] ✅ Successfully gave free tier to account {account_id}")
+            return {
+                'success': True,
+                'message': 'Free tier activated successfully'
+            }
+            
+        except Exception as e:
+            logger.error(f"[FREE TIER] Error giving free tier to {account_id}: {e}")
+            return {'success': False, 'error': str(e)}
         
     async def auto_subscribe_to_free_tier(self, account_id: str, email: Optional[str] = None) -> Dict:
         db = DBConnection()
