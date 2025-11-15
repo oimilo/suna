@@ -70,7 +70,6 @@ class AgentService:
             len(filters.tools) > 0 or
             filters.sort_by == "tools_count"
         ) or include_config
-        )
         
         if needs_post_processing:
             return await self._get_agents_with_complex_filtering(
