@@ -1361,10 +1361,68 @@ print(json.dumps(result))
             ToolResult indicating successful presentation delivery
         """
         try:
+            await self._ensure_sandbox()
+            
             # Convert single attachment to list for consistent handling
             if attachments and isinstance(attachments, str):
                 attachments = [attachments]
 
+            # Normalize presentation name - extract from path if presentation_name contains path separators
+            # The presentation_path might be like "presentations/llm_tool_calls" or just "llm_tool_calls"
+            if presentation_name and '/' in presentation_name:
+                # presentation_name is actually a path, extract the name
+                presentation_name = presentation_name.split('/')[-1]
+            elif not presentation_name and presentation_path:
+                # Extract name from presentation_path if presentation_name is not provided
+                clean_path = presentation_path.replace('/workspace/', '').lstrip('/')
+                if '/' in clean_path:
+                    presentation_name = clean_path.split('/')[-1]
+                else:
+                    presentation_name = clean_path
+            elif not presentation_name:
+                # Fallback: generate from title
+                presentation_name = self._sanitize_filename(presentation_title)
+
+            # Ensure presentation directory exists and metadata.json is created/updated
+            safe_name, full_presentation_path = await self._ensure_presentation_dir(presentation_name)
+            
+            # Load or create metadata
+            metadata = await self._load_presentation_metadata(full_presentation_path)
+            
+            # Update metadata with presentation info
+            metadata["presentation_name"] = presentation_name
+            metadata["title"] = presentation_title
+            metadata["description"] = text
+            metadata["slide_count"] = slide_count
+            if presentation_url:
+                metadata["presentation_url"] = presentation_url
+            
+            # Ensure all slides from attachments are in metadata
+            if attachments:
+                for idx, attachment in enumerate(attachments):
+                    # Extract slide number from filename (e.g., slide_01.html -> 1)
+                    slide_match = re.search(r'slide[_\s]*(\d+)', attachment, re.IGNORECASE)
+                    slide_number = int(slide_match.group(1)) if slide_match else (idx + 1)
+                    
+                    # Normalize attachment path
+                    normalized_path = attachment.replace('/workspace/', '').lstrip('/')
+                    filename = os.path.basename(normalized_path)
+                    
+                    # Ensure this slide is in metadata
+                    slide_key = str(slide_number)
+                    if slide_key not in metadata.get("slides", {}):
+                        metadata.setdefault("slides", {})[slide_key] = {
+                            "title": f"Slide {slide_number}",
+                            "filename": filename,
+                            "file_path": normalized_path,
+                            "preview_url": f"/workspace/{normalized_path}",
+                            "created_at": datetime.now().isoformat(),
+                            "updated_at": datetime.now().isoformat(),
+                        }
+            
+            # Save updated metadata
+            await self._save_presentation_metadata(full_presentation_path, metadata)
+            
             # Create a structured response with all presentation data
             result_data = {
                 "presentation_name": presentation_name,
@@ -1379,4 +1437,5 @@ print(json.dumps(result))
                 
             return self.success_response(result_data)
         except Exception as e:
+            logger.error(f"Error presenting presentation: {str(e)}", exc_info=True)
             return self.fail_response(f"Error presenting presentation: {str(e)}")
