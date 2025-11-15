@@ -133,6 +133,40 @@ function PriceDisplay({ price, isCompact }: PriceDisplayProps) {
   );
 }
 
+const parseNumericPrice = (price?: string | null) => {
+  if (!price) return null;
+  const numericPortion = price.replace(/[^0-9.,]/g, '').replace(/\s/g, '');
+  if (!numericPortion) return null;
+
+  const normalised = numericPortion
+    .replace(/\.(?=.*\.)/g, '')
+    .replace(',', '.');
+
+  const parsed = parseFloat(normalised);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatPriceWithReference = (value: number, reference?: string | null) => {
+  if (!reference) {
+    return `$${value}`;
+  }
+
+  const numericMatch = reference.match(/[\d.,]+/);
+  if (!numericMatch) {
+    const currencyMatch = reference.match(/^[^\d]+/);
+    const prefix = currencyMatch ? currencyMatch[0].trim() : reference;
+    const needsSpace = prefix && !prefix.endsWith(' ');
+    return `${prefix}${needsSpace ? ' ' : ''}${value}`;
+  }
+
+  return reference.replace(numericMatch[0], value.toString());
+};
+
+const isZeroPrice = (price?: string | null) => {
+  const numeric = parseNumericPrice(price);
+  return numeric !== null && numeric === 0;
+};
+
 function BillingPeriodToggle({
   billingPeriod,
   setBillingPeriod
@@ -197,17 +231,19 @@ function PricingTier({
 
   // Determine the price to display based on billing period
   const getDisplayPrice = () => {
-    // For $0 plans, always show $0
-    if (tier.price === '$0') {
-      return '$0';
+    if (isZeroPrice(tier.price)) {
+      return tier.price ?? '$0';
     }
 
     if (billingPeriod === 'yearly_commitment') {
       // Calculate the yearly commitment price (15% off regular monthly)
-      const regularPrice = parseFloat(tier.price.slice(1));
-      const discountedPrice = Math.round(regularPrice * 0.85);
-      console.log(`[${tier.name}] Yearly Commitment: $${regularPrice} -> $${discountedPrice}`);
-      return `$${discountedPrice}`;
+      const monthlyValue = parseNumericPrice(tier.price);
+      if (monthlyValue === null) {
+        return tier.price;
+      }
+      const discountedPrice = Math.round(monthlyValue * 0.85);
+      console.log(`[${tier.name}] Yearly Commitment: ${tier.price} -> ${discountedPrice}`);
+      return formatPriceWithReference(discountedPrice, tier.price);
     } else if (billingPeriod === 'yearly' && tier.yearlyPrice) {
       console.log(`[${tier.name}] Yearly: ${tier.yearlyPrice}`);
       return tier.yearlyPrice;
