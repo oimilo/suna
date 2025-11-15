@@ -235,7 +235,6 @@ class AgentService:
                 from core.versioning.version_service import get_version_service
                 version_service = await get_version_service()
                 
-                version_map = {}
                 for agent in agents:
                     version_id = agent.get('current_version_id')
                     if version_id:
@@ -256,6 +255,8 @@ class AgentService:
             except Exception as e:
                 logger.warning(f"Failed to batch load agent versions: {e}")
                 version_map = {}
+
+        return version_map
 
     async def _passes_complex_filters(
         self, 
