@@ -139,10 +139,17 @@ class AgentData:
             if self.version_number is not None:
                 result["current_version"] = {
                     "version_id": self.current_version_id,
+                    "agent_id": self.agent_id,
                     "version_number": self.version_number,
-                    "version_name": self.version_name,
-                    "created_at": self.version_created_at,
-                    "updated_at": self.version_updated_at,
+                    "version_name": self.version_name or "v1",
+                    "system_prompt": self.system_prompt or "",
+                    "model": self.model,
+                    "configured_mcps": self.configured_mcps or [],
+                    "custom_mcps": self.custom_mcps or [],
+                    "agentpress_tools": self.agentpress_tools or {},
+                    "is_active": True,
+                    "created_at": self.version_created_at or self.created_at,
+                    "updated_at": self.version_updated_at or self.updated_at,
                     "created_by": self.version_created_by,
                 }
         else:
