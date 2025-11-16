@@ -110,6 +110,7 @@ export const MarketplaceAgentPreviewDialog: React.FC<MarketplaceAgentPreviewDial
   if (!agent) return null;
 
   const isSunaAgent = agent.is_kortix_team || false;
+  const shouldMaskPrompt = isSunaAgent;
   
   const tools = agent.mcp_requirements || [];
   
@@ -201,11 +202,17 @@ export const MarketplaceAgentPreviewDialog: React.FC<MarketplaceAgentPreviewDial
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <h3 className="text-sm font-medium text-muted-foreground">System Prompt</h3>
                   </div>
-                  <div className="rounded-lg">
-                    <Markdown className="text-xs [&>*]:text-xs [&>*]:opacity-50 [&>*]:leading-relaxed select-text">
-                      {agent.system_prompt}
-                    </Markdown>
-                  </div>
+                  {shouldMaskPrompt ? (
+                    <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                      Prophet's system prompt is managed centrally and isn't shown in previews.
+                    </div>
+                  ) : (
+                    <div className="rounded-lg">
+                      <Markdown className="text-xs [&>*]:text-xs [&>*]:opacity-50 [&>*]:leading-relaxed select-text">
+                        {agent.system_prompt}
+                      </Markdown>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

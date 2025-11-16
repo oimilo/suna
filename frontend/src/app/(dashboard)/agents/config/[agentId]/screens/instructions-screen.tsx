@@ -16,11 +16,15 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
     const updateAgentMutation = useUpdateAgent();
     const [systemPrompt, setSystemPrompt] = useState('');
 
+    const shouldMaskPrompt = Boolean(agent?.metadata?.is_suna_default);
+
     useEffect(() => {
-        if (agent?.system_prompt) {
+        if (!shouldMaskPrompt && agent?.system_prompt) {
             setSystemPrompt(agent.system_prompt);
+        } else if (shouldMaskPrompt) {
+            setSystemPrompt('');
         }
-    }, [agent?.system_prompt]);
+    }, [agent?.system_prompt, shouldMaskPrompt]);
 
     const isSunaAgent = agent?.metadata?.is_suna_default || false;
     const restrictions = agent?.metadata?.restrictions || {};
@@ -67,13 +71,24 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
                     System Prompt
                 </Label>
                 <div className="flex-1 min-h-[500px]">
-                    <ExpandableMarkdownEditor
-                        value={systemPrompt}
-                        onSave={handleSave}
-                        disabled={!isEditable}
-                        placeholder="Define how your agent should behave..."
-                        className="h-full"
-                    />
+                    {shouldMaskPrompt ? (
+                        <div className="h-full rounded-xl border bg-muted/30 flex items-center justify-center text-center p-6">
+                            <div>
+                                <p className="font-medium">Prophet's system prompt is managed centrally.</p>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    Create a custom agent to define and view your own system prompt.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <ExpandableMarkdownEditor
+                            value={systemPrompt}
+                            onSave={handleSave}
+                            disabled={!isEditable}
+                            placeholder="Define how your agent should behave..."
+                            className="h-full"
+                        />
+                    )}
                 </div>
             </div>
         </div>

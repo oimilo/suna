@@ -53,6 +53,7 @@ export function CreateNewAgentToolView({
   );
 
   const toolTitle = getToolTitle(name);
+  const shouldMaskPrompt = Boolean(is_default);
 
   const getEnabledToolsCount = () => {
     if (!agentpress_tools) return 0;
@@ -160,10 +161,16 @@ export function CreateNewAgentToolView({
                     <User className="w-4 h-4" />
                     System Prompt Preview
                   </h4>
-                  <div className="bg-muted/50 rounded-lg p-3 text-xs text-zinc-600 dark:text-zinc-400 font-mono max-h-32 overflow-y-auto">
-                    {system_prompt.substring(0, 200)}
-                    {system_prompt.length > 200 && '...'}
-                  </div>
+                  {shouldMaskPrompt ? (
+                    <div className="bg-muted/30 border rounded-lg p-3 text-xs text-muted-foreground">
+                      This system prompt is managed centrally.
+                    </div>
+                  ) : (
+                    <div className="bg-muted/50 rounded-lg p-3 text-xs text-zinc-600 dark:text-zinc-400 font-mono max-h-32 overflow-y-auto">
+                      {system_prompt.substring(0, 200)}
+                      {system_prompt.length > 200 && '...'}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

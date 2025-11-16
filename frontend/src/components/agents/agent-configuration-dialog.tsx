@@ -164,6 +164,7 @@ export function AgentConfigurationDialog({
   const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isSunaAgent;
   const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isSunaAgent;
   const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isSunaAgent;
+  const shouldMaskPrompt = Boolean(isSunaAgent);
 
   const hasChanges = useMemo(() => {
     return JSON.stringify(formData) !== JSON.stringify(originalFormData);
@@ -644,13 +645,24 @@ export function AgentConfigurationDialog({
                       </Alert>
                     )}
                     <Label className="text-base font-semibold mb-3 block flex-shrink-0">System Prompt</Label>
-                    <ExpandableMarkdownEditor
-                      value={formData.system_prompt}
-                      onSave={handleSystemPromptChange}
-                      disabled={!isSystemPromptEditable}
-                      placeholder="Define how your agent should behave..."
-                      className="flex-1 h-[90%]"
-                    />
+                    {shouldMaskPrompt ? (
+                      <div className="flex-1 rounded-xl border bg-muted/30 p-6 text-center flex items-center justify-center">
+                        <div>
+                          <p className="font-medium">Prophet's system prompt is hidden.</p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Duplicate this agent to customize instructions.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ExpandableMarkdownEditor
+                        value={formData.system_prompt}
+                        onSave={handleSystemPromptChange}
+                        disabled={!isSystemPromptEditable}
+                        placeholder="Define how your agent should behave..."
+                        className="flex-1 h-[90%]"
+                      />
+                    )}
                   </div>
                 </TabsContent>
 
