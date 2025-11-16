@@ -44,6 +44,7 @@ interface FullScreenPresentationViewerProps {
   isOpen: boolean;
   onClose: () => void;
   presentationName?: string;
+  safePresentationName?: string;
   sandboxUrl?: string;
   sandboxId?: string;
   initialSlide?: number;
@@ -53,6 +54,7 @@ export function FullScreenPresentationViewer({
   isOpen,
   onClose,
   presentationName,
+  safePresentationName,
   sandboxUrl,
   sandboxId,
   initialSlide = 1,
@@ -85,24 +87,25 @@ export function FullScreenPresentationViewer({
 
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    if (!presentationName || (!sandboxUrl && !sandboxId)) return;
+    const normalizedName =
+      safePresentationName ||
+      (presentationName ? sanitizeFilename(presentationName) : undefined);
+
+    if (!normalizedName || (!sandboxUrl && !sandboxId)) return;
     
     setIsLoading(true);
     setError(null);
     setRetryAttempt(retryCount);
     
     try {
-      // Sanitize the presentation name to match backend directory creation
-      const sanitizedPresentationName = sanitizeFilename(presentationName);
-      
       const metadataUrl =
         constructHtmlPreviewUrl({
           sandboxId,
           sandboxUrl,
-          filePath: `presentations/${sanitizedPresentationName}/metadata.json`,
+          filePath: `presentations/${normalizedName}/metadata.json`,
         }) ??
         (sandboxUrl
-          ? `${sandboxUrl.replace(/\/$/, '')}/presentations/${sanitizedPresentationName}/metadata.json`
+          ? `${sandboxUrl.replace(/\/$/, '')}/presentations/${normalizedName}/metadata.json`
           : undefined);
 
       if (!metadataUrl) {
@@ -161,7 +164,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [presentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
+  }, [presentationName, safePresentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
