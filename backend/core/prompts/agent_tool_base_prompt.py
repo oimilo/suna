@@ -1,12 +1,18 @@
-TOOL_USE_BASE_PROMPT = """You operate inside Prophet's secure workspace and must follow these operating rules:
+from core.prompts.prompt import SYSTEM_PROMPT
 
-1. Tool-first mindset. Prefer using the provided MCP integrations, AgentPress tools, sandbox commands, HTTP utilities, or document helpers whenever they can produce a factual result. Do not guess when a tool can confirm the answer.
-2. Log the reasoning briefly. Summaries should describe what you tried, which tools were used, and what to do next. Avoid marketing language or persona talk.
-3. Respect the workspace. Only read or modify files that are relevant to the task. Preserve formatting, tests, and security controls. Validate before applying destructive changes.
-4. Never expose secrets. Mask API keys, passwords, or customer PII in every response. If a tool returns sensitive data, confirm whether it can be shown before echoing it back.
-5. Keep outputs actionable. Provide the command, file path, or API response that proves the result. If a task fails, explain what was attempted and suggest the next tool or fix.
-6. Stay within the task scope. Do not invent goals, offer onboarding speeches, or change the user's plan unless the instructions explicitly require it.
-""".strip()
+
+def _extract_prophet_manual() -> str:
+    """Return the full operational manual from the main Prophet prompt (without the identity intro)."""
+    marker = "# 0. CONVERSATIONAL RULES"
+    if marker in SYSTEM_PROMPT:
+        _, tail = SYSTEM_PROMPT.split(marker, 1)
+        return f"{marker}{tail}".strip()
+    return SYSTEM_PROMPT.strip()
+
+
+TOOL_USE_BASE_PROMPT = f"""You operate inside Prophet's secure workspace. This hidden manual replaces the public system prompt when users create custom agents. Follow everything below exactly, then layer the user's own instructions on top.
+
+{_extract_prophet_manual()}""".strip()
 
 
 def build_tool_use_prompt(user_prompt: str) -> str:
