@@ -2,10 +2,14 @@ import { createClient } from "@/lib/supabase/client";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
-export type Agent = {
+type AgentPromptFields = {
+  system_prompt: string;
+  system_prompt_user?: string | null;
+};
+
+export type Agent = AgentPromptFields & {
   agent_id: string;
   name: string;
-  system_prompt: string;
   model?: string | null;
   configured_mcps: Array<{
     name: string;
@@ -122,12 +126,11 @@ export type AgentVersionCreateRequest = {
   description?: string;
 };
 
-export type AgentVersion = {
+export type AgentVersion = AgentPromptFields & {
   version_id: string;
   agent_id: string;
   version_number: number;
   version_name: string;
-  system_prompt: string;
   model?: string;  // Add model field
   configured_mcps: Array<any>;
   custom_mcps: Array<any>;
@@ -138,6 +141,39 @@ export type AgentVersion = {
   created_by?: string;
   change_description?: string;
 };
+
+const getVisibleSystemPrompt = (
+  systemPrompt?: string | null,
+  userPrompt?: string | null
+): string => (userPrompt ?? systemPrompt ?? '') || '';
+
+const normalizeAgentVersion = (
+  version?: AgentVersion | null
+): AgentVersion | null => {
+  if (!version) {
+    return version ?? null;
+  }
+
+  return {
+    ...version,
+    system_prompt: getVisibleSystemPrompt(
+      version.system_prompt,
+      version.system_prompt_user
+    ),
+  };
+};
+
+const normalizeAgent = (agent: Agent): Agent => ({
+  ...agent,
+  system_prompt: getVisibleSystemPrompt(
+    agent.system_prompt,
+    agent.system_prompt_user
+  ),
+  current_version: normalizeAgentVersion(agent.current_version),
+});
+
+const normalizeAgentVersionStrict = (version: AgentVersion): AgentVersion =>
+  normalizeAgentVersion(version)!;
 
 export type AgentUpdateRequest = {
   name?: string;
@@ -203,8 +239,11 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result;
+    const result: AgentsResponse = await response.json();
+    return {
+      ...result,
+      agents: (result.agents ?? []).map(normalizeAgent),
+    };
   } catch (err) {
     console.error('Error fetching agents:', err);
     throw err;
@@ -233,8 +272,8 @@ export const getAgent = async (agentId: string): Promise<Agent> => {
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const agent = await response.json();
-    return agent;
+    const agent: Agent = await response.json();
+    return normalizeAgent(agent);
   } catch (err) {
     console.error('Error fetching agent:', err);
     throw err;
@@ -275,8 +314,8 @@ export const createAgent = async (agentData: AgentCreateRequest): Promise<Agent>
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const agent = await response.json();
-    return agent;
+    const agent: Agent = await response.json();
+    return normalizeAgent(agent);
   } catch (err) {
     console.error('Error creating agent:', err);
     throw err;
@@ -306,8 +345,8 @@ export const updateAgent = async (agentId: string, agentData: AgentUpdateRequest
       throw new Error(errorData.message || `HTTP ${response.status}: {response.statusText}`);
     }
 
-    const agent = await response.json();
-    return agent;
+    const agent: Agent = await response.json();
+    return normalizeAgent(agent);
   } catch (err) {
     console.error('Error updating agent:', err);
     throw err;
@@ -363,8 +402,11 @@ export const getThreadAgent = async (threadId: string): Promise<ThreadAgentRespo
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const agent = await response.json();
-    return agent;
+    const threadAgent: ThreadAgentResponse = await response.json();
+    return {
+      ...threadAgent,
+      agent: threadAgent.agent ? normalizeAgent(threadAgent.agent) : null,
+    };
   } catch (err) {
     console.error('Error fetching thread agent:', err);
     throw err;
@@ -393,8 +435,8 @@ export const getAgentVersions = async (agentId: string): Promise<AgentVersion[]>
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const versions = await response.json();
-    return versions;
+    const versions: AgentVersion[] = await response.json();
+    return versions.map(normalizeAgentVersionStrict);
   } catch (err) {
     console.error('Error fetching agent versions:', err);
     throw err;
@@ -427,8 +469,8 @@ export const createAgentVersion = async (
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const version = await response.json();
-    return version;
+    const version: AgentVersion = await response.json();
+    return normalizeAgentVersionStrict(version);
   } catch (err) {
     console.error('Error creating agent version:', err);
     throw err;
@@ -493,8 +535,8 @@ export const getAgentVersion = async (
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const version = await response.json();
-    return version;
+    const version: AgentVersion = await response.json();
+    return normalizeAgentVersionStrict(version);
   } catch (err) {
     console.error('Error fetching agent version:', err);
     throw err;
@@ -531,8 +573,8 @@ export const updateAgentVersionDetails = async (
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const version = await response.json();
-    return version;
+    const version: AgentVersion = await response.json();
+    return normalizeAgentVersionStrict(version);
   } catch (err) {
     console.error('Error updating version details:', err);
     throw err;
