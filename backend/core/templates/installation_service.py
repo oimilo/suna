@@ -445,7 +445,9 @@ class InstallationService:
                 custom_mcps=custom_mcps,
                 agentpress_tools=agentpress_tools,
                 version_name="v1",
-                change_description="Initial version from template"
+                change_description="Initial version from template",
+                system_prompt_user=system_prompt,
+                apply_tool_base_prompt=True
             )
             
             logger.info(f"Successfully created initial version {version.version_id} for agent {agent_id}")

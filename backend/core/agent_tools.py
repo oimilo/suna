@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Body
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
+from core.config_helper import get_user_visible_system_prompt
 
 from . import core_utils as utils
 from .core_utils import _get_version_service
@@ -182,14 +183,17 @@ async def update_custom_mcp_tools_for_agent(
         from .versioning.version_service import get_version_service
         try:
             version_service = await get_version_service() 
+            user_prompt = get_user_visible_system_prompt(agent_config)
             new_version = await version_service.create_version(
                 agent_id=agent_id,
                 user_id=user_id,
-                system_prompt=agent_config.get('system_prompt', ''),
+                system_prompt=user_prompt,
                 configured_mcps=agent_config.get('tools', {}).get('mcp', []),
                 custom_mcps=custom_mcps,
                 agentpress_tools=agent_config.get('tools', {}).get('agentpress', {}),
-                change_description=f"Updated custom MCP tools for {mcp_type}"
+                change_description=f"Updated custom MCP tools for {mcp_type}",
+                system_prompt_user=user_prompt,
+                apply_tool_base_prompt=True
             )
             logger.debug(f"Created version {new_version.version_id} for custom MCP tools update on agent {agent_id}")
         except Exception as e:
@@ -286,14 +290,17 @@ async def update_agent_custom_mcps(
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             change_description = f"MCP tools update {timestamp}"
             
+            user_prompt = get_user_visible_system_prompt(agent_config)
             new_version = await version_service.create_version(
                 agent_id=agent_id,
                 user_id=user_id,
-                system_prompt=agent_config.get('system_prompt', ''),
+                system_prompt=user_prompt,
                 configured_mcps=agent_config.get('tools', {}).get('mcp', []),
                 custom_mcps=existing_custom_mcps,
                 agentpress_tools=agent_config.get('tools', {}).get('agentpress', {}),
-                change_description=change_description
+                change_description=change_description,
+                system_prompt_user=user_prompt,
+                apply_tool_base_prompt=True
             )
             logger.debug(f"Created version {new_version.version_id} for agent {agent_id}")
             

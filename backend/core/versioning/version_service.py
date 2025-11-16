@@ -7,6 +7,7 @@ from enum import Enum
 
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
+from core.prompts.agent_tool_base_prompt import build_tool_use_prompt
 
 
 class VersionStatus(Enum):
@@ -32,6 +33,7 @@ class AgentVersion:
     created_by: str = ""
     change_description: Optional[str] = None
     previous_version_id: Optional[str] = None
+    system_prompt_user: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -40,6 +42,7 @@ class AgentVersion:
             'version_number': self.version_number,
             'version_name': self.version_name,
             'system_prompt': self.system_prompt,
+            'system_prompt_user': self.system_prompt_user,
             'model': self.model,  # Add model to dict output
             'configured_mcps': self.configured_mcps,
             'custom_mcps': self.custom_mcps,
@@ -157,7 +160,8 @@ class VersionService:
             updated_at=datetime.fromisoformat(row['updated_at'].replace('Z', '+00:00')),
             created_by=row['created_by'],
             change_description=row.get('change_description'),
-            previous_version_id=row.get('previous_version_id')
+            previous_version_id=row.get('previous_version_id'),
+            system_prompt_user=config.get('system_prompt_user')
         )
     
     def _normalize_custom_mcps(self, custom_mcps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -192,7 +196,9 @@ class VersionService:
         agentpress_tools: Dict[str, Any],
         model: Optional[str] = None,
         version_name: Optional[str] = None,
-        change_description: Optional[str] = None
+        change_description: Optional[str] = None,
+        system_prompt_user: Optional[str] = None,
+        apply_tool_base_prompt: bool = False
     ) -> AgentVersion:
         
         logger.debug(f"Creating version for agent {agent_id}")
@@ -233,13 +239,22 @@ class VersionService:
                 triggers.append(trigger_copy)
         
         normalized_custom_mcps = self._normalize_custom_mcps(custom_mcps)
+
+        sanitized_user_prompt = None
+        final_system_prompt = system_prompt or ''
+        if system_prompt_user is not None:
+            sanitized_user_prompt = system_prompt_user.strip()
+            if apply_tool_base_prompt:
+                final_system_prompt = build_tool_use_prompt(sanitized_user_prompt)
+            else:
+                final_system_prompt = sanitized_user_prompt or final_system_prompt
         
         version = AgentVersion(
             version_id=str(uuid4()),
             agent_id=agent_id,
             version_number=version_number,
             version_name=version_name,
-            system_prompt=system_prompt,
+            system_prompt=final_system_prompt,
             model=model,
             configured_mcps=configured_mcps,
             custom_mcps=normalized_custom_mcps,
@@ -249,7 +264,8 @@ class VersionService:
             updated_at=datetime.now(timezone.utc),
             created_by=user_id,
             change_description=change_description,
-            previous_version_id=previous_version_id
+            previous_version_id=previous_version_id,
+            system_prompt_user=sanitized_user_prompt
         )
         
         data = {
@@ -274,6 +290,8 @@ class VersionService:
                 'triggers': triggers
             }
         }
+        if sanitized_user_prompt is not None:
+            data['config']['system_prompt_user'] = sanitized_user_prompt
         
         result = await client.table('agent_versions').insert(data).execute()
         

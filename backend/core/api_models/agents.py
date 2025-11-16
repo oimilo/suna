@@ -43,6 +43,7 @@ class AgentVersionResponse(BaseModel):
     version_number: int
     version_name: str
     system_prompt: str
+    system_prompt_user: Optional[str] = None
     model: Optional[str] = None
     configured_mcps: List[Dict[str, Any]]
     custom_mcps: List[Dict[str, Any]]
