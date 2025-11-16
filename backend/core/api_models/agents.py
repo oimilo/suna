@@ -69,6 +69,7 @@ class AgentResponse(BaseModel):
     name: str
     description: Optional[str] = None
     system_prompt: Optional[str] = None  # Optional for list operations where config not loaded
+    system_prompt_user: Optional[str] = None
     model: Optional[str] = None
     configured_mcps: List[Dict[str, Any]]
     custom_mcps: List[Dict[str, Any]]

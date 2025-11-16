@@ -37,6 +37,7 @@ class AgentData:
     
     # Configuration fields (from version or fallback)
     system_prompt: Optional[str] = None
+    system_prompt_user: Optional[str] = None
     model: Optional[str] = None
     configured_mcps: Optional[list] = None
     custom_mcps: Optional[list] = None
@@ -68,7 +69,7 @@ class AgentData:
                 version_number=self.version_number,
                 version_name=self.version_name or 'v1',
                 system_prompt=self.system_prompt or '',
-                system_prompt_user=self.system_prompt or '',
+                system_prompt_user=self.system_prompt_user if self.system_prompt_user is not None else (self.system_prompt or ''),
                 model=self.model,
                 configured_mcps=self.configured_mcps or [],
                 custom_mcps=self.custom_mcps or [],
@@ -84,6 +85,7 @@ class AgentData:
             name=self.name,
             description=self.description,
             system_prompt=self.system_prompt,
+            system_prompt_user=self.system_prompt_user,
             model=self.model,
             configured_mcps=self.configured_mcps,
             custom_mcps=self.custom_mcps,
@@ -126,6 +128,7 @@ class AgentData:
         if self.config_loaded:
             result.update({
                 "system_prompt": self.system_prompt,
+                "system_prompt_user": self.system_prompt_user,
                 "model": self.model,
                 "configured_mcps": self.configured_mcps,
                 "custom_mcps": self.custom_mcps,
@@ -145,6 +148,7 @@ class AgentData:
                     "version_number": self.version_number,
                     "version_name": self.version_name or "v1",
                     "system_prompt": self.system_prompt or "",
+                        "system_prompt_user": self.system_prompt_user if self.system_prompt_user is not None else (self.system_prompt or ""),
                     "model": self.model,
                     "configured_mcps": self.configured_mcps or [],
                     "custom_mcps": self.custom_mcps or [],
@@ -158,6 +162,7 @@ class AgentData:
             # Indicate config not loaded
             result.update({
                 "system_prompt": None,
+                "system_prompt_user": None,
                 "configured_mcps": [],  # Must be list, not None for Pydantic
                 "custom_mcps": [],      # Must be list, not None for Pydantic  
                 "agentpress_tools": {}, # Must be dict, not None for Pydantic
@@ -352,6 +357,7 @@ class AgentLoader:
         from core.config_helper import _extract_agentpress_tools_for_run
         
         agent.system_prompt = SUNA_CONFIG['system_prompt']
+        agent.system_prompt_user = ""
         agent.model = SUNA_CONFIG['model']
         agent.agentpress_tools = _extract_agentpress_tools_for_run(SUNA_CONFIG['agentpress_tools'])
         agent.centrally_managed = True
@@ -422,6 +428,8 @@ class AgentLoader:
                 config = version_dict['config']
                 tools = config.get('tools', {})
                 
+                user_prompt = config.get('system_prompt_user')
+                agent.system_prompt_user = user_prompt if user_prompt is not None else None
                 agent.system_prompt = get_user_visible_system_prompt(config)
                 agent.model = config.get('model')
                 agent.configured_mcps = tools.get('mcp', [])
@@ -433,6 +441,8 @@ class AgentLoader:
                 agent.triggers = config.get('triggers', [])
             else:
                 # Old format compatibility
+                legacy_user_prompt = version_dict.get('system_prompt_user')
+                agent.system_prompt_user = legacy_user_prompt if legacy_user_prompt is not None else None
                 agent.system_prompt = version_dict.get('system_prompt_user') or version_dict.get('system_prompt', '')
                 agent.model = version_dict.get('model')
                 agent.configured_mcps = version_dict.get('configured_mcps', [])
@@ -461,6 +471,7 @@ class AgentLoader:
         from core.config_helper import _get_default_agentpress_tools, _extract_agentpress_tools_for_run
         
         agent.system_prompt = 'You are a helpful AI assistant.'
+        agent.system_prompt_user = agent.system_prompt
         agent.model = None
         agent.configured_mcps = []
         agent.custom_mcps = []
@@ -529,6 +540,8 @@ class AgentLoader:
         
         from core.config_helper import _extract_agentpress_tools_for_run
         
+        user_prompt = config.get('system_prompt_user')
+        agent.system_prompt_user = user_prompt if user_prompt is not None else None
         agent.system_prompt = get_user_visible_system_prompt(config)
         agent.model = config.get('model')
         agent.configured_mcps = tools.get('mcp', [])
