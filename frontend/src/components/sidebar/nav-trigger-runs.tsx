@@ -2,15 +2,19 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { ThreadIcon } from './thread-icon';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/components/ui/sidebar';
 import { ThreadWithProject, GroupedThreads } from '@/hooks/sidebar/use-sidebar';
-import { processThreadsWithProjects, useProjects, useThreads, groupThreadsByDate } from '@/hooks/sidebar/use-sidebar';
+import { processThreadsWithProjects, useProjects, useThreads, groupThreadsByDate, useDeleteThread } from '@/hooks/sidebar/use-sidebar';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { formatDateForList } from '@/lib/utils/date-formatting';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DeleteConfirmationDialog } from '@/components/thread/DeleteConfirmationDialog';
+import { toast } from 'sonner';
+import { threadKeys } from '@/hooks/threads/keys';
 
 // Component for date group headers
 const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateGroup, count }) => {
@@ -28,10 +32,12 @@ const TriggerRunItem: React.FC<{
     thread: ThreadWithProject;
     isActive: boolean;
     isThreadLoading: boolean;
-    pathname: string | null;
-    isMobile: boolean;
+    isDeleting: boolean;
     handleThreadClick: (e: React.MouseEvent<HTMLAnchorElement>, threadId: string, url: string) => void;
-}> = ({ thread, isActive, isThreadLoading, handleThreadClick, isMobile }) => {
+    onDelete: (thread: ThreadWithProject) => void;
+}> = ({ thread, isActive, isThreadLoading, handleThreadClick, onDelete, isDeleting }) => {
+    const [isHovering, setIsHovering] = useState(false);
+
     return (
         <SpotlightCard
             className={cn(
@@ -44,7 +50,11 @@ const TriggerRunItem: React.FC<{
                 onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
                 className="block"
             >
-                <div className="flex items-center gap-3 p-2.5 text-sm">
+                <div
+                    className="flex items-center gap-3 p-2.5 text-sm"
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                >
                     <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
                         {isThreadLoading ? (
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -57,9 +67,45 @@ const TriggerRunItem: React.FC<{
                         )}
                     </div>
                     <span className="flex-1 truncate">{thread.projectName}</span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {formatDateForList(thread.updatedAt)}
-                    </span>
+                    <div className="flex-shrink-0 relative">
+                        <span
+                            className={cn(
+                                "text-xs text-muted-foreground transition-opacity",
+                                isHovering ? "opacity-0" : "opacity-100"
+                            )}
+                        >
+                            {formatDateForList(thread.updatedAt)}
+                        </span>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className={cn(
+                                        "absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-md hover:bg-accent transition-all text-muted-foreground",
+                                        isHovering ? "opacity-100" : "opacity-0 pointer-events-none"
+                                    )}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                    disabled={isDeleting}
+                                >
+                                    <MoreHorizontal className="h-4 w-4 rotate-90" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onDelete(thread);
+                                    }}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </a>
         </SpotlightCard>
@@ -69,10 +115,13 @@ const TriggerRunItem: React.FC<{
 export function NavTriggerRuns() {
     const { isMobile, state, setOpenMobile } = useSidebar();
     const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null);
+    const [threadToDelete, setThreadToDelete] = useState<ThreadWithProject | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const isNavigatingRef = useRef(false);
     const queryClient = useQueryClient();
+    const { mutate: deleteThreadMutation, isPending: isDeletingThread } = useDeleteThread();
 
     const {
         data: projects = [],
@@ -136,6 +185,38 @@ export function NavTriggerRuns() {
         }
     };
 
+    const handleDeleteRequest = (thread: ThreadWithProject) => {
+        setThreadToDelete(thread);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!threadToDelete) return;
+        const threadId = threadToDelete.threadId;
+        const isViewing = pathname?.includes(threadId);
+
+        deleteThreadMutation(
+            { threadId },
+            {
+                onSuccess: () => {
+                    toast.success('Trigger run deleted');
+                    if (isViewing) {
+                        router.push('/dashboard');
+                    }
+                    queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
+                },
+                onError: (error) => {
+                    console.error('Failed to delete trigger run', error);
+                    toast.error('Failed to delete trigger run');
+                },
+                onSettled: () => {
+                    setThreadToDelete(null);
+                    setIsDeleteDialogOpen(false);
+                }
+            }
+        );
+    };
+
     // Loading state or error handling
     const isLoading = isProjectsLoading || isThreadsLoading;
     const hasError = projectsError || threadsError;
@@ -145,6 +226,7 @@ export function NavTriggerRuns() {
     }
 
     return (
+        <>
         <div>
             {/* Section Header */}
             <div className="py-2 mt-4 first:mt-2">
@@ -183,9 +265,9 @@ export function NavTriggerRuns() {
                                                     thread={thread}
                                                     isActive={isActive}
                                                     isThreadLoading={isThreadLoading}
-                                                    pathname={pathname}
-                                                    isMobile={isMobile}
-                                                    handleThreadClick={handleThreadClick}
+                                                handleThreadClick={handleThreadClick}
+                                                onDelete={handleDeleteRequest}
+                                                isDeleting={isDeletingThread && threadToDelete?.threadId === thread.threadId}
                                                 />
                                             );
                                         })}
@@ -200,5 +282,16 @@ export function NavTriggerRuns() {
                 )}
             </div>
         </div>
+
+        {threadToDelete && (
+            <DeleteConfirmationDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onConfirm={handleConfirmDelete}
+                threadName={threadToDelete.projectName}
+                isDeleting={isDeletingThread}
+            />
+        )}
+        </>
     );
 }
