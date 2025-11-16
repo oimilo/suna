@@ -90,6 +90,7 @@ export function PresentationViewer({
   // Extract presentation info from tool data
   const { toolResult } = extractToolData(toolContent);
   let extractedPresentationName: string | undefined;
+  let safePresentationNameFromOutput: string | undefined;
   let currentSlideNumber: number | undefined;
   let presentationTitleFromOutput: string | undefined;
   let toolExecutionError: string | undefined;
@@ -124,6 +125,7 @@ export function PresentationViewer({
       // Only extract data if we have a valid parsed object
       if (output && typeof output === 'object') {
         extractedPresentationName = output.presentation_name;
+        safePresentationNameFromOutput = output.safe_presentation_name;
         currentSlideNumber = output.slide_number;
         presentationTitleFromOutput = output.presentation_title || output.title;
         fallbackPresentationTitle = presentationTitleFromOutput || fallbackPresentationTitle;
@@ -148,14 +150,18 @@ export function PresentationViewer({
   // Get tool title for display
   const toolTitle = getToolTitle(name || 'presentation-viewer');
 
-  // Helper function to sanitize filename (matching backend logic)
+  // Helper function to sanitize filename (matching backend logic fallback)
   const sanitizeFilename = (name: string): string => {
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
   };
 
+  const normalizedPresentationName =
+    safePresentationNameFromOutput ||
+    (extractedPresentationName ? sanitizeFilename(extractedPresentationName) : undefined);
+
   // Load metadata.json for the presentation with retry logic
   const loadMetadata = async (retryCount = 0, maxRetries = 5) => {
-    if (!extractedPresentationName || (!project?.sandbox?.sandbox_url && !project?.sandbox?.id)) return;
+    if (!normalizedPresentationName || (!project?.sandbox?.sandbox_url && !project?.sandbox?.id)) return;
     
     setIsLoadingMetadata(true);
     setError(null);
@@ -165,17 +171,14 @@ export function PresentationViewer({
     let lastMetadataRequestUrl: string | undefined;
     
     try {
-      // Sanitize the presentation name to match backend directory creation
-      const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
-      
       const resolvedMetadataUrl =
         constructHtmlPreviewUrl({
           sandboxId: project?.sandbox?.id,
           sandboxUrl: project?.sandbox?.sandbox_url,
-          filePath: `presentations/${sanitizedPresentationName}/metadata.json`,
+          filePath: `presentations/${normalizedPresentationName}/metadata.json`,
         }) ??
         (project?.sandbox?.sandbox_url
-          ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/presentations/${sanitizedPresentationName}/metadata.json`
+          ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/presentations/${normalizedPresentationName}/metadata.json`
           : undefined);
 
       if (!resolvedMetadataUrl) {
@@ -904,6 +907,7 @@ export function PresentationViewer({
           }, 300);
         }}
         presentationName={extractedPresentationName}
+        safePresentationName={normalizedPresentationName}
         sandboxUrl={project?.sandbox?.sandbox_url}
         initialSlide={
           fullScreenInitialSlide ||

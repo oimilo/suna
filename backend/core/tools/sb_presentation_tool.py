@@ -665,6 +665,7 @@ class SandboxPresentationTool(SandboxToolsBase):
             response_data = {
                 "message": f"Slide {slide_number} '{slide_title}' created/updated successfully",
                 "presentation_name": presentation_name,
+                "safe_presentation_name": safe_name,
                 "presentation_path": f"{self.presentations_dir}/{safe_name}",
                 "slide_number": slide_number,
                 "slide_title": slide_title,
@@ -761,6 +762,7 @@ class SandboxPresentationTool(SandboxToolsBase):
             return self.success_response({
                 "message": f"Found {len(slides_info)} slides in presentation '{presentation_name}'",
                 "presentation_name": presentation_name,
+                "safe_presentation_name": safe_name,
                 "presentation_title": metadata.get("title", "Presentation"),
                 "slides": slides_info,
                 "total_slides": len(slides_info),
@@ -1424,10 +1426,13 @@ print(json.dumps(result))
             await self._save_presentation_metadata(full_presentation_path, metadata)
             
             # Create a structured response with all presentation data
+            normalized_presentation_path = f"{self.presentations_dir}/{safe_name}"
+
             result_data = {
                 "presentation_name": presentation_name,
+                "safe_presentation_name": safe_name,
                 "presentation_title": presentation_title,
-                "presentation_path": presentation_path,
+                "presentation_path": normalized_presentation_path,
                 "slide_count": slide_count,
                 "text": text,
                 "attachments": attachments,
