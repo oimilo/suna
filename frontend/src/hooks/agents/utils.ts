@@ -110,6 +110,7 @@ export type AgentCreateRequest = {
 
 export type AgentVersionCreateRequest = {
   system_prompt: string;
+  system_prompt_user?: string;
   model?: string;
   configured_mcps?: Array<{
     name: string;
@@ -145,7 +146,12 @@ export type AgentVersion = AgentPromptFields & {
 const getVisibleSystemPrompt = (
   systemPrompt?: string | null,
   userPrompt?: string | null
-): string => (userPrompt ?? systemPrompt ?? '') || '';
+): string => {
+  if (userPrompt !== undefined && userPrompt !== null) {
+    return userPrompt;
+  }
+  return systemPrompt ?? '';
+};
 
 const normalizeAgentVersion = (
   version?: AgentVersion | null
