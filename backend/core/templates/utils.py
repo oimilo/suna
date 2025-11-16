@@ -197,6 +197,7 @@ def sanitize_config_for_security(config: Dict[str, Any]) -> Dict[str, Any]:
 
     sanitized = {
         'system_prompt': config.get('system_prompt', ''),
+        'system_prompt_user': config.get('system_prompt_user'),
         'tools': {
             'agentpress': sanitized_agentpress_tools,
             'mcp': config.get('tools', {}).get('mcp', []),

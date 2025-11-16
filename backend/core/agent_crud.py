@@ -45,43 +45,43 @@ async def update_agent(
         restrictions = agent_metadata.get('restrictions', {})
         
         if is_suna_agent:
-            logger.warning(f"Update attempt on Suna default agent {agent_id} by user {user_id}")
+            logger.warning(f"Update attempt on Prophet default agent {agent_id} by user {user_id}")
             
             if (agent_data.name is not None and 
                 agent_data.name != existing_data.get('name') and 
                 restrictions.get('name_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted name of Suna agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted name of Prophet agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Suna's name cannot be modified. This restriction is managed centrally."
+                    detail="Prophet's name cannot be modified. This restriction is managed centrally."
                 )
             
             
             if (agent_data.system_prompt is not None and 
                 restrictions.get('system_prompt_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted system prompt of Suna agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted system prompt of Prophet agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Suna's system prompt cannot be modified. This is managed centrally to ensure optimal performance."
+                    detail="Prophet's system prompt cannot be modified. This is managed centrally to ensure optimal performance."
                 )
             
             if (agent_data.agentpress_tools is not None and 
                 restrictions.get('tools_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted tools of Suna agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted tools of Prophet agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Suna's default tools cannot be modified. These tools are optimized for Suna's capabilities."
+                    detail="Prophet's default tools cannot be modified. These tools are optimized for Prophet's capabilities."
                 )
             
             if ((agent_data.configured_mcps is not None or agent_data.custom_mcps is not None) and 
                 restrictions.get('mcps_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted MCPs of Suna agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted MCPs of Prophet agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Suna's integrations cannot be modified."
+                    detail="Prophet's integrations cannot be modified."
                 )
             
-            logger.debug(f"Suna agent update validation passed for agent {agent_id} by user {user_id}")
+            logger.debug(f"Prophet agent update validation passed for agent {agent_id} by user {user_id}")
 
         current_version_data = None
         if existing_data.get('current_version_id'):
@@ -120,6 +120,7 @@ async def update_agent(
                     "version_number": 1,
                     "version_name": "v1",
                     "system_prompt": existing_data.get('system_prompt', ''),
+                    "system_prompt_user": existing_data.get('system_prompt', ''),
                     "model": existing_data.get('model'),
                     "configured_mcps": existing_data.get('configured_mcps', []),
                     "custom_mcps": existing_data.get('custom_mcps', []),
@@ -133,7 +134,8 @@ async def update_agent(
                     agentpress_tools=initial_version_data["agentpress_tools"],
                     configured_mcps=initial_version_data["configured_mcps"],
                     custom_mcps=initial_version_data["custom_mcps"],
-                    triggers=triggers
+                    triggers=triggers,
+                    system_prompt_user=initial_version_data["system_prompt"]
                 )
                 initial_version_data["config"] = initial_config
                 
@@ -151,6 +153,7 @@ async def update_agent(
                 else:
                     current_version_data = {
                         'system_prompt': existing_data.get('system_prompt', ''),
+                        'system_prompt_user': existing_data.get('system_prompt', ''),
                         'model': existing_data.get('model'),
                         'configured_mcps': existing_data.get('configured_mcps', []),
                         'custom_mcps': existing_data.get('custom_mcps', []),
@@ -180,7 +183,9 @@ async def update_agent(
             except (TypeError, ValueError):
                 return new_val != old_val
         
-        if values_different(agent_data.system_prompt, current_version_data.get('system_prompt')):
+        current_visible_prompt = (current_version_data.get('system_prompt_user') or current_version_data.get('system_prompt', '')) if current_version_data else ''
+
+        if values_different(agent_data.system_prompt, current_visible_prompt):
             needs_new_version = True
             version_changes['system_prompt'] = agent_data.system_prompt
         
@@ -226,7 +231,7 @@ async def update_agent(
         if config.ENV_MODE == EnvMode.STAGING:
             print(f"[DEBUG] update_agent: Prepared update_data with icon fields - icon_name={update_data.get('icon_name')}, icon_color={update_data.get('icon_color')}, icon_background={update_data.get('icon_background')}")
         
-        current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_version_data.get('system_prompt', '')
+        current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_visible_prompt
         current_model = agent_data.model if agent_data.model is not None else current_version_data.get('model')
 
         if agent_data.configured_mcps is not None:
@@ -269,7 +274,9 @@ async def update_agent(
                     configured_mcps=current_configured_mcps,
                     custom_mcps=current_custom_mcps,
                     agentpress_tools=current_agentpress_tools,
-                    change_description="Configuration updated"
+                    change_description="Configuration updated",
+                    system_prompt_user=current_system_prompt,
+                    apply_tool_base_prompt=True
                 )
                 
                 new_version_id = new_version.version_id
@@ -335,6 +342,7 @@ async def update_agent(
                     version_number=current_version_data['version_number'],
                     version_name=current_version_data['version_name'],
                     system_prompt=current_version_data['system_prompt'],
+                    system_prompt_user=current_version_data.get('system_prompt_user'),
                     model=current_version_data.get('model'),
                     configured_mcps=current_version_data.get('configured_mcps', []),
                     custom_mcps=current_version_data.get('custom_mcps', []),
@@ -357,6 +365,7 @@ async def update_agent(
                 'version_number': current_version.version_number,
                 'version_name': current_version.version_name,
                 'system_prompt': current_version.system_prompt,
+                'system_prompt_user': current_version.system_prompt_user,
                 'model': current_version.model,
                 'configured_mcps': current_version.configured_mcps,
                 'custom_mcps': current_version.custom_mcps,
@@ -395,7 +404,7 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
             raise HTTPException(status_code=400, detail="Cannot delete default agent")
         
         if agent.get('metadata', {}).get('is_suna_default', False):
-            raise HTTPException(status_code=400, detail="Cannot delete Suna default agent")
+            raise HTTPException(status_code=400, detail="Cannot delete Prophet default agent")
         
         # Clean up triggers before deleting agent to ensure proper remote cleanup
         try:
@@ -582,12 +591,10 @@ async def create_agent(
         
         try:
             version_service = await _get_version_service()
-            from .suna_config import SUNA_CONFIG
             from .config_helper import _get_default_agentpress_tools
             from core.ai_models import model_manager
             
-            system_prompt = SUNA_CONFIG["system_prompt"]
-            
+            user_system_prompt = (agent_data.system_prompt or "").strip()
             agentpress_tools = agent_data.agentpress_tools if agent_data.agentpress_tools else _get_default_agentpress_tools()
             agentpress_tools = ensure_core_tools_enabled(agentpress_tools)
             
@@ -596,13 +603,15 @@ async def create_agent(
             version = await version_service.create_version(
                 agent_id=agent['agent_id'],
                 user_id=user_id,
-                system_prompt=system_prompt,
+                system_prompt=user_system_prompt,
                 model=default_model,
                 configured_mcps=agent_data.configured_mcps or [],
                 custom_mcps=agent_data.custom_mcps or [],
                 agentpress_tools=agentpress_tools,
                 version_name="v1",
-                change_description="Initial version"
+                change_description="Initial version",
+                system_prompt_user=user_system_prompt,
+                apply_tool_base_prompt=True
             )
             
             agent['current_version_id'] = version.version_id
@@ -614,6 +623,7 @@ async def create_agent(
                 version_number=version.version_number,
                 version_name=version.version_name,
                 system_prompt=version.system_prompt,
+                system_prompt_user=version.system_prompt_user,
                 model=version.model,
                 configured_mcps=version.configured_mcps,
                 custom_mcps=version.custom_mcps,

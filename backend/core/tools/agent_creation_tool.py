@@ -4,6 +4,7 @@ from uuid import uuid4
 from core.agentpress.tool import Tool, ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
+from core.config_helper import get_user_visible_system_prompt
 from core.utils.core_tools_helper import ensure_core_tools_enabled
 from core.utils.config import config
 
@@ -177,7 +178,9 @@ class AgentCreationTool(Tool):
                     custom_mcps=[],
                     agentpress_tools=agentpress_tools,
                     version_name="v1",
-                    change_description="Initial version"
+                    change_description="Initial version",
+                    system_prompt_user=system_prompt,
+                    apply_tool_base_prompt=True
                 )
                 
                 await client.table('agents').update({
@@ -620,15 +623,18 @@ class AgentCreationTool(Tool):
             from core.versioning.version_service import get_version_service
             version_service = await get_version_service()
             
+            user_prompt = get_user_visible_system_prompt(current_config)
             new_version = await version_service.create_version(
                 agent_id=agent_id,
                 user_id=account_id,
-                system_prompt=current_config.get('system_prompt', ''),
+                system_prompt=user_prompt,
                 model=current_config.get('model'),
                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                 custom_mcps=updated_mcps,
                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
-                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools"
+                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools",
+                system_prompt_user=user_prompt,
+                apply_tool_base_prompt=True
             )
             
             await client.table('agents').update({
@@ -1135,7 +1141,8 @@ class AgentCreationTool(Tool):
                 await client.table('agents').update(agent_updates).eq('agent_id', agent_id).execute()
             
             version_changes = False
-            new_system_prompt = system_prompt if system_prompt is not None else current_config.get('system_prompt', '')
+            base_prompt_from_config = get_user_visible_system_prompt(current_config)
+            new_system_prompt = system_prompt if system_prompt is not None else base_prompt_from_config
             new_model = model if model is not None else current_config.get('model')
             new_agentpress_tools = agentpress_tools if agentpress_tools is not None else current_config.get('tools', {}).get('agentpress', {})
             
@@ -1168,7 +1175,9 @@ class AgentCreationTool(Tool):
                     configured_mcps=configured_mcps,
                     custom_mcps=custom_mcps,
                     agentpress_tools=new_agentpress_tools,
-                    change_description=change_description or f"Updated: {', '.join(updates)}"
+                    change_description=change_description or f"Updated: {', '.join(updates)}",
+                    system_prompt_user=new_system_prompt,
+                    apply_tool_base_prompt=True
                 )
                 
                 await client.table('agents').update({

@@ -19,6 +19,7 @@ from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.prompt import get_system_prompt
 
 from core.utils.logger import logger
+from core.prompts.agent_tool_base_prompt import build_tool_use_prompt
 
 from core.billing.billing_integration import billing_integration
 
@@ -347,9 +348,19 @@ class PromptManager:
         #         sample_response = file.read()
         #     default_system_content = default_system_content + "\n\n <sample_assistant_response>" + sample_response + "</sample_assistant_response>"
         
-        # Start with agent's normal system prompt or default
-        if agent_config and agent_config.get('system_prompt'):
-            system_content = agent_config['system_prompt'].strip()
+        # Start with agent's system prompt hierarchy
+        if agent_config:
+            final_prompt = agent_config.get('system_prompt_final')
+            if final_prompt:
+                system_content = final_prompt.strip()
+            elif agent_config.get('system_prompt'):
+                base_prompt = agent_config['system_prompt'].strip()
+                if agent_config.get('is_suna_default'):
+                    system_content = base_prompt
+                else:
+                    system_content = build_tool_use_prompt(base_prompt)
+            else:
+                system_content = default_system_content
         else:
             system_content = default_system_content
         

@@ -61,7 +61,7 @@ class AgentTemplate:
     
     @property
     def system_prompt(self) -> str:
-        return self.config.get('system_prompt', '')
+        return self.config.get('system_prompt_user') or self.config.get('system_prompt', '')
     
     @property
     def agentpress_tools(self) -> Dict[str, Any]:
@@ -547,6 +547,7 @@ class TemplateService:
         
         sanitized = {
             'system_prompt': config.get('system_prompt', ''),
+            'system_prompt_user': config.get('system_prompt_user'),
             'model': config.get('model'),
             'tools': {
                 'agentpress': sanitized_agentpress,

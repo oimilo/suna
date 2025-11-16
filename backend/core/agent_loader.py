@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
+from core.config_helper import get_user_visible_system_prompt
 
 
 @dataclass
@@ -67,6 +68,7 @@ class AgentData:
                 version_number=self.version_number,
                 version_name=self.version_name or 'v1',
                 system_prompt=self.system_prompt or '',
+                system_prompt_user=self.system_prompt or '',
                 model=self.model,
                 configured_mcps=self.configured_mcps or [],
                 custom_mcps=self.custom_mcps or [],
@@ -420,7 +422,7 @@ class AgentLoader:
                 config = version_dict['config']
                 tools = config.get('tools', {})
                 
-                agent.system_prompt = config.get('system_prompt', '')
+                agent.system_prompt = get_user_visible_system_prompt(config)
                 agent.model = config.get('model')
                 agent.configured_mcps = tools.get('mcp', [])
                 agent.custom_mcps = tools.get('custom_mcp', [])
@@ -431,7 +433,7 @@ class AgentLoader:
                 agent.triggers = config.get('triggers', [])
             else:
                 # Old format compatibility
-                agent.system_prompt = version_dict.get('system_prompt', '')
+                agent.system_prompt = version_dict.get('system_prompt_user') or version_dict.get('system_prompt', '')
                 agent.model = version_dict.get('model')
                 agent.configured_mcps = version_dict.get('configured_mcps', [])
                 agent.custom_mcps = version_dict.get('custom_mcps', [])
@@ -527,7 +529,7 @@ class AgentLoader:
         
         from core.config_helper import _extract_agentpress_tools_for_run
         
-        agent.system_prompt = config.get('system_prompt', '')
+        agent.system_prompt = get_user_visible_system_prompt(config)
         agent.model = config.get('model')
         agent.configured_mcps = tools.get('mcp', [])
         agent.custom_mcps = tools.get('custom_mcp', [])

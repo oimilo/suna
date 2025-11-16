@@ -847,6 +847,7 @@ async def get_thread_agent(thread_id: str, user_id: str = Depends(verify_and_get
                     version_number=current_version_data['version_number'],
                     version_name=current_version_data['version_name'],
                     system_prompt=current_version_data['system_prompt'],
+                    system_prompt_user=current_version_data.get('system_prompt_user'),
                     model=current_version_data.get('model'),
                     configured_mcps=current_version_data.get('configured_mcps', []),
                     custom_mcps=current_version_data.get('custom_mcps', []),

@@ -84,7 +84,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
             metadata = current_agent.get('metadata', {})
             is_suna_default = metadata.get('is_suna_default', False)
             
-            # Enforce Suna restrictions (simplified)
+            # Enforce Prophet restrictions (simplified)
             if is_suna_default:
                 restricted_fields = []
                 if name is not None:
@@ -96,8 +96,8 @@ class AgentConfigTool(AgentBuilderBaseTool):
                 
                 if restricted_fields:
                     return self.fail_response(
-                        f"Cannot modify {', '.join(restricted_fields)} for Suna. "
-                        f"Suna's core identity is centrally managed. You can still add MCPs and triggers."
+                        f"Cannot modify {', '.join(restricted_fields)} for Prophet. "
+                        f"Prophet's core identity is centrally managed. You can still add MCPs and triggers."
                     )
 
             agent_update_fields = {}
@@ -137,7 +137,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
                     if system_prompt is not None:
                         current_system_prompt = system_prompt
                     else:
-                        current_system_prompt = current_version.get('system_prompt', '')
+                        current_system_prompt = current_version.get('system_prompt_user') or current_version.get('system_prompt', '')
                     
                     if agentpress_tools is not None:
                         # Validate and normalize the tool configuration
@@ -203,7 +203,9 @@ class AgentConfigTool(AgentBuilderBaseTool):
                         custom_mcps=current_custom_mcps,
                         agentpress_tools=current_agentpress_tools,
                         version_name=f"v{current_version.get('version_number', 1) + 1}",
-                        change_description="Updated via agent builder"
+                        change_description="Updated via agent builder",
+                        system_prompt_user=current_system_prompt,
+                        apply_tool_base_prompt=True
                     )
                     
                     version_created = True
