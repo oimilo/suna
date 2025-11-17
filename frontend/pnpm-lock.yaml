@@ -140,9 +140,15 @@ importers:
       '@tiptap/core':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/pm@3.10.7)
+      '@tiptap/extension-blockquote':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-character-count':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/extensions@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
+      '@tiptap/extension-code-block':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7)
       '@tiptap/extension-code-block-lowlight':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/extension-code-block@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7)(highlight.js@11.11.1)(lowlight@3.3.0)
@@ -155,6 +161,9 @@ importers:
       '@tiptap/extension-details':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/extension-text-style@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7)))(@tiptap/pm@3.10.7)
+      '@tiptap/extension-document':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-dropcursor':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/extensions@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
@@ -167,6 +176,12 @@ importers:
       '@tiptap/extension-gapcursor':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/extensions@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
+      '@tiptap/extension-hard-break':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
+      '@tiptap/extension-heading':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-highlight':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
@@ -191,6 +206,9 @@ importers:
       '@tiptap/extension-mention':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7)(@tiptap/suggestion@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
+      '@tiptap/extension-paragraph':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-placeholder':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/extensions@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
@@ -209,10 +227,16 @@ importers:
       '@tiptap/extension-task-list':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/extension-list@3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))(@tiptap/pm@3.10.7))
+      '@tiptap/extension-text':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-text-align':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-typography':
+        specifier: ^3.3.0
+        version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
+      '@tiptap/extension-underline':
         specifier: ^3.3.0
         version: 3.10.7(@tiptap/core@3.10.7(@tiptap/pm@3.10.7))
       '@tiptap/extension-youtube':
