@@ -55,8 +55,45 @@ async def get_or_start_sandbox(sandbox_id: str) -> AsyncSandbox:
                 # Start supervisord in a session when restarting
                 await start_supervisord_session(sandbox)
             except Exception as e:
-                logger.error(f"Error starting sandbox: {e}")
-                raise e
+                # Handle 409 Conflict errors - sandbox might already be starting
+                error_str = str(e).lower()
+                if "409" in error_str or "conflict" in error_str:
+                    logger.warning(f"Received 409 Conflict when starting sandbox {sandbox_id}. Checking current state...")
+                    
+                    # Re-check sandbox state - it might already be STARTING or STARTED
+                    try:
+                        sandbox = await daytona.get(sandbox_id)
+                        
+                        # If already STARTED, we're good
+                        if sandbox.state == SandboxState.STARTED:
+                            logger.info(f"Sandbox {sandbox_id} is already STARTED after conflict. Continuing...")
+                            await start_supervisord_session(sandbox)
+                        # If STARTING, wait for it to complete
+                        elif sandbox.state == SandboxState.STARTING:
+                            logger.info(f"Sandbox {sandbox_id} is STARTING. Waiting for it to complete...")
+                            for _ in range(30):
+                                await asyncio.sleep(1)
+                                sandbox = await daytona.get(sandbox_id)
+                                if sandbox.state == SandboxState.STARTED:
+                                    logger.info(f"Sandbox {sandbox_id} reached STARTED state")
+                                    await start_supervisord_session(sandbox)
+                                    break
+                                elif sandbox.state in [SandboxState.ARCHIVED, SandboxState.STOPPED, SandboxState.ARCHIVING]:
+                                    # Sandbox failed to start, raise original error
+                                    logger.error(f"Sandbox {sandbox_id} failed to start after conflict")
+                                    raise e
+                        else:
+                            # Unexpected state, raise original error
+                            logger.error(f"Sandbox {sandbox_id} in unexpected state {sandbox.state} after conflict")
+                            raise e
+                    except Exception as check_error:
+                        # If we can't check the state, raise original error
+                        logger.error(f"Error checking sandbox state after conflict: {check_error}")
+                        raise e
+                else:
+                    # Not a 409 error, propagate it
+                    logger.error(f"Error starting sandbox: {e}")
+                    raise e
         
         logger.info(f"Sandbox {sandbox_id} is ready")
         return sandbox

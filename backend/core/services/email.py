@@ -183,7 +183,7 @@ Thanks again, and welcome to the Prophet community 🌞
 
 — The Milo Team
 
-Go to the platform: https://www.suna.so/
+Go to the platform: https://www.prophet.build/
 
 ---
 © 2025 Milo. All rights reserved.

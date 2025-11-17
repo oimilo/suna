@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2, Plug, Brain, LibraryBig, Zap, Workflow } from 'lucide-react';
+import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2, Plug, Brain, LibraryBig, Zap, Workflow, Lock } from 'lucide-react';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import type { ModelOption } from '@/hooks/agents';
@@ -32,6 +32,7 @@ import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 type UnifiedConfigMenuProps = {
     isLoggedIn?: boolean;
@@ -47,7 +48,6 @@ type UnifiedConfigMenuProps = {
     subscriptionStatus: SubscriptionStatus;
     canAccessModel: (modelId: string) => boolean;
     refreshCustomModels?: () => void;
-    onUpgradeRequest?: () => void;
 };
 
 const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMenu({
@@ -59,7 +59,6 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     modelOptions,
     canAccessModel,
     subscriptionStatus,
-    onUpgradeRequest,
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -71,6 +70,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
+    const openPricingModal = usePricingModalStore((state) => state.openPricingModal);
 
     // Debounce search query
     useEffect(() => {
@@ -353,16 +353,29 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                         <div className="space-y-0.5">
                                             {modelOptions.map((model) => {
                                                 const isActive = selectedModel === model.id;
+                                                const hasAccess = canAccessModel(model.id);
                                                 return (
                                                     <SpotlightCard
                                                         key={model.id}
-                                                        className="transition-colors cursor-pointer bg-transparent"
+                                                        className={cn(
+                                                            "transition-colors cursor-pointer bg-transparent relative",
+                                                            !hasAccess && "opacity-60"
+                                                        )}
                                                     >
                                                         <div
-                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1"
+                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 relative"
                                                             onClick={() => {
-                                                                onModelChange(model.id);
-                                                                setIsOpen(false);
+                                                                if (hasAccess) {
+                                                                    onModelChange(model.id);
+                                                                    setIsOpen(false);
+                                                                } else {
+                                                                    setIsOpen(false);
+                                                                    openPricingModal({
+                                                                        isAlert: true,
+                                                                        alertTitle: 'Upgrade to access this AI model.',
+                                                                        returnUrl: typeof window !== 'undefined' ? window.location.href : '/',
+                                                                    });
+                                                                }
                                                             }}
                                                         >
                                                             <ModelProviderIcon
@@ -373,6 +386,11 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                                             <span className="flex-1 truncate font-medium">{model.label}</span>
                                                             {isActive && (
                                                                 <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                                            )}
+                                                            {!hasAccess && (
+                                                                <div className="absolute right-2 top-2 text-muted-foreground/80">
+                                                                    <Lock className="h-3.5 w-3.5" />
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </SpotlightCard>
