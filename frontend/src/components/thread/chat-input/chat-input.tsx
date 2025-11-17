@@ -610,11 +610,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
             isDraggingOver ? 'opacity-40' : '',
           )}
-          disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
+          disabled={(disabled && !isAgentRunning) || hasSubmitted}
           rows={1}
         />
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, disabled, isAgentRunning, hasSubmitted]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">

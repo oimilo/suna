@@ -21,6 +21,7 @@ import {
   Zap,
   ShoppingCart,
   Lightbulb,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -734,6 +735,8 @@ interface PricingSectionProps {
   noPadding?: boolean;
   onSubscriptionUpdate?: () => void;
   customTitle?: string;
+  isAlert?: boolean;
+  alertTitle?: string;
 }
 
 export function PricingSection({
@@ -744,6 +747,8 @@ export function PricingSection({
   noPadding = false,
   onSubscriptionUpdate,
   customTitle,
+  isAlert = false,
+  alertTitle,
 }: PricingSectionProps) {
   const { user } = useAuth();
   const isUserAuthenticated = !!user;
@@ -848,7 +853,17 @@ export function PricingSection({
       className={cn("flex flex-col items-center justify-center w-full relative", noPadding ? "pb-0" : "pb-12")}
     >
       <div className="w-full mx-auto px-6 flex flex-col items-center">
-        {showTitleAndTabs && (
+        {isAlert && (
+          <div className="w-full flex justify-center mb-6 gap-4">
+            <div className="h-10 w-10 rounded-full bg-amber-600/10 border border-amber-600/20 dark:bg-amber-500/10 dark:border-amber-500/20 flex items-center justify-center">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+            </div>
+            <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl text-amber-600 dark:text-amber-500">
+              {alertTitle || 'Pick the plan that works for you.'}
+            </h2>
+          </div>
+        )}
+        {showTitleAndTabs && !isAlert && (
           <div className="w-full flex justify-center mb-6">
             <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl">
               {customTitle || 'Pick the plan that works for you.'}

@@ -1,19 +1,13 @@
+from fastapi import APIRouter, HTTPException, Depends, Header
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
 import os
 import concurrent.futures
-from fastapi import APIRouter, HTTPException, Depends, Header
-from pydantic import BaseModel, EmailStr
-from typing import Optional, Dict, Any
 
 from core.services.email import email_service
 from core.utils.logger import logger
-from core.utils.auth_utils import verify_admin_api_key
 
 router = APIRouter(tags=["email"])
-
-
-class SendWelcomeEmailRequest(BaseModel):
-    email: EmailStr
-    name: Optional[str] = None
 
 
 class EmailResponse(BaseModel):
@@ -43,30 +37,6 @@ def verify_webhook_secret(x_webhook_secret: str = Header(...)) -> bool:
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
     return True
-
-
-@router.post("/send-welcome-email", response_model=EmailResponse)
-async def send_welcome_email(
-    request: SendWelcomeEmailRequest, _: bool = Depends(verify_admin_api_key)
-):
-    try:
-
-        def send_email():
-            return email_service.send_welcome_email(
-                user_email=request.email, user_name=request.name
-            )
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(send_email)
-
-        return EmailResponse(success=True, message="Welcome email sent")
-
-    except Exception as e:
-        logger.error(f"Erro enviando welcome email para {request.email}: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error while sending welcome email",
-        )
 
 
 @router.post("/webhooks/user-created", response_model=EmailResponse)

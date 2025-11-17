@@ -43,7 +43,7 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import debounce from 'lodash/debounce';
 
-import { Extension } from '@tiptap/core';
+import { Extension, type Extensions } from '@tiptap/core';
 import { Ruler } from "./ruler";
 
 const FontSize = Extension.create({
@@ -198,7 +198,7 @@ export const Editor = ({
       [onChange, autoSaveDelay, onSaveStateChange]
     );
 
-    const extensions = useMemo(() => {
+    const extensions = useMemo<Extensions>(() => {
       const baseExtensions = [
         Document,
         Paragraph,
@@ -291,7 +291,7 @@ export const Editor = ({
         );
       }
 
-      return baseExtensions;
+      return baseExtensions as Extensions;
     }, [autoSave, ydoc, placeholder]);
 
     const editor = useEditor({
@@ -379,7 +379,7 @@ export const Editor = ({
           setEditor(editor);
         }
       },
-      extensions,
+      extensions: extensions as any,
       editorProps: {
         
         attributes: {

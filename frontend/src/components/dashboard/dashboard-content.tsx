@@ -8,15 +8,14 @@ import {
   ChatInput,
   ChatInputHandles,
 } from '@/components/thread/chat-input/chat-input';
-import { AgentRunLimitError, ProjectLimitError, BillingError } from '@/lib/api/errors';
+import { AgentRunLimitError, ProjectLimitError, BillingError, ThreadLimitError, AgentCountLimitError, TriggerLimitError, CustomWorkerLimitError, ModelAccessDeniedError } from '@/lib/api/errors';
 import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
-import { useInitiateAgentWithInvalidation } from '@/hooks/dashboard/use-initiate-agent';
+import { useInitiateAgentWithInvalidation, useThreadLimit } from '@/hooks/dashboard/use-initiate-agent';
 
 import { useAgents } from '@/hooks/agents/use-agents';
 import { PlanSelectionModal } from '@/components/billing/pricing';
-import { useBillingModal } from '@/hooks/billing/use-billing-modal';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { SunaModesPanel } from './suna-modes-panel';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
@@ -27,6 +26,9 @@ import { toast } from 'sonner';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { CreditsDisplay } from '@/components/billing/credits-display';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -72,12 +74,26 @@ export function DashboardContent() {
   const { user } = useAuth();
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
-  const {
-    showModal: showBillingModal,
-    creditsExhausted,
-    openModal: openBillingModal,
-    closeModal: closeBillingModal,
-  } = useBillingModal();
+  const threadLimitQuery = useThreadLimit();
+  const [alertDismissed, setAlertDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
+  });
+  const canCreateThread = threadLimitQuery.data?.can_create ?? true;
+  const showLimitAlert = !canCreateThread && !alertDismissed;
+  const openPricingModal = usePricingModalStore((state) => state.openPricingModal);
+  const getReturnUrl = () => (typeof window !== 'undefined' ? window.location.href : '/');
+  const openUpgradeAlert = (title: string) =>
+    openPricingModal({
+      isAlert: true,
+      alertTitle: title,
+      returnUrl: getReturnUrl(),
+    });
+  const openStandardUpgrade = (title?: string) =>
+    openPricingModal({
+      title: title || 'Pick the plan that works for you.',
+      returnUrl: getReturnUrl(),
+    });
 
   // Feature flag for custom agents section
 
@@ -103,6 +119,16 @@ export function DashboardContent() {
       initializeFromAgents(agents, undefined, setSelectedAgent);
     }
   }, [agents, initializeFromAgents, setSelectedAgent]);
+
+  React.useEffect(() => {
+    const handleStorage = () => {
+      if (typeof window === 'undefined') return;
+      const dismissed = sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
+      setAlertDismissed(dismissed);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   React.useEffect(() => {
     const tab = searchParams.get('tab');
@@ -224,9 +250,7 @@ export function DashboardContent() {
       chatInputRef.current?.clearPendingFiles();
     } catch (error: any) {
       console.error('Error during submission process:', error);
-      if (error instanceof BillingError) {
-        openBillingModal(error);
-      } else if (error instanceof AgentRunLimitError) {
+      if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
         setAgentLimitData({
           runningCount: running_count,
@@ -234,13 +258,41 @@ export function DashboardContent() {
         });
         setShowAgentLimitDialog(true);
       } else if (error instanceof ProjectLimitError) {
-        openBillingModal(error);
+        openUpgradeAlert(`Upgrade to create more projects (${error.detail.current_count}/${error.detail.limit})`);
+      } else if (error instanceof ThreadLimitError) {
+        openUpgradeAlert(`Upgrade to create more threads (${error.detail.current_count}/${error.detail.limit})`);
+      } else if (error instanceof AgentCountLimitError) {
+        openUpgradeAlert(`Upgrade to add more custom agents (${error.detail.current_count}/${error.detail.limit})`);
+      } else if (error instanceof TriggerLimitError) {
+        openUpgradeAlert(error.detail?.message || 'Upgrade to add more triggers.');
+      } else if (error instanceof CustomWorkerLimitError) {
+        openUpgradeAlert(error.detail?.message || 'Upgrade to add more custom workers.');
+      } else if (error instanceof ModelAccessDeniedError) {
+        openUpgradeAlert('Upgrade your plan to access this AI model.');
+      } else if (error instanceof BillingError) {
+        const message = error.detail?.message?.toLowerCase() || '';
+        const isCreditsExhausted =
+          message.includes('credit') ||
+          message.includes('balance') ||
+          message.includes('insufficient') ||
+          message.includes('out of credits') ||
+          message.includes('no credits');
+
+        openPricingModal({
+          isAlert: isCreditsExhausted,
+          alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : undefined,
+          title: !isCreditsExhausted ? 'Pick the plan that works for you.' : undefined,
+          returnUrl: getReturnUrl(),
+        });
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Operation failed';
         toast.error(errorMessage);
       }
-      // Only reset loading state if there was an error or no thread_id was returned
+
+      setInputValue('');
+      chatInputRef.current?.clearPendingFiles();
       setIsSubmitting(false);
+      setIsRedirecting(false);
     }
   };
 
@@ -270,11 +322,7 @@ export function DashboardContent() {
 
   return (
     <>
-      <PlanSelectionModal
-        open={showBillingModal}
-        onOpenChange={closeBillingModal}
-        creditsExhausted={creditsExhausted}
-      />
+      <PlanSelectionModal />
 
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
         {/* Credits Display - Top right corner */}
@@ -339,7 +387,43 @@ export function DashboardContent() {
                         </p>
                       </div>
 
-                      <div className="w-full">
+                      <div className="w-full flex flex-col items-center">
+                        {showLimitAlert && (
+                          <div
+                            className="w-full md:w-[95%] h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-t-3xl flex items-center justify-between overflow-hidden"
+                            style={{
+                              marginBottom: '-40px',
+                              transition: 'margin-bottom 300ms ease-in-out, opacity 300ms ease-in-out',
+                            }}
+                          >
+                            <span className="-mt-3.5 dark:text-amber-500 text-amber-700 text-sm">
+                              You ran out of limits. Upgrade your plan to chat more.
+                            </span>
+                            <div className="flex items-center -mt-3.5 gap-1">
+                              <Button
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => openUpgradeAlert('You ran out of limits. Upgrade your plan to chat more.')}
+                              >
+                                Upgrade
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 text-muted-foreground"
+                                onClick={() => {
+                                  if (typeof window !== 'undefined') {
+                                    sessionStorage.setItem('threadLimitAlertDismissed', 'true');
+                                    window.dispatchEvent(new Event('storage'));
+                                  }
+                                  setAlertDismissed(true);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                         <ChatInput
                           ref={chatInputRef}
                           onSubmit={handleSubmit}

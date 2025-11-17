@@ -209,7 +209,6 @@ export const handleGoogleSlidesUpload = async (sandbox: SandboxReference, presen
         duration: 3000,
       });
       handleGoogleAuth(presentationPath, sandbox.sandbox_url as string, sandbox.id);
-      handleGoogleAuth(presentationPath, sandbox.sandbox_url as string, sandbox.id);
       return {
         success: false,
         redirected_to_auth: true,

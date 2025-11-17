@@ -13,40 +13,56 @@ import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { billingKeys } from '@/hooks/billing/use-subscription';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 interface PlanSelectionModalProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     returnUrl?: string;
     creditsExhausted?: boolean;
+    customTitle?: string;
 }
 
 export function PlanSelectionModal({
-    open,
-    onOpenChange,
-    returnUrl,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    returnUrl: controlledReturnUrl,
     creditsExhausted = false,
+    customTitle,
 }: PlanSelectionModalProps) {
     const defaultReturnUrl = typeof window !== 'undefined' ? window.location.href : '/';
     const queryClient = useQueryClient();
-    const searchParams = useSearchParams();
     const router = useRouter();
+    const {
+        isOpen: storeIsOpen,
+        closePricingModal,
+        customTitle: storeCustomTitle,
+        returnUrl: storeReturnUrl,
+        isAlert: storeIsAlert,
+        alertTitle: storeAlertTitle,
+    } = usePricingModalStore();
+
+    const isOpen = controlledOpen ?? storeIsOpen;
+    const handleOpenChange = controlledOnOpenChange ?? ((open: boolean) => {
+        if (!open) {
+            closePricingModal();
+        }
+    });
 
     // Check for checkout success when modal opens and invalidate queries
     useEffect(() => {
-        if (open) {
-            const checkoutSuccess = searchParams.get('checkout');
-            const sessionId = searchParams.get('session_id');
-            const clientSecret = searchParams.get('client_secret');
-            
-            // If we have checkout success indicators, invalidate billing queries
+        if (isOpen && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const checkoutSuccess = params.get('checkout');
+            const sessionId = params.get('session_id');
+            const clientSecret = params.get('client_secret');
+
             if (checkoutSuccess === 'success' || sessionId || clientSecret) {
                 console.log('🔄 Checkout success detected in modal, invalidating billing queries...');
                 queryClient.invalidateQueries({ queryKey: billingKeys.all });
-                
-                // Clean up URL params
+
                 const url = new URL(window.location.href);
                 url.searchParams.delete('checkout');
                 url.searchParams.delete('session_id');
@@ -54,19 +70,22 @@ export function PlanSelectionModal({
                 router.replace(url.pathname + url.search, { scroll: false });
             }
         }
-    }, [open, searchParams, queryClient, router]);
+    }, [isOpen, queryClient, router]);
 
     const handleSubscriptionUpdate = () => {
         // Invalidate all billing queries
         queryClient.invalidateQueries({ queryKey: billingKeys.all });
         // Close modal after successful upgrade
         setTimeout(() => {
-            onOpenChange(false);
+            handleOpenChange(false);
         }, 500);
     };
 
+    const effectiveReturnUrl = controlledReturnUrl || storeReturnUrl || defaultReturnUrl;
+    const displayReason = customTitle || storeCustomTitle || (creditsExhausted ? "You ran out of credits. Upgrade now." : undefined);
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogContent 
                 className={cn(
                     "max-w-[100vw] w-full h-full max-h-[100vh] p-0 gap-0 overflow-hidden",
@@ -95,7 +114,7 @@ export function PlanSelectionModal({
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => onOpenChange(false)}
+                            onClick={() => handleOpenChange(false)}
                             className="h-9 w-9 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90 border border-border/50 transition-all"
                         >
                             <X className="h-4 w-4" />
@@ -108,11 +127,13 @@ export function PlanSelectionModal({
                 <div className="w-full h-full flex items-center justify-center overflow-hidden bg-background pt-[67px]">
                     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
                         <PricingSection
-                            returnUrl={returnUrl || defaultReturnUrl}
+                            returnUrl={effectiveReturnUrl}
                             showTitleAndTabs={true}
                             insideDialog={false}
                             noPadding={true}
-                            customTitle={creditsExhausted ? "You ran out of credits. Upgrade now." : undefined}
+                            customTitle={displayReason}
+                            isAlert={storeIsAlert}
+                            alertTitle={storeAlertTitle}
                             onSubscriptionUpdate={handleSubscriptionUpdate}
                         />
                     </div>
