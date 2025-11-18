@@ -1132,6 +1132,12 @@ class SubscriptionService:
             'can_purchase_credits': tier_obj.can_purchase_credits,
             'models': tier_obj.models,
             'project_limit': tier_obj.project_limit,
+            'thread_limit': tier_obj.thread_limit,
+            'concurrent_runs': tier_obj.concurrent_runs,
+            'custom_workers_limit': tier_obj.custom_workers_limit,
+            'scheduled_triggers_limit': tier_obj.scheduled_triggers_limit,
+            'app_triggers_limit': tier_obj.app_triggers_limit,
+            'agent_limit': tier_obj.custom_workers_limit,
             'is_trial': trial_status == 'active'
         }
         

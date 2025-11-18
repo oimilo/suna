@@ -25,6 +25,11 @@ class Tier:
     can_purchase_credits: bool
     models: List[str]
     project_limit: int
+    thread_limit: int
+    concurrent_runs: int
+    custom_workers_limit: int
+    scheduled_triggers_limit: int
+    app_triggers_limit: int
 
 TIERS: Dict[str, Tier] = {
     'none': Tier(
@@ -34,7 +39,12 @@ TIERS: Dict[str, Tier] = {
         display_name='No Plan',
         can_purchase_credits=False,
         models=[],
-        project_limit=0
+        project_limit=0,
+        thread_limit=0,
+        concurrent_runs=0,
+        custom_workers_limit=0,
+        scheduled_triggers_limit=0,
+        app_triggers_limit=0
     ),
     'free': Tier(
         name='free',
@@ -42,8 +52,13 @@ TIERS: Dict[str, Tier] = {
         monthly_credits=FREE_TIER_INITIAL_CREDITS,
         display_name='Basic',
         can_purchase_credits=False,
-        models=['all'],
-        project_limit=1
+        models=['haiku'],
+        project_limit=1,
+        thread_limit=1,
+        concurrent_runs=1,
+        custom_workers_limit=1,
+        scheduled_triggers_limit=1,
+        app_triggers_limit=1
     ),
     'tier_2_20': Tier(
         name='tier_2_20',
@@ -56,7 +71,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Starter',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=100
+        project_limit=100,
+        thread_limit=100,
+        concurrent_runs=3,
+        custom_workers_limit=2,
+        scheduled_triggers_limit=5,
+        app_triggers_limit=10
     ),
     'tier_6_50': Tier(
         name='tier_6_50',
@@ -69,7 +89,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Professional',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=500
+        project_limit=500,
+        thread_limit=500,
+        concurrent_runs=5,
+        custom_workers_limit=5,
+        scheduled_triggers_limit=10,
+        app_triggers_limit=25
     ),
     'tier_12_100': Tier(
         name='tier_12_100',
@@ -81,7 +106,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Team',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=1000
+        project_limit=1000,
+        thread_limit=1000,
+        concurrent_runs=10,
+        custom_workers_limit=10,
+        scheduled_triggers_limit=20,
+        app_triggers_limit=50
     ),
     'tier_25_200': Tier(
         name='tier_25_200',
@@ -94,7 +124,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Business',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=2500
+        project_limit=2500,
+        thread_limit=2500,
+        concurrent_runs=20,
+        custom_workers_limit=25,
+        scheduled_triggers_limit=50,
+        app_triggers_limit=100
     ),
     'tier_50_400': Tier(
         name='tier_50_400',
@@ -106,7 +141,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Enterprise',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=5000
+        project_limit=5000,
+        thread_limit=5000,
+        concurrent_runs=50,
+        custom_workers_limit=50,
+        scheduled_triggers_limit=100,
+        app_triggers_limit=250
     ),
     'tier_125_800': Tier(
         name='tier_125_800',
@@ -118,7 +158,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Enterprise Plus',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=10000
+        project_limit=10000,
+        thread_limit=10000,
+        concurrent_runs=100,
+        custom_workers_limit=100,
+        scheduled_triggers_limit=250,
+        app_triggers_limit=500
     ),
     'tier_200_1000': Tier(
         name='tier_200_1000',
@@ -130,7 +175,12 @@ TIERS: Dict[str, Tier] = {
         display_name='Ultimate',
         can_purchase_credits=True,
         models=['all'],
-        project_limit=25000
+        project_limit=25000,
+        thread_limit=25000,
+        concurrent_runs=250,
+        custom_workers_limit=250,
+        scheduled_triggers_limit=500,
+        app_triggers_limit=1000
     ),
 }
 
@@ -175,6 +225,26 @@ def is_model_allowed(tier_name: str, model: str) -> bool:
 def get_project_limit(tier_name: str) -> int:
     tier = TIERS.get(tier_name)
     return tier.project_limit if tier else 3
+
+def get_thread_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.thread_limit if tier else TIERS['free'].thread_limit
+
+def get_concurrent_runs_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.concurrent_runs if tier else TIERS['free'].concurrent_runs
+
+def get_custom_workers_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.custom_workers_limit if tier else TIERS['free'].custom_workers_limit
+
+def get_scheduled_trigger_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.scheduled_triggers_limit if tier else TIERS['free'].scheduled_triggers_limit
+
+def get_app_trigger_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.app_triggers_limit if tier else TIERS['free'].app_triggers_limit
 
 def is_commitment_price_id(price_id: str) -> bool:
     commitment_price_ids = [
