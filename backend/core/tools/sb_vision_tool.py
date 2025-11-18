@@ -52,6 +52,14 @@ class SandboxVisionTool(SandboxToolsBase):
         # Make thread_manager accessible within the tool instance
         self.thread_manager = thread_manager
         self.db = DBConnection()
+        self.stagehand_host = config.STAGEHAND_API_HOST or "localhost"
+        try:
+            self.stagehand_port = int(config.STAGEHAND_API_PORT or 8004)
+        except (TypeError, ValueError):
+            self.stagehand_port = 8004
+
+    def _stagehand_base_url(self) -> str:
+        return f"http://{self.stagehand_host}:{self.stagehand_port}"
 
     async def convert_svg_with_sandbox_browser(self, svg_full_path: str) -> Tuple[bytes, str]:
         """Convert SVG to PNG using sandbox browser API for better rendering support.
@@ -71,11 +79,12 @@ class SandboxVisionTool(SandboxToolsBase):
             await self._ensure_sandbox()
             
             env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
-            init_response = await self.sandbox.process.exec(
-                "curl -s -X POST 'http://localhost:8004/api/init' -H 'Content-Type: application/json' -d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'",
-                timeout=30,
-                env=env_vars
+            init_url = f"{self._stagehand_base_url()}/api/init"
+            init_cmd = (
+                f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
+                "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
             )
+            init_response = await self.sandbox.process.exec(init_cmd, timeout=30, env=env_vars)
             
             if init_response.exit_code != 0:
                 raise Exception(f"Failed to initialize browser: {init_response.result}")
@@ -94,7 +103,7 @@ class SandboxVisionTool(SandboxToolsBase):
             }
             
             # Build curl command to call sandbox browser API
-            url = "http://localhost:8004/api/convert-svg"
+            url = f"{self._stagehand_base_url()}/api/convert-svg"
             json_data = json.dumps(params)
             curl_cmd = f"curl -s -X POST '{url}' -H 'Content-Type: application/json' -d '{json_data}'"
             
