@@ -2,6 +2,7 @@ import os
 import base64
 import mimetypes
 import uuid
+import asyncio
 from datetime import datetime
 from typing import Optional, Tuple, Dict, Any
 from io import BytesIO
@@ -59,8 +60,22 @@ class SandboxVisionTool(SandboxToolsBase):
         except (TypeError, ValueError):
             self.stagehand_port = 8004
 
-    def _stagehand_base_url(self) -> str:
-        return f"http://{self.stagehand_host}:{self.stagehand_port}"
+    def _stagehand_base_url(self, port: Optional[int] = None) -> str:
+        target_port = port or self.stagehand_port
+        return f"http://{self.stagehand_host}:{target_port}"
+
+    def _candidate_stagehand_ports(self) -> list[int]:
+        candidates: list[int] = []
+        for port in [self.stagehand_port, 8004, 8003]:
+            if port is None:
+                continue
+            try:
+                port_int = int(port)
+            except (TypeError, ValueError):
+                continue
+            if port_int not in candidates:
+                candidates.append(port_int)
+        return candidates
 
     def _sentry_enabled(self) -> bool:
         try:
@@ -115,6 +130,151 @@ class SandboxVisionTool(SandboxToolsBase):
                     scope.set_extra(key, value)
             sentry_sdk.capture_message(message, level=level)
 
+    async def _ensure_stagehand_available(self) -> bool:
+        try:
+            await self._ensure_sandbox()
+            candidates = self._candidate_stagehand_ports()
+
+            for port in candidates:
+                success = await self._vision_attempt_stagehand_health(port)
+                if success:
+                    if port != self.stagehand_port:
+                        self.stagehand_port = port
+                        self._record_stagehand_breadcrumb(
+                            "vision.stagehand.port.detected",
+                            {"port": port},
+                        )
+                    return True
+
+            self._capture_stagehand_event(
+                "Vision tool failed to detect Stagehand API",
+                extra={"ports": candidates},
+            )
+            return False
+        except Exception as e:
+            self._capture_stagehand_event(
+                "Vision tool Stagehand detection error",
+                extra={"error": str(e)},
+            )
+            sentry_sdk.capture_exception(e)
+            return False
+
+    async def _vision_attempt_stagehand_health(self, port: int) -> bool:
+        max_retries = 5
+        retry_delays = [1, 2, 3, 5, 5]
+
+        self._record_stagehand_breadcrumb(
+            "vision.stagehand.health_check.start",
+            {"port": port, "max_retries": max_retries},
+        )
+
+        for attempt in range(max_retries):
+            health_url = f"{self._stagehand_base_url(port)}/api"
+            curl_cmd = f"curl -s -X GET '{health_url}' -H 'Content-Type: application/json'"
+
+            if attempt > 0:
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.health_check.retry",
+                    {"attempt": attempt + 1, "port": port},
+                )
+
+            response = await self.sandbox.process.exec(curl_cmd, timeout=10)
+
+            if response.exit_code == 0:
+                try:
+                    result = json.loads(response.result)
+                    if result.get("status") == "healthy":
+                        self._record_stagehand_breadcrumb(
+                            "vision.stagehand.health_check.success",
+                            {"attempt": attempt + 1, "port": port},
+                        )
+                        return True
+                    else:
+                        initialized = await self._vision_attempt_stagehand_init(port)
+                        if initialized:
+                            return True
+                except json.JSONDecodeError:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.health_check.invalid_json",
+                        {"response": response.result, "port": port},
+                        level="warning",
+                    )
+            elif response.exit_code == 7:
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.health_check.connection_refused",
+                    {"attempt": attempt + 1, "port": port},
+                    level="debug",
+                )
+            else:
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.health_check.exec_failure",
+                    {
+                        "attempt": attempt + 1,
+                        "port": port,
+                        "exit_code": response.exit_code,
+                        "response": response.result,
+                    },
+                    level="warning",
+                )
+
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delays[attempt])
+
+        return False
+
+    async def _vision_attempt_stagehand_init(self, port: int) -> bool:
+        env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
+        init_endpoints = [
+            f"{self._stagehand_base_url(port)}/api/init",
+            f"{self._stagehand_base_url(port)}/init",
+        ]
+
+        for init_url in init_endpoints:
+            self._record_stagehand_breadcrumb(
+                "vision.stagehand.init.attempt",
+                {"endpoint": init_url, "port": port},
+            )
+            init_cmd = (
+                f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
+                "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
+            )
+            response = await self.sandbox.process.exec(init_cmd, timeout=90, env=env_vars)
+            if response.exit_code == 0:
+                try:
+                    init_result = json.loads(response.result)
+                    if init_result.get("status") == "healthy":
+                        self._record_stagehand_breadcrumb(
+                            "vision.stagehand.init.success",
+                            {"endpoint": init_url, "port": port},
+                        )
+                        return True
+                    else:
+                        self._record_stagehand_breadcrumb(
+                            "vision.stagehand.init.failure",
+                            {"endpoint": init_url, "response": init_result, "port": port},
+                            level="warning",
+                        )
+                except json.JSONDecodeError:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.init.invalid_json",
+                        {"endpoint": init_url, "response": response.result, "port": port},
+                        level="warning",
+                    )
+            elif response.exit_code in (22,):
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.init.http_error",
+                    {"endpoint": init_url, "response": response.result, "port": port},
+                    level="warning",
+                )
+                continue
+            else:
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.init.exec_failure",
+                    {"endpoint": init_url, "response": response.result, "port": port},
+                    level="warning",
+                )
+        return False
+
     async def convert_svg_with_sandbox_browser(self, svg_full_path: str) -> Tuple[bytes, str]:
         """Convert SVG to PNG using sandbox browser API for better rendering support.
         
@@ -131,67 +291,10 @@ class SandboxVisionTool(SandboxToolsBase):
             
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
-            
-            env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
-            init_endpoints = [
-                f"{self._stagehand_base_url()}/api/init",
-                f"{self._stagehand_base_url()}/init",
-            ]
-            init_response = None
-            self._record_stagehand_breadcrumb(
-                "vision.stagehand.init.start",
-                {"svg_path": svg_full_path},
-            )
-            for init_url in init_endpoints:
-                self._record_stagehand_breadcrumb(
-                    "vision.stagehand.init.attempt",
-                    {"endpoint": init_url},
+            if not await self._ensure_stagehand_available():
+                raise Exception(
+                    "Stagehand API server is not running or could not be initialized for SVG conversion."
                 )
-                init_cmd = (
-                    f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
-                    "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
-                )
-                init_response = await self.sandbox.process.exec(init_cmd, timeout=30, env=env_vars)
-                if init_response.exit_code == 0:
-                    self._record_stagehand_breadcrumb(
-                        "vision.stagehand.init.command_success",
-                        {"endpoint": init_url},
-                    )
-                    break
-            
-            if init_response is None or init_response.exit_code != 0:
-                self._capture_stagehand_event(
-                    "Vision tool failed to initialize Stagehand",
-                    extra={
-                        "endpoint_attempts": init_endpoints,
-                        "exit_code": getattr(init_response, "exit_code", None),
-                        "response": getattr(init_response, "result", None),
-                    },
-                )
-                raise Exception(f"Failed to initialize browser: {init_response.result}")
-            
-            try:
-                init_data = json.loads(init_response.result)
-                if init_data.get("status") not in ["healthy", "initialized"]:
-                    self._record_stagehand_breadcrumb(
-                        "vision.stagehand.init.unexpected_status",
-                        {"status": init_data.get("status"), "response": init_data},
-                        level="warning",
-                    )
-                    raise Exception(f"Browser initialization failed: {init_data}")
-                else:
-                    self._record_stagehand_breadcrumb(
-                        "vision.stagehand.init.success",
-                        {"status": init_data.get("status")},
-                    )
-            except json.JSONDecodeError:
-                # Assume success if we can't parse response
-                self._record_stagehand_breadcrumb(
-                    "vision.stagehand.init.invalid_json",
-                    {"response": init_response.result},
-                    level="warning",
-                )
-                pass
             
             # Now call the browser API conversion endpoint
             params = {
