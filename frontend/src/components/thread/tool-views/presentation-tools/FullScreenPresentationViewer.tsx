@@ -117,7 +117,6 @@ export function FullScreenPresentationViewer({
       
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
-        headers: { 'Cache-Control': 'no-cache' }
       });
       
       if (response.ok) {
