@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 import asyncio
+from urllib.parse import urlparse
 
 import httpx
 import aiohttp
@@ -205,7 +206,66 @@ def _is_vnc_request(path: str, request: Request) -> bool:
     return False
 
 
+def _extract_presentation_prefix_from_referer(referer: str, sandbox_id: str) -> Optional[str]:
+    if not referer:
+        return None
+
+    try:
+        parsed = urlparse(referer)
+    except ValueError:
+        return None
+
+    preview_prefix = f"/api/preview/{sandbox_id}/"
+    if not parsed.path.startswith(preview_prefix):
+        return None
+
+    relative_path = parsed.path[len(preview_prefix):]
+    if not relative_path.startswith("presentations/"):
+        return None
+
+    parts = relative_path.split("/")
+    if len(parts) < 2:
+        return None
+
+    return "/".join(parts[:2])
+
+
+def _rewrite_presentation_asset_path(path: str, request: Request, sandbox_id: str) -> str:
+    normalized = (path or "").lstrip("/")
+    if not normalized:
+        return path
+
+    if normalized.startswith(
+        (
+            "presentations/",
+            "workspace/",
+            "api/",
+            "downloads/",
+            "vnc",
+            "websockify",
+        )
+    ):
+        return path
+
+    referer_prefix = _extract_presentation_prefix_from_referer(
+        request.headers.get("referer") or "",
+        sandbox_id,
+    )
+    if not referer_prefix:
+        return path
+
+    rewritten = f"{referer_prefix}/{normalized}"
+    logger.debug(
+        "Rewriting presentation asset path %s -> %s (referer=%s)",
+        path,
+        rewritten,
+        request.headers.get("referer"),
+    )
+    return rewritten
+
+
 async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Response:
+    path = _rewrite_presentation_asset_path(path, request, sandbox_id)
     metadata = await _get_project_sandbox_metadata(sandbox_id)
 
     base_url = metadata["sandbox_url"]
