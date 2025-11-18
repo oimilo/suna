@@ -85,12 +85,16 @@ export function FullScreenPresentationViewer({
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
   };
 
+  const normalizedPresentationName = useMemo(() => {
+    return (
+      safePresentationName ||
+      (presentationName ? sanitizeFilename(presentationName) : undefined)
+    );
+  }, [safePresentationName, presentationName]);
+
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    const normalizedName =
-      safePresentationName ||
-      (presentationName ? sanitizeFilename(presentationName) : undefined);
-
+    const normalizedName = normalizedPresentationName;
     if (!normalizedName || (!sandboxUrl && !sandboxId)) return;
     
     setIsLoading(true);
@@ -163,7 +167,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [presentationName, safePresentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
+  }, [normalizedPresentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
@@ -363,14 +367,28 @@ export function FullScreenPresentationViewer({
       }
 
       const fallbackBase = sandboxUrl ? sandboxUrl.replace(/\/$/, '') : undefined;
+      const resolvedFilePath = (() => {
+        const rawPath = slide.file_path || '';
+        if (rawPath.startsWith('presentations/')) {
+          return rawPath.replace(/^\/+/, '');
+        }
+        if (rawPath.startsWith('/workspace/')) {
+          return rawPath.replace(/^\/workspace\//, '');
+        }
+        if (normalizedPresentationName) {
+          return `presentations/${normalizedPresentationName.replace(/^\/+/, '')}/${rawPath.replace(/^\/+/, '')}`;
+        }
+        return rawPath.replace(/^\/+/, '');
+      })();
+
       const slideUrl =
         constructHtmlPreviewUrl({
           sandboxId,
           sandboxUrl,
-          filePath: slide.file_path,
+          filePath: resolvedFilePath,
         }) ??
         (fallbackBase
-          ? `${fallbackBase}/${slide.file_path.replace(/^\/workspace\//, '')}`
+          ? `${fallbackBase}/${resolvedFilePath}`
           : undefined);
 
       if (!slideUrl) {
@@ -387,12 +405,12 @@ export function FullScreenPresentationViewer({
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
       const editorUrl =
-        buildSandboxProxyUrl({
+        (buildSandboxProxyUrl({
           sandboxId,
           sandboxUrl,
-          relativePath: `api/html/${slide.file_path}/editor`,
+          relativePath: `api/html/${resolvedFilePath}/editor`,
         }) ??
-        (sandboxUrl ? `${sandboxUrl}/api/html/${slide.file_path}/editor` : undefined);
+        (sandboxUrl ? `${sandboxUrl}/api/html/${resolvedFilePath}/editor` : undefined));
       const iframeSrc = showEditor && editorUrl ? editorUrl : slideUrlWithCacheBust;
 
       return (
