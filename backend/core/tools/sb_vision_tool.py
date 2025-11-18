@@ -79,14 +79,21 @@ class SandboxVisionTool(SandboxToolsBase):
             await self._ensure_sandbox()
             
             env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
-            init_url = f"{self._stagehand_base_url()}/api/init"
-            init_cmd = (
-                f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
-                "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
-            )
-            init_response = await self.sandbox.process.exec(init_cmd, timeout=30, env=env_vars)
+            init_endpoints = [
+                f"{self._stagehand_base_url()}/api/init",
+                f"{self._stagehand_base_url()}/init",
+            ]
+            init_response = None
+            for init_url in init_endpoints:
+                init_cmd = (
+                    f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
+                    "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
+                )
+                init_response = await self.sandbox.process.exec(init_cmd, timeout=30, env=env_vars)
+                if init_response.exit_code == 0:
+                    break
             
-            if init_response.exit_code != 0:
+            if init_response is None or init_response.exit_code != 0:
                 raise Exception(f"Failed to initialize browser: {init_response.result}")
             
             try:
