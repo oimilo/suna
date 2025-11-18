@@ -589,6 +589,23 @@ async def unified_agent_start(
             # Check billing and limits (including project limit)
             await _check_billing_and_limits(client, account_id, model_name, check_project_limit=True)
             
+            if config.ENV_MODE != EnvMode.LOCAL:
+                from core.utils.limits_checker import check_thread_limit
+                thread_limit_check = await check_thread_limit(client, account_id)
+                if not thread_limit_check['can_create']:
+                    error_detail = {
+                        "message": f"Maximum of {thread_limit_check['limit']} threads allowed for your current plan. You have {thread_limit_check['current_count']} threads.",
+                        "current_count": thread_limit_check['current_count'],
+                        "limit": thread_limit_check['limit'],
+                        "tier_name": thread_limit_check.get('tier_name'),
+                        "error_code": "THREAD_LIMIT_EXCEEDED"
+                    }
+                    logger.warning(
+                        f"Thread limit exceeded for account {account_id}: "
+                        f"{thread_limit_check['current_count']}/{thread_limit_check['limit']}"
+                    )
+                    raise HTTPException(status_code=402, detail=error_detail)
+            
             # Get effective model
             effective_model = await _get_effective_model(model_name, agent_config, client, account_id)
             
