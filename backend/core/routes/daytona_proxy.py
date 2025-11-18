@@ -9,7 +9,15 @@ from datetime import datetime, timezone
 import asyncio
 
 import httpx
-import websockets
+import aiohttp
+from aiohttp import (
+    ClientSession,
+    ClientTimeout,
+    ClientWebSocketResponse,
+    ClientConnectorError,
+    WSServerHandshakeError,
+    WSMsgType,
+)
 from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
 from starlette.websockets import WebSocketState
 
@@ -273,31 +281,44 @@ def _prepare_websocket_headers(websocket: WebSocket, preview_token: Optional[str
     return headers
 
 
-async def _relay_client_to_upstream(websocket: WebSocket, upstream: websockets.WebSocketClientProtocol) -> None:
+async def _relay_client_to_upstream(websocket: WebSocket, upstream: ClientWebSocketResponse) -> None:
     try:
         while True:
             message = await websocket.receive()
-            if "text" in message and message["text"] is not None:
-                await upstream.send(message["text"])
-            elif "bytes" in message and message["bytes"] is not None:
-                await upstream.send(message["bytes"])
-            elif message.get("type") == "websocket.disconnect":
+            message_type = message.get("type")
+            if message_type == "websocket.disconnect":
                 await upstream.close(code=message.get("code", 1000))
                 break
+            if message.get("text") is not None:
+                await upstream.send_str(message["text"])
+            elif message.get("bytes") is not None:
+                await upstream.send_bytes(message["bytes"])
     except WebSocketDisconnect as exc:
         await upstream.close(code=exc.code or 1000)
 
 
-async def _relay_upstream_to_client(upstream: websockets.WebSocketClientProtocol, websocket: WebSocket) -> None:
+async def _relay_upstream_to_client(upstream: ClientWebSocketResponse, websocket: WebSocket) -> None:
     try:
         async for message in upstream:
-            if isinstance(message, bytes):
-                await websocket.send_bytes(message)
-            else:
-                await websocket.send_text(message)
-    except websockets.ConnectionClosed as exc:
+            if message.type == WSMsgType.TEXT:
+                await websocket.send_text(message.data)
+            elif message.type == WSMsgType.BINARY:
+                await websocket.send_bytes(message.data)
+            elif message.type == WSMsgType.PING:
+                await upstream.pong(message.data)
+            elif message.type == WSMsgType.PONG:
+                continue
+            elif message.type == WSMsgType.CLOSE:
+                if websocket.application_state == WebSocketState.CONNECTED:
+                    await websocket.close(code=upstream.close_code or 1000)
+                break
+            elif message.type == WSMsgType.ERROR:
+                if websocket.application_state == WebSocketState.CONNECTED:
+                    await websocket.close(code=1011, reason=str(upstream.exception()))
+                break
+    except aiohttp.ClientConnectionError as exc:
         if websocket.application_state == WebSocketState.CONNECTED:
-            await websocket.close(code=exc.code or 1011, reason=exc.reason)
+            await websocket.close(code=1011, reason=str(exc))
 
 
 def _get_query_string_from_websocket(websocket: WebSocket) -> str:
@@ -324,17 +345,24 @@ async def _proxy_websocket_request(sandbox_id: str, path: str, websocket: WebSoc
     await websocket.accept()
 
     try:
-        async with websockets.connect(target_url, extra_headers=headers, max_size=None) as upstream:
-            logger.debug(
-                "Proxied VNC websocket sandbox_id=%s target=%s",
-                sandbox_id,
+        timeout = ClientTimeout(total=None, sock_connect=10)
+        async with ClientSession(timeout=timeout) as session:
+            async with session.ws_connect(
                 target_url,
-            )
-            await asyncio.gather(
-                _relay_client_to_upstream(websocket, upstream),
-                _relay_upstream_to_client(upstream, websocket),
-            )
-    except (websockets.InvalidHandshake, websockets.WebSocketException) as exc:
+                headers=headers,
+                receive_timeout=None,
+                autoping=True,
+            ) as upstream:
+                logger.debug(
+                    "Proxied VNC websocket sandbox_id=%s target=%s",
+                    sandbox_id,
+                    target_url,
+                )
+                await asyncio.gather(
+                    _relay_client_to_upstream(websocket, upstream),
+                    _relay_upstream_to_client(upstream, websocket),
+                )
+    except (WSServerHandshakeError, ClientConnectorError, aiohttp.ClientError) as exc:
         logger.error(
             "Failed to proxy VNC websocket for sandbox_id=%s target=%s: %s",
             sandbox_id,
