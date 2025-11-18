@@ -179,31 +179,46 @@ class BrowserTool(SandboxToolsBase):
                             logger.info("✅ Stagehand API server is running and healthy")
                             return True
                         else:
-                            # If the browser api is not healthy, we need to initialize it
+                            # If the browser api is not healthy, attempt initialization
                             logger.info("Stagehand API server responded but browser not initialized. Initializing...")
+                            initialization_attempted = False
+
                             # Pass API key securely as environment variable instead of command line argument
                             env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
 
-                            init_url = f"{self._stagehand_base_url()}/api/init"
-                            init_cmd = (
-                                f"curl -s -X POST \"{init_url}\" "
-                                "-H \"Content-Type: application/json\" "
-                                "-d \"{\\\"api_key\\\": \\\"$GEMINI_API_KEY\\\"}\""
-                            )
-                            response = await self.sandbox.process.exec(init_cmd, timeout=90, env=env_vars)
-                            if response.exit_code == 0:
-                                try:
-                                    init_result = json.loads(response.result)
-                                    if init_result.get("status") == "healthy":
-                                        logger.info("✅ Stagehand API server initialized successfully")
-                                        return True
-                                    else:
-                                        logger.warning(f"Stagehand API initialization failed: {init_result}")
-                                        # Don't return False yet, might succeed on retry
-                                except json.JSONDecodeError:
-                                    logger.warning(f"Init endpoint returned invalid JSON: {response.result}")
-                            else:
-                                logger.warning(f"Stagehand API initialization request failed: {response.result}")
+                            init_endpoints = [
+                                f"{self._stagehand_base_url()}/api/init",
+                                f"{self._stagehand_base_url()}/init",
+                            ]
+
+                            for init_url in init_endpoints:
+                                initialization_attempted = True
+                                init_cmd = (
+                                    f"curl -s -X POST \"{init_url}\" "
+                                    "-H \"Content-Type: application/json\" "
+                                    "-d \"{\\\"api_key\\\": \\\"$GEMINI_API_KEY\\\"}\""
+                                )
+                                response = await self.sandbox.process.exec(init_cmd, timeout=90, env=env_vars)
+                                if response.exit_code == 0:
+                                    try:
+                                        init_result = json.loads(response.result)
+                                        if init_result.get("status") == "healthy":
+                                            logger.info("✅ Stagehand API server initialized successfully")
+                                            return True
+                                        else:
+                                            logger.warning(f"Stagehand API initialization failed via {init_url}: {init_result}")
+                                            # Don't return False yet, might succeed on next endpoint or retry
+                                    except json.JSONDecodeError:
+                                        logger.warning(f"Init endpoint returned invalid JSON from {init_url}: {response.result}")
+                                elif response.exit_code in (22,):  # HTTP error (curl)
+                                    logger.warning(f"Stagehand API initialization endpoint {init_url} returned HTTP error: {response.result}")
+                                    # If the endpoint is missing (404/405), try next one before retry loop
+                                    continue
+                                else:
+                                    logger.warning(f"Stagehand API initialization request failed for {init_url}: {response.result}")
+
+                            if not initialization_attempted:
+                                logger.warning("Stagehand API initialization skipped (no endpoints attempted)")
                     except json.JSONDecodeError:
                         logger.warning(f"Stagehand API server responded but with invalid JSON: {response.result}")
                 elif response.exit_code == 7:
