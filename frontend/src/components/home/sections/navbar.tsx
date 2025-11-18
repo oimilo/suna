@@ -91,8 +91,8 @@ export function Navbar() {
   const toggleDrawer = () => setIsDrawerOpen((prev) => !prev);
   const handleOverlayClick = () => setIsDrawerOpen(false);
 
-  // Always use white logo since we're forcing dark mode on landing page
-  const logoSrc = '/branco.svg';
+  // Always use white logomark since landing força tema escuro
+  const logoSrc = '/logomark-white.svg';
 
   return (
     <header
@@ -118,11 +118,11 @@ export function Navbar() {
             <Link href="/" className="flex items-center gap-3">
               <Image
                 src={logoSrc}
-                alt="Milo Logo"
+                alt="Prophet Logomark"
                 width={140}
-                height={22}
+                height={50}
                 priority
-              /> 
+              />
             </Link>
 
             <NavMenu />
@@ -196,9 +196,9 @@ export function Navbar() {
                   <Link href="/" className="flex items-center gap-3">
                     <Image
                       src={logoSrc}
-                      alt="Milo Logo"
+                      alt="Prophet Logomark"
                       width={120}
-                      height={22}
+                      height={40}
                       priority
                     />
                     <span className="font-medium text-primary text-sm">
