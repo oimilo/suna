@@ -307,6 +307,8 @@ class Configuration:
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
     OR_SITE_URL: Optional[str] = "https://www.prophet.build"
     OR_APP_NAME: Optional[str] = "Prophet AI"
+    STAGEHAND_API_HOST: Optional[str] = "localhost"
+    STAGEHAND_API_PORT: Optional[int] = 8004
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None

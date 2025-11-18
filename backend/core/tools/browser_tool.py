@@ -37,6 +37,14 @@ class BrowserTool(SandboxToolsBase):
     def __init__(self, project_id: str, thread_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
         self.thread_id = thread_id
+        self.stagehand_host = config.STAGEHAND_API_HOST or "localhost"
+        try:
+            self.stagehand_port = int(config.STAGEHAND_API_PORT or 8004)
+        except (TypeError, ValueError):
+            self.stagehand_port = 8004
+
+    def _stagehand_base_url(self) -> str:
+        return f"http://{self.stagehand_host}:{self.stagehand_port}"
     
     def _validate_base64_image(self, base64_string: str, max_size_mb: int = 10) -> tuple[bool, str]:
         """
@@ -118,7 +126,13 @@ class BrowserTool(SandboxToolsBase):
             processes = response.result if response.exit_code == 0 else "Failed to get process list"
             
             # Check what ports are listening
-            netstat_cmd = "netstat -tlnp 2>/dev/null | grep -E ':(8003|8004)' || ss -tlnp 2>/dev/null | grep -E ':(8003|8004)' || echo 'No netstat/ss available'"
+            ports_to_check = sorted({self.stagehand_port, 8004})
+            port_pattern = "|".join(str(port) for port in ports_to_check)
+            netstat_cmd = (
+                f"netstat -tlnp 2>/dev/null | grep -E ':({port_pattern})' "
+                f"|| ss -tlnp 2>/dev/null | grep -E ':({port_pattern})' "
+                "|| echo 'No netstat/ss available'"
+            )
             response2 = await self.sandbox.process.exec(netstat_cmd, timeout=10)
             
             ports = response2.result if response2.exit_code == 0 else "Failed to get port list"
@@ -150,7 +164,8 @@ class BrowserTool(SandboxToolsBase):
             
             for attempt in range(max_retries):
                 # Simple health check curl command
-                curl_cmd = "curl -s -X GET 'http://localhost:8004/api' -H 'Content-Type: application/json'"
+                stagehand_health_url = f"{self._stagehand_base_url()}/api"
+                curl_cmd = f"curl -s -X GET '{stagehand_health_url}' -H 'Content-Type: application/json'"
                 
                 if attempt > 0:
                     logger.info(f"Retrying Stagehand API health check (attempt {attempt + 1}/{max_retries})...")
@@ -169,11 +184,13 @@ class BrowserTool(SandboxToolsBase):
                             # Pass API key securely as environment variable instead of command line argument
                             env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
 
-                            response = await self.sandbox.process.exec(
-                                'curl -s -X POST "http://localhost:8004/api/init" -H "Content-Type: application/json" -d "{\\"api_key\\": \\"$GEMINI_API_KEY\\"}"',
-                                timeout=90,
-                                env=env_vars
+                            init_url = f"{self._stagehand_base_url()}/api/init"
+                            init_cmd = (
+                                f"curl -s -X POST \"{init_url}\" "
+                                "-H \"Content-Type: application/json\" "
+                                "-d \"{\\\"api_key\\\": \\\"$GEMINI_API_KEY\\\"}\""
                             )
+                            response = await self.sandbox.process.exec(init_cmd, timeout=90, env=env_vars)
                             if response.exit_code == 0:
                                 try:
                                     init_result = json.loads(response.result)
@@ -232,7 +249,7 @@ class BrowserTool(SandboxToolsBase):
             
             
             # Build the curl command to call the local Stagehand API
-            url = f"http://localhost:8004/api/{endpoint}"  # Fixed localhost as curl runs inside container
+            url = f"{self._stagehand_base_url()}/api/{endpoint}"  # curl runs inside the sandbox container
             
             if method == "GET" and params:
                 query_params = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -321,7 +338,10 @@ class BrowserTool(SandboxToolsBase):
             else:
                 # Check if it's a connection error (exit code 7)
                 if response.exit_code == 7:
-                    error_msg = f"Stagehand API server is not available on port 8004. Please ensure the Stagehand API server is running. Error: {response}"
+                    error_msg = (
+                        f"Stagehand API server is not available on port {self.stagehand_port}. "
+                        f"Please ensure the Stagehand API server is running. Error: {response}"
+                    )
                     logger.error(error_msg)
                     return self.fail_response(error_msg)
                 else:
