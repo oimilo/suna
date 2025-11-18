@@ -3,7 +3,7 @@
  * Uses timezone as a proxy for geographic location (no API calls needed)
  */
 
-import { locales, defaultLocale, type Locale } from '@/i18n/config';
+import { locales, defaultLocale, type Locale, normalizeLocale } from '@/i18n/config';
 
 /**
  * Maps timezone regions to likely languages
@@ -30,7 +30,7 @@ const TIMEZONE_TO_LOCALE_MAP: Record<string, Locale> = {
   'Europe/Budapest': 'en',
   'Europe/Bucharest': 'en',
   'Europe/Athens': 'en',
-  'Europe/Lisbon': 'en',
+  'Europe/Lisbon': 'pt-BR',
   
   // Americas (mostly English, but some regions)
   'America/New_York': 'en',
@@ -40,7 +40,17 @@ const TIMEZONE_TO_LOCALE_MAP: Record<string, Locale> = {
   'America/Toronto': 'en',
   'America/Vancouver': 'en',
   'America/Mexico_City': 'en', // Spanish not supported
-  'America/Sao_Paulo': 'en', // Portuguese not supported
+  'America/Sao_Paulo': 'pt-BR',
+  'America/Bahia': 'pt-BR',
+  'America/Fortaleza': 'pt-BR',
+  'America/Recife': 'pt-BR',
+  'America/Belem': 'pt-BR',
+  'America/Manaus': 'pt-BR',
+  'America/Porto_Velho': 'pt-BR',
+  'America/Boa_Vista': 'pt-BR',
+  'America/Cuiaba': 'pt-BR',
+  'America/Campo_Grande': 'pt-BR',
+  'America/Noronha': 'pt-BR',
   'America/Buenos_Aires': 'en', // Spanish not supported
   
   // Asia Pacific
@@ -115,19 +125,20 @@ export function detectLocaleFromBrowser(): Locale | null {
   }
 
   try {
-    const browserLang = navigator.language.split('-')[0].toLowerCase();
-    if (locales.includes(browserLang as Locale)) {
-      return browserLang as Locale;
-    }
-    
-    // Try full language code (e.g., "de-DE", "it-IT")
-    const fullLang = navigator.language.toLowerCase();
-    for (const locale of locales) {
-      if (fullLang.startsWith(locale)) {
-        return locale;
+    const browserLanguages = [navigator.language, ...(navigator.languages ?? [])];
+
+    for (const lang of browserLanguages) {
+      const normalized = normalizeLocale(lang);
+      if (normalized) {
+        return normalized;
       }
     }
-    
+
+    const fallback = normalizeLocale(navigator.language.split('-')[0]);
+    if (fallback) {
+      return fallback;
+    }
+
     return null;
   } catch (error) {
     console.warn('Failed to detect locale from browser:', error);

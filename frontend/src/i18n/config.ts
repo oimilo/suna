@@ -1,20 +1,56 @@
 import { getRequestConfig } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-export const locales = ['en', 'de', 'it'] as const;
+export const locales = ['en', 'de', 'it', 'pt-BR'] as const;
 export type Locale = (typeof locales)[number];
+
+const localeAliasMap: Record<string, Locale> = {
+  pt: 'pt-BR',
+  'pt-br': 'pt-BR'
+};
+
+export function normalizeLocale(value?: string | null): Locale | null {
+  if (!value) return null;
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const directMatch = locales.find(
+    (locale) => locale.toLowerCase() === normalized
+  );
+  if (directMatch) {
+    return directMatch;
+  }
+
+  if (localeAliasMap[normalized]) {
+    return localeAliasMap[normalized];
+  }
+
+  const base = normalized.split(/[-_]/)[0];
+  if (!base) return null;
+
+  if (localeAliasMap[base]) {
+    return localeAliasMap[base];
+  }
+
+  const baseMatch = locales.find(
+    (locale) => locale.toLowerCase().split(/[-_]/)[0] === base
+  );
+
+  return baseMatch ?? null;
+}
 
 export const defaultLocale: Locale = 'en';
 
 export default getRequestConfig(async ({ locale }) => {
-  // Validate that the incoming `locale` parameter is valid
-  if (!locales.includes(locale as Locale)) {
+  const normalized = normalizeLocale(locale);
+  if (!normalized) {
     notFound();
   }
 
   return {
-    locale,
-    messages: (await import(`../../translations/${locale}.json`)).default
+    locale: normalized,
+    messages: (await import(`../../translations/${normalized}.json`)).default
   };
 });
 

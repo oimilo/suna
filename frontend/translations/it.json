@@ -572,7 +572,8 @@
   "languages": {
     "en": "English",
     "de": "Deutsch",
-    "it": "Italiano"
+    "it": "Italiano",
+    "pt-BR": "Portoghese (Brasile)"
   },
   "suna": {
     "samplePrompts": "Prompt di esempio",

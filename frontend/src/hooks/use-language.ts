@@ -1,6 +1,6 @@
 'use client';
 
-import { locales, defaultLocale, type Locale } from '@/i18n/config';
+import { locales, defaultLocale, type Locale, normalizeLocale } from '@/i18n/config';
 import { useCallback, useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { detectBestLocale } from '@/lib/utils/geo-detection';
@@ -16,35 +16,38 @@ import { detectBestLocale } from '@/lib/utils/geo-detection';
 async function getStoredLocale(): Promise<Locale> {
   if (typeof window === 'undefined') return defaultLocale;
 
+  const resolveLocale = (value?: string | null) => normalizeLocale(value) ?? null;
+
   try {
-    // Check user profile preference (if authenticated)
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.user_metadata?.locale && locales.includes(user.user_metadata.locale as Locale)) {
-      return user.user_metadata.locale as Locale;
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (user?.user_metadata?.locale) {
+      const normalized = resolveLocale(user.user_metadata.locale);
+      if (normalized) {
+        return normalized;
+      }
     }
   } catch (error) {
-    // Silently fail - user might not be authenticated
     console.debug('Could not fetch user locale:', error);
   }
 
-  // Check cookie
   const cookies = document.cookie.split(';');
-  const localeCookie = cookies.find(c => c.trim().startsWith('locale='));
+  const localeCookie = cookies.find((c) => c.trim().startsWith('locale='));
   if (localeCookie) {
     const value = localeCookie.split('=')[1].trim();
-    if (locales.includes(value as Locale)) {
-      return value as Locale;
+    const normalized = resolveLocale(value);
+    if (normalized) {
+      return normalized;
     }
   }
 
-  // Check localStorage
-  const stored = localStorage.getItem('locale');
-  if (stored && locales.includes(stored as Locale)) {
-    return stored as Locale;
+  const stored = resolveLocale(localStorage.getItem('locale'));
+  if (stored) {
+    return stored;
   }
 
-  // Geo-detection fallback
   return detectBestLocale();
 }
 

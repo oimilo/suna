@@ -2,7 +2,7 @@
 
 import { NextIntlClientProvider } from 'next-intl';
 import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
-import { locales, defaultLocale, type Locale } from '@/i18n/config';
+import { locales, defaultLocale, type Locale, normalizeLocale } from '@/i18n/config';
 
 async function getMessages(locale: Locale) {
   try {
@@ -16,33 +16,36 @@ async function getMessages(locale: Locale) {
 
 function getStoredLocale(): Locale {
   if (typeof window === 'undefined') return defaultLocale;
-  
+
+  const resolveLocale = (value?: string | null) => normalizeLocale(value) ?? null;
+
   try {
-    // Check cookie first
     const cookies = document.cookie.split(';');
-    const localeCookie = cookies.find(c => c.trim().startsWith('locale='));
+    const localeCookie = cookies.find((c) => c.trim().startsWith('locale='));
     if (localeCookie) {
       const value = localeCookie.split('=')[1].trim();
-      if (locales.includes(value as Locale)) {
-        return value as Locale;
+      const normalized = resolveLocale(value);
+      if (normalized) {
+        return normalized;
       }
     }
-    
-    // Check localStorage
-    const stored = localStorage.getItem('locale');
-    if (stored && locales.includes(stored as Locale)) {
-      return stored as Locale;
+
+    const stored = resolveLocale(localStorage.getItem('locale'));
+    if (stored) {
+      return stored;
     }
-    
-    // Check browser language
-    const browserLang = navigator.language.split('-')[0].toLowerCase();
-    if (locales.includes(browserLang as Locale)) {
-      return browserLang as Locale;
+
+    const browserLanguages = [navigator.language, ...(navigator.languages ?? [])];
+    for (const lang of browserLanguages) {
+      const normalized = resolveLocale(lang);
+      if (normalized) {
+        return normalized;
+      }
     }
   } catch (error) {
     console.error('Error getting stored locale:', error);
   }
-  
+
   return defaultLocale;
 }
 
