@@ -316,12 +316,23 @@ export function PresentationViewer({
       .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
     .sort((a, b) => a.number - b.number) : [];
 
+  const normalizeSlidePath = (rawPath: string) => {
+    const trimmed = rawPath.trim();
+    if (trimmed.startsWith('presentations/')) {
+      return trimmed.replace(/^\/+/, '');
+    }
+    if (trimmed.startsWith('/workspace/')) {
+      return trimmed.replace(/^\/workspace\//, '');
+    }
+    if (normalizedPresentationName) {
+      return `presentations/${normalizedPresentationName.replace(/^\/+/, '')}/${trimmed.replace(/^\/+/, '')}`;
+    }
+    return trimmed.replace(/^\/+/, '');
+  };
+
   const fallbackSlides = !metadata
     ? fallbackAttachments.map((attachment, index) => {
-        const normalizedPath = attachment
-          .replace(/^\/workspace\//, '')
-          .replace(/^\.\/+/, '')
-          .trim();
+        const normalizedPath = normalizeSlidePath(attachment);
         const filename =
           normalizedPath.split('/').pop() ||
           `slide_${String(index + 1).padStart(2, '0')}.html`;
@@ -330,16 +341,13 @@ export function PresentationViewer({
           .replace(/[_-]+/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
-        const previewPath = normalizedPath.startsWith('presentations/')
-          ? `/workspace/${normalizedPath}`
-          : `/workspace/${normalizedPath}`;
 
         return {
           number: index + 1,
           title: inferredTitle || `Slide ${index + 1}`,
           filename,
           file_path: normalizedPath,
-          preview_url: previewPath,
+          preview_url: normalizedPath,
           created_at: new Date().toISOString(),
         };
       })
