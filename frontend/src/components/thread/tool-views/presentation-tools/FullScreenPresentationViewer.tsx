@@ -92,6 +92,32 @@ export function FullScreenPresentationViewer({
     );
   }, [safePresentationName, presentationName]);
 
+  const normalizeSlidePath = useCallback(
+    (rawPath: string) => {
+      const trimmed = (rawPath || '').trim();
+      if (!trimmed) return '';
+
+      const stripLeadingSlash = (value: string) => value.replace(/^\/+/, '');
+
+      if (trimmed.startsWith('/workspace/')) {
+        return trimmed.replace(/^\/workspace\//, '');
+      }
+
+      const withoutLeadingSlashes = stripLeadingSlash(trimmed);
+
+      if (withoutLeadingSlashes.startsWith('presentations/')) {
+        return withoutLeadingSlashes;
+      }
+
+      if (normalizedPresentationName) {
+        return `presentations/${stripLeadingSlash(normalizedPresentationName)}/${withoutLeadingSlashes}`;
+      }
+
+      return withoutLeadingSlashes;
+    },
+    [normalizedPresentationName]
+  );
+
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
     const normalizedName = normalizedPresentationName;
@@ -367,19 +393,7 @@ export function FullScreenPresentationViewer({
       }
 
       const fallbackBase = sandboxUrl ? sandboxUrl.replace(/\/$/, '') : undefined;
-      const resolvedFilePath = (() => {
-        const rawPath = slide.file_path || '';
-        if (rawPath.startsWith('presentations/')) {
-          return rawPath.replace(/^\/+/, '');
-        }
-        if (rawPath.startsWith('/workspace/')) {
-          return rawPath.replace(/^\/workspace\//, '');
-        }
-        if (normalizedPresentationName) {
-          return `presentations/${normalizedPresentationName.replace(/^\/+/, '')}/${rawPath.replace(/^\/+/, '')}`;
-        }
-        return rawPath.replace(/^\/+/, '');
-      })();
+      const resolvedFilePath = normalizeSlidePath(slide.file_path || '');
 
       const slideUrl =
         constructHtmlPreviewUrl({
@@ -457,7 +471,7 @@ export function FullScreenPresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [sandboxUrl, sandboxId, refreshTimestamp, showEditor]);
+  }, [sandboxUrl, sandboxId, refreshTimestamp, showEditor, normalizeSlidePath]);
 
   // Render slide iframe with proper scaling
   const renderSlide = useMemo(() => {

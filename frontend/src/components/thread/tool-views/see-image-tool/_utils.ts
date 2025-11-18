@@ -1,3 +1,4 @@
+import { buildSandboxProxyUrl } from '@/lib/utils/url';
 import { extractToolData, normalizeContentToString } from '../utils';
 
 export interface SeeImageData {
@@ -350,6 +351,9 @@ export function constructImageUrl(filePath: string, project?: { sandbox?: { sand
   const sandboxId = typeof project?.sandbox === 'string' 
     ? project.sandbox 
     : project?.sandbox?.id;
+  const sandboxUrl = typeof project?.sandbox === 'object'
+    ? project?.sandbox?.sandbox_url
+    : undefined;
   
   if (sandboxId) {
     let normalizedPath = cleanPath;
@@ -361,16 +365,28 @@ export function constructImageUrl(filePath: string, project?: { sandbox?: { sand
     return apiEndpoint;
   }
   
-  // Fallback to sandbox_url for direct access
-  if (project?.sandbox?.sandbox_url) {
-    const sandboxUrl = project.sandbox.sandbox_url.replace(/\/$/, '');
+  const normalizedWorkspacePath = (() => {
     let normalizedPath = cleanPath;
     if (!normalizedPath.startsWith('/workspace')) {
       normalizedPath = `/workspace/${normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath}`;
     }
-    
-    const fullUrl = `${sandboxUrl}${normalizedPath}`;
-    return fullUrl;
+    return normalizedPath;
+  })();
+  
+  const relativePath = normalizedWorkspacePath.replace(/^\/workspace\//, '');
+  const proxyUrl = buildSandboxProxyUrl({
+    sandboxId,
+    sandboxUrl,
+    relativePath,
+    encodePathSegments: true,
+  });
+  if (proxyUrl) {
+    return proxyUrl;
+  }
+  
+  if (sandboxUrl) {
+    const base = sandboxUrl.replace(/\/$/, '');
+    return `${base}${normalizedWorkspacePath}`;
   }
   
   console.warn('No sandbox URL or ID available, using path as-is:', cleanPath);
