@@ -6,9 +6,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone
+import asyncio
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response, status
+import websockets
+from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
+from starlette.websockets import WebSocketState
 
 from core.services.supabase import DBConnection
 from core.utils.config import config
@@ -230,6 +233,117 @@ async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Respon
     )
 
 
+def _build_websocket_target_url(base_url: str, path: str, query_string: str) -> str:
+    base = base_url.rstrip("/")
+    if base.startswith("https://"):
+        base = "wss://" + base.removeprefix("https://")
+    elif base.startswith("http://"):
+        base = "ws://" + base.removeprefix("http://")
+
+    target = f"{base}/{path.lstrip('/')}" if path else base
+    if query_string:
+        return f"{target}?{query_string}"
+    return target
+
+
+def _prepare_websocket_headers(websocket: WebSocket, preview_token: Optional[str]) -> Dict[str, str]:
+    headers: Dict[str, str] = {}
+
+    origin = websocket.headers.get("origin")
+    if origin:
+        headers["Origin"] = origin
+
+    user_agent = websocket.headers.get("user-agent")
+    if user_agent:
+        headers["User-Agent"] = user_agent
+
+    if config.DAYTONA_PREVIEW_SKIP_WARNING:
+        headers.setdefault("X-Daytona-Skip-Preview-Warning", "true")
+    if config.DAYTONA_PREVIEW_DISABLE_CORS:
+        headers.setdefault("X-Daytona-Disable-CORS", "true")
+    if preview_token:
+        headers["X-Daytona-Preview-Token"] = preview_token
+
+    client_host = websocket.client.host if websocket.client else None
+    if client_host:
+        headers["X-Forwarded-For"] = client_host
+
+    headers.setdefault("X-Forwarded-Proto", websocket.url.scheme)
+    headers.setdefault("X-Forwarded-Host", websocket.url.hostname or "")
+    return headers
+
+
+async def _relay_client_to_upstream(websocket: WebSocket, upstream: websockets.WebSocketClientProtocol) -> None:
+    try:
+        while True:
+            message = await websocket.receive()
+            if "text" in message and message["text"] is not None:
+                await upstream.send(message["text"])
+            elif "bytes" in message and message["bytes"] is not None:
+                await upstream.send(message["bytes"])
+            elif message.get("type") == "websocket.disconnect":
+                await upstream.close(code=message.get("code", 1000))
+                break
+    except WebSocketDisconnect as exc:
+        await upstream.close(code=exc.code or 1000)
+
+
+async def _relay_upstream_to_client(upstream: websockets.WebSocketClientProtocol, websocket: WebSocket) -> None:
+    try:
+        async for message in upstream:
+            if isinstance(message, bytes):
+                await websocket.send_bytes(message)
+            else:
+                await websocket.send_text(message)
+    except websockets.ConnectionClosed as exc:
+        if websocket.application_state == WebSocketState.CONNECTED:
+            await websocket.close(code=exc.code or 1011, reason=exc.reason)
+
+
+def _get_query_string_from_websocket(websocket: WebSocket) -> str:
+    raw = websocket.scope.get("query_string")
+    if raw:
+        if isinstance(raw, bytes):
+            return raw.decode()
+        return str(raw)
+    return ""
+
+
+async def _proxy_websocket_request(sandbox_id: str, path: str, websocket: WebSocket) -> None:
+    metadata = await _get_project_sandbox_metadata(sandbox_id)
+    vnc_base = metadata.get("vnc_preview")
+    if not vnc_base:
+        logger.error("VNC preview URL missing for sandbox_id=%s", sandbox_id)
+        await websocket.close(code=1011, reason="Sandbox VNC endpoint unavailable")
+        return
+
+    query_string = _get_query_string_from_websocket(websocket)
+    target_url = _build_websocket_target_url(vnc_base, path, query_string)
+    headers = _prepare_websocket_headers(websocket, metadata.get("preview_token"))
+
+    await websocket.accept()
+
+    try:
+        async with websockets.connect(target_url, extra_headers=headers, max_size=None) as upstream:
+            logger.debug(
+                "Proxied VNC websocket sandbox_id=%s target=%s",
+                sandbox_id,
+                target_url,
+            )
+            await asyncio.gather(
+                _relay_client_to_upstream(websocket, upstream),
+                _relay_upstream_to_client(upstream, websocket),
+            )
+    except (websockets.InvalidHandshake, websockets.WebSocketException) as exc:
+        logger.error(
+            "Failed to proxy VNC websocket for sandbox_id=%s target=%s: %s",
+            sandbox_id,
+            target_url,
+            exc,
+        )
+        await websocket.close(code=1011, reason="Failed to reach sandbox VNC")
+
+
 @router.api_route("/{sandbox_id}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
 async def proxy_preview_root(sandbox_id: str, request: Request) -> Response:
     """
@@ -246,6 +360,17 @@ async def proxy_preview_path(sandbox_id: str, path: str, request: Request) -> Re
     """
 
     return await _proxy_request(sandbox_id, path, request)
+
+
+@router.websocket("/{sandbox_id}/websockify")
+async def proxy_preview_websocket(sandbox_id: str, websocket: WebSocket) -> None:
+    await _proxy_websocket_request(sandbox_id, "websockify", websocket)
+
+
+@router.websocket("/{sandbox_id}/websockify/{path:path}")
+async def proxy_preview_websocket_path(sandbox_id: str, path: str, websocket: WebSocket) -> None:
+    target_path = f"websockify/{path.lstrip('/')}" if path else "websockify"
+    await _proxy_websocket_request(sandbox_id, target_path, websocket)
 
 
 def _should_refresh_preview_token(sandbox_info: Dict[str, Any]) -> bool:
