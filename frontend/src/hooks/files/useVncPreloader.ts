@@ -132,9 +132,25 @@ export function useVncPreloader(
 
     const normalizedBase = base.replace(/\/$/, '');
 
-    return `${normalizedBase}/vnc_lite.html?password=${encodeURIComponent(
-      sandbox.pass,
-    )}&autoconnect=true&scale=local`;
+    const wsPath = (() => {
+      try {
+        const url = new URL(normalizedBase);
+        const path = url.pathname.replace(/\/$/, '');
+        const fullPath = path ? `${path}/websockify` : 'websockify';
+        return fullPath.replace(/^\//, '');
+      } catch {
+        return 'websockify';
+      }
+    })();
+
+    const params = new URLSearchParams({
+      password: sandbox.pass,
+      autoconnect: 'true',
+      scale: 'local',
+      path: wsPath,
+    });
+
+    return `${normalizedBase}/vnc_lite.html?${params.toString()}`;
   }, [sandbox?.id, sandbox?.vnc_preview, sandbox?.pass]);
 
   const retry = useCallback(() => {
