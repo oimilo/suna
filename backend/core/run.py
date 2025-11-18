@@ -338,7 +338,8 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   client=None,
                                   tool_registry=None,
-                                  xml_tool_calling: bool = True) -> dict:
+                                  xml_tool_calling: bool = True,
+                                  user_id: Optional[str] = None) -> dict:
         
         default_system_content = get_system_prompt()
         
@@ -505,6 +506,27 @@ When using the tools:
         
         system_content += datetime_info
 
+        # Add user locale context if user_id is provided
+        if user_id and client:
+            try:
+                from core.utils.user_locale import (
+                    get_locale_context_prompt,
+                    get_user_locale,
+                )
+
+                locale = await get_user_locale(user_id, client)
+                locale_prompt = get_locale_context_prompt(locale)
+                system_content += f"\n\n{locale_prompt}\n"
+                logger.debug(
+                    "Added locale context (%s) to system prompt for user %s",
+                    locale,
+                    user_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to add locale context to system prompt: %s", exc
+                )
+
         system_message = {"role": "system", "content": system_content}
         return system_message
 
@@ -657,11 +679,14 @@ class AgentRunner:
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
         system_message = await PromptManager.build_system_prompt(
-            self.config.model_name, self.config.agent_config, 
-            self.config.thread_id, 
-            mcp_wrapper_instance, self.client,
+            self.config.model_name,
+            self.config.agent_config,
+            self.config.thread_id,
+            mcp_wrapper_instance,
+            self.client,
             tool_registry=self.thread_manager.tool_registry,
-            xml_tool_calling=True
+            xml_tool_calling=True,
+            user_id=self.account_id,
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")

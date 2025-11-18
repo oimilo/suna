@@ -14,6 +14,7 @@ import { PostHogIdentify } from '@/components/posthog-identify';
 import '@/lib/polyfills';
 import { roobert } from './fonts/roobert';
 import { roobertMono } from './fonts/roobert-mono';
+import { I18nProvider } from '@/components/i18n-provider';
 
 
 export const viewport: Viewport = {
@@ -202,12 +203,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <ReactQueryProvider>
-              {children}
-              <Toaster />
-            </ReactQueryProvider>
-          </AuthProvider>
+          <I18nProvider>
+            <AuthProvider>
+              <ReactQueryProvider>
+                {children}
+                <Toaster />
+              </ReactQueryProvider>
+            </AuthProvider>
+          </I18nProvider>
           <Analytics />
           <GoogleAnalytics gaId="G-6ETJFB3PT3" />
           <SpeedInsights />
