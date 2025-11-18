@@ -8,7 +8,7 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 
 # Supported locales (must match frontend)
-SUPPORTED_LOCALES = ["en", "de", "it"]
+SUPPORTED_LOCALES = ["en", "de", "it", "pt-BR"]
 DEFAULT_LOCALE = "en"
 
 
@@ -107,6 +107,8 @@ The user has set their preferred language to English. You should respond in Engl
 Der Benutzer hat Deutsch als bevorzugte Sprache eingestellt. Sie sollten auf Deutsch antworten und durchgehend deutsche Terminologie verwenden. Alle Ihre Antworten, Erklärungen und Interaktionen sollten in deutscher Sprache erfolgen.""",
         "it": """## PREFERENZA LINGUISTICA
 L'utente ha impostato l'italiano come lingua preferita. Dovresti rispondere in italiano e utilizzare terminologia italiana in tutte le tue risposte. Tutte le tue risposte, spiegazioni e interazioni dovrebbero essere in italiano.""",
+        "pt-BR": """## PREFERÊNCIA DE IDIOMA
+O usuário definiu o português do Brasil como idioma preferido. Responda em português e utilize terminologia em português em todas as respostas. Todas as explicações, instruções e interações devem ser fornecidas em português brasileiro, com tom claro e profissional.""",
     }
 
     return locale_instructions.get(locale, locale_instructions["en"])
