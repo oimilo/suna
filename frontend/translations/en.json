@@ -564,7 +564,8 @@
   "languages": {
     "en": "English",
     "de": "Deutsch",
-    "it": "Italiano"
+    "it": "Italiano",
+    "pt-BR": "Portuguese (Brazil)"
   },
   "suna": {
     "samplePrompts": "Sample prompts",

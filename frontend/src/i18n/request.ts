@@ -1,12 +1,28 @@
 import { getRequestConfig } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { locales, defaultLocale, type Locale } from './config';
+import { defaultLocale, type Locale, normalizeLocale } from './config';
+
+async function buildResponse(locale: Locale) {
+  return {
+    locale,
+    messages: (await import(`../../translations/${locale}.json`)).default
+  };
+}
 
 export default getRequestConfig(async () => {
   let locale: Locale = defaultLocale;
   const cookieStore = await cookies();
-  
+
+  const resolveLocale = (value?: string | null) => {
+    const normalized = normalizeLocale(value);
+    if (normalized) {
+      locale = normalized;
+      return true;
+    }
+    return false;
+  };
+
   // Priority 1: Check user profile preference (if authenticated)
   try {
     const supabase = createServerClient(
@@ -19,47 +35,44 @@ export default getRequestConfig(async () => {
           },
           setAll() {
             // No-op for server-side
-          },
-        },
+          }
+        }
       }
     );
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.user_metadata?.locale && locales.includes(user.user_metadata.locale as Locale)) {
-      locale = user.user_metadata.locale as Locale;
-      return {
-        locale,
-        messages: (await import(`../../translations/${locale}.json`)).default
-      };
+
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (user?.user_metadata?.locale && resolveLocale(user.user_metadata.locale)) {
+      return buildResponse(locale);
     }
   } catch (error) {
-    // User might not be authenticated, continue with other methods
     console.debug('Could not fetch user locale from profile:', error);
   }
-  
+
   // Priority 2: Check cookie
   const localeCookie = cookieStore.get('locale')?.value;
-  if (localeCookie && locales.includes(localeCookie as Locale)) {
-    locale = localeCookie as Locale;
-    return {
-      locale,
-      messages: (await import(`../../translations/${locale}.json`)).default
-    };
+  if (localeCookie && resolveLocale(localeCookie)) {
+    return buildResponse(locale);
   }
-  
+
   // Priority 3: Try to detect from Accept-Language header
   const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
+
   if (acceptLanguage) {
-    const browserLocale = acceptLanguage.split(',')[0].split('-')[0].toLowerCase();
-    if (locales.includes(browserLocale as Locale)) {
-      locale = browserLocale as Locale;
+    const candidates = acceptLanguage
+      .split(',')
+      .map((part) => part.split(';')[0]?.trim())
+      .filter(Boolean);
+
+    for (const candidate of candidates) {
+      if (resolveLocale(candidate)) {
+        return buildResponse(locale);
+      }
     }
   }
 
-  return {
-    locale,
-    messages: (await import(`../../translations/${locale}.json`)).default
-  };
+  return buildResponse(locale);
 });
 
