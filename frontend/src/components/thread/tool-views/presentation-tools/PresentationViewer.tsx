@@ -317,17 +317,26 @@ export function PresentationViewer({
     .sort((a, b) => a.number - b.number) : [];
 
   const normalizeSlidePath = (rawPath: string) => {
-    const trimmed = rawPath.trim();
-    if (trimmed.startsWith('presentations/')) {
-      return trimmed.replace(/^\/+/, '');
-    }
+    const trimmed = (rawPath || '').trim();
+    if (!trimmed) return '';
+
+    const stripLeadingSlash = (value: string) => value.replace(/^\/+/, '');
+
     if (trimmed.startsWith('/workspace/')) {
       return trimmed.replace(/^\/workspace\//, '');
     }
-    if (normalizedPresentationName) {
-      return `presentations/${normalizedPresentationName.replace(/^\/+/, '')}/${trimmed.replace(/^\/+/, '')}`;
+
+    const withoutLeadingSlashes = stripLeadingSlash(trimmed);
+
+    if (withoutLeadingSlashes.startsWith('presentations/')) {
+      return withoutLeadingSlashes;
     }
-    return trimmed.replace(/^\/+/, '');
+
+    if (normalizedPresentationName) {
+      return `presentations/${stripLeadingSlash(normalizedPresentationName)}/${withoutLeadingSlashes}`;
+    }
+
+    return withoutLeadingSlashes;
   };
 
   const fallbackSlides = !metadata
@@ -543,15 +552,18 @@ export function PresentationViewer({
         );
       }
 
+      const fallbackBase = project?.sandbox?.sandbox_url
+        ? project.sandbox.sandbox_url.replace(/\/$/, '')
+        : undefined;
+      const resolvedFilePath = normalizeSlidePath(slide.file_path || '');
+
       const slideUrl =
         constructHtmlPreviewUrl({
           sandboxId: project?.sandbox?.id,
           sandboxUrl: project?.sandbox?.sandbox_url,
-          filePath: slide.file_path,
+          filePath: resolvedFilePath,
         }) ??
-        (project?.sandbox?.sandbox_url
-          ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/${slide.file_path.replace(/^\/workspace\//, '')}`
-          : undefined);
+        (fallbackBase ? `${fallbackBase}/${resolvedFilePath}` : undefined);
 
       if (!slideUrl) {
         return (
@@ -608,7 +620,7 @@ export function PresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [project?.sandbox?.sandbox_url, project?.sandbox?.id, refreshTimestamp]);
+  }, [project?.sandbox?.sandbox_url, project?.sandbox?.id, refreshTimestamp, normalizeSlidePath]);
 
   // Render individual slide using the original approach
   const renderSlidePreview = useCallback((slide: SlideMetadata & { number: number }) => {
@@ -914,6 +926,7 @@ export function PresentationViewer({
         presentationName={extractedPresentationName}
         safePresentationName={normalizedPresentationName}
         sandboxUrl={project?.sandbox?.sandbox_url}
+        sandboxId={project?.sandbox?.id}
         initialSlide={
           fullScreenInitialSlide ||
           visibleSlide ||
