@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from uuid import uuid4
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_optional_current_user_id_from_jwt
 from core.utils.logger import logger
+from core.utils.config import config, EnvMode
 from core.services.supabase import DBConnection
 from datetime import datetime
 import os
@@ -681,6 +682,28 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
         agent_check = await client_db.table('agents').select('agent_id').eq('agent_id', req.agent_id).eq('account_id', current_user_id).execute()
         if not agent_check.data:
             raise HTTPException(status_code=404, detail="Agent not found or access denied")
+
+        if config.ENV_MODE != EnvMode.LOCAL:
+            from core.utils.limits_checker import check_trigger_limit
+            limit_check = await check_trigger_limit(client_db, current_user_id, req.agent_id, 'app')
+            
+            if not limit_check['can_create']:
+                error_detail = {
+                    "message": (
+                        f"Maximum of {limit_check['limit']} app triggers allowed for your plan. "
+                        f"You already have {limit_check['current_count']} app triggers."
+                    ),
+                    "current_count": limit_check['current_count'],
+                    "limit": limit_check['limit'],
+                    "tier_name": limit_check.get('tier_name'),
+                    "trigger_type": "app",
+                    "error_code": "TRIGGER_LIMIT_EXCEEDED"
+                }
+                logger.warning(
+                    f"Trigger limit exceeded for account {current_user_id}: "
+                    f"{limit_check['current_count']}/{limit_check['limit']} app triggers"
+                )
+                raise HTTPException(status_code=402, detail=error_detail)
 
         profile_service = ComposioProfileService(db)
         profile_config = await profile_service.get_profile_config(req.profile_id)
