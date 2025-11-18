@@ -106,7 +106,7 @@ export function PlanSelectionModal({
                     
                     {/* Kortix Logo - Dead Center */}
                     <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
-                        <KortixLogo size={20} variant="logomark" />
+                        <KortixLogo size={64} variant="logomark" />
                     </div>
                     
                     {/* Close button - Right aligned */}
