@@ -3,7 +3,7 @@ import base64
 import mimetypes
 import uuid
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from io import BytesIO
 from PIL import Image
 from urllib.parse import urlparse
@@ -16,6 +16,7 @@ from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
 import tempfile
 import requests
+import sentry_sdk
 from core.utils.config import config
 
 # Add common image MIME types if mimetypes module is limited
@@ -61,6 +62,59 @@ class SandboxVisionTool(SandboxToolsBase):
     def _stagehand_base_url(self) -> str:
         return f"http://{self.stagehand_host}:{self.stagehand_port}"
 
+    def _sentry_enabled(self) -> bool:
+        try:
+            return bool(sentry_sdk.Hub.current and sentry_sdk.Hub.current.client)
+        except Exception:
+            return False
+
+    def _stagehand_context(self) -> Dict[str, Any]:
+        return {
+            "project_id": getattr(self, "project_id", None),
+            "thread_id": self.thread_id,
+            "stagehand_host": self.stagehand_host,
+            "stagehand_port": self.stagehand_port,
+        }
+
+    def _record_stagehand_breadcrumb(
+        self,
+        message: str,
+        data: Optional[Dict[str, Any]] = None,
+        level: str = "info",
+    ) -> None:
+        if not self._sentry_enabled():
+            return
+        breadcrumb_data = self._stagehand_context()
+        if data:
+            breadcrumb_data.update(data)
+        sentry_sdk.add_breadcrumb(
+            category="stagehand",
+            message=message,
+            data=breadcrumb_data,
+            level=level,
+        )
+
+    def _capture_stagehand_event(
+        self,
+        message: str,
+        *,
+        extra: Optional[Dict[str, Any]] = None,
+        level: str = "error",
+    ) -> None:
+        if not self._sentry_enabled():
+            return
+        with sentry_sdk.push_scope() as scope:
+            context = self._stagehand_context()
+            for key, value in context.items():
+                if key in {"project_id", "thread_id"} and value is not None:
+                    scope.set_tag(key, value)
+                else:
+                    scope.set_extra(key, value)
+            if extra:
+                for key, value in extra.items():
+                    scope.set_extra(key, value)
+            sentry_sdk.capture_message(message, level=level)
+
     async def convert_svg_with_sandbox_browser(self, svg_full_path: str) -> Tuple[bytes, str]:
         """Convert SVG to PNG using sandbox browser API for better rendering support.
         
@@ -84,24 +138,59 @@ class SandboxVisionTool(SandboxToolsBase):
                 f"{self._stagehand_base_url()}/init",
             ]
             init_response = None
+            self._record_stagehand_breadcrumb(
+                "vision.stagehand.init.start",
+                {"svg_path": svg_full_path},
+            )
             for init_url in init_endpoints:
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.init.attempt",
+                    {"endpoint": init_url},
+                )
                 init_cmd = (
                     f"curl -s -X POST '{init_url}' -H 'Content-Type: application/json' "
                     "-d '{\"api_key\": \"'$GEMINI_API_KEY'\"}'"
                 )
                 init_response = await self.sandbox.process.exec(init_cmd, timeout=30, env=env_vars)
                 if init_response.exit_code == 0:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.init.command_success",
+                        {"endpoint": init_url},
+                    )
                     break
             
             if init_response is None or init_response.exit_code != 0:
+                self._capture_stagehand_event(
+                    "Vision tool failed to initialize Stagehand",
+                    extra={
+                        "endpoint_attempts": init_endpoints,
+                        "exit_code": getattr(init_response, "exit_code", None),
+                        "response": getattr(init_response, "result", None),
+                    },
+                )
                 raise Exception(f"Failed to initialize browser: {init_response.result}")
             
             try:
                 init_data = json.loads(init_response.result)
                 if init_data.get("status") not in ["healthy", "initialized"]:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.init.unexpected_status",
+                        {"status": init_data.get("status"), "response": init_data},
+                        level="warning",
+                    )
                     raise Exception(f"Browser initialization failed: {init_data}")
+                else:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.init.success",
+                        {"status": init_data.get("status")},
+                    )
             except json.JSONDecodeError:
                 # Assume success if we can't parse response
+                self._record_stagehand_breadcrumb(
+                    "vision.stagehand.init.invalid_json",
+                    {"response": init_response.result},
+                    level="warning",
+                )
                 pass
             
             # Now call the browser API conversion endpoint
@@ -116,6 +205,10 @@ class SandboxVisionTool(SandboxToolsBase):
             
             # Execute the API call
             response = await self.sandbox.process.exec(curl_cmd, timeout=30)
+            self._record_stagehand_breadcrumb(
+                "vision.stagehand.convert_svg",
+                {"endpoint": url, "exit_code": response.exit_code},
+            )
             
             if response.exit_code == 0:
                 try:
@@ -127,19 +220,47 @@ class SandboxVisionTool(SandboxToolsBase):
                         if screenshot_base64:
                             png_bytes = base64.b64decode(screenshot_base64)
                             print(f"[SeeImage] Converted SVG '{os.path.basename(svg_full_path)}' to PNG using sandbox browser")
+                            self._record_stagehand_breadcrumb(
+                                "vision.stagehand.convert_svg.success",
+                                {"svg_name": os.path.basename(svg_full_path)},
+                            )
                             return png_bytes, 'image/png'
                         else:
+                            self._record_stagehand_breadcrumb(
+                                "vision.stagehand.convert_svg.missing_screenshot",
+                                {"response": response_data},
+                                level="warning",
+                            )
                             raise Exception("No screenshot data in browser response")
                     else:
                         error_msg = response_data.get("error", "Unknown browser conversion error")
+                        self._record_stagehand_breadcrumb(
+                            "vision.stagehand.convert_svg.response_error",
+                            {"response": response_data},
+                            level="warning",
+                        )
                         raise Exception(f"Browser conversion failed: {error_msg}")
                         
                 except json.JSONDecodeError:
+                    self._record_stagehand_breadcrumb(
+                        "vision.stagehand.convert_svg.invalid_json",
+                        {"response": response.result},
+                        level="warning",
+                    )
                     raise Exception(f"Invalid JSON response from browser API: {response.result}")
             else:
+                self._capture_stagehand_event(
+                    "Vision tool Stagehand convert-svg command failed",
+                    extra={"exit_code": response.exit_code, "response": response.result},
+                )
                 raise Exception(f"Browser API call failed with exit code {response.exit_code}: {response.result}")
                 
         except Exception as e:
+            self._capture_stagehand_event(
+                "Vision tool Stagehand conversion error",
+                extra={"error": str(e), "svg_path": svg_full_path},
+            )
+            sentry_sdk.capture_exception(e)
             raise Exception(f"Sandbox browser-based SVG conversion failed: {str(e)}")
     
     async def compress_image(self, image_bytes: bytes, mime_type: str, file_path: str) -> Tuple[bytes, str]:
