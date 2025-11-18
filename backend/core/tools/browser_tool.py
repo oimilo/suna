@@ -3,11 +3,13 @@ from core.agentpress.thread_manager import ThreadManager
 from core.sandbox.tool_base import SandboxToolsBase
 from core.utils.logger import logger
 from core.utils.s3_upload_utils import upload_base64_image
+from typing import Any, Dict, Optional
 import asyncio
 import json
 import base64
 import io
 import traceback
+import sentry_sdk
 from PIL import Image
 from core.utils.config import config
 
@@ -45,6 +47,59 @@ class BrowserTool(SandboxToolsBase):
 
     def _stagehand_base_url(self) -> str:
         return f"http://{self.stagehand_host}:{self.stagehand_port}"
+
+    def _sentry_enabled(self) -> bool:
+        try:
+            return bool(sentry_sdk.Hub.current and sentry_sdk.Hub.current.client)
+        except Exception:
+            return False
+
+    def _stagehand_context(self) -> Dict[str, Any]:
+        return {
+            "project_id": getattr(self, "project_id", None),
+            "thread_id": self.thread_id,
+            "stagehand_host": self.stagehand_host,
+            "stagehand_port": self.stagehand_port,
+        }
+
+    def _record_stagehand_breadcrumb(
+        self,
+        message: str,
+        data: Optional[Dict[str, Any]] = None,
+        level: str = "info",
+    ) -> None:
+        if not self._sentry_enabled():
+            return
+        breadcrumb_data = self._stagehand_context()
+        if data:
+            breadcrumb_data.update(data)
+        sentry_sdk.add_breadcrumb(
+            category="stagehand",
+            message=message,
+            data=breadcrumb_data,
+            level=level,
+        )
+
+    def _capture_stagehand_event(
+        self,
+        message: str,
+        *,
+        extra: Optional[Dict[str, Any]] = None,
+        level: str = "error",
+    ) -> None:
+        if not self._sentry_enabled():
+            return
+        with sentry_sdk.push_scope() as scope:
+            context = self._stagehand_context()
+            for key, value in context.items():
+                if key in {"project_id", "thread_id"} and value is not None:
+                    scope.set_tag(key, value)
+                else:
+                    scope.set_extra(key, value)
+            if extra:
+                for key, value in extra.items():
+                    scope.set_extra(key, value)
+            sentry_sdk.capture_message(message, level=level)
     
     def _validate_base64_image(self, base64_string: str, max_size_mb: int = 10) -> tuple[bool, str]:
         """
@@ -161,6 +216,11 @@ class BrowserTool(SandboxToolsBase):
             # after the sandbox initializes. We'll retry with exponential backoff.
             max_retries = 5
             retry_delays = [1, 2, 3, 5, 5]  # seconds between retries
+
+            self._record_stagehand_breadcrumb(
+                "stagehand.health_check.start",
+                {"max_retries": max_retries},
+            )
             
             for attempt in range(max_retries):
                 # Simple health check curl command
@@ -169,6 +229,11 @@ class BrowserTool(SandboxToolsBase):
                 
                 if attempt > 0:
                     logger.info(f"Retrying Stagehand API health check (attempt {attempt + 1}/{max_retries})...")
+
+                self._record_stagehand_breadcrumb(
+                    "stagehand.health_check.attempt",
+                    {"attempt": attempt + 1, "health_url": stagehand_health_url},
+                )
                 
                 response = await self.sandbox.process.exec(curl_cmd, timeout=10)
                 
@@ -177,10 +242,19 @@ class BrowserTool(SandboxToolsBase):
                         result = json.loads(response.result)
                         if result.get("status") == "healthy":
                             logger.info("✅ Stagehand API server is running and healthy")
+                            self._record_stagehand_breadcrumb(
+                                "stagehand.health_check.success",
+                                {"attempt": attempt + 1},
+                            )
                             return True
                         else:
                             # If the browser api is not healthy, attempt initialization
                             logger.info("Stagehand API server responded but browser not initialized. Initializing...")
+                            self._record_stagehand_breadcrumb(
+                                "stagehand.health_check.unhealthy_response",
+                                {"response": result},
+                                level="warning",
+                            )
                             initialization_attempted = False
 
                             # Pass API key securely as environment variable instead of command line argument
@@ -193,6 +267,10 @@ class BrowserTool(SandboxToolsBase):
 
                             for init_url in init_endpoints:
                                 initialization_attempted = True
+                                self._record_stagehand_breadcrumb(
+                                    "stagehand.init.attempt",
+                                    {"endpoint": init_url},
+                                )
                                 init_cmd = (
                                     f"curl -s -X POST \"{init_url}\" "
                                     "-H \"Content-Type: application/json\" "
@@ -204,39 +282,101 @@ class BrowserTool(SandboxToolsBase):
                                         init_result = json.loads(response.result)
                                         if init_result.get("status") == "healthy":
                                             logger.info("✅ Stagehand API server initialized successfully")
+                                            self._record_stagehand_breadcrumb(
+                                                "stagehand.init.success",
+                                                {"endpoint": init_url},
+                                            )
                                             return True
                                         else:
                                             logger.warning(f"Stagehand API initialization failed via {init_url}: {init_result}")
+                                            self._record_stagehand_breadcrumb(
+                                                "stagehand.init.failure",
+                                                {"endpoint": init_url, "response": init_result},
+                                                level="warning",
+                                            )
                                             # Don't return False yet, might succeed on next endpoint or retry
                                     except json.JSONDecodeError:
                                         logger.warning(f"Init endpoint returned invalid JSON from {init_url}: {response.result}")
+                                        self._record_stagehand_breadcrumb(
+                                            "stagehand.init.invalid_json",
+                                            {"endpoint": init_url, "response": response.result},
+                                            level="warning",
+                                        )
                                 elif response.exit_code in (22,):  # HTTP error (curl)
                                     logger.warning(f"Stagehand API initialization endpoint {init_url} returned HTTP error: {response.result}")
+                                    self._record_stagehand_breadcrumb(
+                                        "stagehand.init.http_error",
+                                        {"endpoint": init_url, "response": response.result},
+                                        level="warning",
+                                    )
                                     # If the endpoint is missing (404/405), try next one before retry loop
                                     continue
                                 else:
                                     logger.warning(f"Stagehand API initialization request failed for {init_url}: {response.result}")
+                                    self._record_stagehand_breadcrumb(
+                                        "stagehand.init.exec_failure",
+                                        {"endpoint": init_url, "response": response.result, "exit_code": response.exit_code},
+                                        level="warning",
+                                    )
 
                             if not initialization_attempted:
                                 logger.warning("Stagehand API initialization skipped (no endpoints attempted)")
+                                self._record_stagehand_breadcrumb(
+                                    "stagehand.init.skipped",
+                                    level="warning",
+                                    data=None,
+                                )
                     except json.JSONDecodeError:
                         logger.warning(f"Stagehand API server responded but with invalid JSON: {response.result}")
+                        self._record_stagehand_breadcrumb(
+                            "stagehand.health_check.invalid_json",
+                            {"response": response.result},
+                            level="warning",
+                        )
                 elif response.exit_code == 7:
                     # Connection refused - server not ready yet
                     logger.debug(f"Browser API server not ready yet (connection refused)")
+                    self._record_stagehand_breadcrumb(
+                        "stagehand.health_check.connection_refused",
+                        {"attempt": attempt + 1},
+                        level="debug",
+                    )
                 else:
                     logger.debug(f"Health check failed with exit code {response.exit_code}")
+                    self._record_stagehand_breadcrumb(
+                        "stagehand.health_check.exec_failure",
+                        {"attempt": attempt + 1, "exit_code": response.exit_code, "response": response.result},
+                        level="warning",
+                    )
                 
                 # Wait before retrying (except on last attempt)
                 if attempt < max_retries - 1:
                     await asyncio.sleep(retry_delays[attempt])
             
             # All retries exhausted
+            debug_info = await self._debug_sandbox_services()
             logger.error(f"Stagehand API server failed to start after {max_retries} attempts")
+            self._record_stagehand_breadcrumb(
+                "stagehand.health_check.failed",
+                {"attempts": max_retries},
+                level="error",
+            )
+            self._capture_stagehand_event(
+                "Stagehand API server failed health check retries",
+                extra={
+                    "attempts": max_retries,
+                    "debug_info": debug_info,
+                },
+            )
             return False
                 
         except Exception as e:
             logger.error(f"Error checking Stagehand API health: {e}")
+            self._capture_stagehand_event(
+                "Stagehand API health check raised exception",
+                extra={"error": str(e)},
+            )
+            sentry_sdk.capture_exception(e)
             return False
 
     async def _execute_stagehand_api(self, endpoint: str, params: dict = None, method: str = "POST") -> ToolResult:
@@ -260,6 +400,10 @@ class BrowserTool(SandboxToolsBase):
                 error_msg += f"\n\nDebug information:\n{debug_info}"
                 
                 logger.error(error_msg)
+                self._capture_stagehand_event(
+                    "Stagehand API unavailable when executing tool",
+                    extra={"debug_info": debug_info, "endpoint": endpoint},
+                )
                 return self.fail_response(error_msg)
             
             
@@ -358,14 +502,27 @@ class BrowserTool(SandboxToolsBase):
                         f"Please ensure the Stagehand API server is running. Error: {response}"
                     )
                     logger.error(error_msg)
+                    self._capture_stagehand_event(
+                        "Stagehand API connection refused during request",
+                        extra={"endpoint": endpoint, "response": response.result},
+                    )
                     return self.fail_response(error_msg)
                 else:
                     logger.error(f"Stagehand API request failed: {response}")
+                    self._capture_stagehand_event(
+                        "Stagehand API request failed",
+                        extra={"endpoint": endpoint, "response": response.result, "exit_code": response.exit_code},
+                    )
                     return self.fail_response(f"Stagehand API request failed: {response}")
 
         except Exception as e:
             logger.error(f"Error executing Stagehand action: {e}")
             logger.debug(traceback.format_exc())
+            self._capture_stagehand_event(
+                "Stagehand tool execution raised exception",
+                extra={"error": str(e), "endpoint": endpoint},
+            )
+            sentry_sdk.capture_exception(e)
             return self.fail_response(f"Error executing Stagehand action: {e}")
 
     # Core Functions Only
