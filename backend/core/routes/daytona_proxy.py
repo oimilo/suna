@@ -176,7 +176,24 @@ def _is_vnc_request(path: str, request: Request) -> bool:
         "vnc",
         "websockify",
     )
+    vnc_static_prefixes = (
+        "core/",
+        "app/",
+        "vendor/",
+        "include/",
+        "media/",
+        "sounds/",
+        "images/",
+        "fonts/",
+        "locale/",
+        "utils/",
+    )
+
     if normalized_path.startswith(vnc_path_prefixes):
+        return True
+    if normalized_path.startswith(vnc_static_prefixes):
+        return True
+    if normalized_path in {"package.json", "favicon.ico"}:
         return True
 
     referer = (request.headers.get("referer") or "").lower()
