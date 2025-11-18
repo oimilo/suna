@@ -64,12 +64,19 @@ async def _get_project_sandbox_metadata(sandbox_id: str) -> Dict[str, Any]:
             detail="Sandbox preview URL is not available"
         )
 
+    vnc_preview = sandbox_info.get("vnc_preview")
+    if vnc_preview:
+        vnc_preview = vnc_preview.rstrip("/")
+
     preview_token = sandbox_info.get("preview_token") or sandbox_info.get("token")
 
     if _should_refresh_preview_token(sandbox_info):
         try:
             sandbox_info = await _refresh_preview_target(client, project_row.get("project_id"), sandbox_id, sandbox_info)
             sandbox_url = sandbox_info.get("sandbox_url", sandbox_url)
+            refreshed_vnc_preview = sandbox_info.get("vnc_preview")
+            if refreshed_vnc_preview:
+                vnc_preview = refreshed_vnc_preview.rstrip("/")
             preview_token = sandbox_info.get("preview_token") or sandbox_info.get("token")
         except Exception as exc:
             logger.error(
@@ -81,6 +88,7 @@ async def _get_project_sandbox_metadata(sandbox_id: str) -> Dict[str, Any]:
     return {
         "project_id": project_row.get("project_id"),
         "sandbox_url": sandbox_url.rstrip("/"),
+        "vnc_preview": vnc_preview,
         "preview_token": preview_token,
     }
 
@@ -140,10 +148,44 @@ def _transform_response_headers(upstream_headers: httpx.Headers) -> Dict[str, st
     }
 
 
+def _is_vnc_request(path: str, request: Request) -> bool:
+    """
+    Determine whether the incoming request should target the VNC preview endpoint.
+
+    The VNC UI serves multiple asset paths (HTML, JS, WebSocket upgrades) that all need
+    to be proxied to the Daytona 6080 port. We first inspect the requested path and then
+    fall back to the Referer header to catch secondary asset loads.
+    """
+
+    normalized_path = (path or "").lstrip("/").lower()
+    if not normalized_path:
+        return False
+
+    vnc_path_prefixes = (
+        "vnc",
+        "websockify",
+    )
+    if normalized_path.startswith(vnc_path_prefixes):
+        return True
+
+    referer = (request.headers.get("referer") or "").lower()
+    if referer:
+        referer_markers = ("vnc_lite.html", "vnc.html", "vnc_auto.html", "vnc_playback.html", "/novnc/")
+        if any(marker in referer for marker in referer_markers):
+            return True
+
+    return False
+
+
 async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Response:
     metadata = await _get_project_sandbox_metadata(sandbox_id)
+
+    base_url = metadata["sandbox_url"]
+    if metadata.get("vnc_preview") and _is_vnc_request(path, request):
+        base_url = metadata["vnc_preview"]
+
     upstream_url = _build_target_url(
-        metadata["sandbox_url"],
+        base_url,
         path,
         request.url.query
     )
