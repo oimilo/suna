@@ -387,9 +387,7 @@ export function FullScreenPresentationViewer({
           sandboxUrl,
           filePath: resolvedFilePath,
         }) ??
-        (fallbackBase
-          ? `${fallbackBase}/${resolvedFilePath}`
-          : undefined);
+        (sandboxUrl ? `${sandboxUrl.replace(/\/$/, '')}/${resolvedFilePath}` : undefined);
 
       if (!slideUrl) {
         return (
