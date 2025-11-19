@@ -39,6 +39,19 @@ export interface AgentIconGenerationResponse {
   icon_background: string;
 }
 
+export interface AgentSetupFromChatRequest {
+  description: string;
+}
+
+export interface AgentSetupFromChatResponse {
+  agent_id: string;
+  name: string;
+  system_prompt: string;
+  icon_name: string;
+  icon_color: string;
+  icon_background: string;
+}
+
 export interface ActiveAgentRun {
   id: string;
   thread_id: string;
@@ -87,25 +100,6 @@ export const unifiedAgentStart = async (options: {
       });
     }
 
-    // Debug logging
-    console.log('[unifiedAgentStart] Sending to backend:', {
-      threadId: options.threadId,
-      prompt: options.prompt ? options.prompt.substring(0, 100) : undefined,
-      promptLength: options.prompt?.length || 0,
-      model_name: options.model_name,
-      agent_id: options.agent_id,
-      filesCount: options.files?.length || 0,
-    });
-    
-    // Debug: Log FormData contents
-    console.log('[unifiedAgentStart] FormData entries:');
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
-      } else {
-        console.log(`  ${key}: ${String(value).substring(0, 100)}`);
-      }
-    }
 
     const response = await backendApi.upload<{ thread_id: string; agent_run_id: string; status: string }>(
       '/agent/start',
@@ -117,19 +111,7 @@ export const unifiedAgentStart = async (options: {
       const status = response.error.status || 500;
       
       if (status === 402) {
-        const detail = response.error.details?.detail || {};
-        
-        if (detail.error_code === 'PROJECT_LIMIT_EXCEEDED') {
-          throw new ProjectLimitError(status, {
-            message: detail.message || 'Project limit exceeded',
-            current_count: detail.current_count || 0,
-            limit: detail.limit || 0,
-            tier_name: detail.tier_name || 'none',
-            error_code: detail.error_code
-          });
-        }
-        
-        throw new BillingError(status, detail);
+        throw response.error;
       }
 
       if (status === 429) {
@@ -277,6 +259,28 @@ export const generateAgentIcon = async (request: AgentIconGenerationRequest): Pr
   }
 };
 
+export const setupAgentFromChat = async (request: AgentSetupFromChatRequest): Promise<AgentSetupFromChatResponse> => {
+  try {
+    const response = await backendApi.post<AgentSetupFromChatResponse>(
+      '/agents/setup-from-chat',
+      request,
+      { showErrors: true, timeout: 20000 } // 20 seconds (single optimized LLM call)
+    );
+
+    if (response.error) {
+      throw new Error(
+        `Error setting up agent from chat: ${response.error.message} (${response.error.status})`,
+      );
+    }
+
+    return response.data!;
+  } catch (error) {
+    console.error('[API] Failed to setup agent from chat:', error);
+    handleApiError(error, { operation: 'setup agent from chat', resource: 'agent setup' });
+    throw error;
+  }
+};
+
 export const getAgentRuns = async (threadId: string): Promise<AgentRun[]> => {
   try {
     const response = await backendApi.get<{ agent_runs: AgentRun[] }>(
@@ -385,7 +389,7 @@ export const streamAgent = (
       activeStreams.set(agentRunId, eventSource);
 
       eventSource.onopen = () => {
-        console.log(`[STREAM] EventSource opened for ${agentRunId}`);
+        // Stream opened successfully
       };
 
       eventSource.onmessage = (event) => {

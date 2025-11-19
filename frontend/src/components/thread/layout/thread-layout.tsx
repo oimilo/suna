@@ -6,6 +6,7 @@ import { Project } from '@/lib/api/projects';
 import { ApiMessageType } from '@/components/thread/types';
 import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 import { useIsMobile } from '@/hooks/utils';
+import { cn } from '@/lib/utils';
 
 interface ThreadLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,8 @@ interface ThreadLayoutProps {
   disableInitialAnimation?: boolean;
   compact?: boolean;
   variant?: 'default' | 'shared';
+  chatInput?: React.ReactNode;
+  leftSidebarState?: 'expanded' | 'collapsed';
 }
 
 export function ThreadLayout({
@@ -72,7 +75,9 @@ export function ThreadLayout({
   agentName,
   disableInitialAnimation = false,
   compact = false,
-  variant = 'default'
+  variant = 'default',
+  chatInput,
+  leftSidebarState,
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
 
@@ -142,10 +147,13 @@ export function ThreadLayout({
       )}
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isActuallyMobile))
-          ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
-          : ''
-          }`}
+        data-left-sidebar={leftSidebarState}
+        className={cn(
+          'flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out',
+          (!initialLoadCompleted || (isSidePanelOpen && !isActuallyMobile)) &&
+            'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]',
+          leftSidebarState === 'collapsed' && 'pl-0'
+        )}
       >
         <SiteHeader
           threadId={threadId}
@@ -160,6 +168,10 @@ export function ThreadLayout({
         />
 
         {children}
+
+        {chatInput && (
+          <div className="border-t border-border/20 bg-background/95 p-4">{chatInput}</div>
+        )}
       </div>
 
       <ToolCallSidePanel

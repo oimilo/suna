@@ -8,7 +8,16 @@ import {
   ChatInput,
   ChatInputHandles,
 } from '@/components/thread/chat-input/chat-input';
-import { AgentRunLimitError, ProjectLimitError, BillingError, ThreadLimitError, AgentCountLimitError, TriggerLimitError, CustomWorkerLimitError, ModelAccessDeniedError } from '@/lib/api/errors';
+import { 
+  AgentRunLimitError, 
+  ProjectLimitError, 
+  BillingError,
+  ThreadLimitError,
+  AgentCountLimitError,
+  TriggerLimitError,
+  CustomWorkerLimitError,
+  ModelAccessDeniedError
+} from '@/lib/api/errors';
 import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
@@ -16,6 +25,7 @@ import { useInitiateAgentWithInvalidation, useThreadLimit } from '@/hooks/dashbo
 
 import { useAgents } from '@/hooks/agents/use-agents';
 import { PlanSelectionModal } from '@/components/billing/pricing';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { SunaModesPanel } from './suna-modes-panel';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
@@ -26,14 +36,20 @@ import { toast } from 'sonner';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { CreditsDisplay } from '@/components/billing/credits-display';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Info, X } from 'lucide-react';
+import { useLimits } from '@/hooks/dashboard/use-limits';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Progress } from '../ui/progress';
+import { useTranslations } from 'next-intl';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
 
 export function DashboardContent() {
+  const t = useTranslations('dashboard');
+  const tCommon = useTranslations('common');
+  const tBilling = useTranslations('billing');
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
@@ -74,30 +90,8 @@ export function DashboardContent() {
   const { user } = useAuth();
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
-  const threadLimitQuery = useThreadLimit();
-  const [alertDismissed, setAlertDismissed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
-  });
-  const canCreateThread = threadLimitQuery.data?.can_create ?? true;
-  const showLimitAlert = !canCreateThread && !alertDismissed;
-  const openPricingModal = usePricingModalStore((state) => state.openPricingModal);
-  const getReturnUrl = () => (typeof window !== 'undefined' ? window.location.href : '/');
-  const openUpgradeAlert = (title: string) =>
-    openPricingModal({
-      isAlert: true,
-      alertTitle: title,
-      returnUrl: getReturnUrl(),
-    });
-  const openStandardUpgrade = (title?: string) =>
-    openPricingModal({
-      title: title || 'Pick the plan that works for you.',
-      returnUrl: getReturnUrl(),
-    });
+  const pricingModalStore = usePricingModalStore();
 
-  // Feature flag for custom agents section
-
-  // Fetch agents to get the selected agent's name
   const { data: agentsResponse } = useAgents({
     limit: 100,
     sort_by: 'name',
@@ -108,27 +102,24 @@ export function DashboardContent() {
   const selectedAgent = selectedAgentId
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
-  const displayName = selectedAgent?.name || 'Prophet';
+  const displayName = selectedAgent?.name || 'Suna';
   const agentAvatar = undefined;
   const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
+  const { data: threadLimit, isLoading: isThreadLimitLoading } = useThreadLimit();
+  const { data: limits } = useLimits();
+  const canCreateThread = threadLimit?.can_create || false;
+  
+  const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
+  // Only show alert after loading is complete and limit is actually exceeded
+  const showAlert = !isThreadLimitLoading && !canCreateThread && !isDismissed;
 
   React.useEffect(() => {
     if (agents.length > 0) {
       initializeFromAgents(agents, undefined, setSelectedAgent);
     }
   }, [agents, initializeFromAgents, setSelectedAgent]);
-
-  React.useEffect(() => {
-    const handleStorage = () => {
-      if (typeof window === 'undefined') return;
-      const dismissed = sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
-      setAlertDismissed(dismissed);
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   React.useEffect(() => {
     const tab = searchParams.get('tab');
@@ -243,52 +234,46 @@ export function DashboardContent() {
 
       if (result.thread_id) {
         setInitiatedThreadId(result.thread_id);
-        // Don't reset isSubmitting here - keep loading until redirect happens
       } else {
         throw new Error('Agent initiation did not return a thread_id.');
       }
       chatInputRef.current?.clearPendingFiles();
     } catch (error: any) {
       console.error('Error during submission process:', error);
-      if (error instanceof AgentRunLimitError) {
+      if (error instanceof ProjectLimitError) {
+        pricingModalStore.openPricingModal({ 
+          isAlert: true,
+          alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+        });
+      } else if (error instanceof ThreadLimitError) {
+        pricingModalStore.openPricingModal({ 
+          isAlert: true,
+          alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+        });
+      } else if (error instanceof BillingError) {
+        const message = error.detail?.message?.toLowerCase() || '';
+        const isCreditsExhausted = 
+          message.includes('credit') ||
+          message.includes('balance') ||
+          message.includes('insufficient') ||
+          message.includes('out of credits') ||
+          message.includes('no credits');
+        
+        pricingModalStore.openPricingModal({ 
+          isAlert: true,
+          alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : 'Pick the plan that works for you.'
+        });
+      } else if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
         setAgentLimitData({
           runningCount: running_count,
           runningThreadIds: running_thread_ids,
         });
         setShowAgentLimitDialog(true);
-      } else if (error instanceof ProjectLimitError) {
-        openUpgradeAlert(`Upgrade to create more projects (${error.detail.current_count}/${error.detail.limit})`);
-      } else if (error instanceof ThreadLimitError) {
-        openUpgradeAlert(`Upgrade to create more threads (${error.detail.current_count}/${error.detail.limit})`);
-      } else if (error instanceof AgentCountLimitError) {
-        openUpgradeAlert(`Upgrade to add more custom agents (${error.detail.current_count}/${error.detail.limit})`);
-      } else if (error instanceof TriggerLimitError) {
-        openUpgradeAlert(error.detail?.message || 'Upgrade to add more triggers.');
-      } else if (error instanceof CustomWorkerLimitError) {
-        openUpgradeAlert(error.detail?.message || 'Upgrade to add more custom workers.');
-      } else if (error instanceof ModelAccessDeniedError) {
-        openUpgradeAlert('Upgrade your plan to access this AI model.');
-      } else if (error instanceof BillingError) {
-        const message = error.detail?.message?.toLowerCase() || '';
-        const isCreditsExhausted =
-          message.includes('credit') ||
-          message.includes('balance') ||
-          message.includes('insufficient') ||
-          message.includes('out of credits') ||
-          message.includes('no credits');
-
-        openPricingModal({
-          isAlert: isCreditsExhausted,
-          alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : undefined,
-          title: !isCreditsExhausted ? 'Pick the plan that works for you.' : undefined,
-          returnUrl: getReturnUrl(),
-        });
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Operation failed';
         toast.error(errorMessage);
       }
-
       setInputValue('');
       chatInputRef.current?.clearPendingFiles();
       setIsSubmitting(false);
@@ -326,8 +311,62 @@ export function DashboardContent() {
 
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
         {/* Credits Display - Top right corner */}
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
           <CreditsDisplay />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size='icon' variant='outline'>
+                <Info className='h-4 w-4'/>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align='end' className="w-70">
+              <div>
+                <h2 className="text-md font-medium mb-4">{t('usageLimits')}</h2>
+                <div className="space-y-2">
+                  <div className='space-y-2'>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{t('threads')}</span>
+                      <span className="font-medium">{limits?.thread_count?.current_count || 0} / {limits?.thread_count?.limit || 0}</span>
+                    </div>
+                    <Progress 
+                      className='h-1'
+                      value={((limits?.thread_count?.current_count || 0) / (limits?.thread_count?.limit || 1)) * 100} 
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Custom Workers</span>
+                      <span className="font-medium">{limits?.agent_count?.current_count || 0} / {limits?.agent_count?.limit || 0}</span>
+                    </div>
+                    <Progress 
+                      className='h-1'
+                      value={((limits?.agent_count?.current_count || 0) / (limits?.agent_count?.limit || 1)) * 100} 
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{t('scheduledTriggers')}</span>
+                      <span className="font-medium">{limits?.trigger_count?.scheduled?.current_count || 0} / {limits?.trigger_count?.scheduled?.limit || 0}</span>
+                    </div>
+                    <Progress 
+                      className='h-1'
+                      value={((limits?.trigger_count?.scheduled?.current_count || 0) / (limits?.trigger_count?.scheduled?.limit || 1)) * 100} 
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{t('appTriggers')}</span>
+                      <span className="font-medium">{limits?.trigger_count?.app?.current_count || 0} / {limits?.trigger_count?.app?.limit || 0}</span>
+                    </div>
+                    <Progress 
+                      className='h-1'
+                      value={((limits?.trigger_count?.app?.current_count || 0) / (limits?.trigger_count?.app?.limit || 1)) * 100} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -349,7 +388,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Prophet Super Worker
+                    Kortix Super Worker
                   </button>
                   <button
                     onClick={() => {
@@ -371,64 +410,25 @@ export function DashboardContent() {
             )} */}
             
 
-            {/* Centered content area */}
             <div className="flex-1 flex items-start justify-center pt-[30vh]">
-              {/* Super Worker View - Prophet only */}
               {viewMode === 'super-worker' && (
                 <div className="w-full animate-in fade-in-0 duration-300">
-                  {/* Title and chat input - Fixed position */}
                   <div className="px-4 py-8">
                     <div className="w-full max-w-3xl mx-auto flex flex-col items-center space-y-6 md:space-y-8">
                       <div className="flex flex-col items-center text-center w-full">
                         <p
                           className="tracking-tight text-2xl md:text-3xl font-normal text-foreground/90"
                         >
-                          What do you want to get done?
+                          {t('whatWouldYouLike')}
                         </p>
                       </div>
 
                       <div className="w-full flex flex-col items-center">
-                        {showLimitAlert && (
-                          <div
-                            className="w-full md:w-[95%] h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-t-3xl flex items-center justify-between overflow-hidden"
-                            style={{
-                              marginBottom: '-40px',
-                              transition: 'margin-bottom 300ms ease-in-out, opacity 300ms ease-in-out',
-                            }}
-                          >
-                            <span className="-mt-3.5 dark:text-amber-500 text-amber-700 text-sm">
-                              You ran out of limits. Upgrade your plan to chat more.
-                            </span>
-                            <div className="flex items-center -mt-3.5 gap-1">
-                              <Button
-                                size="sm"
-                                className="h-6 text-xs"
-                                onClick={() => openUpgradeAlert('You ran out of limits. Upgrade your plan to chat more.')}
-                              >
-                                Upgrade
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 text-muted-foreground"
-                                onClick={() => {
-                                  if (typeof window !== 'undefined') {
-                                    sessionStorage.setItem('threadLimitAlertDismissed', 'true');
-                                    window.dispatchEvent(new Event('storage'));
-                                  }
-                                  setAlertDismissed(true);
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
                         <ChatInput
                           ref={chatInputRef}
                           onSubmit={handleSubmit}
                           loading={isSubmitting || isRedirecting}
-                          placeholder="Describe what you need help with..."
+                          placeholder={t('describeWhatYouNeed')}
                           value={inputValue}
                           onChange={setInputValue}
                           hideAttachments={false}
@@ -446,6 +446,38 @@ export function DashboardContent() {
                           selectedOutputFormat={selectedOutputFormat}
                           selectedTemplate={selectedTemplate}
                         />
+
+                        {showAlert && (
+                          <div 
+                            className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-between overflow-hidden'
+                            style={{
+                              marginTop: '-32px',
+                              transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
+                            }}
+                          >
+                            <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm'>{t('limitsExceeded')}</span>
+                            <div className='flex items-center -mb-3.5'>
+                              <Button 
+                                size='sm' 
+                                className='h-6 text-xs'
+                                onClick={() => pricingModalStore.openPricingModal()}
+                              >
+                                {tCommon('upgrade')}
+                                </Button>
+                              {/* <Button 
+                                size='icon' 
+                                variant='ghost' 
+                                className='h-6 text-muted-foreground'
+                                onClick={() => {
+                                  sessionStorage.setItem('threadLimitAlertDismissed', 'true');
+                                  window.dispatchEvent(new Event('storage'));
+                                }}
+                              >
+                                <X/>
+                              </Button> */}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

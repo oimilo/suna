@@ -21,14 +21,13 @@ import {
   Zap,
   ShoppingCart,
   Lightbulb,
-  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SubscriptionInfo } from '@/lib/api/billing';
 import { createCheckoutSession, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse } from '@/lib/api/billing';
 import { toast } from 'sonner';
-import { config, isLocalMode } from '@/lib/config';
+import { isLocalMode } from '@/lib/config';
 import { useSubscription, useScheduleDowngrade } from '@/hooks/billing';
 import { useSubscriptionCommitment } from '@/hooks/billing';
 import { useAuth } from '@/components/AuthProvider';
@@ -87,14 +86,11 @@ const getFeatureIcon = (feature: string) => {
   if (featureLower.includes('token credits') || featureLower.includes('ai token')) {
     return <Clock className="size-4" />;
   }
-  if (featureLower.includes('custom agents') || featureLower.includes('custom workers') || featureLower.includes('agents')) {
+  if (featureLower.includes('custom workers') || featureLower.includes('agents')) {
     return <Bot className="size-4" />;
   }
   if (featureLower.includes('private projects') || featureLower.includes('public projects')) {
     return <FileText className="size-4" />;
-  }
-  if (featureLower.includes('custom abilities') || featureLower.includes('basic abilities')) {
-    return <Settings className="size-4" />;
   }
   if (featureLower.includes('integrations') || featureLower.includes('100+')) {
     return <Grid3X3 className="size-4" />;
@@ -135,40 +131,6 @@ function PriceDisplay({ price, isCompact }: PriceDisplayProps) {
     </motion.span>
   );
 }
-
-const parseNumericPrice = (price?: string | null) => {
-  if (!price) return null;
-  const numericPortion = price.replace(/[^0-9.,]/g, '').replace(/\s/g, '');
-  if (!numericPortion) return null;
-
-  const normalised = numericPortion
-    .replace(/\.(?=.*\.)/g, '')
-    .replace(',', '.');
-
-  const parsed = parseFloat(normalised);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const formatPriceWithReference = (value: number, reference?: string | null) => {
-  if (!reference) {
-    return `$${value}`;
-  }
-
-  const numericMatch = reference.match(/[\d.,]+/);
-  if (!numericMatch) {
-    const currencyMatch = reference.match(/^[^\d]+/);
-    const prefix = currencyMatch ? currencyMatch[0].trim() : reference;
-    const needsSpace = prefix && !prefix.endsWith(' ');
-    return `${prefix}${needsSpace ? ' ' : ''}${value}`;
-  }
-
-  return reference.replace(numericMatch[0], value.toString());
-};
-
-const isZeroPrice = (price?: string | null) => {
-  const numeric = parseNumericPrice(price);
-  return numeric !== null && numeric === 0;
-};
 
 function BillingPeriodToggle({
   billingPeriod,
@@ -237,18 +199,17 @@ function PricingTier({
 
   // Determine the price to display based on billing period
   const getDisplayPrice = () => {
-    if (isZeroPrice(tier.price)) {
-      return tier.price ?? '$0';
+    // For $0 plans, always show $0
+    if (tier.price === '$0') {
+      return '$0';
     }
 
     if (billingPeriod === 'yearly_commitment') {
-      const monthlyValue = parseNumericPrice(tier.price);
-      if (monthlyValue === null) {
-        return tier.price;
-      }
-      const discountedPrice = Math.round(monthlyValue * 0.85);
-      console.log(`[${tier.name}] Yearly Commitment: ${tier.price} -> ${discountedPrice}`);
-      return formatPriceWithReference(discountedPrice, tier.price);
+      // Calculate the yearly commitment price (15% off regular monthly)
+      const regularPrice = parseFloat(tier.price.slice(1));
+      const discountedPrice = Math.round(regularPrice * 0.85);
+      console.log(`[${tier.name}] Yearly Commitment: $${regularPrice} -> $${discountedPrice}`);
+      return `$${discountedPrice}`;
     } else if (billingPeriod === 'yearly' && tier.yearlyPrice) {
       console.log(`[${tier.name}] Yearly: ${tier.yearlyPrice}`);
       return tier.yearlyPrice;
@@ -326,6 +287,11 @@ function PricingTier({
           posthog.capture('plan_upgraded');
           queryClient.invalidateQueries({ queryKey: billingKeys.all });
           if (onSubscriptionUpdate) onSubscriptionUpdate();
+          if (response.redirect_to_dashboard) {
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 1000);
+          }
           break;
         case 'commitment_blocks_downgrade':
           toast.warning(response.message || t('cannotDowngradeDuringCommitment'));
@@ -375,33 +341,22 @@ function PricingTier({
     }
   };
 
-  // Find the current tier using tier_key
   const currentTier = siteConfig.cloudPricingItems.find(
     (p) => p.tierKey === currentSubscription?.tier_key || p.tierKey === currentSubscription?.tier?.name,
   );
 
-  const normalizeTierKey = (value?: string | null) => value?.toString().toLowerCase();
-  const freeTierKey = config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey.toLowerCase();
-  const tierKeyNormalized = normalizeTierKey(tier.tierKey) || tier.name.toLowerCase();
-  const currentTierKeyNormalized =
-    normalizeTierKey(currentSubscription?.tier_key) ||
-    normalizeTierKey(currentSubscription?.tier?.name) ||
-    normalizeTierKey(currentTier?.tierKey);
-  const isFreeTierCard = tierKeyNormalized === freeTierKey;
-  const userIsOnFreeTier = currentTierKeyNormalized === freeTierKey;
-
   const userPlanName = currentSubscription?.plan_name || 'none';
 
-  // Check if this is the current plan - must match BOTH tier_key AND billing period
-  const isSameTier =
-    (currentTierKeyNormalized && tierKeyNormalized
-      ? currentTierKeyNormalized === tierKeyNormalized
-      : currentSubscription?.tier_key === tier.tierKey) ||
+  const isSameTier = currentSubscription?.tier_key === tier.tierKey ||
     currentSubscription?.tier?.name === tier.tierKey;
   const isSameBillingPeriod = currentBillingPeriod === billingPeriod;
-  const hasActivePaidSubscription = isSameTier && isSameBillingPeriod &&
-    currentSubscription?.subscription?.status === 'active';
-  const isCurrentActivePlan = isAuthenticated && (hasActivePaidSubscription || (isFreeTierCard && userIsOnFreeTier));
+
+  const isRevenueCatSubscription = currentSubscription?.provider === 'revenuecat';
+  
+  const isCurrentActivePlan = isAuthenticated && isSameTier && 
+    (isSameBillingPeriod || isRevenueCatSubscription) &&
+    (currentSubscription?.subscription?.status === 'active' || 
+     (isRevenueCatSubscription && currentSubscription?.status === 'active'));
 
   const isScheduled = isAuthenticated && (currentSubscription as any)?.has_schedule;
   const isScheduledTargetPlan =
@@ -423,7 +378,13 @@ function PricingTier({
   const planChangeValidation = { allowed: true };
 
   if (isAuthenticated) {
-    if (isCurrentActivePlan) {
+    // For RevenueCat subscriptions on web, show current plan and disable changes
+    if (isRevenueCatSubscription && !isCurrentActivePlan) {
+      buttonText = 'Manage in App';
+      buttonDisabled = true;
+      buttonVariant = 'outline';
+      buttonClassName = 'opacity-70 cursor-not-allowed bg-muted text-muted-foreground';
+    } else if (isCurrentActivePlan) {
       if (userPlanName === 'trial') {
         buttonText = t('trialActive');
         statusBadge = (
@@ -435,7 +396,7 @@ function PricingTier({
         buttonText = t('currentPlan');
         statusBadge = (
           <span className="bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-            {t('currentBadge')}
+            Current{isRevenueCatSubscription ? ' (Mobile)' : ''}
           </span>
         );
       }
@@ -899,6 +860,8 @@ export function PricingSection({
     );
   }
 
+  const isRevenueCatUser = isAuthenticated && currentSubscription?.provider === 'revenuecat';
+
   return (
     <section
       id="pricing"
@@ -906,18 +869,15 @@ export function PricingSection({
     >
       <div className="w-full mx-auto px-6 flex flex-col items-center">
         {isAlert && (
-          <div className="w-full flex justify-center mb-6 gap-4">
-            <div className="h-10 w-10 rounded-full bg-amber-600/10 border border-amber-600/20 dark:bg-amber-500/10 dark:border-amber-500/20 flex items-center justify-center">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl text-amber-600 dark:text-amber-500">
+          <div className="w-full flex justify-center mb-6">
+            <h2 className="text-3xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl text-foreground">
               {alertTitle || t('pickPlan')}
             </h2>
           </div>
         )}
         {showTitleAndTabs && !isAlert && (
           <div className="w-full flex justify-center mb-6">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl">
+            <h2 className="text-3xl font-medium tracking-tight text-center text-balance leading-tight max-w-2xl">
               {customTitle || t('pickPlan')}
             </h2>
           </div>

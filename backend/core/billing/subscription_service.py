@@ -25,7 +25,6 @@ from .idempotency import (
     generate_subscription_modify_idempotency_key
 )
 from .stripe_circuit_breaker import StripeAPIWrapper
-from .free_tier_service import free_tier_service
 
 class SubscriptionService:
     def __init__(self):
@@ -227,71 +226,6 @@ class SubscriptionService:
             trial_status = credit_account.data[0].get('trial_status')
             current_tier = credit_account.data[0].get('tier')
         
-        target_tier = get_tier_by_price_id(price_id)
-        is_free_tier = target_tier and target_tier.name == 'free'
-
-        if is_free_tier:
-            logger.info(f"[FREE TIER] Handling free tier selection for account {account_id}")
-
-            # If account already on free tier (with or without Stripe subscription), do nothing
-            if current_tier == 'free':
-                logger.info(f"[FREE TIER] Account {account_id} already has free tier - no change")
-                return {
-                    'status': 'no_change',
-                    'message': 'You are already on the free plan.'
-                }
-
-            if existing_subscription_id:
-                logger.info(f"[FREE TIER] Account {account_id} already has subscription {existing_subscription_id}, evaluating downgrade path")
-
-                # Schedule downgrade to free tier for existing paid subscription
-                try:
-                    downgrade_result = await self.schedule_tier_downgrade(
-                        account_id=account_id,
-                        target_tier_key='free',
-                        commitment_type='monthly'
-                    )
-
-                    logger.info(f"[FREE TIER] Scheduled downgrade to free tier for {account_id}")
-
-                    return {
-                        'status': 'downgrade_scheduled',
-                        'message': downgrade_result.get('message'),
-                        'effective_date': downgrade_result.get('scheduled_date'),
-                        'details': {
-                            'effective_date': downgrade_result.get('scheduled_date'),
-                            'current_price': downgrade_result.get('current_tier', {}).get('monthly_credits'),
-                            'new_price': downgrade_result.get('target_tier', {}).get('monthly_credits'),
-                        }
-                    }
-                except HTTPException as e:
-                    raise e
-                except Exception as e:
-                    logger.error(f"[FREE TIER] Failed to schedule downgrade for {account_id}: {e}")
-                    raise HTTPException(status_code=500, detail=f"Failed to schedule downgrade: {str(e)}")
-
-            # No existing subscription - give free tier directly (idempotent)
-            free_result = await free_tier_service.give_free_tier_directly(account_id)
-
-            if not free_result.get('success'):
-                logger.error(f"[FREE TIER] Failed to activate free tier for {account_id}: {free_result.get('error')}")
-                raise HTTPException(status_code=500, detail=free_result.get('error') or "Failed to activate free plan.")
-
-            await Cache.invalidate(f"subscription_tier:{account_id}")
-            await Cache.invalidate(f"credit_balance:{account_id}")
-            await Cache.invalidate(f"credit_summary:{account_id}")
-
-            message = free_result.get('message') or 'Free plan activated successfully.'
-            status = 'no_change' if 'already' in message.lower() else 'updated'
-
-            logger.info(f"[FREE TIER] Free tier ensured for {account_id} (status={status})")
-
-            return {
-                'status': status,
-                'subscription_id': None,
-                'message': message
-            }
-
         # Always use timestamp in idempotency key to allow retries with different parameters
         import time
         timestamp = int(time.time() * 1000)  # Millisecond precision
@@ -335,7 +269,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': fe_checkout_url,  # Use embedded checkout URL (session.url is None for embedded mode)
-                'fe_checkout_url': fe_checkout_url,  # Prophet-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
                 'converting_from_trial': True,
@@ -467,7 +401,7 @@ class SubscriptionService:
             
             return {
                 'checkout_url': fe_checkout_url,  # Use embedded checkout URL (session.url is None for embedded mode)
-                'fe_checkout_url': fe_checkout_url,  # Prophet-branded embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Kortix-branded embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,
             }
@@ -1147,21 +1081,24 @@ class SubscriptionService:
     async def get_allowed_models_for_user(self, user_id: str, client=None) -> List[str]:
         try:
             from core.ai_models import model_manager
+            from core.billing.config import is_model_allowed
 
             tier_info = await self.get_user_subscription_tier(user_id)
             tier_name = tier_info['name']
             
             logger.debug(f"[ALLOWED_MODELS] User {user_id} tier: {tier_name}")
 
-            if 'all' in tier_info.get('models', []):
+            if tier_info.get('models'):
                 all_models = model_manager.list_available_models(include_disabled=False)
-                allowed_model_ids = [model_data["id"] for model_data in all_models]
-                logger.debug(f"[ALLOWED_MODELS] User {user_id} has access to all {len(allowed_model_ids)} models")
+                allowed_model_ids = []
+                
+                for model_data in all_models:
+                    model_id = model_data["id"]
+                    if is_model_allowed(tier_name, model_id):
+                        allowed_model_ids.append(model_id)
+                
+                logger.debug(f"[ALLOWED_MODELS] User {user_id} has access to {len(allowed_model_ids)} models: {[m for m in allowed_model_ids]}")
                 return allowed_model_ids
-            
-            elif tier_info.get('models'):
-                logger.debug(f"[ALLOWED_MODELS] User {user_id} has specific models: {tier_info['models']}")
-                return tier_info['models']
             
             else:
                 logger.debug(f"[ALLOWED_MODELS] User {user_id} has no model access (tier: {tier_name})")

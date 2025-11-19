@@ -202,90 +202,8 @@ class TrialService:
         logger.info(f"[TRIAL SECURITY] Trial activation attempt for account {account_id}")
         
         if not TRIAL_ENABLED:
-            # When trials are disabled, give free tier immediately instead of rejecting
-            logger.info(f"[TRIAL] Trials disabled - giving free tier immediately for account {account_id}")
-            
-            try:
-                from .config import FREE_TIER_INITIAL_CREDITS
-                
-                # Check if account already has free tier (with error handling for connection issues)
-                try:
-                    account_result = await client.from_('credit_accounts').select(
-                        'tier, balance'
-                    ).eq('account_id', account_id).execute()
-                    
-                    if account_result.data and len(account_result.data) > 0:
-                        current_tier = account_result.data[0].get('tier')
-                        if current_tier == 'free':
-                            logger.info(f"[TRIAL] Account {account_id} already has free tier")
-                            return {
-                                'checkout_url': success_url,
-                                'fe_checkout_url': success_url,
-                                'session_id': None,
-                                'client_secret': None,
-                            }
-                except Exception as select_error:
-                    # If select fails (e.g., connection error or account doesn't exist), continue to create/update
-                    logger.warning(f"[TRIAL] Could not check existing account (will create/update): {select_error}")
-                
-                # Give free tier directly without Stripe - use upsert to create if doesn't exist
-                try:
-                    await client.from_('credit_accounts').upsert({
-                        'account_id': account_id,
-                        'tier': 'free',
-                        'balance': float(FREE_TIER_INITIAL_CREDITS),
-                        'non_expiring_credits': float(FREE_TIER_INITIAL_CREDITS),
-                        'expiring_credits': 0.00,
-                        'trial_status': 'none',
-                        'last_grant_date': datetime.now(timezone.utc).isoformat()
-                    }, on_conflict='account_id').execute()
-                except Exception as upsert_error:
-                    logger.error(f"[TRIAL] Failed to upsert credit_accounts: {upsert_error}")
-                    # Try to add credits anyway via credit_manager which handles missing accounts
-                    pass
-                
-                # Add credits to ledger (credit_manager handles missing accounts)
-                try:
-                    await credit_manager.add_credits(
-                        account_id=account_id,
-                        amount=FREE_TIER_INITIAL_CREDITS,
-                        is_expiring=False,
-                        description='Welcome to Prophet! Free tier initial credits',
-                        type='tier_grant'
-                    )
-                except Exception as credit_error:
-                    logger.warning(f"[TRIAL] Failed to add credits to ledger (non-critical): {credit_error}")
-                
-                # Record trial history (non-critical)
-                try:
-                    await client.from_('trial_history').upsert({
-                        'account_id': account_id,
-                        'started_at': datetime.now(timezone.utc).isoformat(),
-                        'ended_at': None,
-                        'converted_to_paid': False,
-                        'status': 'converted'
-                    }, on_conflict='account_id').execute()
-                except Exception as history_error:
-                    logger.warning(f"[TRIAL] Failed to record trial history (non-critical): {history_error}")
-                
-                logger.info(f"[TRIAL] ✅ Successfully gave free tier to account {account_id}")
-                return {
-                    'checkout_url': success_url,  # Redirect to success URL
-                    'fe_checkout_url': success_url,
-                    'session_id': None,
-                    'client_secret': None,
-                }
-                
-            except Exception as e:
-                logger.error(f"[TRIAL] Failed to give free tier to {account_id}: {e}", exc_info=True)
-                # Return success anyway to allow user to proceed - the account might already be set up
-                logger.warning(f"[TRIAL] Returning success despite error - account may already be configured")
-                return {
-                    'checkout_url': success_url,
-                    'fe_checkout_url': success_url,
-                    'session_id': None,
-                    'client_secret': None,
-                }
+            logger.warning(f"[TRIAL SECURITY] Trial attempt rejected - trials disabled for account {account_id}")
+            raise HTTPException(status_code=400, detail="Trials are not currently enabled")
         
         # Check if trial history already exists
         trial_history_result = await client.from_('trial_history')\
@@ -423,7 +341,7 @@ class TrialService:
             
             return {
                 'checkout_url': fe_checkout_url,  # Use embedded checkout URL (session.url is None for embedded mode)
-                'fe_checkout_url': fe_checkout_url,  # Prophet-branded wrapper with embedded checkout
+                'fe_checkout_url': fe_checkout_url,  # Kortix-branded wrapper with embedded checkout
                 'session_id': session.id,
                 'client_secret': client_secret,  # For direct API usage
             }

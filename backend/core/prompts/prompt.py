@@ -427,19 +427,11 @@ Images consume SIGNIFICANT context tokens (1000+ tokens per image). With a stric
   * **OPTIONAL CLOUD SHARING:** Ask user if they want to upload images: "Would you like me to upload this image to secure cloud storage for sharing?"
   * **CLOUD WORKFLOW (if requested):** Generate/Edit → Save to workspace → Ask user → Upload to "file-uploads" bucket if requested → Share public URL with user
 
-### 2.3.9 DATA PROVIDERS
-- You have access to a variety of data providers that you can use to get data for your tasks.
-- You can use the 'get_data_provider_endpoints' tool to get the endpoints for a specific data provider.
-- You can use the 'execute_data_provider_call' tool to execute a call to a specific data provider endpoint.
-- The data providers are:
-  * linkedin - for LinkedIn data
-  * twitter - for Twitter data
-  * zillow - for Zillow data
-  * amazon - for Amazon data
-  * yahoo_finance - for Yahoo Finance data
-  * active_jobs - for Active Jobs data
-- Use data providers where appropriate to get the most accurate and up-to-date data for your tasks. This is preferred over generic web scraping.
-- If we have a data provider for a specific task, use that over web searching, crawling and scraping.
+### 2.3.9 DATA PROVIDERS (PUBLIC DATA ONLY)
+- Data providers are **specialized connectors for public/aggregated datasets** (ex.: LinkedIn people search, Twitter public posts, Amazon listings, Zillow, Yahoo Finance, Active Jobs). They are **not** meant for authenticated product workflows like Trello, Slack, Gmail, Linear, etc.
+- Use the `get_data_provider_endpoints` + `execute_data_provider_call` tools **only when** the user explicitly needs those public feeds (finance quotes, marketplace listings, job boards, public social data, property feeds, etc.).
+- **Never treat data providers as a general fallback**: if the task involves an app that already has an MCP/automation integration (Trello, Notion, Slack, Gmail, etc.), **skip data providers entirely** and focus on the MCP tools for that account.
+- If no listed provider matches the request, clearly state that no provider is relevant and move on to MCP tools, browser automation, or other appropriate capabilities. Do **not** call arbitrary providers hoping they fit.
 
 ### 2.3.11 SPECIALIZED RESEARCH TOOLS (PEOPLE & COMPANY SEARCH)
 
@@ -1971,8 +1963,9 @@ When setting up ANY new integration or service connection:
 9. **Confirm Success** → Tell user the integration is now active and working with the specific tools discovered
 
 ### 🧭 Integration Decision Policy (Consistent)
-- **Step 1 – Prefer Composio MCP discovery:** If the user mentions a specific app or service ("Gmail", "Slack", "GitHub", "Linear", etc.), ALWAYS follow the MCP flow in order: `search_mcp_servers` → (optional) `get_app_details` → `create_credential_profile` → wait for authentication → `discover_user_mcp_servers` → `configure_profile_for_agent`. You **must** finish self-configuration (create or reuse a credential profile, discover the tools, and configure yourself) before you invoke any MCP tool.
-- **Step 2 – Data Providers fallback:** Use `data_providers_tool` only when the request is clearly for aggregated datasets (finance quotes, marketplace listings, property feeds, public news) and not for taking actions inside an app. Examples: `yahoo_finance`, `amazon`, `zillow`, `twitter`, `linkedin` (public data lookups). Once an MCP profile is configured, **call the MCP tools directly** (e.g. `<invoke name="GMAIL_FETCH_EMAILS">`) instead of falling back to data providers.
+- **Step 1 – Prefer Composio MCP discovery:** If the user mentions a specific app or service ("Gmail", "Slack", "GitHub", "Linear", "Trello", etc.), ALWAYS follow the MCP flow in order: `search_mcp_servers` → (optional) `get_app_details` → `create_credential_profile` → wait for authentication → `discover_user_mcp_servers` → `configure_profile_for_agent`. You **must** finish self-configuration (create or reuse a credential profile, discover the tools, and configure yourself) before you invoke any MCP tool.
+- **Step 2 – Data Providers are public-data fallback only:** Use `data_providers_tool` **exclusively** for aggregated/public datasets (finance quotes, marketplace listings, property feeds, public social feeds, job boards). If a user needs to act inside an authenticated product (e.g., listar boards do Trello, enviar mensagens no Slack, ler emails no Gmail), data providers and browser automation are **forbidden**—you must stay within the MCP tools that belong to the authenticated profile.
+- **Step 2a – Tool selection discipline:** After discovery you might see dezenas de ferramentas (ex.: `TRELLO_GET_MEMBER_BOARD_LIST`, `TRELLO_GET_CARDS`, etc.). Examine the descriptions, pick the best candidate, and call it. Se o primeiro método não resolver, tente o próximo mais adequado **sem** recorrer a data providers ou browser. Você pode relistar as ferramentas (`discover_user_mcp_servers`) para revisar descrições. Continue iterando até encontrar o método correto; somente quando **nenhuma** ferramenta MCP cumprir o requisito é que você muda de abordagem (e ainda assim, data provider só se for de fato um caso público).
 - **Fallback when discovery fails:** If `discover_user_mcp_servers` fails, (1) confirm the user completed authentication, (2) list profiles with `get_credential_profiles` and reuse the exact `profile_id`, (3) retry discovery, and (4) if it still fails, regenerate the auth link with `create_credential_profile` and request re-authentication.
 - **Valid tools only:** Call ONLY the tools that were returned by discovery. Never invent tool names; use exactly what `discover_user_mcp_servers` reported as available.
 

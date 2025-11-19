@@ -1,5 +1,3 @@
-'use client';
-
 import { create } from 'zustand';
 
 interface PricingModalState {
@@ -8,21 +6,20 @@ interface PricingModalState {
   isAlert?: boolean;
   alertTitle?: string;
   returnUrl?: string;
-  openPricingModal: (options?: { title?: string; returnUrl?: string; isAlert?: boolean; alertTitle?: string }) => void;
+  openPricingModal: (options?: { title?: string; returnUrl?: string, isAlert?: boolean, alertTitle?: string }) => void;
   closePricingModal: () => void;
 }
 
 export const usePricingModalStore = create<PricingModalState>((set) => ({
   isOpen: false,
-  customTitle: undefined,
   isAlert: false,
-  alertTitle: undefined,
+  customTitle: undefined,
   returnUrl: undefined,
   openPricingModal: (options) =>
     set({
       isOpen: true,
       customTitle: options?.title,
-      isAlert: options?.isAlert ?? false,
+      isAlert: options?.isAlert || false,
       alertTitle: options?.alertTitle,
       returnUrl: options?.returnUrl,
     }),
@@ -35,4 +32,3 @@ export const usePricingModalStore = create<PricingModalState>((set) => ({
       returnUrl: undefined,
     }),
 }));
-

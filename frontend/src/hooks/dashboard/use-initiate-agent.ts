@@ -1,16 +1,28 @@
 'use client';
 
 import { unifiedAgentStart, UnifiedAgentStartResponse } from "@/lib/api/agents";
-import { AgentRunLimitError, BillingError, ProjectLimitError, ThreadLimitError, AgentCountLimitError, TriggerLimitError, CustomWorkerLimitError, ModelAccessDeniedError } from "@/lib/api/errors";
+import { 
+  AgentRunLimitError, 
+  BillingError, 
+  ProjectLimitError, 
+  ThreadLimitError,
+  AgentCountLimitError,
+  TriggerLimitError,
+  CustomWorkerLimitError,
+  ModelAccessDeniedError
+} from "@/lib/api/errors";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { handleApiSuccess, handleApiError } from "@/lib/error-handler";
 import { dashboardKeys } from "./keys";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from 'next-intl';
 
 import { projectKeys, threadKeys } from "../threads/keys";
 import { backendApi } from "@/lib/api-client";
 
 export const useInitiateAgentMutation = () => {
+  const t = useTranslations('dashboard');
+  
   return useMutation<
     UnifiedAgentStartResponse, 
     Error,
@@ -45,19 +57,19 @@ export const useInitiateAgentMutation = () => {
       });
     },
     onSuccess: (data) => {
-      handleApiSuccess("Agent initiated successfully", "Your AI assistant is ready to help");
+      handleApiSuccess(t('agentInitiatedSuccessfully'), t('aiAssistantReady'));
     },
     onError: (error) => {
-      if (
-        error instanceof BillingError ||
-        error instanceof AgentRunLimitError ||
-        error instanceof ProjectLimitError ||
-        error instanceof ThreadLimitError ||
-        error instanceof AgentCountLimitError ||
-        error instanceof TriggerLimitError ||
-        error instanceof CustomWorkerLimitError ||
-        error instanceof ModelAccessDeniedError
-      ) {
+      // Let all limit/billing errors bubble up to be handled by components
+      // This ensures a single source of truth for error handling
+      if (error instanceof BillingError || 
+          error instanceof AgentRunLimitError ||
+          error instanceof ProjectLimitError ||
+          error instanceof ThreadLimitError ||
+          error instanceof AgentCountLimitError ||
+          error instanceof TriggerLimitError ||
+          error instanceof CustomWorkerLimitError ||
+          error instanceof ModelAccessDeniedError) {
         throw error;
       }
       if (error instanceof Error && error.message.toLowerCase().includes("payment required")) {
@@ -75,39 +87,38 @@ export const useThreadLimit = () => {
       const response = await backendApi.get('/limits?type=thread_count');
       return response.data.thread_count || response.data;
     },
-    staleTime: 30_000,
+    staleTime: 30000,
     refetchOnWindowFocus: false,
   });
-};
+}
 
 export const useInitiateAgentWithInvalidation = () => {
   const queryClient = useQueryClient();
   const baseMutation = useInitiateAgentMutation();
   
   return useMutation({
-    mutationFn: (formData: FormData) => baseMutation.mutateAsync(formData),
+    mutationFn: async (formData: FormData) => {
+      return baseMutation.mutateAsync(formData);
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
       queryClient.invalidateQueries({ queryKey: threadKeys.all });
       queryClient.invalidateQueries({ queryKey: dashboardKeys.agents });
     },
     onError: (error) => {
-      if (
-        error instanceof BillingError ||
-        error instanceof AgentRunLimitError ||
-        error instanceof ProjectLimitError ||
-        error instanceof ThreadLimitError ||
-        error instanceof AgentCountLimitError ||
-        error instanceof TriggerLimitError ||
-        error instanceof CustomWorkerLimitError ||
-        error instanceof ModelAccessDeniedError
-      ) {
+      if (error instanceof BillingError || 
+          error instanceof AgentRunLimitError ||
+          error instanceof ProjectLimitError ||
+          error instanceof ThreadLimitError ||
+          error instanceof AgentCountLimitError ||
+          error instanceof TriggerLimitError ||
+          error instanceof CustomWorkerLimitError ||
+          error instanceof ModelAccessDeniedError) {
         throw error;
       }
       if (error instanceof Error) {
         const errorMessage = error.message;
         if (errorMessage.toLowerCase().includes("payment required")) {
-          // Throw BillingError so components can handle it consistently
           throw new BillingError(402, { message: "Payment required to continue" });
         }
       }

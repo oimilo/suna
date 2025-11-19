@@ -69,7 +69,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('20.00'),
         display_name='Starter',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=100,
         thread_limit=100,
@@ -87,7 +87,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('50.00'),
         display_name='Professional',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=500,
         thread_limit=500,
@@ -104,7 +104,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('100.00'),
         display_name='Team',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=1000,
         thread_limit=1000,
@@ -139,7 +139,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('400.00'),
         display_name='Enterprise',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=5000,
         thread_limit=5000,
@@ -156,7 +156,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('800.00'),
         display_name='Enterprise Plus',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=10000,
         thread_limit=10000,
@@ -173,7 +173,7 @@ TIERS: Dict[str, Tier] = {
         ],
         monthly_credits=Decimal('1000.00'),
         display_name='Ultimate',
-        can_purchase_credits=True,
+        can_purchase_credits=False,
         models=['all'],
         project_limit=25000,
         thread_limit=25000,
@@ -218,33 +218,31 @@ def can_purchase_credits(tier_name: str) -> bool:
 
 def is_model_allowed(tier_name: str, model: str) -> bool:
     tier = TIERS.get(tier_name, TIERS['none'])
+    
     if 'all' in tier.models:
         return True
-    return model in tier.models
+    
+    from core.ai_models import model_manager
+    resolved_model_id = model_manager.resolve_model_id(model)
+    model_obj = model_manager.get_model(resolved_model_id) if resolved_model_id else None
+    
+    if not model_obj:
+        return False
+    
+    for allowed_pattern in tier.models:
+        if allowed_pattern.lower() in model_obj.name.lower():
+            return True
+        if allowed_pattern.lower() in model_obj.id.lower():
+            return True
+        for alias in model_obj.aliases:
+            if allowed_pattern.lower() in alias.lower():
+                return True
+    
+    return False
 
 def get_project_limit(tier_name: str) -> int:
     tier = TIERS.get(tier_name)
     return tier.project_limit if tier else 3
-
-def get_thread_limit(tier_name: str) -> int:
-    tier = TIERS.get(tier_name)
-    return tier.thread_limit if tier else TIERS['free'].thread_limit
-
-def get_concurrent_runs_limit(tier_name: str) -> int:
-    tier = TIERS.get(tier_name)
-    return tier.concurrent_runs if tier else TIERS['free'].concurrent_runs
-
-def get_custom_workers_limit(tier_name: str) -> int:
-    tier = TIERS.get(tier_name)
-    return tier.custom_workers_limit if tier else TIERS['free'].custom_workers_limit
-
-def get_scheduled_trigger_limit(tier_name: str) -> int:
-    tier = TIERS.get(tier_name)
-    return tier.scheduled_triggers_limit if tier else TIERS['free'].scheduled_triggers_limit
-
-def get_app_trigger_limit(tier_name: str) -> int:
-    tier = TIERS.get(tier_name)
-    return tier.app_triggers_limit if tier else TIERS['free'].app_triggers_limit
 
 def is_commitment_price_id(price_id: str) -> bool:
     commitment_price_ids = [
@@ -276,4 +274,38 @@ def get_price_type(price_id: str) -> str:
     if price_id in yearly_price_ids:
         return 'yearly'
     
-    return 'monthly' 
+    return 'monthly'
+
+def get_thread_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.thread_limit if tier else TIERS['free'].thread_limit
+
+def get_concurrent_runs_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.concurrent_runs if tier else TIERS['free'].concurrent_runs
+
+def get_custom_workers_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.custom_workers_limit if tier else TIERS['free'].custom_workers_limit
+
+def get_scheduled_triggers_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.scheduled_triggers_limit if tier else TIERS['free'].scheduled_triggers_limit
+
+def get_app_triggers_limit(tier_name: str) -> int:
+    tier = TIERS.get(tier_name)
+    return tier.app_triggers_limit if tier else TIERS['free'].app_triggers_limit
+
+def get_tier_limits(tier_name: str) -> Dict:
+    tier = TIERS.get(tier_name, TIERS['free'])
+    return {
+        'project_limit': tier.project_limit,
+        'thread_limit': tier.thread_limit,
+        'concurrent_runs': tier.concurrent_runs,
+        'custom_workers_limit': tier.custom_workers_limit,
+        'scheduled_triggers_limit': tier.scheduled_triggers_limit,
+        'app_triggers_limit': tier.app_triggers_limit,
+        'agent_limit': tier.custom_workers_limit,
+        'can_purchase_credits': tier.can_purchase_credits,
+        'models': tier.models
+    } 
