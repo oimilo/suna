@@ -3,6 +3,7 @@ from typing import Optional
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
+from .mcp_configuration_mixin import MCPConfigurationMixin
 from core.composio_integration.toolkit_service import ToolkitService
 from core.composio_integration.composio_service import get_integration_service
 from core.utils.logger import logger
@@ -15,7 +16,7 @@ from core.utils.logger import logger
     weight=170,
     visible=True
 )
-class MCPSearchTool(AgentBuilderBaseTool):
+class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
 
@@ -186,7 +187,7 @@ class MCPSearchTool(AgentBuilderBaseTool):
                 return self.fail_response("Failed to discover tools")
             
             available_tools = result.tools or []
-            
+            auto_config_summary = await self._auto_configure_profile_if_needed(profile, available_tools)
             return self.success_response({
                 "message": f"Found {len(available_tools)} MCP tools available for {profile.toolkit_name} profile '{profile.profile_name}'",
                 "profile_info": {
@@ -196,7 +197,9 @@ class MCPSearchTool(AgentBuilderBaseTool):
                     "is_connected": profile.is_connected
                 },
                 "tools": available_tools,
-                "total_tools": len(available_tools)
+                "total_tools": len(available_tools),
+                "auto_configured": bool(auto_config_summary),
+                "configuration_details": auto_config_summary
             })
             
         except Exception as e:

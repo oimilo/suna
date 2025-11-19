@@ -1,13 +1,13 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from uuid import uuid4
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
 from core.composio_integration.composio_service import get_integration_service
 from core.composio_integration.composio_profile_service import ComposioProfileService
-from core.mcp_module.mcp_service import mcp_service
 from .mcp_search_tool import MCPSearchTool
 from core.utils.logger import logger
+from .mcp_configuration_mixin import MCPConfigurationMixin
 
 @tool_metadata(
     display_name="Credentials Manager",
@@ -17,7 +17,7 @@ from core.utils.logger import logger
     weight=180,
     visible=True
 )
-class CredentialProfileTool(AgentBuilderBaseTool):
+class CredentialProfileTool(MCPConfigurationMixin, AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
         self.composio_search = MCPSearchTool(thread_manager, db_connection, agent_id)
