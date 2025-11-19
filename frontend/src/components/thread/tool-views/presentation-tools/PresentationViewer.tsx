@@ -54,6 +54,7 @@ interface PresentationMetadata {
   title: string;
   description: string;
   slides: Record<string, SlideMetadata>;
+  slide_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -312,9 +313,28 @@ export function PresentationViewer({
     }
   }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide]);
 
-  const metadataSlides = metadata ? Object.entries(metadata.slides)
-      .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
-    .sort((a, b) => a.number - b.number) : [];
+  const metadataSlides = useMemo(() => {
+    if (!metadata) {
+      return [];
+    }
+
+    const totalSlides = Number.isFinite(metadata.slide_count)
+      ? Number(metadata.slide_count)
+      : undefined;
+
+    return Object.entries(metadata.slides || {})
+      .map(([num, slide]) => ({
+        number: Number.parseInt(num, 10),
+        ...slide,
+      }))
+      .filter(
+        (slide) =>
+          Number.isFinite(slide.number) &&
+          (!!slide.file_path || !!slide.preview_url) &&
+          (typeof totalSlides === 'undefined' || slide.number <= totalSlides),
+      )
+      .sort((a, b) => a.number - b.number);
+  }, [metadata]);
 
   const normalizeSlidePath = (rawPath: string) => {
     const trimmed = (rawPath || '').trim();
