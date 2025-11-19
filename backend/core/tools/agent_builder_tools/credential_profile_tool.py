@@ -211,8 +211,6 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             current_config = version_result.data['config']
             current_tools = current_config.get('tools', {})
             current_custom_mcps = current_tools.get('custom_mcp', [])
-            current_user_prompt = get_user_visible_system_prompt(current_config)
-            
             new_mcp_config = {
                 'name': profile.toolkit_name,
                 'type': 'composio',
@@ -237,13 +235,11 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             new_version = await version_service.create_version(
                 agent_id=self.agent_id,
                 user_id=account_id,
-                system_prompt=current_user_prompt,
+                system_prompt=current_config.get('system_prompt', ''),
                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                 custom_mcps=updated_mcps,
                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
-                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools",
-                system_prompt_user=current_user_prompt,
-                apply_tool_base_prompt=True
+                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools"
             )
 
             # Dynamically register the MCP tools in the current runtime
@@ -280,6 +276,8 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                 
             except Exception as e:
                 logger.warning(f"Could not dynamically register MCP tools in current runtime: {str(e)}. Tools will be available on next agent run.")
+
+            await self._refresh_runtime_tools(account_id, current_config)
 
             return self.success_response({
                 "message": f"Profile '{profile.profile_name}' configured with {len(enabled_tools)} tools and registered in current runtime",
@@ -349,18 +347,16 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                             current_config['tools'] = current_tools
                             
                             version_service = await get_version_service()
-                            current_user_prompt = get_user_visible_system_prompt(current_config)
                             await version_service.create_version(
                                 agent_id=self.agent_id,
                                 user_id=account_id,
-                                system_prompt=current_user_prompt,
+                                system_prompt=current_config.get('system_prompt', ''),
                                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                                 custom_mcps=updated_mcps,
                                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
-                                change_description=f"Deleted credential profile {profile.display_name}",
-                                system_prompt_user=current_user_prompt,
-                                apply_tool_base_prompt=True
+                                change_description=f"Deleted credential profile {profile.display_name}"
                             )
+                            await self._refresh_runtime_tools(account_id, current_config)
                         except Exception as e:
                             return self.fail_response("Failed to update agent config")
             

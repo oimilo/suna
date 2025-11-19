@@ -4,9 +4,9 @@ from uuid import uuid4
 from core.agentpress.tool import Tool, ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
-from core.config_helper import get_user_visible_system_prompt
 from core.utils.core_tools_helper import ensure_core_tools_enabled
 from core.utils.config import config
+from core.utils.tool_runtime import refresh_runtime_tools
 
 @tool_metadata(
     display_name="Agent Builder",
@@ -178,14 +178,25 @@ class AgentCreationTool(Tool):
                     custom_mcps=[],
                     agentpress_tools=agentpress_tools,
                     version_name="v1",
-                    change_description="Initial version",
-                    system_prompt_user=system_prompt,
-                    apply_tool_base_prompt=True
+                    change_description="Initial version"
                 )
                 
                 await client.table('agents').update({
                     "current_version_id": version.version_id
                 }).eq("agent_id", agent_id).execute()
+
+                runtime_config = {
+                    'system_prompt': system_prompt,
+                    'model': default_model,
+                    'agentpress_tools': agentpress_tools,
+                    'tools': {
+                        'agentpress': agentpress_tools,
+                        'mcp': configured_mcps,
+                        'custom_mcp': []
+                    }
+                }
+
+                await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, runtime_config)
 
                 success_message = f"✅ Successfully created agent '{name}'!\n\n"
                 success_message += f"**Icon**: {icon_name} ({icon_color} on {icon_background})\n"
@@ -623,24 +634,23 @@ class AgentCreationTool(Tool):
             from core.versioning.version_service import get_version_service
             version_service = await get_version_service()
             
-            user_prompt = get_user_visible_system_prompt(current_config)
             new_version = await version_service.create_version(
                 agent_id=agent_id,
                 user_id=account_id,
-                system_prompt=user_prompt,
+                system_prompt=current_config.get('system_prompt', ''),
                 model=current_config.get('model'),
                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                 custom_mcps=updated_mcps,
                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
-                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools",
-                system_prompt_user=user_prompt,
-                apply_tool_base_prompt=True
+                change_description=f"Configured {display_name or profile.display_name} with {len(enabled_tools)} tools"
             )
             
             await client.table('agents').update({
                 'current_version_id': new_version.version_id,
                 'version_count': agent_data['version_count'] + 1
             }).eq('agent_id', agent_id).execute()
+
+            await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, current_config)
             
             try:
                 from core.tools.mcp_tool_wrapper import MCPToolWrapper
@@ -1141,8 +1151,8 @@ class AgentCreationTool(Tool):
                 await client.table('agents').update(agent_updates).eq('agent_id', agent_id).execute()
             
             version_changes = False
-            base_prompt_from_config = get_user_visible_system_prompt(current_config)
-            new_system_prompt = system_prompt if system_prompt is not None else base_prompt_from_config
+            base_system_prompt = current_config.get('system_prompt', '')
+            new_system_prompt = system_prompt if system_prompt is not None else base_system_prompt
             new_model = model if model is not None else current_config.get('model')
             new_agentpress_tools = agentpress_tools if agentpress_tools is not None else current_config.get('tools', {}).get('agentpress', {})
             
@@ -1175,15 +1185,21 @@ class AgentCreationTool(Tool):
                     configured_mcps=configured_mcps,
                     custom_mcps=custom_mcps,
                     agentpress_tools=new_agentpress_tools,
-                    change_description=change_description or f"Updated: {', '.join(updates)}",
-                    system_prompt_user=new_system_prompt,
-                    apply_tool_base_prompt=True
+                    change_description=change_description or f"Updated: {', '.join(updates)}"
                 )
                 
                 await client.table('agents').update({
                     'current_version_id': new_version.version_id,
                     'version_count': agent_data['version_count'] + 1
                 }).eq('agent_id', agent_id).execute()
+
+                current_config['system_prompt'] = new_system_prompt
+                current_config['model'] = new_model
+                current_tools = current_config.get('tools', {})
+                current_tools['agentpress'] = new_agentpress_tools
+                current_config['tools'] = current_tools
+
+                await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, current_config)
                 
                 try:
                     await self._sync_triggers_to_version_config(agent_id)

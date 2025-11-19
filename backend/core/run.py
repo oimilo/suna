@@ -19,8 +19,6 @@ from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.prompt import get_system_prompt
 
 from core.utils.logger import logger
-from core.prompts.agent_tool_base_prompt import build_tool_use_prompt
-
 from core.billing.billing_integration import billing_integration
 
 from core.services.langfuse import langfuse
@@ -34,6 +32,7 @@ from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.ai_models.manager import model_manager
 from core.tools.vapi_voice_tool import VapiVoiceTool
+from core.utils.tool_runtime import get_disabled_tools
 
 load_dotenv()
 
@@ -64,7 +63,7 @@ class ToolManager:
         """
         disabled_tools = disabled_tools or []
         
-        # Migrate tool config once to avoid repeated expensive operations
+        # Migrate tool config ONCE at the start to avoid repeated expensive operations
         self.migrated_tools = self._get_migrated_tools_config()
         
         # Core tools - always enabled
@@ -253,7 +252,8 @@ class ToolManager:
             if enabled_methods:
                 logger.debug(f"✅ Registered browser_tool with methods: {enabled_methods}")
     
-    def _get_migrated_tools_config(self) -> Dict[str, Any]:
+    def _get_migrated_tools_config(self) -> dict:
+        """Migrate tool config once and cache it. This is expensive so we only do it once."""
         if not self.agent_config or 'agentpress_tools' not in self.agent_config:
             return {}
         
@@ -267,7 +267,8 @@ class ToolManager:
         return migrate_legacy_tool_config(raw_tools)
     
     def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
-        if not getattr(self, 'migrated_tools', None):
+        """Get enabled methods for a tool using the pre-migrated config."""
+        if not hasattr(self, 'migrated_tools') or not self.migrated_tools:
             return None
         
         from core.utils.tool_discovery import get_enabled_methods_for_tool
@@ -357,19 +358,9 @@ class PromptManager:
         #         sample_response = file.read()
         #     default_system_content = default_system_content + "\n\n <sample_assistant_response>" + sample_response + "</sample_assistant_response>"
         
-        # Start with agent's system prompt hierarchy
-        if agent_config:
-            final_prompt = agent_config.get('system_prompt_final')
-            if final_prompt:
-                system_content = final_prompt.strip()
-            elif agent_config.get('system_prompt'):
-                base_prompt = agent_config['system_prompt'].strip()
-                if agent_config.get('is_suna_default'):
-                    system_content = base_prompt
-                else:
-                    system_content = build_tool_use_prompt(base_prompt)
-            else:
-                system_content = default_system_content
+        # Start with agent's normal system prompt or default
+        if agent_config and agent_config.get('system_prompt'):
+            system_content = agent_config['system_prompt'].strip()
         else:
             system_content = default_system_content
         
@@ -517,23 +508,13 @@ When using the tools:
         # Add user locale context if user_id is provided
         if user_id and client:
             try:
-                from core.utils.user_locale import (
-                    get_locale_context_prompt,
-                    get_user_locale,
-                )
-
+                from core.utils.user_locale import get_user_locale, get_locale_context_prompt
                 locale = await get_user_locale(user_id, client)
                 locale_prompt = get_locale_context_prompt(locale)
                 system_content += f"\n\n{locale_prompt}\n"
-                logger.debug(
-                    "Added locale context (%s) to system prompt for user %s",
-                    locale,
-                    user_id,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to add locale context to system prompt: %s", exc
-                )
+                logger.debug(f"Added locale context ({locale}) to system prompt for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to add locale context to system prompt: {e}")
 
         system_message = {"role": "system", "content": system_content}
         return system_message
@@ -581,10 +562,10 @@ class AgentRunner:
         if self.config.agent_config:
             agent_id = self.config.agent_config.get('agent_id')
         
-        # Cache migrated config for tool enablement checks
-        self.migrated_tools = self._get_migrated_tools_config()
-        
         disabled_tools = self._get_disabled_tools_from_config()
+        
+        # Cache migrated tools config once for use in AgentRun methods
+        self.migrated_tools = self._get_migrated_tools_config()
         
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
         
@@ -597,7 +578,8 @@ class AgentRunner:
         else:
             logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
     
-    def _get_migrated_tools_config(self) -> Dict[str, Any]:
+    def _get_migrated_tools_config(self) -> dict:
+        """Migrate tool config once and cache it. This is expensive so we only do it once."""
         if not self.config.agent_config or 'agentpress_tools' not in self.config.agent_config:
             return {}
         
@@ -611,7 +593,8 @@ class AgentRunner:
         return migrate_legacy_tool_config(raw_tools)
     
     def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
-        if not getattr(self, 'migrated_tools', None):
+        """Get enabled methods for a tool using the pre-migrated config."""
+        if not hasattr(self, 'migrated_tools') or not self.migrated_tools:
             return None
         
         from core.utils.tool_discovery import get_enabled_methods_for_tool
@@ -640,45 +623,7 @@ class AgentRunner:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
     
     def _get_disabled_tools_from_config(self) -> List[str]:
-        disabled_tools = []
-        
-        if not self.config.agent_config or 'agentpress_tools' not in self.config.agent_config:
-            return disabled_tools
-        
-        raw_tools = self.config.agent_config['agentpress_tools']
-        
-        if not isinstance(raw_tools, dict):
-            return disabled_tools
-        
-        if self.config.agent_config.get('is_suna_default', False) and not raw_tools:
-            return disabled_tools
-        
-        def is_tool_enabled(tool_name: str) -> bool:
-            try:
-                tool_config = raw_tools.get(tool_name, True)
-                if isinstance(tool_config, bool):
-                    return tool_config
-                elif isinstance(tool_config, dict):
-                    return tool_config.get('enabled', True)
-                else:
-                    return True
-            except Exception:
-                return True
-        
-        all_tools = [
-            'sb_shell_tool', 'sb_files_tool', 'sb_expose_tool',
-            'web_search_tool', 'image_search_tool', 'sb_vision_tool', 'sb_presentation_tool', 'sb_image_edit_tool',
-            'sb_kb_tool', 'sb_design_tool', 'sb_upload_file_tool',
-            'sb_docs_tool',
-            'data_providers_tool', 'browser_tool', 'people_search_tool', 'company_search_tool', 
-            'agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool',
-            'agent_creation_tool'
-        ]
-        
-        for tool_name in all_tools:
-            if not is_tool_enabled(tool_name):
-                disabled_tools.append(tool_name)
-                
+        disabled_tools = get_disabled_tools(self.config.agent_config)
         logger.debug(f"Disabled tools from config: {disabled_tools}")
         return disabled_tools
     
@@ -695,14 +640,12 @@ class AgentRunner:
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
         system_message = await PromptManager.build_system_prompt(
-            self.config.model_name,
-            self.config.agent_config,
-            self.config.thread_id,
-            mcp_wrapper_instance,
-            self.client,
+            self.config.model_name, self.config.agent_config, 
+            self.config.thread_id, 
+            mcp_wrapper_instance, self.client,
             tool_registry=self.thread_manager.tool_registry,
             xml_tool_calling=True,
-            user_id=self.account_id,
+            user_id=self.account_id
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")
@@ -858,7 +801,7 @@ class AgentRunner:
                             generation.end(status_message="error_detected", level="ERROR")
                         break
                         
-                    if agent_should_terminate or last_tool_call in ['ask', 'complete', 'present_presentation']:
+                    if agent_should_terminate or last_tool_call in ['ask', 'complete']:
                         if generation:
                             generation.end(status_message="agent_stopped")
                         continue_execution = False
