@@ -11,6 +11,7 @@ import { AgentRunLimitError, ProjectLimitError, BillingError } from '@/lib/api/e
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useTranslations } from 'next-intl';
 import { useAgentStream } from '@/hooks/agents';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/utils';
@@ -66,6 +67,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const t = useTranslations('dashboard');
 
   // Check if user is authenticated
   const { user } = useAuth();
@@ -240,7 +242,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
       // Only invalidate if it's for this project
       if (eventProjectId === projectId) {
-        console.log('[ThreadComponent] Sandbox active, invalidating file caches for:', sandboxId);
 
         // Invalidate all file content queries
         queryClient.invalidateQueries({
@@ -317,13 +318,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       const threadAgentId = threadAgentData?.agent?.agent_id;
       const agentIdToUse = configuredAgentId || threadAgentId;
 
-      console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
-
       initializeFromAgents(agents, agentIdToUse);
 
       // If configuredAgentId is provided, force selection and override any existing selection
       if (configuredAgentId && selectedAgentId !== configuredAgentId) {
-        console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
         setSelectedAgent(configuredAgentId);
       }
     }
@@ -344,12 +342,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const handleAgentSelect = useCallback((agentId: string | undefined) => {
     // If configuredAgentId is set, only allow selection of that specific agent
     if (configuredAgentId) {
-      console.log(`[ThreadComponent] Configured agent mode: ${configuredAgentId}. Attempted selection: ${agentId}`);
       if (agentId === configuredAgentId) {
         setSelectedAgent(agentId);
-        console.log(`[ThreadComponent] Allowed selection of configured agent: ${agentId}`);
-      } else {
-        console.log(`[ThreadComponent] Blocked selection of non-configured agent: ${agentId}`);
       }
       // Ignore attempts to select other agents
       return;
@@ -492,7 +486,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
     // Downgrade log level for expected/benign cases (opening old conversations)
     if (isExpected) {
-      console.info(`[PAGE] Stream skipped for inactive run: ${errorMessage}`);
       return;
     }
 
@@ -753,7 +746,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
     // Start streaming if user initiated a run (don't wait for initialLoadCompleted for first-time users)
     if (agentRunId && agentRunId !== currentHookRunId && userInitiatedRun) {
-      console.log(`[ThreadComponent] Starting user-initiated stream for runId: ${agentRunId}`);
       startStreaming(agentRunId);
       lastStreamStartedRef.current = agentRunId; // Track that we started this runId
       setUserInitiatedRun(false); // Reset flag after starting
@@ -768,7 +760,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       !userInitiatedRun &&
       agentStatus === 'running'
     ) {
-      console.log(`[ThreadComponent] Starting auto stream for runId: ${agentRunId}`);
       startStreaming(agentRunId);
       lastStreamStartedRef.current = agentRunId; // Track that we started this runId
     }
@@ -1017,7 +1008,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             <div className="flex-shrink-0 border-t border-border/20 bg-background p-4">
               <ChatInput
                 onSubmit={handleSubmitMessage}
-                placeholder={`Describe what you need help with...`}
+                placeholder={t('describeWhatYouNeed')}
                 loading={isSending}
                 disabled={isSending}
                 isAgentRunning={
@@ -1161,7 +1152,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
               <ChatInput
                 onSubmit={handleSubmitMessage}
-                placeholder={`Describe what you need help with...`}
+                placeholder={t('describeWhatYouNeed')}
                 loading={isSending}
                 disabled={isSending}
                 isAgentRunning={
