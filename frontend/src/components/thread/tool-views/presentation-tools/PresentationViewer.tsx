@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   DropdownMenu,
@@ -19,27 +18,27 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Presentation,
-  Clock,
   Loader2,
   CheckCircle,
   AlertTriangle,
   FileText,
-  Hash,
   Maximize2,
   Download,
   ExternalLink,
-  ChevronDown,
 } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { formatTimestamp, extractToolData, getToolTitle } from '../utils';
-import { downloadPresentation, handleGoogleSlidesUpload } from '../utils/presentation-utils';
+import {
+  downloadPresentation,
+  handleGoogleSlidesUpload,
+  DownloadFormat,
+} from '../utils/presentation-utils';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import { LoadingState } from '../shared/LoadingState';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
-import { DownloadFormat } from '../utils/presentation-utils';
-import posthog from 'posthog-js';
-import { captureClientException } from '@/lib/monitoring/sentry';
+import { PresentationSlideCard } from './PresentationSlideCard';
+import { usePresentationViewerStore } from '@/stores/presentation-viewer-store';
 
 interface SlideMetadata {
   title: string;
@@ -54,227 +53,139 @@ interface PresentationMetadata {
   title: string;
   description: string;
   slides: Record<string, SlideMetadata>;
-  slide_count?: number;
   created_at: string;
   updated_at: string;
 }
 
 interface PresentationViewerProps extends ToolViewProps {
-  // All data will be extracted from toolContent
   showHeader?: boolean;
 }
 
+const sanitizeFilename = (name: string): string =>
+  name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
+
 export function PresentationViewer({
-  assistantContent,
   toolContent,
-  assistantTimestamp,
   toolTimestamp,
-  isSuccess = true,
   isStreaming = false,
   name,
   project,
   showHeader = true,
 }: PresentationViewerProps) {
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
-
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [hasScrolledToCurrentSlide, setHasScrolledToCurrentSlide] = useState(false);
   const [backgroundRetryInterval, setBackgroundRetryInterval] = useState<NodeJS.Timeout | null>(null);
-
   const [visibleSlide, setVisibleSlide] = useState<number | null>(null);
-  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [fullScreenInitialSlide, setFullScreenInitialSlide] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Extract presentation info from tool data
+  const {
+    isOpen,
+    presentationName,
+    sandboxUrl,
+    sandboxId,
+    initialSlide,
+    openPresentation,
+    closePresentation,
+  } = usePresentationViewerStore();
+  const viewerState = { isOpen, presentationName, sandboxUrl, sandboxId, initialSlide };
+
   const { toolResult } = extractToolData(toolContent);
   let extractedPresentationName: string | undefined;
-  let safePresentationNameFromOutput: string | undefined;
   let currentSlideNumber: number | undefined;
-  let presentationTitleFromOutput: string | undefined;
+  let presentationTitle: string | undefined;
   let toolExecutionError: string | undefined;
-  let fallbackAttachments: string[] = [];
-  let fallbackPresentationTitle: string | undefined;
 
   if (toolResult && toolResult.toolOutput && toolResult.toolOutput !== 'STREAMING') {
     try {
       let output;
-      
+
       if (typeof toolResult.toolOutput === 'string') {
-        // Check if the string looks like an error message
         if (toolResult.toolOutput.startsWith('Error') || toolResult.toolOutput.includes('exec')) {
-          console.error('Tool execution error:', toolResult.toolOutput);
           toolExecutionError = toolResult.toolOutput;
-          // Don't return early - let the component render the error state
         } else {
-          // Try to parse as JSON
-          try {
-            output = JSON.parse(toolResult.toolOutput);
-          } catch (parseError) {
-            console.error('Failed to parse tool output as JSON:', parseError);
-            console.error('Raw tool output:', toolResult.toolOutput);
-            toolExecutionError = `Failed to parse tool output: ${toolResult.toolOutput}`;
-            // Don't return early - let the component render the error state
-          }
+          output = JSON.parse(toolResult.toolOutput);
         }
       } else {
         output = toolResult.toolOutput;
       }
-      
-      // Only extract data if we have a valid parsed object
+
       if (output && typeof output === 'object') {
         extractedPresentationName = output.presentation_name;
-        safePresentationNameFromOutput = output.safe_presentation_name;
         currentSlideNumber = output.slide_number;
-        presentationTitleFromOutput = output.presentation_title || output.title;
-        fallbackPresentationTitle = presentationTitleFromOutput || fallbackPresentationTitle;
-
-        if (Array.isArray(output.attachments)) {
-          fallbackAttachments = output.attachments;
-        } else if (typeof output.attachments === 'string') {
-          fallbackAttachments = output.attachments
-            .split(',')
-            .map((item: string) => item.trim())
-            .filter((item: string) => item.length > 0);
-        }
+        presentationTitle = output.presentation_title || output.title;
       }
-    } catch (e) {
-      console.error('Failed to process tool output:', e);
-      console.error('Tool output type:', typeof toolResult.toolOutput);
-      console.error('Tool output value:', toolResult.toolOutput);
-      toolExecutionError = `Unexpected error processing tool output: ${String(e)}`;
+    } catch (err) {
+      console.error('Failed to process tool output:', err);
+      toolExecutionError = `Unexpected error processing tool output: ${String(err)}`;
     }
   }
 
-  // Get tool title for display
   const toolTitle = getToolTitle(name || 'presentation-viewer');
+  const normalizedPresentationName = extractedPresentationName
+    ? sanitizeFilename(extractedPresentationName)
+    : undefined;
 
-  // Helper function to sanitize filename (matching backend logic fallback)
-  const sanitizeFilename = (name: string): string => {
-    return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
-  };
-
-  const normalizedPresentationName =
-    safePresentationNameFromOutput ||
-    (extractedPresentationName ? sanitizeFilename(extractedPresentationName) : undefined);
-
-  // Load metadata.json for the presentation with retry logic
   const loadMetadata = async (retryCount = 0, maxRetries = 5) => {
-    if (!normalizedPresentationName || (!project?.sandbox?.sandbox_url && !project?.sandbox?.id)) return;
-    
+    if (!normalizedPresentationName || (!project?.sandbox?.sandbox_url && !project?.sandbox?.id)) {
+      return;
+    }
+
     setIsLoadingMetadata(true);
     setError(null);
     setRetryAttempt(retryCount);
-    
-    let metadataUrl: string | undefined;
-    let lastMetadataRequestUrl: string | undefined;
-    
+
     try {
-      const resolvedMetadataUrl =
+      const metadataUrl =
         constructHtmlPreviewUrl({
           sandboxId: project?.sandbox?.id,
           sandboxUrl: project?.sandbox?.sandbox_url,
           filePath: `presentations/${normalizedPresentationName}/metadata.json`,
-        }) ??
+        }) ||
         (project?.sandbox?.sandbox_url
           ? `${project.sandbox.sandbox_url.replace(/\/$/, '')}/presentations/${normalizedPresentationName}/metadata.json`
           : undefined);
 
-      if (!resolvedMetadataUrl) {
-        throw new Error('Não foi possível construir a URL de metadata da apresentação.');
+      if (!metadataUrl) {
+        throw new Error('Sandbox preview URL unavailable for presentation metadata.');
       }
 
-      metadataUrl = resolvedMetadataUrl;
-      
-      // Add cache-busting parameter to ensure fresh data
-      const urlWithCacheBust = `${resolvedMetadataUrl}?t=${Date.now()}`;
-      lastMetadataRequestUrl = urlWithCacheBust;
-      
-      console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
-      
-      const response = await fetch(urlWithCacheBust, {
+      const response = await fetch(`${metadataUrl}?t=${Date.now()}`, {
         cache: 'no-cache',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setMetadata(data);
-        console.log('Successfully loaded presentation metadata:', data);
         setIsLoadingMetadata(false);
-        
-        // Clear background retry interval on success
+
         if (backgroundRetryInterval) {
           clearInterval(backgroundRetryInterval);
           setBackgroundRetryInterval(null);
         }
-        
-        return; // Success, exit early
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        return;
       }
+
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
-      
-      // If we haven't reached max retries, try again with exponential backoff
+
       if (retryCount < maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Cap at 10 seconds
-        console.log(`Retrying in ${delay}ms...`);
-        
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
         setTimeout(() => {
           loadMetadata(retryCount + 1, maxRetries);
         }, delay);
-        
-        return; // Don't set error state yet, we're retrying
+        return;
       }
-      
-      // All retries exhausted, set error and start background retry
+
       setError('Failed to load presentation metadata after multiple attempts');
       setIsLoadingMetadata(false);
 
-      if (typeof window !== 'undefined' && typeof posthog?.capture === 'function') {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-              ? err
-              : (() => {
-                  try {
-                    return JSON.stringify(err);
-                  } catch {
-                    return 'Unknown error';
-                  }
-                })();
-
-        posthog.capture('presentation_metadata_fetch_failed', {
-          sandboxId: project?.sandbox?.id ?? null,
-          presentationName: extractedPresentationName ?? null,
-          retryAttempts: retryCount + 1,
-          metadataUrl: metadataUrl ?? null,
-          lastRequestUrl: lastMetadataRequestUrl ?? null,
-          errorMessage,
-        });
-      }
-
-      void captureClientException(err, {
-        tags: {
-          feature: 'presentation-viewer',
-        },
-        extra: {
-          sandboxId: project?.sandbox?.id ?? null,
-          presentationName: extractedPresentationName ?? null,
-          retryAttempts: retryCount + 1,
-          metadataUrl: metadataUrl ?? null,
-          lastRequestUrl: lastMetadataRequestUrl ?? null,
-        },
-      });
-      
-      // Start background retry every 10 seconds
       if (!backgroundRetryInterval) {
         const interval = setInterval(() => {
-          console.log('Background retry attempt...');
-          loadMetadata(0, 2); // Fewer retries for background attempts
+          loadMetadata(0, 2);
         }, 10000);
         setBackgroundRetryInterval(interval);
       }
@@ -282,15 +193,13 @@ export function PresentationViewer({
   };
 
   useEffect(() => {
-    // Clear any existing background retry when dependencies change
     if (backgroundRetryInterval) {
       clearInterval(backgroundRetryInterval);
       setBackgroundRetryInterval(null);
     }
     loadMetadata();
-  }, [extractedPresentationName, project?.sandbox?.sandbox_url, project?.sandbox?.id, toolContent]);
+  }, [normalizedPresentationName, project?.sandbox?.sandbox_url, project?.sandbox?.id, toolContent]);
 
-  // Cleanup background retry interval on unmount
   useEffect(() => {
     return () => {
       if (backgroundRetryInterval) {
@@ -299,165 +208,61 @@ export function PresentationViewer({
     };
   }, [backgroundRetryInterval]);
 
-  // Reset scroll state when tool content changes (new tool call)
   useEffect(() => {
     setHasScrolledToCurrentSlide(false);
   }, [toolContent, currentSlideNumber]);
 
-  // Scroll to current slide when metadata loads or when tool content changes
+  const slides = useMemo(() => (
+    metadata
+      ? Object.entries(metadata.slides)
+          .map(([num, slide]) => ({ number: parseInt(num, 10), ...slide }))
+          .sort((a, b) => a.number - b.number)
+      : []
+  ), [metadata]);
+
   useEffect(() => {
     if (metadata && currentSlideNumber && !hasScrolledToCurrentSlide) {
-      // Wait longer for memoized components to render
       scrollToCurrentSlide(800);
       setHasScrolledToCurrentSlide(true);
     }
   }, [metadata, currentSlideNumber, hasScrolledToCurrentSlide]);
 
-  const metadataSlides = useMemo(() => {
-    if (!metadata) {
-      return [];
-    }
-
-    const totalSlides = Number.isFinite(metadata.slide_count)
-      ? Number(metadata.slide_count)
-      : undefined;
-
-    return Object.entries(metadata.slides || {})
-      .map(([num, slide]) => ({
-        number: Number.parseInt(num, 10),
-        ...slide,
-      }))
-      .filter(
-        (slide) =>
-          Number.isFinite(slide.number) &&
-          (!!slide.file_path || !!slide.preview_url) &&
-          (typeof totalSlides === 'undefined' || slide.number <= totalSlides),
-      )
-      .sort((a, b) => a.number - b.number);
-  }, [metadata]);
-
-  const normalizeSlidePath = (rawPath: string) => {
-    const trimmed = (rawPath || '').trim();
-    if (!trimmed) return '';
-
-    const stripLeadingSlash = (value: string) => value.replace(/^\/+/, '');
-
-    if (trimmed.startsWith('/workspace/')) {
-      return trimmed.replace(/^\/workspace\//, '');
-    }
-
-    const withoutLeadingSlashes = stripLeadingSlash(trimmed);
-
-    if (withoutLeadingSlashes.startsWith('presentations/')) {
-      return withoutLeadingSlashes;
-    }
-
-    if (normalizedPresentationName) {
-      return `presentations/${stripLeadingSlash(normalizedPresentationName)}/${withoutLeadingSlashes}`;
-    }
-
-    return withoutLeadingSlashes;
-  };
-
-  const fallbackSlides = !metadata
-    ? fallbackAttachments.map((attachment, index) => {
-        const normalizedPath = normalizeSlidePath(attachment);
-        const filename =
-          normalizedPath.split('/').pop() ||
-          `slide_${String(index + 1).padStart(2, '0')}.html`;
-        const inferredTitle = filename
-          .replace(/\.[^.]+$/, '')
-          .replace(/[_-]+/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        return {
-          number: index + 1,
-          title: inferredTitle || `Slide ${index + 1}`,
-          filename,
-          file_path: normalizedPath,
-          preview_url: normalizedPath,
-          created_at: new Date().toISOString(),
-        };
-      })
-    : [];
-
-  const combinedSlides =
-    metadata && metadataSlides.length > 0 ? metadataSlides : fallbackSlides;
-
-  const resolvedPresentationTitle =
-    metadata?.title ||
-    metadata?.presentation_name ||
-    fallbackPresentationTitle ||
-    presentationTitleFromOutput ||
-    extractedPresentationName ||
-    toolTitle;
-
-  const hasFallbackSlides = !metadata && fallbackSlides.length > 0;
-  const shouldShowErrorState =
-    !!toolExecutionError || (!!error && !hasFallbackSlides);
-
-  // Additional effect to scroll when slides are actually rendered
   useEffect(() => {
-    if (
-      combinedSlides.length > 0 &&
-      currentSlideNumber &&
-    metadata &&
-      !hasScrolledToCurrentSlide
-    ) {
-      // Extra delay to ensure DOM is fully rendered
-      const timer = setTimeout(() => {
-        scrollToCurrentSlide(100);
-        setHasScrolledToCurrentSlide(true);
-      }, 1000);
+    if (!slides.length) return;
 
-      return () => clearTimeout(timer);
-    }
-  }, [combinedSlides.length, currentSlideNumber, metadata, hasScrolledToCurrentSlide]);
-
-  // Scroll-based slide detection with proper edge handling
-  useEffect(() => {
-    if (!metadataSlides.length) return;
-
-    // Initialize with first slide
-    setVisibleSlide(metadataSlides[0].number);
+    setVisibleSlide(slides[0].number);
 
     const handleScroll = () => {
-      
       const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-      if (!scrollArea || metadataSlides.length === 0) return;
+      if (!scrollArea || slides.length === 0) return;
 
       const { scrollTop, scrollHeight, clientHeight } = scrollArea;
       const scrollViewportRect = scrollArea.getBoundingClientRect();
       const viewportCenter = scrollViewportRect.top + scrollViewportRect.height / 2;
 
-      // Check if we're at the very top (first slide)
       if (scrollTop <= 10) {
-        setVisibleSlide(metadataSlides[0].number);
+        setVisibleSlide(slides[0].number);
         return;
       }
 
-      // Check if we're at the very bottom (last slide)
       if (scrollTop + clientHeight >= scrollHeight - 10) {
-        setVisibleSlide(metadataSlides[metadataSlides.length - 1].number);
+        setVisibleSlide(slides[slides.length - 1].number);
         return;
       }
 
-      // For middle slides, find the slide closest to the viewport center
-      let closestSlide = metadataSlides[0];
+      let closestSlide = slides[0];
       let smallestDistance = Infinity;
 
-      metadataSlides.forEach((slide) => {
+      slides.forEach((slide) => {
         const slideElement = document.getElementById(`slide-${slide.number}`);
         if (!slideElement) return;
 
         const slideRect = slideElement.getBoundingClientRect();
         const slideCenter = slideRect.top + slideRect.height / 2;
         const distanceFromCenter = Math.abs(slideCenter - viewportCenter);
-
-        // Only consider slides that are at least partially visible
-        const isPartiallyVisible = slideRect.bottom > scrollViewportRect.top && 
-                                 slideRect.top < scrollViewportRect.bottom;
+        const isPartiallyVisible =
+          slideRect.bottom > scrollViewportRect.top &&
+          slideRect.top < scrollViewportRect.bottom;
 
         if (isPartiallyVisible && distanceFromCenter < smallestDistance) {
           smallestDistance = distanceFromCenter;
@@ -468,7 +273,6 @@ export function PresentationViewer({
       setVisibleSlide(closestSlide.number);
     };
 
-    // Debounce scroll handler for better performance
     let scrollTimeout: NodeJS.Timeout;
     const debouncedHandleScroll = () => {
       clearTimeout(scrollTimeout);
@@ -478,7 +282,6 @@ export function PresentationViewer({
     const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
     if (scrollArea) {
       scrollArea.addEventListener('scroll', debouncedHandleScroll);
-      // Run once immediately to set initial state
       handleScroll();
     }
 
@@ -488,30 +291,28 @@ export function PresentationViewer({
         scrollArea.removeEventListener('scroll', debouncedHandleScroll);
       }
     };
-  }, [metadataSlides]);
+  }, [slides]);
 
-  // Helper function to scroll to current slide
   const scrollToCurrentSlide = (delay: number = 200) => {
     if (!currentSlideNumber || !metadata) return;
-    
+
     setTimeout(() => {
       const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
-      
+
       if (slideElement) {
-        slideElement.scrollIntoView({ 
-          behavior: 'smooth', 
+        slideElement.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
-          inline: 'nearest'
+          inline: 'nearest',
         });
       } else {
-        // Fallback: try again after a longer delay if element not found yet
         setTimeout(() => {
           const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
           if (retryElement) {
-            retryElement.scrollIntoView({ 
-              behavior: 'smooth', 
+            retryElement.scrollIntoView({
+              behavior: 'smooth',
               block: 'center',
-              inline: 'nearest'
+              inline: 'nearest',
             });
           }
         }, 500);
@@ -519,291 +320,166 @@ export function PresentationViewer({
     }, delay);
   };
 
-  // Create a refresh timestamp when metadata changes
-  const refreshTimestamp = useMemo(() => Date.now(), [metadata]);
+  const handleDownload = async (
+    setDownloadState: (state: boolean) => void,
+    format: DownloadFormat,
+  ) => {
+    if (!extractedPresentationName || !project?.sandbox) return;
 
-  // Memoized slide iframe component to prevent unnecessary re-renders
-  const SlideIframe = useMemo(() => {
-    const SlideIframeComponent = React.memo(({ slide }: { slide: SlideMetadata & { number: number } }) => {
-      const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
-      const [scale, setScale] = useState(1);
-
-      useEffect(() => {
-        if (containerRef) {
-          const updateScale = () => {
-            const containerWidth = containerRef.offsetWidth;
-            const containerHeight = containerRef.offsetHeight;
-            
-            // Calculate scale to fit 1920x1080 into container while maintaining aspect ratio
-            const scaleX = containerWidth / 1920;
-            const scaleY = containerHeight / 1080;
-            const newScale = Math.min(scaleX, scaleY);
-            
-            // Only update if scale actually changed to prevent unnecessary re-renders
-            if (Math.abs(newScale - scale) > 0.001) {
-              setScale(newScale);
-            }
-          };
-
-          // Use a debounced version for resize events to prevent excessive updates
-          let resizeTimeout: NodeJS.Timeout;
-          const debouncedUpdateScale = () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(updateScale, 100);
-          };
-
-          updateScale();
-          window.addEventListener('resize', debouncedUpdateScale);
-          return () => {
-            window.removeEventListener('resize', debouncedUpdateScale);
-            clearTimeout(resizeTimeout);
-          };
-        }
-      }, [containerRef, scale]);
-
-      if (!project?.sandbox?.sandbox_url && !project?.sandbox?.id) {
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">No slide content to preview</p>
-            </div>
-          </div>
-        );
-      }
-
-      const fallbackBase = project?.sandbox?.sandbox_url
-        ? project.sandbox.sandbox_url.replace(/\/$/, '')
-        : undefined;
-      const resolvedFilePath = normalizeSlidePath(slide.file_path || '');
-
-      const slideUrl =
-        constructHtmlPreviewUrl({
-          sandboxId: project?.sandbox?.id,
-          sandboxUrl: project?.sandbox?.sandbox_url,
-          filePath: resolvedFilePath,
-        }) ??
-        (fallbackBase ? `${fallbackBase}/${resolvedFilePath}` : undefined);
-
-      if (!slideUrl) {
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Preview indisponível no momento.</p>
-            </div>
-          </div>
-        );
-      }
-      // Add cache-busting to iframe src to ensure fresh content
-      const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
-
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-transparent">
-          <div 
-            ref={setContainerRef}
-            className="relative w-full h-full bg-background rounded-lg overflow-hidden"
-            style={{
-              containIntrinsicSize: '1920px 1080px',
-              contain: 'layout style'
-            }}
-          >
-            <iframe
-              key={`slide-${slide.number}-${refreshTimestamp}`} // Key with stable timestamp ensures iframe refreshes when metadata changes
-              src={slideUrlWithCacheBust}
-              title={`Slide ${slide.number}: ${slide.title}`}
-              className="border-0 rounded-xl"
-              sandbox="allow-same-origin allow-scripts"
-              style={{
-                width: '1920px',
-                height: '1080px',
-                border: 'none',
-                display: 'block',
-                transform: `scale(${scale})`,
-                transformOrigin: '0 0',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                willChange: 'transform',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden'
-              }}
-            />
-          </div>
-        </div>
-      );
-    }, (prevProps, nextProps) => {
-      // Custom comparison function - only re-render if slide number or file_path changes
-      return prevProps.slide.number === nextProps.slide.number && 
-             prevProps.slide.file_path === nextProps.slide.file_path;
-    });
-    
-    SlideIframeComponent.displayName = 'SlideIframeComponent';
-    return SlideIframeComponent;
-  }, [project?.sandbox?.sandbox_url, project?.sandbox?.id, refreshTimestamp, normalizeSlidePath]);
-
-  // Render individual slide using the original approach
-  const renderSlidePreview = useCallback((slide: SlideMetadata & { number: number }) => {
-    return <SlideIframe slide={slide} />;
-  }, [SlideIframe]);
-
-  const handleDownload = async (setIsDownloading: (isDownloading: boolean) => void, format: DownloadFormat) => {
-    
-    if ((!project?.sandbox?.sandbox_url && !project?.sandbox?.id) || !extractedPresentationName) return;
-
-    setIsDownloading(true);
-    try{
-      if (format === DownloadFormat.GOOGLE_SLIDES){
+    setDownloadState(true);
+    try {
+      if (format === DownloadFormat.GOOGLE_SLIDES) {
         const result = await handleGoogleSlidesUpload(
-          project!.sandbox!,
-          `/workspace/presentations/${extractedPresentationName}`
+          project.sandbox,
+          `/workspace/presentations/${extractedPresentationName}`,
         );
-        // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
-          return; // Don't set loading false, user is being redirected
+          return;
         }
-      } else{
+      } else {
         await downloadPresentation(
           format,
-          project.sandbox!,
+          project.sandbox,
           `/workspace/presentations/${extractedPresentationName}`,
-          extractedPresentationName
+          extractedPresentationName,
         );
       }
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
+    } catch (err) {
+      console.error(`Error downloading ${format}:`, err);
     } finally {
-      setIsDownloading(false);
+      setDownloadState(false);
     }
   };
-  
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
-      {showHeader && <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
-              <Presentation className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+      {showHeader && (
+        <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20">
+                <Presentation className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                  {metadata?.title || metadata?.presentation_name || presentationTitle || toolTitle}
+                </CardTitle>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                {resolvedPresentationTitle}
-              </CardTitle>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {/* Export actions */}
-            {metadata && metadataSlides.length > 0 && !isStreaming && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFullScreenInitialSlide(
-                      visibleSlide ||
-                        currentSlideNumber ||
-                        metadataSlides[0]?.number ||
-                        1,
-                    );
-                    setIsFullScreenOpen(true);
-                  }}
-                  className="h-8 w-8 p-0"
-                  title="Open in full screen"
+            <div className="flex items-center gap-2">
+              {metadata && slides.length > 0 && !isStreaming && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (openPresentation && project?.sandbox?.sandbox_url && extractedPresentationName) {
+                        openPresentation(
+                          extractedPresentationName,
+                          project.sandbox.sandbox_url,
+                          project.sandbox.id,
+                          visibleSlide || currentSlideNumber || slides[0]?.number || 1,
+                        );
+                      }
+                    }}
+                    className="h-8 w-8 p-0"
+                    title="Open in full screen"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Export presentation"
+                        disabled={isDownloading}
+                      >
+                        {isDownloading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-32">
+                      <DropdownMenuItem
+                        onClick={() => handleDownload(setIsDownloading, DownloadFormat.PDF)}
+                        className="cursor-pointer"
+                        disabled={isDownloading}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDownload(setIsDownloading, DownloadFormat.PPTX)}
+                        className="cursor-pointer"
+                        disabled={isDownloading}
+                      >
+                        <Presentation className="h-4 w-4 mr-2" />
+                        PPTX
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDownload(setIsDownloading, DownloadFormat.GOOGLE_SLIDES)}
+                        className="cursor-pointer"
+                        disabled={isDownloading}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Google Slides
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
+
+              {!isStreaming && (
+                <Badge
+                  variant="secondary"
+                  className="bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      title="Export presentation"
-                      disabled={isDownloading}
-                    >
-                      {isDownloading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Download className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-32">
-                    <DropdownMenuItem 
-                      onClick={() => handleDownload(setIsDownloading, DownloadFormat.PDF)}
-                      className="cursor-pointer"
-                      disabled={isDownloading}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      PDF
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleDownload(setIsDownloading, DownloadFormat.PPTX)}
-                      className="cursor-pointer"
-                      disabled={isDownloading}
-                    >
-                      <Presentation className="h-4 w-4 mr-2" />
-                      PPTX
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleDownload(setIsDownloading, DownloadFormat.GOOGLE_SLIDES)}
-                      className="cursor-pointer"
-                      disabled={isDownloading}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Google Slides
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                  Success
+                </Badge>
+              )}
 
-            {!isStreaming && (
-              <Badge
-                variant="secondary"
-                className="bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-              >
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                Success
-              </Badge>
-            )}
-
-            {isStreaming && (
-              <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                Loading
-              </Badge>
-            )}
+              {isStreaming && (
+                <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  Loading
+                </Badge>
+              )}
+            </div>
           </div>
-        </div>
-      </CardHeader>}
-
-
+        </CardHeader>
+      )}
 
       <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
-        {(isStreaming || (isLoadingMetadata && !metadata)) ? (
+        {isStreaming || (isLoadingMetadata && !metadata) ? (
           <LoadingState
             icon={Presentation}
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
             title="Loading presentation"
-            filePath={retryAttempt > 0 ? `Retrying... (attempt ${retryAttempt + 1})` : "Loading slides..."}
-            showProgress={true}
+            filePath={
+              retryAttempt > 0 ? `Retrying... (attempt ${retryAttempt + 1})` : 'Loading slides...'
+            }
+            showProgress
           />
-        ) : shouldShowErrorState ? (
+        ) : error || toolExecutionError || !metadata ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-rose-100 to-rose-50 shadow-inner dark:from-rose-800/40 dark:to-rose-900/60">
               <AlertTriangle className="h-10 w-10 text-rose-400 dark:text-rose-600" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              {toolExecutionError ? 'Tool Execution Error' : (error || 'Failed to load presentation')}
+              {toolExecutionError ? 'Tool Execution Error' : error || 'Failed to load presentation'}
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md mb-4">
-              {toolExecutionError ? 'The presentation tool encountered an error during execution:' : 
-               (error || 'There was an error loading the presentation. Please try again.')}
+              {toolExecutionError
+                ? 'The presentation tool encountered an error during execution:'
+                : error || 'There was an error loading the presentation. Please try again.'}
             </p>
             {retryAttempt > 0 && !toolExecutionError && (
               <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">
@@ -817,9 +493,9 @@ export function PresentationViewer({
               </p>
             )}
             {!toolExecutionError && error && (
-              <Button 
-                onClick={() => loadMetadata()} 
-                variant="outline" 
+              <Button
+                onClick={() => loadMetadata()}
+                variant="outline"
                 size="sm"
                 disabled={isLoadingMetadata}
                 className="mb-4"
@@ -836,22 +512,20 @@ export function PresentationViewer({
             )}
             {toolExecutionError && (
               <div className="w-full max-w-2xl">
-                <CodeBlockCode 
-                  code={toolExecutionError} 
+                <CodeBlockCode
+                  code={toolExecutionError}
                   language="text"
                   className="text-xs bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md border"
                 />
               </div>
             )}
           </div>
-        ) : combinedSlides.length === 0 ? (
+        ) : slides.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60">
               <Presentation className="h-10 w-10 text-blue-400 dark:text-blue-600" />
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              No slides found
-            </h3>
+            <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">No slides found</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md">
               This presentation doesn't have any slides yet.
             </p>
@@ -859,60 +533,24 @@ export function PresentationViewer({
         ) : (
           <ScrollArea className="h-full">
             <div className="space-y-4 p-4">
-              {!metadata && hasFallbackSlides && (
-                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="text-xs leading-relaxed">
-                    Não foi possível carregar os metadados da apresentação. Exibindo visualização diretamente a partir dos arquivos anexados.
-                  </span>
-                </div>
-              )}
-              {combinedSlides.map((slide) => (
-                <div 
-                  key={slide.number} 
-                  id={`slide-${slide.number}`} 
-                  className={`group relative bg-background border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] transition-all duration-200 ${currentSlideNumber === slide.number && 'ring-2 ring-blue-500/20 shadow-md'}`}
-                >
-                  {/* Slide header */}
-                  <div className="px-3 py-2 bg-muted/20 border-b border-border/40 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="h-6 px-2 text-xs font-mono">
-                        #{slide.number}
-                      </Badge>
-                      {slide.title && (
-                        <span className="text-sm text-muted-foreground truncate">
-                          {slide.title}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setFullScreenInitialSlide(slide.number);
-                        setIsFullScreenOpen(true);
-                      }}
-                      className="h-8 w-8 p-0 opacity-60 group-hover:opacity-100 transition-opacity"
-                      title="Open in full screen"
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Slide Preview */}
-                  <div 
-                    className="relative aspect-video bg-muted/30 cursor-pointer"
-                    onClick={() => {
-                      setFullScreenInitialSlide(slide.number);
-                      setIsFullScreenOpen(true);
-                    }}
-                  >
-                    {renderSlidePreview(slide)}
-                    
-                    {/* Subtle hover overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
-                  </div>
-                </div>
+              {slides.map((slide) => (
+                <PresentationSlideCard
+                  key={slide.number}
+                  slide={slide}
+                  project={project}
+                  onFullScreenClick={(slideNumber) => {
+                    if (openPresentation && project?.sandbox?.sandbox_url && extractedPresentationName) {
+                      openPresentation(
+                        extractedPresentationName,
+                        project.sandbox.sandbox_url,
+                        project.sandbox.id,
+                        slideNumber,
+                      );
+                    }
+                  }}
+                  className={currentSlideNumber === slide.number ? 'ring-2 ring-blue-500/20 shadow-md' : ''}
+                  refreshTimestamp={metadata?.updated_at ? new Date(metadata.updated_at).getTime() : undefined}
+                />
               ))}
             </div>
           </ScrollArea>
@@ -921,39 +559,25 @@ export function PresentationViewer({
 
       <div className="px-4 py-2 h-9 bg-muted/20 border-t border-border/40 flex justify-between items-center">
         <div className="text-xs text-muted-foreground">
-          {combinedSlides.length > 0 && visibleSlide && (
+          {slides.length > 0 && visibleSlide && (
             <span className="font-mono">
-              {visibleSlide}/{combinedSlides.length}
+              {visibleSlide}/{slides.length}
             </span>
           )}
         </div>
-        <div className="text-xs text-muted-foreground">
-          {formatTimestamp(toolTimestamp)}
-        </div>
+        <div className="text-xs text-muted-foreground">{formatTimestamp(toolTimestamp)}</div>
       </div>
 
-      {/* Full Screen Presentation Viewer */}
       <FullScreenPresentationViewer
-        isOpen={isFullScreenOpen}
-        onClose={() => {
-          setIsFullScreenOpen(false);
-          setFullScreenInitialSlide(null);
-          // Reload metadata after closing full screen viewer in case edits were made
-          setTimeout(() => {
-            loadMetadata();
-          }, 300);
-        }}
-        presentationName={extractedPresentationName}
-        safePresentationName={normalizedPresentationName}
-        sandboxUrl={project?.sandbox?.sandbox_url}
-        sandboxId={project?.sandbox?.id}
-        initialSlide={
-          fullScreenInitialSlide ||
-          visibleSlide ||
-          currentSlideNumber ||
-          combinedSlides[0]?.number ||
-          1
+        isOpen={viewerState.isOpen}
+        onClose={closePresentation}
+        presentationName={viewerState.presentationName}
+        safePresentationName={
+          viewerState.presentationName ? sanitizeFilename(viewerState.presentationName) : undefined
         }
+        sandboxUrl={viewerState.sandboxUrl}
+        sandboxId={viewerState.sandboxId}
+        initialSlide={viewerState.initialSlide}
       />
     </Card>
   );

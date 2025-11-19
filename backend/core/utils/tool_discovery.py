@@ -7,11 +7,15 @@ Tools are discovered via Tool.__subclasses__() rather than filesystem scanning.
 
 import importlib
 import inspect
+import time
 from typing import Dict, List, Any, Optional, Type
 from pathlib import Path
 
 from core.agentpress.tool import Tool, ToolMetadata, MethodMetadata
 from core.utils.logger import logger
+
+# Cache for discovered tools to avoid repeated expensive imports
+_TOOLS_CACHE: Optional[Dict[str, Type[Tool]]] = None
 
 
 def _ensure_tools_imported():
@@ -119,6 +123,19 @@ def _generate_display_name(name: str) -> str:
     return s3.title()
 
 
+def warm_up_tools_cache():
+    """Pre-load and cache all tool classes on worker startup."""
+    logger.info("🔥 Warming up worker: loading tool classes...")
+    start = time.time()
+    discover_tools()
+    elapsed = time.time() - start
+    logger.info(
+        "✅ Worker ready: %s tools loaded in %.2fs",
+        len(_TOOLS_CACHE) if _TOOLS_CACHE else 0,
+        elapsed,
+    )
+
+
 def discover_tools() -> Dict[str, Type[Tool]]:
     """Discover all available tools from the centralized tool registry.
     
@@ -131,8 +148,14 @@ def discover_tools() -> Dict[str, Type[Tool]]:
         Dict mapping tool names (str) to tool classes (Type[Tool])
         Example: {'web_search_tool': SandboxWebSearchTool, 'browser_tool': BrowserTool, ...}
     """
+    global _TOOLS_CACHE
+    if _TOOLS_CACHE is not None:
+        return _TOOLS_CACHE
+    
     from core.tools.tool_registry import get_all_tools
-    return get_all_tools()
+    _TOOLS_CACHE = get_all_tools()
+    logger.debug("Loaded and cached %s tool classes", len(_TOOLS_CACHE))
+    return _TOOLS_CACHE
 
 
 def _extract_tool_metadata(tool_name: str, tool_class: Type[Tool]) -> Dict[str, Any]:

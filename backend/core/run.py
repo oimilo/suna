@@ -64,6 +64,9 @@ class ToolManager:
         """
         disabled_tools = disabled_tools or []
         
+        # Migrate tool config once to avoid repeated expensive operations
+        self.migrated_tools = self._get_migrated_tools_config()
+        
         # Core tools - always enabled
         self._register_core_tools()
         
@@ -250,21 +253,26 @@ class ToolManager:
             if enabled_methods:
                 logger.debug(f"✅ Registered browser_tool with methods: {enabled_methods}")
     
-    def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
+    def _get_migrated_tools_config(self) -> Dict[str, Any]:
         if not self.agent_config or 'agentpress_tools' not in self.agent_config:
-            return None
+            return {}
         
-        from core.utils.tool_discovery import get_enabled_methods_for_tool
         from core.utils.tool_migration import migrate_legacy_tool_config
         
         raw_tools = self.agent_config['agentpress_tools']
         
         if not isinstance(raw_tools, dict):
+            return {}
+        
+        return migrate_legacy_tool_config(raw_tools)
+    
+    def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
+        if not getattr(self, 'migrated_tools', None):
             return None
         
-        migrated_tools = migrate_legacy_tool_config(raw_tools)
+        from core.utils.tool_discovery import get_enabled_methods_for_tool
         
-        return get_enabled_methods_for_tool(tool_name, migrated_tools)
+        return get_enabled_methods_for_tool(tool_name, self.migrated_tools)
 
 class MCPManager:
     def __init__(self, thread_manager: ThreadManager, account_id: str):
@@ -573,6 +581,9 @@ class AgentRunner:
         if self.config.agent_config:
             agent_id = self.config.agent_config.get('agent_id')
         
+        # Cache migrated config for tool enablement checks
+        self.migrated_tools = self._get_migrated_tools_config()
+        
         disabled_tools = self._get_disabled_tools_from_config()
         
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
@@ -586,21 +597,26 @@ class AgentRunner:
         else:
             logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
     
-    def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
+    def _get_migrated_tools_config(self) -> Dict[str, Any]:
         if not self.config.agent_config or 'agentpress_tools' not in self.config.agent_config:
-            return None
+            return {}
         
-        from core.utils.tool_discovery import get_enabled_methods_for_tool
         from core.utils.tool_migration import migrate_legacy_tool_config
         
         raw_tools = self.config.agent_config['agentpress_tools']
         
         if not isinstance(raw_tools, dict):
+            return {}
+        
+        return migrate_legacy_tool_config(raw_tools)
+    
+    def _get_enabled_methods_for_tool(self, tool_name: str) -> Optional[List[str]]:
+        if not getattr(self, 'migrated_tools', None):
             return None
         
-        migrated_tools = migrate_legacy_tool_config(raw_tools)
+        from core.utils.tool_discovery import get_enabled_methods_for_tool
         
-        return get_enabled_methods_for_tool(tool_name, migrated_tools)
+        return get_enabled_methods_for_tool(tool_name, self.migrated_tools)
     
     def _register_suna_specific_tools(self, disabled_tools: List[str]):
         if 'agent_creation_tool' not in disabled_tools:

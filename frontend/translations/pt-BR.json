@@ -258,7 +258,11 @@
     "noActionsYet": "Nenhuma ação ainda",
     "workerActionsDescription": "As ações e resultados dos trabalhadores aparecerão aqui à medida que forem executados",
     "toolIsRunning": "A ferramenta está em execução",
-    "toolCurrentlyExecuting": "{toolName} está em execução no momento.Os resultados aparecerão aqui quando concluídos."
+    "toolCurrentlyExecuting": "{toolName} está em execução no momento.Os resultados aparecerão aqui quando concluídos.",
+    "taskCompleted": "Tarefa concluída",
+    "waitingForUserResponse": "Kortix continuará a trabalhar automaticamente assim que você responder.",
+    "samplePrompts": "Exemplos de prompts",
+    "sampleAnswers": "Exemplos de respostas"
   },
   "agents": {
     "title": "Agentes",

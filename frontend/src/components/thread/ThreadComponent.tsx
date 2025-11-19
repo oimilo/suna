@@ -1007,6 +1007,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 agentAvatar={undefined}
                 scrollContainerRef={scrollContainerRef}
                 isPreviewMode={true}
+                threadId={threadId}
               />
             </div>
           </div>
@@ -1138,6 +1139,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentName={agent && agent.name}
           agentAvatar={undefined}
           scrollContainerRef={scrollContainerRef}
+          threadId={threadId}
         />
 
         {!isShared && (
