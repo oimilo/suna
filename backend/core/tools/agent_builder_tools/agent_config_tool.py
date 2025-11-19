@@ -210,6 +210,21 @@ class AgentConfigTool(AgentBuilderBaseTool):
                     
                     version_created = True
                     logger.debug(f"Created new version {new_version.version_id} for agent {self.agent_id}")
+
+                    runtime_config = current_version.get('config')
+                    if not runtime_config:
+                        runtime_config = {
+                            'system_prompt': current_system_prompt,
+                            'model': current_version.get('model'),
+                            'agentpress_tools': current_agentpress_tools,
+                            'tools': {
+                                'agentpress': current_agentpress_tools,
+                                'mcp': current_configured_mcps,
+                                'custom_mcp': current_custom_mcps
+                            }
+                        }
+
+                    await self._refresh_runtime_tools(account_id, runtime_config)
                     
                 except Exception as e:
                     logger.error(f"Failed to create new version: {str(e)}")
