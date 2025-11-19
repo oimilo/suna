@@ -1,11 +1,10 @@
-// Custom error classes for API operations
-
 export class AgentRunLimitError extends Error {
   status: number;
   detail: { 
     message: string;
     running_thread_ids: string[];
     running_count: number;
+    limit: number;
   };
 
   constructor(
@@ -14,6 +13,7 @@ export class AgentRunLimitError extends Error {
       message: string;
       running_thread_ids: string[];
       running_count: number;
+      limit: number;
       [key: string]: any;
     },
     message?: string,
@@ -22,8 +22,6 @@ export class AgentRunLimitError extends Error {
     this.name = 'AgentRunLimitError';
     this.status = status;
     this.detail = detail;
-
-    // Set the prototype explicitly.
     Object.setPrototypeOf(this, AgentRunLimitError.prototype);
   }
 }
@@ -107,61 +105,26 @@ export class BillingError extends Error {
   }
 }
 
-export class NoAccessTokenAvailableError extends Error {
-  constructor(message?: string, options?: { cause?: Error }) {
-    super(message || 'No access token available', options);
-  }
-  name = 'NoAccessTokenAvailableError';
-}
-
-export class ThreadLimitError extends Error {
+export class TriggerLimitError extends Error {
   status: number;
-  detail: {
+  detail: { 
     message: string;
     current_count: number;
     limit: number;
-    tier_name?: string;
-    error_code?: string;
+    tier_name: string;
+    trigger_type: string;
+    error_code: string;
   };
 
   constructor(
     status: number,
-    detail: {
+    detail: { 
       message: string;
       current_count: number;
       limit: number;
-      tier_name?: string;
-      error_code?: string;
-      [key: string]: any;
-    },
-    message?: string,
-  ) {
-    super(message || detail.message || `Thread Limit Exceeded: ${status}`);
-    this.name = 'ThreadLimitError';
-    this.status = status;
-    this.detail = detail;
-    Object.setPrototypeOf(this, ThreadLimitError.prototype);
-  }
-}
-
-export class TriggerLimitError extends Error {
-  status: number;
-  detail: {
-    message: string;
-    current_count?: number;
-    limit?: number;
-    trigger_type?: string;
-    error_code?: string;
-  };
-
-  constructor(
-    status: number,
-    detail: {
-      message: string;
-      current_count?: number;
-      limit?: number;
-      trigger_type?: string;
-      error_code?: string;
+      tier_name: string;
+      trigger_type: string;
+      error_code: string;
       [key: string]: any;
     },
     message?: string,
@@ -174,22 +137,50 @@ export class TriggerLimitError extends Error {
   }
 }
 
-export class CustomWorkerLimitError extends Error {
+export class ModelAccessDeniedError extends Error {
   status: number;
-  detail: {
+  detail: { 
     message: string;
-    current_count?: number;
-    limit?: number;
+    tier_name?: string;
     error_code?: string;
   };
 
   constructor(
     status: number,
-    detail: {
+    detail: { 
       message: string;
-      current_count?: number;
-      limit?: number;
+      tier_name?: string;
       error_code?: string;
+      [key: string]: any;
+    },
+    message?: string,
+  ) {
+    super(message || detail.message || `Model Access Denied: ${status}`);
+    this.name = 'ModelAccessDeniedError';
+    this.status = status;
+    this.detail = detail;
+    Object.setPrototypeOf(this, ModelAccessDeniedError.prototype);
+  }
+}
+
+export class CustomWorkerLimitError extends Error {
+  status: number;
+  detail: { 
+    message: string;
+    current_count: number;
+    limit: number;
+    tier_name: string;
+    error_code: string;
+  };
+
+  constructor(
+    status: number,
+    detail: { 
+      message: string;
+      current_count: number;
+      limit: number;
+      tier_name: string;
+      error_code: string;
       [key: string]: any;
     },
     message?: string,
@@ -202,20 +193,77 @@ export class CustomWorkerLimitError extends Error {
   }
 }
 
-export class ModelAccessDeniedError extends Error {
+export class ThreadLimitError extends Error {
   status: number;
-  detail: { message: string; model_id?: string; [key: string]: any };
+  detail: { 
+    message: string;
+    current_count: number;
+    limit: number;
+    tier_name: string;
+    error_code: string;
+  };
 
   constructor(
     status: number,
-    detail: { message: string; model_id?: string; [key: string]: any },
+    detail: { 
+      message: string;
+      current_count: number;
+      limit: number;
+      tier_name: string;
+      error_code: string;
+      [key: string]: any;
+    },
     message?: string,
   ) {
-    super(message || detail.message || `Model access denied: ${status}`);
-    this.name = 'ModelAccessDeniedError';
+    super(message || detail.message || `Thread Limit Exceeded: ${status}`);
+    this.name = 'ThreadLimitError';
     this.status = status;
     this.detail = detail;
-    Object.setPrototypeOf(this, ModelAccessDeniedError.prototype);
+    Object.setPrototypeOf(this, ThreadLimitError.prototype);
   }
 }
 
+export class NoAccessTokenAvailableError extends Error {
+  constructor(message?: string, options?: { cause?: Error }) {
+    super(message || 'No access token available', options);
+  }
+  name = 'NoAccessTokenAvailableError';
+}
+
+export function parseTierRestrictionError(error: any): Error {
+  const status = error.response?.status || error.status;
+  const errorData = error.response?.data || error.data || error.detail || {};
+  const errorCode = errorData?.detail?.error_code || errorData?.error_code;
+
+  if (status !== 402 || !errorCode) {
+    return error;
+  }
+
+  const detail = errorData?.detail || errorData;
+
+  switch (errorCode) {
+    case 'AGENT_RUN_LIMIT_EXCEEDED':
+      return new AgentRunLimitError(status, detail);
+    
+    case 'PROJECT_LIMIT_EXCEEDED':
+      return new ProjectLimitError(status, detail);
+    
+    case 'AGENT_LIMIT_EXCEEDED':
+      return new AgentCountLimitError(status, detail);
+    
+    case 'TRIGGER_LIMIT_EXCEEDED':
+      return new TriggerLimitError(status, detail);
+    
+    case 'MODEL_ACCESS_DENIED':
+      return new ModelAccessDeniedError(status, detail);
+    
+    case 'CUSTOM_WORKER_LIMIT_EXCEEDED':
+      return new CustomWorkerLimitError(status, detail);
+    
+    case 'THREAD_LIMIT_EXCEEDED':
+      return new ThreadLimitError(status, detail);
+    
+    default:
+      return error;
+  }
+}

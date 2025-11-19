@@ -54,7 +54,7 @@ class SunaAgentManager:
                     print(f"   - User {detail['account_id']}: {detail.get('error', 'Unknown error')}")
         
         if result['installed_count'] > 0:
-        print(f"\n✅ Successfully installed Prophet for {result['installed_count']} users")
+            print(f"\n✅ Successfully installed Prophet for {result['installed_count']} users")
             
     async def update_config_info(self):
         """Show information about Prophet configuration (no sync needed)"""

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { ProjectLimitError, BillingError } from '@/lib/api/errors';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 interface UseBillingModalReturn {
   showModal: boolean;
@@ -14,40 +13,45 @@ interface UseBillingModalReturn {
  * Determines if credits are exhausted based on the error type and message.
  */
 export function useBillingModal(): UseBillingModalReturn {
-  const { isOpen, closePricingModal, openPricingModal } = usePricingModalStore();
+  const [showModal, setShowModal] = useState(false);
   const [creditsExhausted, setCreditsExhausted] = useState(false);
 
   const openModal = useCallback((error?: BillingError | ProjectLimitError) => {
+    // Determine if credits are exhausted
+    // Credits are exhausted if:
+    // 1. It's a BillingError (not ProjectLimitError)
+    // 2. The error message indicates insufficient credits/balance
     let isCreditsExhausted = false;
 
     if (error instanceof BillingError) {
       const message = error.detail?.message?.toLowerCase() || '';
-      isCreditsExhausted =
+      // Check if the error message indicates credits/balance issues
+      isCreditsExhausted = 
         message.includes('credit') ||
         message.includes('balance') ||
         message.includes('insufficient') ||
         message.includes('out of credits') ||
         message.includes('no credits');
+    } else if (error instanceof ProjectLimitError) {
+      // Project limit errors are not about credits
+      isCreditsExhausted = false;
     } else {
+      // If no error provided, assume it's a general billing issue (not credits exhausted)
       isCreditsExhausted = false;
     }
 
     setCreditsExhausted(isCreditsExhausted);
-    openPricingModal({
-      isAlert: isCreditsExhausted,
-      alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : undefined,
-      title: !isCreditsExhausted ? 'Pick the plan that works for you.' : undefined,
-      returnUrl: typeof window !== 'undefined' ? window.location.href : '/',
-    });
-  }, [openPricingModal]);
+    setShowModal(true);
+  }, []);
 
   const closeModal = useCallback(() => {
+    setShowModal(false);
+    // Reset credits exhausted state when closing
     setCreditsExhausted(false);
-    closePricingModal();
-  }, [closePricingModal]);
+  }, []);
 
   return {
-    showModal: isOpen,
+    showModal,
     creditsExhausted,
     openModal,
     closeModal,

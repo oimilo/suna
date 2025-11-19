@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { AlertTriangle, ExternalLink, X, Square, Loader2, Zap, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
@@ -14,7 +15,6 @@ import { toast } from 'sonner';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { getThread, getProject } from '@/hooks/threads/utils';
 import { threadKeys } from '@/hooks/threads/keys';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 interface RunningThreadInfo {
@@ -155,13 +155,7 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
   projectId,
 }) => {
   const pricingModalStore = usePricingModalStore();
-  const handleUpgrade = () => {
-    pricingModalStore.openPricingModal({
-      title: 'Upgrade to run more agents in parallel'
-    });
-    onOpenChange(false);
-  };
-
+  
   const threadQueries = useQueries({
     queries: runningThreadIds.map(threadId => ({
       queryKey: threadKeys.details(threadId),
@@ -173,14 +167,13 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
 
   const agentRunQueries = useQueries({
     queries: runningThreadIds.map(threadId => ({
-      queryKey: threadKeys.agentRuns(threadId), // This matches useAgentRunsQuery exactly
+      queryKey: threadKeys.agentRuns(threadId),
       queryFn: () => getAgentRuns(threadId),
       enabled: open && !!threadId,
       retry: 1,
     }))
   });
 
-  // Use the same query keys as useProjectQuery for cache consistency
   const projectQueries = useQueries({
     queries: runningThreadIds.map(threadId => {
       const threadQuery = threadQueries.find((_, index) => runningThreadIds[index] === threadId);
@@ -195,7 +188,6 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
     })
   });
 
-  // Process the React Query results into our thread info structure
   const runningThreadsInfo: RunningThreadInfo[] = useMemo(() => {
     return runningThreadIds.map((threadId, index) => {
       const threadQuery = threadQueries[index];
@@ -205,10 +197,8 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
       const isLoading = threadQuery.isLoading || agentRunQuery.isLoading || projectQuery.isLoading;
       const hasError = threadQuery.isError || agentRunQuery.isError || projectQuery.isError;
       
-      // Find the running agent run for this thread
       const runningAgentRun = agentRunQuery.data?.find((run: AgentRun) => run.status === 'running') || null;
       
-      // Get thread name from first user message if available
       let threadName = '';
       if (threadQuery.data?.messages?.length > 0) {
         const firstUserMessage = threadQuery.data.messages.find((msg: any) => msg.type === 'user');
@@ -218,7 +208,6 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
         }
       }
 
-      // Get project information
       const projectId = threadQuery.data?.project_id || null;
       const projectName = projectQuery.data?.name || '';
 
@@ -241,6 +230,13 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
   };
 
   const handleThreadStopped = () => {
+  };
+
+  const handleUpgrade = () => {
+    pricingModalStore.openPricingModal({
+      title: 'Upgrade to run more agents in parallel'
+    });
+    onOpenChange(false);
   };
 
   return (

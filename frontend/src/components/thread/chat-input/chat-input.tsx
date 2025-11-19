@@ -206,7 +206,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Prophet Agent Modes feature flag
+    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
     const ENABLE_SUNA_AGENT_MODES = false;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
@@ -282,7 +282,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: agentsResponse } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
 
-    // Check if selected agent is Prophet default based on agent data
+    // Check if selected agent is Suna based on agent data
     const selectedAgent = agents.find(agent => agent.agent_id === selectedAgentId);
     const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
 
@@ -389,8 +389,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       window.addEventListener('resize', adjustHeight);
       return () => window.removeEventListener('resize', adjustHeight);
     }, [value]);
-
-
 
     useEffect(() => {
       if (autoFocus && textareaRef.current) {
@@ -610,11 +608,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
             isDraggingOver ? 'opacity-40' : '',
           )}
-          disabled={(disabled && !isAgentRunning) || hasSubmitted}
+          disabled={disabled && !isAgentRunning}
           rows={1}
         />
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, disabled, isAgentRunning, hasSubmitted]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
@@ -703,7 +701,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </TooltipProvider>
           )}
 
-          {/* Agent Mode Switcher - Only for Prophet */}
+          {/* Agent Mode Switcher - Only for Suna */}
           {ENABLE_SUNA_AGENT_MODES && (isStagingMode() || isLocalMode()) && isSunaAgent && (
             <TooltipProvider>
               <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg">
@@ -857,6 +855,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       </div>
     ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon, buttonLoaderVariant]);
 
+    const isSnackVisible = showToolPreview || !!showSnackbar;
+
     return (
       <div className="mx-auto w-full max-w-4xl relative">
         <div className="relative">
@@ -870,14 +870,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             subscriptionData={subscriptionData}
             onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
             onOpenUpgrade={() => setPlanSelectionModalOpen(true)}
-            isVisible={showToolPreview || !!showSnackbar}
+            isVisible={isSnackVisible}
           />
 
           {/* Scroll to bottom button */}
           {showScrollToBottomIndicator && onScrollToBottom && (
             <button
               onClick={onScrollToBottom}
-              className={`absolute cursor-pointer right-3 z-50 w-8 h-8 rounded-full bg-card border border-border transition-all duration-200 hover:scale-105 flex items-center justify-center ${showToolPreview || !!showSnackbar ? '-top-12' : '-top-5'
+              className={`absolute cursor-pointer right-3 z-50 w-8 h-8 rounded-full bg-card border border-border transition-all duration-200 hover:scale-105 flex items-center justify-center -top-12
                 }`}
               title="Scroll to bottom"
             >
@@ -885,7 +885,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </button>
           )}
           <Card
-            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
+            className={`shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible py-0 pb-5 ${isSnackVisible ? 'mt-6' : ''} ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {

@@ -17,18 +17,13 @@ async def initialize_account(
         db = DBConnection()
         await db.initialize()
         
-        # Give free tier directly without Stripe (for new signups)
-        result = await free_tier_service.give_free_tier_directly(account_id)
+        result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
         
         if not result.get('success'):
-            logger.warning(f"[SETUP] Failed to give free tier directly, trying with Stripe: {result.get('error')}")
-            # Fallback to Stripe method if direct method fails (for backwards compatibility)
-            result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
-            if not result.get('success'):
-                logger.error(f"[SETUP] Failed to create free tier for {account_id}: {result.get('error')}")
-                raise HTTPException(status_code=500, detail="Failed to initialize free tier")
+            logger.error(f"[SETUP] Failed to create free tier for {account_id}: {result.get('error')}")
+            raise HTTPException(status_code=500, detail="Failed to initialize free tier")
         
-        logger.info(f"[SETUP] Installing Prophet agent for {account_id}")
+        logger.info(f"[SETUP] Installing Suna agent for {account_id}")
         suna_service = SunaDefaultAgentService(db)
         await suna_service.install_suna_agent_for_user(account_id)
         
@@ -43,29 +38,4 @@ async def initialize_account(
     except Exception as e:
         logger.error(f"[SETUP] Error initializing account {account_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/ensure-free-tier")
-async def ensure_free_tier(
-    account_id: str = Depends(verify_and_get_user_id_from_jwt)
-):
-    """
-    Ensure user has free tier. Called automatically on login if user doesn't have a tier.
-    This gives free tier directly without requiring Stripe subscription.
-    """
-    try:
-        logger.info(f"[SETUP] Ensuring free tier for account {account_id}")
-        
-        result = await free_tier_service.give_free_tier_directly(account_id)
-        
-        if not result.get('success'):
-            logger.warning(f"[SETUP] Failed to give free tier to {account_id}: {result.get('error')}")
-            # Don't raise error - just return the result
-            return result
-        
-        logger.info(f"[SETUP] ✅ Free tier ensured for account {account_id}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"[SETUP] Error ensuring free tier for {account_id}: {e}")
-        return {'success': False, 'error': str(e)}
 
