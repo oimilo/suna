@@ -2,7 +2,7 @@ from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
-from typing import List, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import json
 import os
 from datetime import datetime
@@ -1399,8 +1399,13 @@ print(json.dumps(result))
             if presentation_url:
                 metadata["presentation_url"] = presentation_url
             
-            # Ensure all slides from attachments are in metadata
+            existing_slides = metadata.get("slides", {}) or {}
+            metadata["slides"] = existing_slides
+            
+            # Ensure all slides from attachments are in metadata while dropping stale entries
             if attachments:
+                updated_slides: Dict[str, Any] = {}
+                
                 for idx, attachment in enumerate(attachments):
                     # Extract slide number from filename (e.g., slide_01.html -> 1)
                     slide_match = re.search(r'slide[_\s]*(\d+)', attachment, re.IGNORECASE)
@@ -1410,17 +1415,19 @@ print(json.dumps(result))
                     normalized_path = attachment.replace('/workspace/', '').lstrip('/')
                     filename = os.path.basename(normalized_path)
                     
-                    # Ensure this slide is in metadata
                     slide_key = str(slide_number)
-                    if slide_key not in metadata.get("slides", {}):
-                        metadata.setdefault("slides", {})[slide_key] = {
-                            "title": f"Slide {slide_number}",
-                            "filename": filename,
-                            "file_path": normalized_path,
-                            "preview_url": f"/workspace/{normalized_path}",
-                            "created_at": datetime.now().isoformat(),
-                            "updated_at": datetime.now().isoformat(),
-                        }
+                    previous = existing_slides.get(slide_key, {})
+                    
+                    updated_slides[slide_key] = {
+                        "title": previous.get("title") or f"Slide {slide_number}",
+                        "filename": filename,
+                        "file_path": normalized_path,
+                        "preview_url": f"/workspace/{normalized_path}",
+                        "created_at": previous.get("created_at") or datetime.now().isoformat(),
+                        "updated_at": datetime.now().isoformat(),
+                    }
+                
+                metadata["slides"] = updated_slides
             
             # Save updated metadata
             await self._save_presentation_metadata(full_presentation_path, metadata)
