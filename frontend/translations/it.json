@@ -277,7 +277,11 @@
     "noActionsYet": "Nessuna azione ancora",
     "workerActionsDescription": "Le azioni e i risultati del worker appariranno qui durante l'esecuzione",
     "toolIsRunning": "Strumento in esecuzione",
-    "toolCurrentlyExecuting": "{toolName} è attualmente in esecuzione. I risultati appariranno qui al completamento."
+    "toolCurrentlyExecuting": "{toolName} è attualmente in esecuzione. I risultati appariranno qui al completamento.",
+    "taskCompleted": "Attività completata",
+    "waitingForUserResponse": "Kortix continuerà automaticamente a lavorare dopo la tua risposta.",
+    "samplePrompts": "Esempi di prompt",
+    "sampleAnswers": "Esempi di risposte"
   },
   "agents": {
     "title": "Agenti",
@@ -293,6 +297,8 @@
     "customizeIcon": "Clicca per personalizzare l'icona dell'agente"
   },
   "home": {
+    "title": "Benvenuto",
+    "subtitle": "Inizia",
     "heroPlaceholder": "Descrivi il compito che vuoi che il tuo Worker completi..."
   },
   "threads": {
@@ -564,10 +570,6 @@
     "network": "Errore di rete",
     "unauthorized": "Non autorizzato",
     "notFound": "Non trovato"
-  },
-  "home": {
-    "title": "Benvenuto",
-    "subtitle": "Inizia"
   },
   "languages": {
     "en": "English",
