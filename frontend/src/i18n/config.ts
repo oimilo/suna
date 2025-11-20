@@ -1,12 +1,11 @@
 import { getRequestConfig } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-export const locales = ['en', 'de', 'it', 'pt-BR'] as const;
+export const locales = ['en', 'de', 'it', 'zh', 'ja', 'pt', 'fr', 'es'] as const;
 export type Locale = (typeof locales)[number];
 
 const localeAliasMap: Record<string, Locale> = {
-  pt: 'pt-BR',
-  'pt-br': 'pt-BR'
+  'pt-br': 'pt'
 };
 
 export function normalizeLocale(value?: string | null): Locale | null {

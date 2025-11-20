@@ -3,6 +3,9 @@ import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { defaultLocale, type Locale, normalizeLocale } from './config';
 
+const resolveLocale = (value?: string | null): Locale | null =>
+  normalizeLocale(value) ?? null;
+
 async function buildResponse(locale: Locale) {
   return {
     locale,
@@ -14,8 +17,8 @@ export default getRequestConfig(async () => {
   let locale: Locale = defaultLocale;
   const cookieStore = await cookies();
 
-  const resolveLocale = (value?: string | null) => {
-    const normalized = normalizeLocale(value);
+  const trySetLocale = (value?: string | null) => {
+    const normalized = resolveLocale(value);
     if (normalized) {
       locale = normalized;
       return true;
@@ -23,7 +26,7 @@ export default getRequestConfig(async () => {
     return false;
   };
 
-  // Priority 1: Check user profile preference (if authenticated)
+  // Priority 1: User profile preference
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,23 +46,22 @@ export default getRequestConfig(async () => {
     const {
       data: { user }
     } = await supabase.auth.getUser();
-    if (user?.user_metadata?.locale && resolveLocale(user.user_metadata.locale)) {
+    if (user?.user_metadata?.locale && trySetLocale(user.user_metadata.locale)) {
       return buildResponse(locale);
     }
   } catch (error) {
     console.debug('Could not fetch user locale from profile:', error);
   }
 
-  // Priority 2: Check cookie
+  // Priority 2: Cookie preference
   const localeCookie = cookieStore.get('locale')?.value;
-  if (localeCookie && resolveLocale(localeCookie)) {
+  if (localeCookie && trySetLocale(localeCookie)) {
     return buildResponse(locale);
   }
 
-  // Priority 3: Try to detect from Accept-Language header
+  // Priority 3: Accept-Language header
   const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
-
   if (acceptLanguage) {
     const candidates = acceptLanguage
       .split(',')
@@ -67,7 +69,7 @@ export default getRequestConfig(async () => {
       .filter(Boolean);
 
     for (const candidate of candidates) {
-      if (resolveLocale(candidate)) {
+      if (trySetLocale(candidate)) {
         return buildResponse(locale);
       }
     }

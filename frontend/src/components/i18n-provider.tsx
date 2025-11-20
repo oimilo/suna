@@ -6,6 +6,9 @@ import { locales, defaultLocale, type Locale, normalizeLocale } from '@/i18n/con
 import { detectBestLocale } from '@/lib/utils/geo-detection';
 import { createClient } from '@/lib/supabase/client';
 
+const resolveLocale = (value?: string | null): Locale | null =>
+  normalizeLocale(value) ?? null;
+
 async function getMessages(locale: Locale) {
   try {
     return (await import(`../../translations/${locale}.json`)).default;
@@ -14,8 +17,6 @@ async function getMessages(locale: Locale) {
     return (await import(`../../translations/${defaultLocale}.json`)).default;
   }
 }
-
-const resolveLocale = (value?: string | null): Locale | null => normalizeLocale(value) ?? null;
 
 function getImmediateLocale(): Locale {
   if (typeof window === 'undefined') return defaultLocale;
@@ -44,7 +45,7 @@ function getImmediateLocale(): Locale {
       }
     }
   } catch {
-    // Ignore errors - we'll fall back to default locale
+    // Ignore errors - fall back to default
   }
 
   return defaultLocale;
@@ -57,13 +58,15 @@ async function getStoredLocale() {
 
   try {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
     const userLocale = resolveLocale(user?.user_metadata?.locale);
     if (userLocale) {
       return { locale: userLocale, hasExplicitPreference: true };
     }
-  } catch {
-    // User might not be authenticated
+  } catch (error) {
+    console.debug('Could not fetch user locale from profile:', error);
   }
 
   const cookies = document.cookie.split(';');
@@ -114,24 +117,24 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         throw new Error(`Invalid messages object for locale ${targetLocale}`);
       }
       if (!msgs.common || !msgs.suna) {
-        console.warn(`Missing sections in ${targetLocale}:`, {
+        console.warn(`⚠️ Missing sections in ${targetLocale}:`, {
           hasCommon: !!msgs.common,
           hasSuna: !!msgs.suna,
-          keys: Object.keys(msgs).slice(0, 10),
+          keys: Object.keys(msgs).slice(0, 10)
         });
       }
       setMessages(msgs);
       setLocale(targetLocale);
       localeRef.current = targetLocale;
     } catch (error) {
-      console.error(`Failed to load messages for ${targetLocale}:`, error);
+      console.error(`❌ Failed to load messages for ${targetLocale}:`, error);
       try {
         const fallback = await getMessages(defaultLocale);
         setMessages(fallback);
         setLocale(defaultLocale);
         localeRef.current = defaultLocale;
       } catch (fallbackError) {
-        console.error('Failed to load default locale messages:', fallbackError);
+        console.error('❌ Failed to load default locale messages:', fallbackError);
         setMessages({});
         setLocale(defaultLocale);
         localeRef.current = defaultLocale;
@@ -142,29 +145,29 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let active = true;
+    let mounted = true;
 
     async function initializeLocale() {
-      const result = await getStoredLocale();
-      if (!active) return;
+      const { locale: storedLocale, hasExplicitPreference } = await getStoredLocale();
 
-      if (!result.hasExplicitPreference && result.locale !== defaultLocale) {
-        const cookieValue = `locale=${result.locale}; path=/; max-age=31536000; SameSite=Lax`;
+      if (!mounted) return;
+
+      if (!hasExplicitPreference && storedLocale !== defaultLocale) {
+        const cookieValue = `locale=${storedLocale}; path=/; max-age=31536000; SameSite=Lax`;
         document.cookie = cookieValue;
-        try {
-          localStorage.setItem('locale', result.locale);
-        } catch {
-          // Ignore storage errors
-        }
+        localStorage.setItem('locale', storedLocale);
       }
 
-      loadMessages(result.locale);
+      if (mounted) {
+        setLocale(storedLocale);
+        loadMessages(storedLocale);
+      }
     }
 
     initializeLocale();
 
     return () => {
-      active = false;
+      mounted = false;
     };
   }, [loadMessages]);
 
@@ -177,6 +180,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener(LOCALE_CHANGE_EVENT as any, handleLocaleChange as EventListener);
+
     return () => {
       window.removeEventListener(LOCALE_CHANGE_EVENT as any, handleLocaleChange as EventListener);
     };
@@ -193,6 +197,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -204,7 +209,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return (
       <NextIntlClientProvider locale={defaultLocale} messages={{}}>
         <div className="min-h-screen flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       </NextIntlClientProvider>
     );
