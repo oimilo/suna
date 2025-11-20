@@ -279,7 +279,7 @@
     "toolIsRunning": "Strumento in esecuzione",
     "toolCurrentlyExecuting": "{toolName} è attualmente in esecuzione. I risultati appariranno qui al completamento.",
     "taskCompleted": "Attività completata",
-    "waitingForUserResponse": "Kortix continuerà automaticamente a lavorare dopo la tua risposta.",
+    "waitingForUserResponse": "L’agente continuerà automaticamente a lavorare dopo la tua risposta.",
     "samplePrompts": "Esempi di prompt",
     "sampleAnswers": "Esempi di risposte"
   },
