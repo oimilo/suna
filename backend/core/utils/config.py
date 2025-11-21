@@ -483,8 +483,8 @@ class Configuration:
         Get the frontend URL based on environment.
         
         Returns:
-        - Production: 'https://milo.com' (or FRONTEND_URL_ENV if set)
-        - Staging: 'https://staging.milo.com' (or FRONTEND_URL_ENV if set)
+        - Production: 'https://prophet.build' (or FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.prophet.build' (or FRONTEND_URL_ENV if set)
         - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
         """
         # Check for environment variable override first
@@ -493,10 +493,9 @@ class Configuration:
         
         # Environment-based defaults
         if self.ENV_MODE == EnvMode.PRODUCTION:
-            return 'https://milo.com'
+            return 'https://prophet.build'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'http://localhost:3000'
-            # return 'https://staging.prophet.so'
+            return 'https://staging.prophet.build'
         else:
             return 'http://localhost:3000'
     

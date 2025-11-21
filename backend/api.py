@@ -146,7 +146,10 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.milo.com", "https://milo.com", "https://www.prophet.so", "https://prophet.so"]
+allowed_origins = [
+    "https://www.prophet.build",
+    "https://prophet.build",
+]
 allow_origin_regex = None
 
 # Add staging-specific origins
@@ -156,7 +159,7 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.prophet.so")
+    allowed_origins.append("https://staging.prophet.build")
     allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments for both legacy and new project names
     allow_origin_regex = r"https://(prophet|kortixcom)-.*-prjcts\.vercel\.app"
