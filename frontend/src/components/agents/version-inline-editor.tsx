@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Edit2, Check, X, Loader2 } from 'lucide-react';
-import { useUpdateVersionDetails } from '@/hooks/agents/use-agent-versions';
+import { useUpdateVersionDetails } from '@/lib/versioning/hooks/use-versions';
 import { cn } from '@/lib/utils';
 
 interface VersionInlineEditorProps {

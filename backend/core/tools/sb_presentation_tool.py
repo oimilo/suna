@@ -25,6 +25,9 @@ class SandboxPresentationTool(SandboxToolsBase):
     Users can include their own CSS styling inline or in style tags as needed.
     """
     
+    _warmup_lock = asyncio.Lock()
+    _sandbox_warmups: Dict[str, bool] = {}
+    
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
         self.presentations_dir = "presentations"
@@ -49,6 +52,34 @@ class SandboxPresentationTool(SandboxToolsBase):
         except:
             pass
         return safe_name, presentation_path
+
+    async def _warmup_presentation_services(self) -> None:
+        """
+        The first request to the HTML→PDF/PPTX conversion server inside the sandbox
+        can take several seconds because Playwright spins up Chromium lazily. We ping
+        the `/presentation/health` endpoint once per sandbox to keep the service warm
+        so that export operations feel instant for end users.
+        """
+
+        await self._ensure_sandbox()
+        sandbox_id = self._sandbox_id
+
+        async with self._warmup_lock:
+            if self._sandbox_warmups.get(sandbox_id):
+                return
+
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    health_url = f"{self.sandbox_url}/presentation/health"
+                    await client.get(health_url)
+                self._sandbox_warmups[sandbox_id] = True
+                logger.info("Presentation services warmed for sandbox %s", sandbox_id)
+            except Exception as exc:
+                logger.warning(
+                    "Presentation warmup failed for sandbox %s: %s",
+                    sandbox_id,
+                    exc,
+                )
 
     def _sanitize_filename(self, name: str) -> str:
         """Convert presentation name to safe filename"""
@@ -1118,6 +1149,7 @@ print(json.dumps(result))
         """Export presentation to PPTX format via sandbox conversion service"""
         try:
             await self._ensure_sandbox()
+            await self._warmup_presentation_services()
             
             if not presentation_name:
                 return self.fail_response("Presentation name is required.")
@@ -1219,6 +1251,7 @@ print(json.dumps(result))
         """Export presentation to PDF format via sandbox conversion service"""
         try:
             await self._ensure_sandbox()
+            await self._warmup_presentation_services()
             
             if not presentation_name:
                 return self.fail_response("Presentation name is required.")

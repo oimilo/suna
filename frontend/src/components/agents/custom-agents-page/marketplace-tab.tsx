@@ -5,8 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { SearchBar } from './search-bar';
 import { MarketplaceSectionHeader } from './marketplace-section-header';
-import { UnifiedAgentCard } from '@/components/ui/unified-agent-card';
+import { AgentCard } from './agent-card';
 import { Pagination } from '../pagination';
+import { BRANDING } from '@/lib/branding';
 
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 
@@ -21,7 +22,7 @@ interface MarketplaceTabProps {
   installingItemId: string | null;
   onInstallClick: (item: MarketplaceTemplate, e?: React.MouseEvent) => void;
   onDeleteTemplate?: (item: MarketplaceTemplate, e?: React.MouseEvent) => void;
-  getItemStyling: (item: MarketplaceTemplate) => { color: string };
+  getItemStyling: (item: MarketplaceTemplate) => { avatar: string; color: string };
   currentUserId?: string;
   onAgentPreview?: (agent: MarketplaceTemplate) => void;
   
@@ -81,7 +82,7 @@ export const MarketplaceTab = ({
             <SelectContent className='rounded-xl'>
               <SelectItem className='rounded-xl' value="all">All Agents</SelectItem>
               <SelectItem className='rounded-xl' value="mine">Mine</SelectItem>
-              <SelectItem className='rounded-xl' value="kortix">Milo Verified</SelectItem>
+              <SelectItem className='rounded-xl' value="kortix">{BRANDING.company} Verified</SelectItem>
               <SelectItem className='rounded-xl' value="community">Community</SelectItem>
             </SelectContent>
           </Select>
@@ -123,31 +124,15 @@ export const MarketplaceTab = ({
                 /> */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {allMarketplaceItems.map((item) => (
-                    <UnifiedAgentCard
+                    <AgentCard
                       key={item.id}
-                      variant="marketplace"
-                      data={{
-                        id: item.id,
-                        name: item.name,
-                        tags: item.tags,
-                        created_at: item.created_at,
-                        creator_id: item.creator_id,
-                        creator_name: item.creator_name,
-                        is_kortix_team: item.is_kortix_team,
-                        download_count: item.download_count,
-                        marketplace_published_at: item.marketplace_published_at,
-                        icon_name: item.icon_name,
-                        icon_color: item.icon_color,
-                        icon_background: item.icon_background,
-                      }}
-                      state={{
-                        isActioning: installingItemId === item.id,
-                      }}
-                      actions={{
-                        onPrimaryAction: () => onInstallClick(item),
-                        onDeleteAction: () => onDeleteTemplate(item),
-                        onClick: () => handleAgentClick(item),
-                      }}
+                      mode="marketplace"
+                      data={item}
+                      styling={getItemStyling(item)}
+                      isActioning={installingItemId === item.id}
+                      onPrimaryAction={onInstallClick}
+                      onDeleteAction={onDeleteTemplate}
+                      onClick={() => handleAgentClick(item)}
                       currentUserId={currentUserId}
                     />
                   ))}
@@ -156,31 +141,15 @@ export const MarketplaceTab = ({
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {allMarketplaceItems.map((item) => (
-                  <UnifiedAgentCard
+                  <AgentCard
                     key={item.id}
-                    variant="marketplace"
-                    data={{
-                      id: item.id,
-                      name: item.name,
-                      tags: item.tags,
-                      created_at: item.created_at,
-                      creator_id: item.creator_id,
-                      creator_name: item.creator_name,
-                      is_kortix_team: item.is_kortix_team,
-                      download_count: item.download_count,
-                      marketplace_published_at: item.marketplace_published_at,
-                      icon_name: item.icon_name,
-                      icon_color: item.icon_color,
-                      icon_background: item.icon_background,
-                    }}
-                    state={{
-                      isActioning: installingItemId === item.id,
-                    }}
-                    actions={{
-                      onPrimaryAction: () => onInstallClick(item),
-                      onDeleteAction: () => onDeleteTemplate(item),
-                      onClick: () => handleAgentClick(item),
-                    }}
+                    mode="marketplace"
+                    data={item}
+                    styling={getItemStyling(item)}
+                    isActioning={installingItemId === item.id}
+                    onPrimaryAction={onInstallClick}
+                    onDeleteAction={onDeleteTemplate}
+                    onClick={() => handleAgentClick(item)}
                     currentUserId={currentUserId}
                   />
                 ))}

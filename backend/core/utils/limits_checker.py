@@ -1,11 +1,15 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime, timezone, timedelta
 from core.utils.logger import logger
 from core.utils.config import config
 from core.utils.cache import Cache
 
 
-async def check_agent_run_limit(client, account_id: str) -> Dict[str, Any]:
+async def check_agent_run_limit(
+    client,
+    account_id: str,
+    agent_id: Optional[str] = None,
+) -> Dict[str, Any]:
     try:
         twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         twenty_four_hours_ago_iso = twenty_four_hours_ago.isoformat()
@@ -22,7 +26,13 @@ async def check_agent_run_limit(client, account_id: str) -> Dict[str, Any]:
             logger.warning(f"Could not get subscription tier for {account_id}: {str(billing_error)}, using global default")
             concurrent_runs_limit = config.MAX_PARALLEL_AGENT_RUNS
         
-        threads_result = await client.table('threads').select('thread_id').eq('account_id', account_id).execute()
+        threads_query = client.table('threads').select('thread_id')
+        if agent_id:
+            threads_query = threads_query.eq('agent_id', agent_id)
+        else:
+            threads_query = threads_query.eq('account_id', account_id)
+
+        threads_result = await threads_query.execute()
         
         if not threads_result.data:
             logger.debug(f"No threads found for account {account_id}")

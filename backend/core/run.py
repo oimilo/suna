@@ -276,9 +276,10 @@ class ToolManager:
         return get_enabled_methods_for_tool(tool_name, self.migrated_tools)
 
 class MCPManager:
-    def __init__(self, thread_manager: ThreadManager, account_id: str):
+    def __init__(self, thread_manager: ThreadManager, account_id: str, thread_id: Optional[str] = None):
         self.thread_manager = thread_manager
         self.account_id = account_id
+        self.thread_id = thread_id
     
     async def register_mcp_tools(self, agent_config: dict) -> Optional[MCPToolWrapper]:
         all_mcps = []
@@ -321,7 +322,11 @@ class MCPManager:
         if not all_mcps:
             return None
         
-        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps)
+        mcp_wrapper_instance = MCPToolWrapper(
+            mcp_configs=all_mcps,
+            thread_manager=self.thread_manager,
+            thread_id=self.thread_id,
+        )
         try:
             await mcp_wrapper_instance.initialize_and_register_tools()
             
@@ -631,7 +636,7 @@ class AgentRunner:
         if not self.config.agent_config:
             return None
         
-        mcp_manager = MCPManager(self.thread_manager, self.account_id)
+        mcp_manager = MCPManager(self.thread_manager, self.account_id, self.config.thread_id)
         return await mcp_manager.register_mcp_tools(self.config.agent_config)
     
     async def run(self, cancellation_event: Optional[asyncio.Event] = None) -> AsyncGenerator[Dict[str, Any], None]:

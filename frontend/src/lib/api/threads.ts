@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
+import { NoAccessTokenAvailableError } from './errors';
 
 export type Thread = {
   thread_id: string;
@@ -198,13 +199,6 @@ export const createThread = async (projectId: string): Promise<Thread> => {
   const data = await response.json();
   return data;
 };
-
-export class NoAccessTokenAvailableError extends Error {
-  constructor() {
-    super('No access token available');
-    this.name = 'NoAccessTokenAvailableError';
-  }
-}
 
 export const addUserMessage = async (
   threadId: string,

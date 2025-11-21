@@ -1,5 +1,10 @@
 from typing import List, Dict, Any, Optional
-from core.utils.pagination import PaginationService, PaginationParams, PaginatedResponse
+from core.utils.pagination import (
+    PaginationService,
+    PaginationParams,
+    PaginatedResponse,
+    PaginationMeta,
+)
 from core.utils.logger import logger
 from .agent_loader import AgentLoader
 from core.utils.query_utils import batch_query_in
@@ -70,6 +75,7 @@ class AgentService:
             len(filters.tools) > 0 or
             filters.sort_by == "tools_count"
         ) or include_config
+        )
         
         if needs_post_processing:
             return await self._get_agents_with_complex_filtering(
@@ -195,7 +201,7 @@ class AgentService:
         if not all_agents:
             return PaginatedResponse(
                 data=[],
-                pagination=PaginationService.PaginationMeta(
+                pagination=PaginationMeta(
                     current_page=pagination_params.page,
                     page_size=pagination_params.page_size,
                     total_items=0,
@@ -235,6 +241,7 @@ class AgentService:
                 from core.versioning.version_service import get_version_service
                 version_service = await get_version_service()
                 
+                version_map = {}
                 for agent in agents:
                     version_id = agent.get('current_version_id')
                     if version_id:
@@ -255,8 +262,6 @@ class AgentService:
             except Exception as e:
                 logger.warning(f"Failed to batch load agent versions: {e}")
                 version_map = {}
-
-        return version_map
 
     async def _passes_complex_filters(
         self, 

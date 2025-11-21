@@ -589,6 +589,8 @@ class BrowserTool(SandboxToolsBase):
             )
             sentry_sdk.capture_exception(e)
             return self.fail_response(f"Error executing Stagehand action: {e}")
+        finally:
+            await self._schedule_stagehand_keepalive()
 
     # Core Functions Only
     

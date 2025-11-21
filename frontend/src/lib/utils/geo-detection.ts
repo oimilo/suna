@@ -3,7 +3,7 @@
  * Uses timezone as a proxy for geographic location (no API calls needed)
  */
 
-import { locales, defaultLocale, type Locale, normalizeLocale } from '@/i18n/config';
+import { locales, defaultLocale, type Locale } from '@/i18n/config';
 
 /**
  * Maps timezone regions to likely languages
@@ -30,7 +30,7 @@ const TIMEZONE_TO_LOCALE_MAP: Record<string, Locale> = {
   'Europe/Budapest': 'en',
   'Europe/Bucharest': 'en',
   'Europe/Athens': 'en',
-  'Europe/Lisbon': 'pt',
+  'Europe/Lisbon': 'en',
   
   // Americas (mostly English, but some regions)
   'America/New_York': 'en',
@@ -183,20 +183,26 @@ export function detectLocaleFromBrowser(): Locale | null {
   }
 
   try {
-    const browserLanguages = [navigator.language, ...(navigator.languages ?? [])];
-
-    for (const lang of browserLanguages) {
-      const normalized = normalizeLocale(lang);
-      if (normalized) {
-        return normalized;
+    // Log browser language info for debugging
+    console.log('🌍 Browser navigator.language:', navigator.language);
+    console.log('🌍 Browser navigator.languages:', navigator.languages);
+    
+    const browserLang = navigator.language.split('-')[0].toLowerCase();
+    if (locales.includes(browserLang as Locale)) {
+      console.log('🌍 Matched browser language:', browserLang);
+      return browserLang as Locale;
+    }
+    
+    // Try full language code (e.g., "de-DE", "it-IT")
+    const fullLang = navigator.language.toLowerCase();
+    for (const locale of locales) {
+      if (fullLang.startsWith(locale)) {
+        console.log('🌍 Matched browser language (full code):', locale);
+        return locale;
       }
     }
-
-    const fallback = normalizeLocale(navigator.language.split('-')[0]);
-    if (fallback) {
-      return fallback;
-    }
-
+    
+    console.log('🌍 No match found for browser language');
     return null;
   } catch (error) {
     console.warn('Failed to detect locale from browser:', error);

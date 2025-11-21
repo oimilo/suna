@@ -59,10 +59,13 @@ class CredentialProfileTool(MCPConfigurationMixin, AgentBuilderBaseTool):
                     "is_default": profile.is_default
                 })
             
+            tool_flow_state = await self._get_tool_flow_state()
+
             return self.success_response({
                 "message": f"Found {len(formatted_profiles)} credential profiles",
                 "profiles": formatted_profiles,
-                "total_count": len(formatted_profiles)
+                "total_count": len(formatted_profiles),
+                "tool_flow": tool_flow_state
             })
             
         except Exception as e:
@@ -139,6 +142,9 @@ Please authenticate your {result.toolkit.name} account by clicking the link belo
 After connecting, you'll be able to use {result.toolkit.name} tools in your agent."""
             else:
                 response_data["instructions"] = f"This {result.toolkit.name} profile has been created and is ready to use."
+            
+            tool_flow_state = await self._get_tool_flow_state()
+            response_data["tool_flow"] = tool_flow_state
             
             return self.success_response(response_data)
             
@@ -279,11 +285,14 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
 
             await self._refresh_runtime_tools(account_id, current_config)
 
+            tool_flow_state = await self._get_tool_flow_state()
+
             return self.success_response({
                 "message": f"Profile '{profile.profile_name}' configured with {len(enabled_tools)} tools and registered in current runtime",
                 "enabled_tools": enabled_tools,
                 "total_tools": len(enabled_tools),
-                "runtime_registration": "success"
+                "runtime_registration": "success",
+                "tool_flow": tool_flow_state
             })
             
         except Exception as e:
@@ -363,12 +372,15 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             # Delete the profile
             await profile_service.delete_profile(profile_id)
             
+            tool_flow_state = await self._get_tool_flow_state()
+            
             return self.success_response({
                 "message": f"Successfully deleted credential profile '{profile.display_name}' for {profile.toolkit_name}",
                 "deleted_profile": {
                     "profile_name": profile.profile_name,
                     "toolkit_name": profile.toolkit_name
-                }
+                },
+                "tool_flow": tool_flow_state
             })
             
         except Exception as e:

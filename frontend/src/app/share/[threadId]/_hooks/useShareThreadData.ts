@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   getMessages,
+  getProject,
+  getThread,
+  Project,
   Message as BaseApiMessageType,
-} from '@/lib/api/threads';
-import { getProject, Project } from '@/lib/api/projects';
-import { getThread } from '@/lib/api/threads';
+} from '@/lib/api';
 import {
   UnifiedMessage,
   ParsedMetadata,
@@ -26,6 +27,9 @@ interface ApiMessageType extends BaseApiMessageType {
   agent_id?: string;
   agents?: {
     name: string;
+    avatar?: string;
+    avatar_color?: string;
+    profile_image_url?: string;
     icon_name?: string;
     icon_color?: string;
     icon_background?: string;

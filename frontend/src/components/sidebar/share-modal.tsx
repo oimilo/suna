@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Copy, Link, Link2Off, Check, Globe, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useThreadQuery, useUpdateThreadMutation } from "@/hooks/threads/use-threads";
-import { useUpdateProject } from "@/hooks/threads/use-project";
+import { useThreadQuery, useUpdateThreadMutation, useUpdateProject } from "@/hooks/react-query"
 import type { JSX } from "react"
 import { Skeleton } from "../ui/skeleton"
 
@@ -249,6 +248,7 @@ export function ShareModal({ isOpen, onClose, threadId, projectId }: ShareModalP
           ) : (
             <div className="text-center space-y-4">
               <div className="space-y-2">
+                <h3 className="text-xl font-semibold">Share this chat</h3>
                 <p className="text-sm text-muted-foreground">
                   Create a shareable link that allows others to view this conversation publicly.
                 </p>

@@ -237,11 +237,14 @@ class AgentConfigTool(AgentBuilderBaseTool):
             if version_created:
                 updated_fields.append("version_created")
             
+            tool_flow_state = await self._get_tool_flow_state()
+
             return self.success_response({
                 "message": "Agent updated successfully",
                 "updated_fields": updated_fields,
                 "agent": updated_agent,
-                "version_created": version_created
+                "version_created": version_created,
+                "tool_flow": tool_flow_state
             })
             
         except Exception as e:
@@ -311,9 +314,13 @@ class AgentConfigTool(AgentBuilderBaseTool):
             
             summary_text = f"Agent '{config_summary['name']}' (version: {config_summary['current_version']}) has {tools_count} tools enabled, {mcps_count} MCP servers configured, and {custom_mcps_count} custom MCP integrations."
             
+            tool_flow_state = self._derive_tool_flow_state(config_summary)
+            config_summary["tool_flow"] = tool_flow_state
+            
             return self.success_response({
                 "summary": summary_text,
-                "configuration": config_summary
+                "configuration": config_summary,
+                "tool_flow": tool_flow_state
             })
             
         except Exception as e:

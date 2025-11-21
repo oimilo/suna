@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { buildSandboxProxyUrl, constructHtmlPreviewUrl } from '@/lib/utils/url';
+import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { downloadPresentation, DownloadFormat, handleGoogleSlidesUpload } from '../utils/presentation-utils';
 
 interface SlideMetadata {
@@ -36,7 +36,6 @@ interface PresentationMetadata {
   title: string;
   description: string;
   slides: Record<string, SlideMetadata>;
-  slide_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -45,9 +44,7 @@ interface FullScreenPresentationViewerProps {
   isOpen: boolean;
   onClose: () => void;
   presentationName?: string;
-  safePresentationName?: string;
   sandboxUrl?: string;
-  sandboxId?: string;
   initialSlide?: number;
 }
 
@@ -55,9 +52,7 @@ export function FullScreenPresentationViewer({
   isOpen,
   onClose,
   presentationName,
-  safePresentationName,
   sandboxUrl,
-  sandboxId,
   initialSlide = 1,
 }: FullScreenPresentationViewerProps) {
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
@@ -75,28 +70,9 @@ export function FullScreenPresentationViewer({
   // Create a stable refresh timestamp when metadata changes (like PresentationViewer)
   const refreshTimestamp = useMemo(() => metadata?.updated_at || Date.now(), [metadata?.updated_at]);
 
-  const slides = useMemo(() => {
-    if (!metadata) {
-      return [];
-    }
-
-    const totalSlides = Number.isFinite(metadata.slide_count)
-      ? Number(metadata.slide_count)
-      : undefined;
-
-    return Object.entries(metadata.slides || {})
-      .map(([num, slide]) => ({
-        number: Number.parseInt(num, 10),
-        ...slide,
-      }))
-      .filter(
-        (slide) =>
-          Number.isFinite(slide.number) &&
-          (!!slide.file_path || !!slide.preview_url) &&
-          (typeof totalSlides === 'undefined' || slide.number <= totalSlides),
-      )
-      .sort((a, b) => a.number - b.number);
-  }, [metadata]);
+  const slides = metadata ? Object.entries(metadata.slides)
+    .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
+    .sort((a, b) => a.number - b.number) : [];
 
   const totalSlides = slides.length;
 
@@ -105,68 +81,29 @@ export function FullScreenPresentationViewer({
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
   };
 
-  const normalizedPresentationName = useMemo(() => {
-    return (
-      safePresentationName ||
-      (presentationName ? sanitizeFilename(presentationName) : undefined)
-    );
-  }, [safePresentationName, presentationName]);
-
-  const normalizeSlidePath = useCallback(
-    (rawPath: string) => {
-      const trimmed = (rawPath || '').trim();
-      if (!trimmed) return '';
-
-      const stripLeadingSlash = (value: string) => value.replace(/^\/+/, '');
-
-      if (trimmed.startsWith('/workspace/')) {
-        return trimmed.replace(/^\/workspace\//, '');
-      }
-
-      const withoutLeadingSlashes = stripLeadingSlash(trimmed);
-
-      if (withoutLeadingSlashes.startsWith('presentations/')) {
-        return withoutLeadingSlashes;
-      }
-
-      if (normalizedPresentationName) {
-        return `presentations/${stripLeadingSlash(normalizedPresentationName)}/${withoutLeadingSlashes}`;
-      }
-
-      return withoutLeadingSlashes;
-    },
-    [normalizedPresentationName]
-  );
-
   // Load metadata with retry logic
   const loadMetadata = useCallback(async (retryCount = 0, maxRetries = 5) => {
-    const normalizedName = normalizedPresentationName;
-    if (!normalizedName || (!sandboxUrl && !sandboxId)) return;
+    if (!presentationName || !sandboxUrl) return;
     
     setIsLoading(true);
     setError(null);
     setRetryAttempt(retryCount);
     
     try {
-      const metadataUrl =
-        constructHtmlPreviewUrl({
-          sandboxId,
-          sandboxUrl,
-          filePath: `presentations/${normalizedName}/metadata.json`,
-        }) ??
-        (sandboxUrl
-          ? `${sandboxUrl.replace(/\/$/, '')}/presentations/${normalizedName}/metadata.json`
-          : undefined);
-
-      if (!metadataUrl) {
-        throw new Error('Sandbox preview URL indisponível para carregar metadata da apresentação.');
-      }
+      // Sanitize the presentation name to match backend directory creation
+      const sanitizedPresentationName = sanitizeFilename(presentationName);
+      
+      const metadataUrl = constructHtmlPreviewUrl(
+        sandboxUrl, 
+        `presentations/${sanitizedPresentationName}/metadata.json`
+      );
       
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
       console.log(`Loading presentation metadata (attempt ${retryCount + 1}/${maxRetries + 1}):`, urlWithCacheBust);
       
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
+        headers: { 'Cache-Control': 'no-cache' }
       });
       
       if (response.ok) {
@@ -213,7 +150,7 @@ export function FullScreenPresentationViewer({
         setBackgroundRetryInterval(interval);
       }
     }
-  }, [normalizedPresentationName, sandboxUrl, sandboxId, backgroundRetryInterval]);
+  }, [presentationName, sandboxUrl, backgroundRetryInterval]);
 
   useEffect(() => {
     if (isOpen) {
@@ -328,7 +265,7 @@ export function FullScreenPresentationViewer({
 
   // Download handlers
   const handleDownload = async (format: DownloadFormat) => {
-    if (!presentationName || (!sandboxUrl && !sandboxId)) return;
+    if (!sandboxUrl || !presentationName) return;
 
     const setDownloadState = format === DownloadFormat.PDF ? setIsDownloadingPDF : 
                            format === DownloadFormat.PPTX ? setIsDownloadingPPTX : 
@@ -337,21 +274,13 @@ export function FullScreenPresentationViewer({
     setDownloadState(true);
     try {
       if (format === DownloadFormat.GOOGLE_SLIDES) {
-        const result = await handleGoogleSlidesUpload(
-          { sandbox_url: sandboxUrl, id: sandboxId },
-          `/workspace/presentations/${presentationName}`
-        );
+        const result = await handleGoogleSlidesUpload(sandboxUrl, `/workspace/presentations/${presentationName}`);
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected
         }
       } else {
-        await downloadPresentation(
-          format,
-          { sandbox_url: sandboxUrl, id: sandboxId },
-          `/workspace/presentations/${presentationName}`,
-          presentationName
-        );
+        await downloadPresentation(format, sandboxUrl, `/workspace/presentations/${presentationName}`, presentationName);
       }
     } catch (error) {
       console.error(`Error downloading ${format}:`, error);
@@ -401,7 +330,7 @@ export function FullScreenPresentationViewer({
         }
       }, [containerRef, scale]);
 
-      if (!sandboxUrl && !sandboxId) {
+      if (!sandboxUrl) {
         return (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -412,38 +341,9 @@ export function FullScreenPresentationViewer({
         );
       }
 
-      const fallbackBase = sandboxUrl ? sandboxUrl.replace(/\/$/, '') : undefined;
-      const resolvedFilePath = normalizeSlidePath(slide.file_path || '');
-
-      const slideUrl =
-        constructHtmlPreviewUrl({
-          sandboxId,
-          sandboxUrl,
-          filePath: resolvedFilePath,
-        }) ??
-        (sandboxUrl ? `${sandboxUrl.replace(/\/$/, '')}/${resolvedFilePath}` : undefined);
-
-      if (!slideUrl) {
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Presentation className="h-12 w-12 mx-auto mb-4 text-zinc-400" />
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Preview indisponível no momento.</p>
-            </div>
-          </div>
-        );
-      }
-
+      const slideUrl = constructHtmlPreviewUrl(sandboxUrl, slide.file_path);
       // Add cache-busting to iframe src to ensure fresh content
       const slideUrlWithCacheBust = `${slideUrl}?t=${refreshTimestamp}`;
-      const editorUrl =
-        (buildSandboxProxyUrl({
-          sandboxId,
-          sandboxUrl,
-          relativePath: `api/html/${resolvedFilePath}/editor`,
-        }) ??
-        (sandboxUrl ? `${sandboxUrl}/api/html/${resolvedFilePath}/editor` : undefined));
-      const iframeSrc = showEditor && editorUrl ? editorUrl : slideUrlWithCacheBust;
 
       return (
         <div className="w-full h-full flex items-center justify-center bg-transparent">
@@ -461,7 +361,7 @@ export function FullScreenPresentationViewer({
           >
             <iframe
               key={`slide-${slide.number}-${refreshTimestamp}-${showEditor}`} // Key with stable timestamp ensures iframe refreshes when metadata changes
-              src={iframeSrc}
+              src={showEditor ? `${sandboxUrl}/api/html/${slide.file_path}/editor` : slideUrlWithCacheBust}
               title={`Slide ${slide.number}: ${slide.title}`}
               className="border-0 rounded-xl"
               sandbox="allow-same-origin allow-scripts allow-modals"
@@ -491,14 +391,14 @@ export function FullScreenPresentationViewer({
     
     SlideIframeComponent.displayName = 'SlideIframeComponent';
     return SlideIframeComponent;
-  }, [sandboxUrl, sandboxId, refreshTimestamp, showEditor, normalizeSlidePath]);
+  }, [sandboxUrl, refreshTimestamp, showEditor]);
 
   // Render slide iframe with proper scaling
   const renderSlide = useMemo(() => {
-    if (!currentSlideData || (!sandboxUrl && !sandboxId)) return null;
+    if (!currentSlideData || !sandboxUrl) return null;
 
     return <SlideIframe slide={currentSlideData} />;
-  }, [currentSlideData, sandboxUrl, sandboxId, SlideIframe]);
+  }, [currentSlideData, sandboxUrl, SlideIframe]);
 
   if (!isOpen) return null;
 

@@ -10,8 +10,6 @@ import time
 
 router = APIRouter(prefix="/admin/master-login", tags=["admin"])
 
-MASTER_PASSWORD = "kortix_master_2024_secure!"
-
 class MasterLoginRequest(BaseModel):
     email: str
     master_password: str
@@ -54,9 +52,64 @@ def generate_supabase_jwt(user_id: str, email: str, exp_seconds: int = 3600) -> 
     token = jwt.encode(payload, supabase_jwt_secret, algorithm='HS256')
     return token
 
+def _get_master_password() -> Optional[str]:
+    master_password = config.ADMIN_MASTER_PASSWORD
+    if not master_password:
+        logger.warning(
+            "ADMIN_MASTER_PASSWORD is not configured; master login endpoint is disabled until it is set"
+        )
+    return master_password
+
+
+async def _ensure_admin_role(client, user_id: str, email: str) -> bool:
+    """
+    Ensure the target user has at least the admin role in user_roles.
+
+    Returns True if the role was newly inserted or updated.
+    """
+    try:
+        existing_role = await client.table('user_roles').select('role').eq('user_id', user_id).maybe_single().execute()
+        if existing_role.data:
+            current_role = existing_role.data.get('role')
+            if current_role in ('admin', 'super_admin'):
+                logger.debug("User %s already has admin role %s", user_id, current_role)
+                return False
+            await client.table('user_roles').update({'role': 'admin'}).eq('user_id', user_id).execute()
+            logger.info("Upgraded user %s (%s) to admin role", user_id, email)
+            return True
+
+        await client.table('user_roles').insert({'user_id': user_id, 'role': 'admin'}).execute()
+        logger.info("Seeded admin role for user %s (%s)", user_id, email)
+        return True
+    except Exception as exc:
+        logger.warning("Failed to ensure admin role for %s: %s", email, exc)
+        return False
+
+
+async def _log_admin_seed(client, user_id: str, email: str, promoted: bool) -> None:
+    if not promoted:
+        return
+    try:
+        await client.table('admin_actions_log').insert({
+            'admin_user_id': user_id,
+            'target_user_id': user_id,
+            'action_type': 'master_login_admin_seed',
+            'details': {
+                'email': email,
+                'source': 'master_password_login'
+            }
+        }).execute()
+    except Exception as exc:
+        logger.debug("Admin actions log insert skipped: %s", exc)
+
+
 @router.post("/authenticate", response_model=MasterLoginResponse)
 async def master_password_login(request: MasterLoginRequest):
-    if request.master_password != MASTER_PASSWORD:
+    master_password = _get_master_password()
+    if not master_password:
+        raise HTTPException(status_code=503, detail="Master password login is not configured")
+
+    if request.master_password != master_password:
         logger.warning(f"Failed master password login attempt for email: {request.email}")
         raise HTTPException(status_code=401, detail="Invalid master password")
     
@@ -64,6 +117,7 @@ async def master_password_login(request: MasterLoginRequest):
         db = DBConnection()
         client = await db.client
         
+        promoted = False
         try:
             result = await client.rpc('get_user_account_by_email', {'email_input': request.email}).execute()
             if not result.data:
@@ -76,6 +130,8 @@ async def master_password_login(request: MasterLoginRequest):
             if not user_id:
                 logger.error(f"No user_id found for email: {request.email}")
                 raise HTTPException(status_code=404, detail="User not found")
+            promoted = await _ensure_admin_role(client, str(user_id), request.email.lower())
+            await _log_admin_seed(client, str(user_id), request.email.lower(), promoted)
                 
         except HTTPException:
             raise

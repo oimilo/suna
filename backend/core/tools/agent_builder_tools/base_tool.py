@@ -4,6 +4,7 @@ from core.agentpress.tool import Tool, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
 from core.utils.tool_runtime import refresh_runtime_tools
+from .tool_flow_mixin import ToolFlowMixin
 
 @tool_metadata(
     display_name="Agent Builder Base",
@@ -13,7 +14,7 @@ from core.utils.tool_runtime import refresh_runtime_tools
     weight=900,
     visible=False
 )
-class AgentBuilderBaseTool(Tool):
+class AgentBuilderBaseTool(ToolFlowMixin, Tool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__()
         self.thread_manager = thread_manager

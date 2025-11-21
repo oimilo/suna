@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Zap } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfiguredTriggersList } from './configured-triggers-list';
-import { TriggerCreationDialog } from '../../triggers/trigger-creation-dialog';
+import { TriggerConfigDialog } from './trigger-config-dialog';
 import { TriggerConfiguration, TriggerProvider } from './types';
 import { 
   useAgentTriggers, 
@@ -13,7 +13,7 @@ import {
   useDeleteTrigger, 
   useToggleTrigger,
   useTriggerProviders 
-} from '@/hooks/triggers';
+} from '@/hooks/react-query/triggers';
 import { toast } from 'sonner';
 import { OneClickIntegrations } from './one-click-integrations';
 
@@ -155,15 +155,16 @@ export const AgentTriggersConfiguration: React.FC<AgentTriggersConfigurationProp
       )}
       
       {configuringProvider && (
-        <TriggerCreationDialog
-          open={!!configuringProvider}
-          onOpenChange={() => setConfiguringProvider(null)}
-          type={configuringProvider.provider_id === 'schedule' ? 'schedule' : 'event'}
-          isEditMode={!!editingTrigger}
-          existingTrigger={editingTrigger}
-          onTriggerCreated={handleSaveTrigger}
-          onTriggerUpdated={handleSaveTrigger}
-        />
+        <Dialog open={!!configuringProvider} onOpenChange={() => setConfiguringProvider(null)}>
+          <TriggerConfigDialog
+            provider={configuringProvider}
+            existingConfig={editingTrigger}
+            onSave={handleSaveTrigger}
+            onCancel={() => setConfiguringProvider(null)}
+            isLoading={createTriggerMutation.isPending || updateTriggerMutation.isPending}
+            agentId={agentId}
+          />
+        </Dialog>
       )}
     </div>
   );

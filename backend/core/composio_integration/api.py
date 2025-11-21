@@ -245,8 +245,26 @@ async def list_toolkits(
         service = get_integration_service()
         
         if search:
-            result = await service.search_toolkits(search, category=category, limit=limit, cursor=cursor)
-        else:
+            queries = [{"use_case": search}]
+            if category:
+                queries[0]["filters"] = {"category": category}
+            result = await service.search_toolkits_with_queries(queries, limit=limit, cursor=cursor)
+            search_entries = result.get("results", [])
+            primary_entry = search_entries[0] if search_entries else {}
+            toolkits = primary_entry.get("results", [])
+            response_payload = {
+                "success": True,
+                "toolkits": toolkits,
+                "total_items": primary_entry.get("total_results", len(toolkits)),
+                "total_pages": 1,
+                "current_page": 1,
+                "next_cursor": None,
+                "has_more": False,
+                "search_session": result.get("session"),
+                "search_source": result.get("source"),
+            }
+            return response_payload
+
             result = await service.list_available_toolkits(limit, cursor=cursor, category=category)
         
         return {

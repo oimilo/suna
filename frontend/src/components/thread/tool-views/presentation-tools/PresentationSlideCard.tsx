@@ -1,11 +1,9 @@
-'use client';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Maximize2, Presentation } from 'lucide-react';
-import type { Project } from '@/lib/api/projects';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
+import { Project } from '@/lib/api/projects';
 
 interface SlideMetadata {
   title: string;
@@ -36,15 +34,10 @@ export function PresentationSlideCard({
   const [scale, setScale] = useState(1);
 
   const slidePreviewUrl = useMemo(() => {
-    const previewUrl = constructHtmlPreviewUrl({
-      sandboxId: project?.sandbox?.id,
-      sandboxUrl: project?.sandbox?.sandbox_url,
-      filePath: slide.file_path,
-    });
-
-    if (!previewUrl) return null;
-    return refreshTimestamp ? `${previewUrl}?t=${refreshTimestamp}` : previewUrl;
-  }, [project?.sandbox?.id, project?.sandbox?.sandbox_url, slide.file_path, refreshTimestamp]);
+    if (!project?.sandbox?.sandbox_url) return null;
+    const url = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
+    return refreshTimestamp ? `${url}?t=${refreshTimestamp}` : url;
+  }, [project?.sandbox?.sandbox_url, slide.file_path, refreshTimestamp]);
 
   useEffect(() => {
     if (!containerRef) return;
@@ -52,24 +45,36 @@ export function PresentationSlideCard({
     const updateScale = () => {
       const containerWidth = containerRef.offsetWidth;
       const containerHeight = containerRef.offsetHeight;
+      
+      // Calculate scale to fit 1920x1080 into container while maintaining aspect ratio
       const scaleX = containerWidth / 1920;
       const scaleY = containerHeight / 1080;
       const newScale = Math.min(scaleX, scaleY);
-
+      
+      // Only update if scale actually changed to prevent unnecessary re-renders
       if (Math.abs(newScale - scale) > 0.001) {
         setScale(newScale);
       }
     };
 
+    // Initial scale calculation
+    updateScale();
+
+    // Use ResizeObserver to watch for container size changes (catches both window and panel resizes)
     let resizeTimeout: NodeJS.Timeout;
     const debouncedUpdateScale = () => {
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateScale, 100);
+      resizeTimeout = setTimeout(updateScale, 50); // Reduced debounce for smoother resizing
     };
 
-    updateScale();
+    const resizeObserver = new ResizeObserver(debouncedUpdateScale);
+    resizeObserver.observe(containerRef);
+
+    // Also listen to window resize as fallback
     window.addEventListener('resize', debouncedUpdateScale);
+
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', debouncedUpdateScale);
       clearTimeout(resizeTimeout);
     };
@@ -101,7 +106,10 @@ export function PresentationSlideCard({
   }
 
   return (
-    <div className={`group relative bg-background border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] transition-all duration-200 ${className}`}>
+    <div 
+      className={`group relative bg-background border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] transition-all duration-200 ${className}`}
+    >
+      {/* Slide header */}
       <div className="px-3 py-2 bg-muted/20 border-b border-border/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="h-6 px-2 text-xs font-mono">
@@ -113,7 +121,7 @@ export function PresentationSlideCard({
             </span>
           )}
         </div>
-        {showFullScreenButton && (
+        {showFullScreenButton !== false && (
           <Button
             variant="ghost"
             size="sm"
@@ -126,18 +134,19 @@ export function PresentationSlideCard({
           </Button>
         )}
       </div>
-
-      <div
+      
+      {/* Slide Preview */}
+      <div 
         className="relative aspect-video bg-muted/30 cursor-pointer"
         onClick={() => onFullScreenClick?.(slide.number)}
       >
         <div className="w-full h-full flex items-center justify-center bg-transparent">
-          <div
+          <div 
             ref={setContainerRef}
             className="relative w-full h-full bg-background rounded-lg overflow-hidden"
             style={{
               containIntrinsicSize: '1920px 1080px',
-              contain: 'layout style',
+              contain: 'layout style'
             }}
           >
             <iframe
@@ -158,13 +167,16 @@ export function PresentationSlideCard({
                 left: 0,
                 willChange: 'transform',
                 backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden'
               }}
             />
           </div>
         </div>
+        
+        {/* Subtle hover overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
       </div>
     </div>
   );
 }
+

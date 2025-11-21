@@ -125,7 +125,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const sidebarContext = React.useContext(SidebarContext);
   const leftSidebarState: 'expanded' | 'collapsed' | undefined = sidebarContext?.state;
   const setLeftSidebarOpen: ((open: boolean) => void) | undefined = sidebarContext?.setOpen;
-  const debugMode = searchParams?.get('debug') === 'true';
 
   // Custom hooks
   const {
@@ -792,7 +791,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Prophet`;
+      document.title = `${projectName} | Kortix`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -800,13 +799,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Prophet`,
+          `${projectName} - Interactive agent conversation powered by Kortix`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Prophet`);
+        ogTitle.setAttribute('content', `${projectName} | Kortix`);
       }
 
       const ogDescription = document.querySelector(
@@ -959,7 +958,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
-        debugMode={debugMode}
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
@@ -1000,7 +998,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           renderAssistantMessage={toolViewAssistant}
           renderToolResult={toolViewResult}
           isLoading={!initialLoadCompleted || isLoading}
-          debugMode={debugMode}
           isMobile={isMobile}
           initialLoadCompleted={initialLoadCompleted}
           agentName={agent && agent.name}
@@ -1032,6 +1029,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 agentAvatar={undefined}
                 scrollContainerRef={scrollContainerRef}
                 isPreviewMode={true}
+                onPromptFill={!isShared ? setChatInputValue : undefined}
                 threadId={threadId}
               />
             </div>
@@ -1180,7 +1178,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={!initialLoadCompleted || isLoading}
-        debugMode={debugMode}
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
@@ -1208,6 +1205,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentAvatar={undefined}
           scrollContainerRef={scrollContainerRef}
           threadId={threadId}
+          onPromptFill={!isShared ? setChatInputValue : undefined}
         />
 
         {isShared && (

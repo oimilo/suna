@@ -18,6 +18,16 @@ import { config } from '@/lib/config';
 
 const MAILTO_ENTERPRISE = 'mailto:vendas@prophet.build?subject=Interesse%20no%20Plano%20Enterprise';
 
+interface PricingSectionProps {
+  returnUrl?: string;
+  showTitleAndTabs?: boolean;
+  showInfo?: boolean;
+  onSubscriptionUpdate?: () => void;
+  hideFree?: boolean;
+  insideDialog?: boolean;
+  noPadding?: boolean;
+}
+
 type BillingPeriod = 'monthly' | 'yearly';
 
 interface BillingPeriodToggleProps {
@@ -157,7 +167,15 @@ const PricingTierCard = ({
   );
 };
 
-export function PricingSection() {
+export function PricingSection({
+  returnUrl,
+  showTitleAndTabs = true,
+  showInfo = true,
+  onSubscriptionUpdate,
+  hideFree = false,
+  insideDialog = false,
+  noPadding = false,
+}: PricingSectionProps = {}) {
   const { user } = useAuth();
   const router = useRouter();
   const { data: subscriptionData } = useSubscription({ enabled: !!user });
@@ -171,10 +189,18 @@ export function PricingSection() {
   }, [subscriptionData?.billing_period]);
 
   const tiers = useMemo(
-    () => siteConfig.cloudPricingItems.filter((tier) => !tier.hidden),
-    []
+    () =>
+      siteConfig.cloudPricingItems.filter(
+        (tier) => !tier.hidden && (!hideFree || (tier.tierKey ?? tier.name) !== config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey),
+      ),
+    [hideFree],
   );
   const currentTierKey = subscriptionData?.tier_key;
+
+  const resolvedSuccessUrl =
+    returnUrl ?? (typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : '/dashboard');
+  const resolvedCancelUrl =
+    returnUrl ?? (typeof window !== 'undefined' ? window.location.href : siteConfig.url);
 
   const handleSubscribe = async (tier: PricingTier) => {
     const tierKey = tier.tierKey ?? tier.name;
@@ -205,8 +231,8 @@ export function PricingSection() {
     const key = `${tierKey}-${billingPeriod}`;
     setProcessingTier(key);
     try {
-      const successUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : '/dashboard';
-      const cancelUrl = typeof window !== 'undefined' ? window.location.href : siteConfig.url;
+      const successUrl = resolvedSuccessUrl;
+      const cancelUrl = resolvedCancelUrl;
       const response: CreateCheckoutSessionResponse = await billingApi.createCheckoutSession({
         tier_key: tierKey,
         success_url: successUrl,
@@ -221,10 +247,12 @@ export function PricingSection() {
 
       if (response.status === 'updated' || response.status === 'upgraded') {
         toast.success(response.message ?? 'Assinatura atualizada com sucesso!');
+        onSubscriptionUpdate?.();
       } else if (response.status === 'no_change') {
         toast.info(response.message ?? 'Você já está neste plano.');
       } else {
         toast.success(response.message ?? 'Processo concluído com sucesso.');
+        onSubscriptionUpdate?.();
       }
     } catch (error: any) {
       console.error('Erro ao processar assinatura:', error);
@@ -239,21 +267,40 @@ export function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="relative z-10 w-full py-24">
-      <div className="container px-4 md:px-8">
-        <SectionHeader>
-          <Badge className="bg-primary/10 text-primary">Planos flexíveis para todo time</Badge>
-          <h2 className="text-3xl md:text-4xl font-semibold text-center text-foreground">
-            Escolha o melhor plano para sua equipe
-          </h2>
-          <p className="text-base text-muted-foreground text-center max-w-xl">
-            Créditos generosos, Workers ilimitados e integrações para você construir automações poderosas.
-          </p>
-        </SectionHeader>
+    <section
+      id="pricing"
+      className={cn(
+        'relative z-10 w-full py-24',
+        noPadding && 'py-8',
+        insideDialog && 'py-6',
+      )}
+    >
+      <div
+        className={cn(
+          'container px-4 md:px-8',
+          noPadding && 'px-0',
+          insideDialog && 'px-0',
+        )}
+      >
+        {showTitleAndTabs && (
+          <SectionHeader>
+            <Badge className="bg-primary/10 text-primary">Planos flexíveis para todo time</Badge>
+            <h2 className="text-3xl md:text-4xl font-semibold text-center text-foreground">
+              Escolha o melhor plano para sua equipe
+            </h2>
+            {showInfo && (
+              <p className="text-base text-muted-foreground text-center max-w-xl">
+                Créditos generosos, Workers ilimitados e integrações para você construir automações poderosas.
+              </p>
+            )}
+          </SectionHeader>
+        )}
 
-        <div className="mt-10 flex justify-center">
-          <BillingPeriodToggle billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} />
-        </div>
+        {showTitleAndTabs && (
+          <div className="mt-10 flex justify-center">
+            <BillingPeriodToggle billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} />
+          </div>
+        )}
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {tiers.map((tier) => {

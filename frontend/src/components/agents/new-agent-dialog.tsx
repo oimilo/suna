@@ -12,13 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useCreateNewAgent } from '@/hooks/agents/use-agents';
+import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
 import { JsonImportDialog } from './json-import-dialog';
 import { AgentCountLimitDialog } from './agent-count-limit-dialog';
-import { AgentCountLimitError } from '@/lib/api/errors';
+import { AgentCountLimitError } from '@/lib/api';
 import { toast } from 'sonner';
-import { AgentCreationModal } from './agent-creation-modal';
-import { isLocalMode, isStagingMode } from '@/lib/config';
 
 interface NewAgentDialogProps {
   open: boolean;
@@ -27,26 +25,6 @@ interface NewAgentDialogProps {
 }
 
 export function NewAgentDialog({ open, onOpenChange, onSuccess }: NewAgentDialogProps) {
-  if (isLocalMode() || isStagingMode()) {
-    return (
-      <AgentCreationModal
-        open={open}
-        onOpenChange={onOpenChange}
-        onSuccess={onSuccess}
-      />
-    );
-  }
-
-  return (
-    <NewAgentDialogLegacy
-      open={open}
-      onOpenChange={onOpenChange}
-      onSuccess={onSuccess}
-    />
-  );
-}
-
-export function NewAgentDialogLegacy({ open, onOpenChange, onSuccess }: NewAgentDialogProps) {
   const [showJsonImport, setShowJsonImport] = useState(false);
   const [jsonImportText, setJsonImportText] = useState('');
   const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
@@ -117,9 +95,9 @@ export function NewAgentDialogLegacy({ open, onOpenChange, onSuccess }: NewAgent
     <AlertDialog open={open} onOpenChange={handleDialogClose}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader className="space-y-3">
-          <AlertDialogTitle className="text-xl">Create New Worker</AlertDialogTitle>
+          <AlertDialogTitle className="text-xl">Create New Agent</AlertDialogTitle>
           <AlertDialogDescription className="text-base leading-relaxed">
-            Create a new worker with default settings that you can customize later, or{' '}
+            Create a new agent with default settings that you can customize later, or{' '}
             <button
               onClick={handleFileImport}
               className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50"

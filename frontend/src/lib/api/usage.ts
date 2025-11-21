@@ -23,5 +23,7 @@ export interface UsageLogsResponse {
   logs: UsageLogEntry[];
   has_more: boolean;
   total_count?: number;
+  message?: string;
+  subscription_limit?: number;
 }
 

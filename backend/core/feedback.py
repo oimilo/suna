@@ -1,15 +1,108 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+import sentry_sdk
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
+from core.services.langfuse import langfuse
 from . import core_utils as utils
 
 router = APIRouter(tags=["feedback"])
+
+
+async def _annotate_message_feedback(
+    client,
+    message_id: str,
+    feedback_record: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """
+    Attach feedback metadata to the associated message (usually a tool result)
+    so the frontend and future sessions can display the rating inline.
+    """
+    try:
+        message_result = (
+            await client.table("messages")
+            .select("metadata, thread_id, type")
+            .eq("message_id", message_id)
+            .maybe_single()
+            .execute()
+        )
+        message_data = message_result.data
+        if not message_data:
+            logger.warning("Message %s not found when recording feedback", message_id)
+            return None
+
+        metadata = message_data.get("metadata") or {}
+        metadata["feedback"] = {
+            "feedback_id": feedback_record.get("feedback_id"),
+            "rating": feedback_record.get("rating"),
+            "feedback_text": feedback_record.get("feedback_text"),
+            "help_improve": feedback_record.get("help_improve"),
+            "context": feedback_record.get("context"),
+            "submitted_at": feedback_record.get("updated_at"),
+        }
+
+        await client.table("messages").update(
+            {"metadata": metadata}
+        ).eq("message_id", message_id).execute()
+
+        return {
+            "thread_id": message_data.get("thread_id"),
+            "message_type": message_data.get("type"),
+        }
+    except Exception as exc:
+        logger.warning(
+            "Failed to annotate message %s with feedback: %s", message_id, exc
+        )
+        return None
+
+
+def _track_feedback_observability(
+    feedback_record: Dict[str, Any],
+    message_context: Optional[Dict[str, Any]],
+) -> None:
+    metadata = {
+        "feedback_id": feedback_record.get("feedback_id"),
+        "rating": feedback_record.get("rating"),
+        "help_improve": feedback_record.get("help_improve"),
+        "has_text": bool(feedback_record.get("feedback_text")),
+        "message_type": message_context.get("message_type") if message_context else None,
+    }
+
+    try:
+        langfuse.event(
+            name="tool_result_feedback",
+            session_id=message_context.get("thread_id") if message_context else None,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        logger.debug("Langfuse feedback event failed: %s", exc)
+
+    rating = feedback_record.get("rating") or 0
+    if rating >= 3:
+        return
+
+    try:
+        hub = sentry_sdk.Hub.current
+        if not hub or not hub.client:
+            return
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("feedback.rating", rating)
+            if feedback_record.get("feedback_id"):
+                scope.set_tag("feedback.id", feedback_record["feedback_id"])
+            if message_context and message_context.get("thread_id"):
+                scope.set_tag("thread.id", message_context["thread_id"])
+            scope.set_extra("feedback", feedback_record)
+            sentry_sdk.capture_message(
+                "Low-rating tool feedback submitted",
+                level="warning",
+            )
+    except Exception as exc:
+        logger.debug("Sentry feedback capture failed: %s", exc)
 
 
 class FeedbackRequest(BaseModel):
@@ -100,6 +193,8 @@ async def submit_feedback(
         if feedback_data.context:
             feedback_payload["context"] = feedback_data.context
 
+        message_context: Optional[Dict[str, Any]] = None
+
         if existing_feedback:
             feedback_result = (
                 await client.table("feedback")
@@ -110,15 +205,25 @@ async def submit_feedback(
             if not feedback_result.data:
                 raise HTTPException(status_code=500, detail="Failed to update feedback")
             logger.debug("Updated feedback %s", feedback_result.data[0]["feedback_id"])
-            return feedback_result.data[0]
-
+            saved_feedback = feedback_result.data[0]
+        else:
         feedback_payload["feedback_id"] = str(uuid.uuid4())
         feedback_payload["created_at"] = datetime.now(timezone.utc).isoformat()
         feedback_result = await client.table("feedback").insert(feedback_payload).execute()
         if not feedback_result.data:
             raise HTTPException(status_code=500, detail="Failed to create feedback")
         logger.debug("Created feedback %s", feedback_result.data[0]["feedback_id"])
-        return feedback_result.data[0]
+            saved_feedback = feedback_result.data[0]
+
+        if feedback_data.message_id:
+            message_context = await _annotate_message_feedback(
+                client,
+                feedback_data.message_id,
+                saved_feedback,
+            )
+
+        _track_feedback_observability(saved_feedback, message_context)
+        return saved_feedback
 
     except HTTPException:
         raise

@@ -355,6 +355,9 @@ class Configuration:
     # Freestyle deployment configuration
     FREESTYLE_API_KEY: Optional[str] = None
     
+    # Admin & internal access
+    ADMIN_MASTER_PASSWORD: Optional[str] = None
+    
     # Stripe configuration
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
@@ -376,7 +379,7 @@ class Configuration:
     LANGFUSE_HOST: Optional[str] = "https://cloud.langfuse.com"
 
     # Admin API key for server-side operations
-    KORTIX_ADMIN_API_KEY: Optional[str] = None
+    ADMIN_API_KEY: Optional[str] = None
 
     # API Keys system configuration
     API_KEY_SECRET: Optional[str] = "default-secret-key-change-in-production"
@@ -558,9 +561,9 @@ class Configuration:
             self.DAYTONA_PREVIEW_PATH_PREFIX = default_preview_prefix
         
         # Auto-generate admin API key if not present
-        if not self.KORTIX_ADMIN_API_KEY:
-            self.KORTIX_ADMIN_API_KEY = self._generate_admin_api_key()
-            logger.info("Auto-generated KORTIX_ADMIN_API_KEY for administrative functions")
+        if not self.ADMIN_API_KEY:
+            self.ADMIN_API_KEY = self._generate_admin_api_key()
+            logger.info("Auto-generated ADMIN_API_KEY for administrative functions")
         
         # Perform validation
         self._validate()

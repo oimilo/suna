@@ -15,10 +15,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAgentVersions, useActivateAgentVersion, useCreateAgentVersion } from '@/hooks/agents/use-agent-versions';
+import { useAgentVersions, useActivateAgentVersion, useCreateAgentVersion } from '@/lib/versioning';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import type { AgentVersion } from '@/hooks/agents/utils';
+import type { AgentVersion } from '@/lib/versioning';
 import { VersionInlineEditor } from './version-inline-editor';
 
 interface AgentVersionSwitcherProps {
@@ -50,22 +50,22 @@ export function AgentVersionSwitcher({
   const [isRollingBack, setIsRollingBack] = useState(false);
 
   const viewingVersionId = versionParam || currentVersionId;
-  const viewingVersion = versions?.find(v => v.version_id === viewingVersionId) || versions?.[0];
+  const viewingVersion = versions?.find(v => v.versionId.value === viewingVersionId) || versions?.[0];
 
-  const canRollback = viewingVersion && viewingVersion.version_number > 1;
+  const canRollback = viewingVersion && viewingVersion.versionNumber.value > 1;
 
   const handleVersionSelect = async (version: AgentVersion) => {
-    if (version.version_id === viewingVersionId) return;
+    if (version.versionId.value === viewingVersionId) return;
     const params = new URLSearchParams(searchParams.toString());
-    if (version.version_id === currentVersionId) {
+    if (version.versionId.value === currentVersionId) {
       params.delete('version');
     } else {
-      params.set('version', version.version_id);
+      params.set('version', version.versionId.value);
     }
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     router.push(newUrl);
-    if (version.version_id !== currentVersionId) {
-      toast.success(`Viewing ${version.version_name} (read-only)`);
+    if (version.versionId.value !== currentVersionId) {
+      toast.success(`Viewing ${version.versionName} (read-only)`);
     }
   };
 
@@ -77,16 +77,16 @@ export function AgentVersionSwitcher({
       const newVersion = await createVersionMutation.mutateAsync({
         agentId,
         data: {
-          system_prompt: selectedVersion.system_prompt,
-          configured_mcps: selectedVersion.configured_mcps,
-          custom_mcps: selectedVersion.custom_mcps,
-          agentpress_tools: selectedVersion.agentpress_tools,
-          description: `Rolled back from ${viewingVersion.version_name} to ${selectedVersion.version_name}`
+          system_prompt: selectedVersion.systemPrompt,
+          configured_mcps: selectedVersion.configuredMcps,
+          custom_mcps: selectedVersion.customMcps,
+          agentpress_tools: selectedVersion.toolConfiguration.tools,
+          description: `Rolled back from ${viewingVersion.versionName} to ${selectedVersion.versionName}`
         }
       });
       await activateVersionMutation.mutateAsync({ 
         agentId, 
-        versionId: newVersion.version_id 
+        versionId: newVersion.versionId.value 
       });
       
       const params = new URLSearchParams(searchParams.toString());
@@ -95,7 +95,7 @@ export function AgentVersionSwitcher({
       router.push(newUrl);
 
       setShowRollbackDialog(false);
-      toast.success(`Rolled back to ${selectedVersion.version_name} configuration`);
+      toast.success(`Rolled back to ${selectedVersion.versionName} configuration`);
     } catch (error) {
       console.error('Failed to rollback:', error);
       toast.error('Failed to rollback version');
@@ -137,7 +137,7 @@ export function AgentVersionSwitcher({
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{viewingVersion ? `${viewingVersion.version_name}${viewingVersionId === currentVersionId ? ' (Current)' : ''}` : 'Version History'}</p>
+              <p>{viewingVersion ? `${viewingVersion.versionName}${viewingVersionId === currentVersionId ? ' (Current)' : ''}` : 'Version History'}</p>
             </TooltipContent>
           </Tooltip>
         <DropdownMenuContent align="start" className="w-80">
@@ -146,11 +146,11 @@ export function AgentVersionSwitcher({
           
           <div className="max-h-96 overflow-y-auto">
             {versions.map((version) => {
-              const isViewing = version.version_id === viewingVersionId;
-              const isCurrent = version.version_id === currentVersionId;
+              const isViewing = version.versionId.value === viewingVersionId;
+              const isCurrent = version.versionId.value === currentVersionId;
               
               return (
-                <div key={version.version_id} className="relative mb-1">
+                <div key={version.versionId.value} className="relative mb-1">
                   <div className={`p-2 hover:bg-accent rounded-sm ${isViewing ? 'bg-accent' : ''}`}>
                     <div className="flex items-start justify-between w-full">
                       <div className="flex-1">
@@ -161,9 +161,9 @@ export function AgentVersionSwitcher({
                           >
                             <VersionInlineEditor
                               agentId={agentId}
-                              versionId={version.version_id}
-                              versionName={version.version_name}
-                              changeDescription={version.change_description}
+                              versionId={version.versionId.value}
+                              versionName={version.versionName}
+                              changeDescription={version.changeDescription}
                               isActive={isCurrent}
                             />
                           </div>
@@ -184,7 +184,7 @@ export function AgentVersionSwitcher({
                         >
                           <Clock className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(version.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(version.createdAt, { addSuffix: true })}
                           </span>
                         </div>
                       </div>

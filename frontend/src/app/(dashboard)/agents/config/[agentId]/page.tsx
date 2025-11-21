@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAgent } from '@/hooks/agents/use-agents';
+import { useAgent, useUpdateAgent } from '@/hooks/agents/use-agents';
 import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ import { InstructionsScreen } from './screens/instructions-screen';
 import { KnowledgeScreen } from './screens/knowledge-screen';
 import { ToolsScreen } from './screens/tools-screen';
 import { IntegrationsScreen } from './screens/integrations-screen';
-import { useUpdateAgent } from '@/hooks/agents/use-agents';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -113,17 +112,15 @@ export default function AgentConfigPage() {
               <SpotlightCard
                 key={item.id}
                 className={cn(
-                  "transition-colors cursor-pointer",
-                  isActive ? "bg-muted" : "bg-transparent"
+                  'transition-colors cursor-pointer',
+                  isActive ? 'bg-muted' : 'bg-transparent',
                 )}
               >
                 <button
                   onClick={() => setActiveView(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 text-sm",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground"
+                    'w-full flex items-center gap-3 px-4 py-3 text-sm',
+                    isActive ? 'text-foreground' : 'text-muted-foreground',
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -145,8 +142,8 @@ export default function AgentConfigPage() {
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-12 w-12 p-0 cursor-pointer hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
-                  isActive ? 'bg-muted/60 border-[1.5px] border-border' : ''
+                  'h-12 w-12 p-0 cursor-pointer hover:bg-muted/60 hover:border-[1.5px] hover:border-border',
+                  isActive ? 'bg-muted/60 border-[1.5px] border-border' : '',
                 )}
                 onClick={() => setActiveView(item.id)}
               >
@@ -167,11 +164,10 @@ export default function AgentConfigPage() {
           >
             <div className="relative">
               <AgentAvatar
-                agent={agent}
+                agentId={agentId}
                 size={48}
                 className="border-[1.5px] transition-all group-hover/header:ring-2 group-hover/header:ring-primary/20"
               />
-
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -180,10 +176,7 @@ export default function AgentConfigPage() {
               </div>
             </div>
           </div>
-          <Button
-            onClick={() => router.push(`/dashboard?agent_id=${agentId}`)}
-            className="gap-2"
-          >
+          <Button onClick={() => router.push(`/dashboard?agent_id=${agentId}`)} className="gap-2">
             <MessageCircle className="h-4 w-4" />
             Start Chat
           </Button>
@@ -210,3 +203,4 @@ export default function AgentConfigPage() {
     </div>
   );
 }
+

@@ -1,12 +1,15 @@
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { BRANDING, getPageTitle, getMetaDescription } from '@/lib/branding';
+
+const title = getPageTitle('Agent Conversation');
+const description = `${BRANDING.company} agent conversation powered by ${BRANDING.name}`;
 
 export const metadata: Metadata = {
-  title: 'Agent Conversation | Prophet',
-  description: 'Interactive agent conversation powered by Prophet',
+  title,
+  description,
   openGraph: {
-    title: 'Agent Conversation | Prophet',
-    description: 'Interactive agent conversation powered by Prophet',
+    title,
+    description,
     type: 'website',
   },
 };
