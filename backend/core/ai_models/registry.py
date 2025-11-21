@@ -1,10 +1,20 @@
 from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
+from core.utils.logger import logger
 
-# SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
+anthropic_key = getattr(config, "ANTHROPIC_API_KEY", None)
+bedrock_token = getattr(config, "AWS_BEARER_TOKEN_BEDROCK", None)
+
+# Use Anthropic directly when running locally or when Bedrock credentials are absent
+SHOULD_USE_ANTHROPIC = bool(anthropic_key) and (
+    config.ENV_MODE == EnvMode.LOCAL or not bedrock_token
+)
+
+if SHOULD_USE_ANTHROPIC:
+    logger.info("AI Model Registry: using Anthropic API credentials")
+else:
+    logger.info("AI Model Registry: using AWS Bedrock inference profiles")
 
 if SHOULD_USE_ANTHROPIC:
     FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
