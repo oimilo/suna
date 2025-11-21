@@ -1,11 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Pressable, Linking, ActivityIndicator } from 'react-native';
+import { View, Pressable, Linking } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import type { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/api/types';
 import { safeJsonParse } from '@/lib/utils/message-grouping';
 import {
-  preprocessTextOnlyTools,
   parseXmlToolCalls,
   isNewXmlFormat,
   parseToolMessage,
@@ -19,8 +18,6 @@ import { markdownStyles, markdownStylesDark } from '@/lib/utils/markdown-styles'
 import { AgentIdentifier } from '@/components/agents';
 import {
   FileAttachmentsGrid,
-  extractFileReferences,
-  removeFileReferences
 } from './FileAttachmentRenderer';
 import { AgentLoader } from './AgentLoader';
 import { CircleDashed, CheckCircle2, AlertCircle, Info } from 'lucide-react-native';
@@ -98,12 +95,13 @@ interface MarkdownContentProps {
   content: string;
   handleToolClick?: (assistantMessageId: string | null, toolName: string) => void;
   messageId?: string | null;
+  threadId?: string;
   onFilePress?: (filePath: string) => void;
   sandboxId?: string;
   isLatestMessage?: boolean;
 }
 
-function MarkdownContent({ content, handleToolClick, messageId, onFilePress, sandboxId, isLatestMessage }: MarkdownContentProps) {
+function MarkdownContent({ content, handleToolClick, messageId, threadId, onFilePress, sandboxId, isLatestMessage }: MarkdownContentProps) {
   const { colorScheme } = useColorScheme();
 
   const processedContent = useMemo(() => {
@@ -185,11 +183,11 @@ function MarkdownContent({ content, handleToolClick, messageId, onFilePress, san
               >
                 {askText}
               </Markdown>
-              
+
               <View className="flex-row items-start gap-2.5 rounded-xl border border-border bg-muted/40 dark:bg-muted/20 px-3 py-2.5 mt-2">
                 <Icon as={Info} size={16} className="text-muted-foreground mt-0.5 flex-shrink-0" />
                 <Text className="text-sm font-roobert text-muted-foreground flex-1 leading-relaxed">
-                  Milo will automatically continue working once you provide your response.
+                  Kortix will automatically continue working once you provide your response.
                 </Text>
               </View>
             </View>
@@ -220,13 +218,12 @@ function MarkdownContent({ content, handleToolClick, messageId, onFilePress, san
               >
                 {completeText}
               </Markdown>
-              
+
               <TaskCompletedFeedback
                 taskSummary={completeText}
-                threadId={message.thread_id}
-                messageId={messageId}
+                threadId={threadId || ''}
+                messageId={messageId || ''}
                 onFollowUpClick={(prompt) => {
-                  // TODO: Handle follow-up click - could trigger a new message
                   console.log('Follow-up clicked:', prompt);
                 }}
               />
@@ -358,9 +355,9 @@ const ToolCard = React.memo(function ToolCard({
       <Pressable
         onPress={onPress}
         disabled={!onPress}
-        className="flex-row items-center gap-3 p-3 rounded-3xl border border-neutral-400/50 dark:border-neutral-700 bg-neutral-200 dark:bg-neutral-800 active:opacity-70"
+        className="flex-row items-center gap-3 p-3 rounded-3xl border border-border bg-card"
       >
-        <View className="h-8 w-8 rounded-xl border border-neutral-400/50 dark:border-neutral-700 items-center justify-center bg-primary/10">
+        <View className="h-8 w-8 rounded-xl border border-border items-center justify-center bg-background">
           <Icon as={CircleDashed} size={16} className="text-primary animate-spin" />
         </View>
         <View className="flex-1">
@@ -381,9 +378,9 @@ const ToolCard = React.memo(function ToolCard({
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      className="flex-row items-center gap-3 p-3 rounded-3xl bg-primary/10 active:opacity-70"
+      className="flex-row items-center gap-3 p-3 rounded-3xl bg-card border border-border"
     >
-      <View className={`h-8 w-8 rounded-xl items-center justify-center ${isError ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+      <View className={`h-8 w-8 rounded-xl items-center justify-center border border-border ${isError ? 'bg-destructive/10' : 'bg-background'}`}>
         <Icon
           as={isError ? AlertCircle : IconComponent}
           size={16}
@@ -433,7 +430,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
   onToolPress,
   streamHookStatus = "idle",
   sandboxId,
-  agentName = 'Prophet',
+  agentName = 'Suna',
 }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -776,6 +773,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                         content={parsedContent.content}
                         handleToolClick={handleToolClick}
                         messageId={message.message_id}
+                        threadId={message.thread_id}
                         onFilePress={onFilePress}
                         sandboxId={sandboxId}
                         isLatestMessage={isLatestMessage}
