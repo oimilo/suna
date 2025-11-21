@@ -26,6 +26,7 @@ services:
       - ENV_MODE=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_USERNAME=
       - REDIS_SSL=False
     depends_on:
       redis:
@@ -46,6 +47,7 @@ services:
       - ENV_MODE=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_USERNAME=
       - REDIS_SSL=False
     depends_on:
       redis:
