@@ -126,19 +126,16 @@ class MCPToolExecutor:
                         tool_name,
                         attempts,
                     )
-        
-        try:
-            async with asyncio.timeout(30):
+
+            try:
+                async with asyncio.timeout(30):
                     async with streamablehttp_client(url, headers=headers or None) as (read, write, _):
-                    async with ClientSession(read, write) as session:
-                        await session.initialize()
-                        result = await session.call_tool(original_tool_name, arguments)
-                        return self._create_success_result(self._extract_content(result))
-        except Exception as e:
-                if (
-                    self._should_retry_with_session_refresh(custom_type, e)
-                    and attempts < 2
-                ):
+                        async with ClientSession(read, write) as session:
+                            await session.initialize()
+                            result = await session.call_tool(original_tool_name, arguments)
+                            return self._create_success_result(self._extract_content(result))
+            except Exception as e:
+                if self._should_retry_with_session_refresh(custom_type, e) and attempts < 2:
                     logger.warning(
                         "HTTP MCP tool %s failed with possible session expiry (%s). Refreshing session and retrying.",
                         tool_name,
@@ -147,8 +144,10 @@ class MCPToolExecutor:
                     force_refresh = True
                     continue
 
-            logger.error(f"Error executing HTTP MCP tool: {str(e)}")
-            return self._create_error_result(f"Error executing HTTP tool: {str(e)}")
+                logger.error(f"Error executing HTTP MCP tool: {str(e)}")
+                return self._create_error_result(f"Error executing HTTP tool: {str(e)}")
+
+        return self._create_error_result("HTTP MCP tool execution failed after retries")
     
     async def _execute_json_tool(self, tool_name: str, arguments: Dict[str, Any], tool_info: Dict[str, Any]) -> ToolResult:
         custom_config = tool_info['custom_config']
