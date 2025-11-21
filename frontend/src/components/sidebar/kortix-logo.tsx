@@ -42,7 +42,7 @@ export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixL
   // Default symbol variant behavior (unchanged)
   return (
     <Image
-      src="/milo-symbol.svg"
+      src="/symbol.svg"
       alt="Milo"
       width={size}
       height={size}
