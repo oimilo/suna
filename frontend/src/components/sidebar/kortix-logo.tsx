@@ -28,9 +28,9 @@ export function KortixLogo({ size = 24, variant = 'symbol', className = '' }: Ko
       case 'wordmark':
         return shouldInvert ? BRANDING.logo.dark : BRANDING.logo.light;
       case 'logomark':
-        return BRANDING.logo.favicon || '/kortix-symbol.svg';
+        return BRANDING.logo.favicon || '/symbol.svg';
       default:
-        return '/kortix-symbol.svg';
+        return '/symbol.svg';
     }
   };
 

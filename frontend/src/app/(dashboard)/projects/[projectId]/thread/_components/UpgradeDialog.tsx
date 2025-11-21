@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Brain, Clock, Crown, Sparkles, Zap } from 'lucide-react';
 import { UpgradeDialog as UnifiedUpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { BillingModal } from '@/components/billing/billing-modal';
+import { BRANDING } from '@/lib/branding';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -33,8 +34,8 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
         open={open}
         onOpenChange={onOpenChange}
         icon={Crown}
-        title="Unlock the Full Suna Experience"
-        description="Upgrade to unlock Suna's full potential. Access our most powerful AI models and enhanced capabilities."
+        title={`Unlock the Full ${BRANDING.defaultAgentName} Experience`}
+        description={`Upgrade to unlock ${BRANDING.defaultAgentName}'s full potential. Access our most powerful AI models and enhanced capabilities.`}
         theme="primary"
         size="sm"
         preventOutsideClick={true}

@@ -20,6 +20,7 @@ import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/complete-tool/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
+import { BRANDING } from '@/lib/branding';
 
 // Configuration for prompt/answer rendering
 const PROMPT_SAMPLES_CONFIG = {
@@ -439,7 +440,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     sandboxId,
     project,
     isPreviewMode = false,
-    agentName = 'Suna',
+    agentName = BRANDING.defaultAgentName,
     agentAvatar = <KortixLogo size={16} />,
     emptyStateComponent,
     threadMetadata,
@@ -505,7 +506,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             };
         }
         return {
-            name: agentName || 'Suna',
+            name: agentName || BRANDING.defaultAgentName,
             avatar: agentAvatar
         };
     }, [threadMetadata, displayMessages, agentName, agentAvatar]);

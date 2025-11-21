@@ -70,11 +70,11 @@ class AgentService:
         count_query = self._build_count_query(user_id, filters)
         
         needs_post_processing = (
-            filters.has_mcp_tools is not None or 
-            filters.has_agentpress_tools is not None or 
-            len(filters.tools) > 0 or
-            filters.sort_by == "tools_count"
-        ) or include_config
+            filters.has_mcp_tools is not None
+            or filters.has_agentpress_tools is not None
+            or len(filters.tools) > 0
+            or filters.sort_by == "tools_count"
+            or include_config
         )
         
         if needs_post_processing:

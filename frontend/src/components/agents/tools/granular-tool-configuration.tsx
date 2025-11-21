@@ -21,6 +21,7 @@ import {
   type ToolGroup,
   type ToolMethod,
 } from './tool-groups';
+import { BRANDING } from '@/lib/branding';
 
 interface GranularToolConfigurationProps {
   tools: Record<string, any>;
@@ -86,7 +87,7 @@ export const GranularToolConfiguration = ({
 
     if (disabled && isSunaAgent) {
       toast.error('Tools cannot be modified', {
-        description: "Suna's default tools are managed centrally and cannot be changed.",
+        description: `${BRANDING.defaultAgentName}'s default tools are managed centrally and cannot be changed.`,
       });
       return;
     }
@@ -126,7 +127,7 @@ export const GranularToolConfiguration = ({
 
     if (disabled && isSunaAgent) {
       toast.error('Methods cannot be modified', {
-        description: "Suna's default tool methods are managed centrally and cannot be changed.",
+        description: `${BRANDING.defaultAgentName}'s default tool methods are managed centrally and cannot be changed.`,
       });
       return;
     }
