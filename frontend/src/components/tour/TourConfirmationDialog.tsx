@@ -3,6 +3,7 @@
 import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { KortixLogo } from '../sidebar/kortix-logo';
+import { BRANDING } from '@/lib/branding';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader } from '../ui/alert-dialog';
 import { AlertDialogDescription, AlertDialogTitle } from '@radix-ui/react-alert-dialog';
 
@@ -30,12 +31,12 @@ export const TourConfirmationDialog = React.memo(({ open, onAccept, onDecline }:
             <div className="flex items-center gap-4 mt-4">
               <div>
                 <AlertDialogTitle className="text-xl font-semibold">
-                  Welcome to Suna
+                  {`Welcome to ${BRANDING.defaultAgentName}`}
                 </AlertDialogTitle>
               </div>
             </div>
             <AlertDialogDescription>
-            Would you like a quick guided tour to help you get started? We'll show you the key features and how to make the most of Suna.
+            Would you like a quick guided tour to help you get started? We'll show you the key features and how to make the most of {BRANDING.defaultAgentName}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex items-center justify-between p-6">

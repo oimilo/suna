@@ -6,6 +6,7 @@ import { ExpandableMarkdownEditor } from '@/components/ui/expandable-markdown-ed
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BRANDING } from '@/lib/branding';
 
 interface InstructionsScreenProps {
   agentId: string;
@@ -30,7 +31,7 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
     if (!isEditable) {
       if (isSunaAgent) {
         toast.error('System prompt cannot be edited', {
-          description: "Suna's system prompt is managed centrally.",
+          description: `${BRANDING.defaultAgentName}'s system prompt is managed centrally.`,
         });
       }
       return;

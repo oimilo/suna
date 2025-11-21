@@ -6,6 +6,7 @@
 export const BRANDING = {
   // App name
   name: process.env.NEXT_PUBLIC_APP_NAME || "Prophet",
+  defaultAgentName: process.env.NEXT_PUBLIC_DEFAULT_AGENT_NAME || process.env.NEXT_PUBLIC_APP_NAME || "Prophet",
   
   // App description
   description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Plataforma de automação inteligente que conecta suas ferramentas favoritas usando linguagem natural",

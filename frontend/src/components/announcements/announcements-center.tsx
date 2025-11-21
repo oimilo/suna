@@ -20,6 +20,7 @@ import {
   type BaseAnnouncement,
   type AnnouncementAction,
 } from '@/hooks/use-announcement-store';
+import { useShallow } from 'zustand/react/shallow';
 import { BRANDING } from '@/lib/branding';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,16 +103,27 @@ function handleAction(action: AnnouncementAction, router: ReturnType<typeof useR
 
 export function AnnouncementsCenter() {
   const router = useRouter();
-  const announcements = useAnnouncementStore((state) => state.announcements);
-  const dismissedAnnouncements = useAnnouncementStore((state) =>
-    Array.from(state.dismissedAnnouncements),
+  const {
+    announcements,
+    dismissedAnnouncements,
+    addAnnouncement,
+    showAnnouncement,
+    dismissAnnouncement,
+    currentAnnouncement,
+    isDialogOpen,
+    closeDialog,
+  } = useAnnouncementStore(
+    useShallow((state) => ({
+      announcements: state.announcements,
+      dismissedAnnouncements: state.dismissedAnnouncements,
+      addAnnouncement: state.addAnnouncement,
+      showAnnouncement: state.showAnnouncement,
+      dismissAnnouncement: state.dismissAnnouncement,
+      currentAnnouncement: state.currentAnnouncement,
+      isDialogOpen: state.isOpen,
+      closeDialog: state.closeDialog,
+    })),
   );
-  const addAnnouncement = useAnnouncementStore((state) => state.addAnnouncement);
-  const showAnnouncement = useAnnouncementStore((state) => state.showAnnouncement);
-  const dismissAnnouncement = useAnnouncementStore((state) => state.dismissAnnouncement);
-  const currentAnnouncement = useAnnouncementStore((state) => state.currentAnnouncement);
-  const isDialogOpen = useAnnouncementStore((state) => state.isOpen);
-  const closeDialog = useAnnouncementStore((state) => state.closeDialog);
 
   useEffect(() => {
     DEFAULT_ANNOUNCEMENTS.forEach((announcement) => {

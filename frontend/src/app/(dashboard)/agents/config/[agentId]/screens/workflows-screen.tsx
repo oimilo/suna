@@ -5,6 +5,7 @@ import { useAgent, useUpdateAgent } from '@/hooks/agents/use-agents';
 import { GranularToolConfiguration } from '@/components/agents/tools/granular-tool-configuration';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BRANDING } from '@/lib/branding';
 
 interface WorkflowsScreenProps {
   agentId: string;
@@ -29,7 +30,7 @@ export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
     if (!areToolsEditable) {
       if (isSunaAgent) {
         toast.error('Tools cannot be edited', {
-          description: "Suna's tools are managed centrally.",
+          description: `${BRANDING.defaultAgentName}'s tools are managed centrally.`,
         });
       }
       return;

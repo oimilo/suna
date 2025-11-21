@@ -61,6 +61,7 @@ import { AgentTriggersConfiguration } from './triggers/agent-triggers-configurat
 import { AgentAvatar } from '../thread/content/agent-avatar';
 import { AgentIconEditorDialog } from './config/agent-icon-editor-dialog';
 import { AgentVersionSwitcher } from './agent-version-switcher';
+import { BRANDING } from '@/lib/branding';
 
 interface AgentConfigurationDialogProps {
   open: boolean;
@@ -232,7 +233,7 @@ export function AgentConfigurationDialog({
     if (!isNameEditable) {
       if (isSunaAgent) {
         toast.error("Name cannot be edited", {
-          description: "Suna's name is managed centrally and cannot be changed.",
+          description: `${BRANDING.defaultAgentName}'s name is managed centrally and cannot be changed.`,
         });
       }
       setEditName(formData.name);
@@ -248,7 +249,7 @@ export function AgentConfigurationDialog({
     if (!isSystemPromptEditable) {
       if (isSunaAgent) {
         toast.error("System prompt cannot be edited", {
-          description: "Suna's system prompt is managed centrally.",
+          description: `${BRANDING.defaultAgentName}'s system prompt is managed centrally.`,
         });
       }
       return;
@@ -265,7 +266,7 @@ export function AgentConfigurationDialog({
     if (!areToolsEditable) {
       if (isSunaAgent) {
         toast.error("Tools cannot be edited", {
-          description: "Suna's tools are managed centrally.",
+          description: `${BRANDING.defaultAgentName}'s tools are managed centrally.`,
         });
       }
       return;

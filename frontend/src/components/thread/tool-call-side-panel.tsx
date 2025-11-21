@@ -23,6 +23,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
+import { BRANDING } from '@/lib/branding';
 
 // ============================================================================
 // Types & Interfaces
@@ -159,7 +160,7 @@ const PanelHeader = memo(function PanelHeader({
   showMinimize = false,
   layoutId,
 }: PanelHeaderProps) {
-  const title = agentName ? `${agentName}'s Computer` : "Suna's Computer";
+  const title = agentName ? `${agentName}'s Computer` : `${BRANDING.defaultAgentName}'s Computer`;
   
   if (variant === 'drawer') {
     return (
