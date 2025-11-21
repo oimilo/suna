@@ -69,13 +69,23 @@ def initialize():
         pool_kwargs["password"] = redis_password
     if redis_username:
         pool_kwargs["username"] = redis_username
-    if use_ssl:
-        pool_kwargs["ssl"] = True
-        pool_kwargs["ssl_cert_reqs"] = None
 
     if redis_url:
-        pool = redis.ConnectionPool.from_url(redis_url, **pool_kwargs)
+        pool = redis.ConnectionPool.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+            ssl_cert_reqs=None if use_ssl else None,
+        )
     else:
+        if use_ssl:
+            pool_kwargs["ssl"] = True
+            pool_kwargs["ssl_cert_reqs"] = None
         pool = redis.ConnectionPool(
             host=redis_host,
             port=redis_port,
