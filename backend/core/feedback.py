@@ -207,12 +207,12 @@ async def submit_feedback(
             logger.debug("Updated feedback %s", feedback_result.data[0]["feedback_id"])
             saved_feedback = feedback_result.data[0]
         else:
-        feedback_payload["feedback_id"] = str(uuid.uuid4())
-        feedback_payload["created_at"] = datetime.now(timezone.utc).isoformat()
-        feedback_result = await client.table("feedback").insert(feedback_payload).execute()
-        if not feedback_result.data:
-            raise HTTPException(status_code=500, detail="Failed to create feedback")
-        logger.debug("Created feedback %s", feedback_result.data[0]["feedback_id"])
+            feedback_payload["feedback_id"] = str(uuid.uuid4())
+            feedback_payload["created_at"] = datetime.now(timezone.utc).isoformat()
+            feedback_result = await client.table("feedback").insert(feedback_payload).execute()
+            if not feedback_result.data:
+                raise HTTPException(status_code=500, detail="Failed to create feedback")
+            logger.debug("Created feedback %s", feedback_result.data[0]["feedback_id"])
             saved_feedback = feedback_result.data[0]
 
         if feedback_data.message_id:
