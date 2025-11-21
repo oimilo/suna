@@ -452,6 +452,9 @@ importers:
       react-icons:
         specifier: ^5.5.0
         version: 5.5.0(react@18.3.1)
+      react-joyride:
+        specifier: ^3.0.0-7
+        version: 3.0.0-7(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@18.3.26)(react@18.3.1)
@@ -512,6 +515,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      usehooks-ts:
+        specifier: ^3.1.1
+        version: 3.1.1(react@18.3.1)
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@18.3.7(@types/react@18.3.26))(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1096,6 +1102,17 @@ packages:
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
 
+  '@gilbarbara/deep-equal@0.3.1':
+    resolution: {integrity: sha512-I7xWjLs2YSVMc5gGx1Z3ZG1lgFpITPndpi8Ku55GeEIKpACCPQNS/OTqQbxgTCfq0Ncvcc+CrFov96itVh6Qvw==}
+
+  '@gilbarbara/hooks@0.8.2':
+    resolution: {integrity: sha512-aWXlJFCrqmasGaDd6IhSpqOFeOD4pSBpRtILKw0WxWQzWE+HYCA0adLf0P18BNztR/G0byWnpkGupeGx+NFnuw==}
+    peerDependencies:
+      react: 16.8 - 18
+
+  '@gilbarbara/types@0.2.2':
+    resolution: {integrity: sha512-QuQDBRRcm1Q8AbSac2W1YElurOhprj3Iko/o+P1fJxUWS4rOGKMVli98OXS7uo4z+cKAif6a+L9bcZFSyauQpQ==}
+
   '@hookform/resolvers@5.2.2':
     resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
     peerDependencies:
@@ -1655,6 +1672,9 @@ packages:
   '@parcel/watcher@2.5.1':
     resolution: {integrity: sha512-dfUnCxiN9H4ap84DvD2ubjw+3vUNpstxa0TneY/Paat8a3R4uQZDLSvWjmznAY/DoahqTHl9V46HF/Zs3F29pg==}
     engines: {node: '>= 10.0.0'}
+
+  '@popperjs/core@2.11.8':
+    resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
   '@posthog/core@1.5.2':
     resolution: {integrity: sha512-iedUP3EnOPPxTA2VaIrsrd29lSZnUV+ZrMnvY56timRVeZAXoYCkmjfIs3KBAsF8OUT5h1GXLSkoQdrV0r31OQ==}
@@ -4276,6 +4296,14 @@ packages:
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
 
+  deepmerge-ts@7.1.5:
+    resolution: {integrity: sha512-HOJkrhaYsweh+W+e74Yn7YStZOilkoPb6fycpwNLKzSPtruFs48nYis0zy5yJz1+ktUhHxoRDJ27RQAWLIJVJw==}
+    engines: {node: '>=16.0.0'}
+
+  deepmerge@4.3.1:
+    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+    engines: {node: '>=0.10.0'}
+
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==}
     engines: {node: '>= 0.4'}
@@ -5089,6 +5117,9 @@ packages:
   is-hexadecimal@2.0.1:
     resolution: {integrity: sha512-DgZQp241c8oO6cA1SbTEWiXeoxV42vlcJxgH+B3hi1AiqqKruZR3ZGF8In3fj4+/y/7rHvlOZLZtgJ/4ttYGZg==}
 
+  is-lite@1.2.1:
+    resolution: {integrity: sha512-pgF+L5bxC+10hLBgf6R2P4ZZUBOQIIacbdo8YvuCP8/JvsWxG7aZ9p10DYuLtifFci4l3VITphhMlMV4Y+urPw==}
+
   is-map@2.0.3:
     resolution: {integrity: sha512-1Qed0/Hr2m+YqxnM09CjA2d/i6YZNfF6R2oRAOj36eUdS6qIV/huPJNSEpKbupewFs+ZsJlxsjjPbc0/afW6Lw==}
     engines: {node: '>= 0.4'}
@@ -5368,6 +5399,9 @@ packages:
 
   lodash-es@4.17.21:
     resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
+
+  lodash.debounce@4.0.8:
+    resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
 
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
@@ -6179,6 +6213,12 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
+  react-floater@0.9.5-4:
+    resolution: {integrity: sha512-3CBOgMfqD18A5HvQRKRNR6pKT5rOCzcdqDzyOU7RYNFgpiGm6BrMjDTXJrstEpRjJ4fyL65dQ6wTRIE2UMQTmQ==}
+    peerDependencies:
+      react: 16.8 - 19
+      react-dom: 16.8 - 19
+
   react-hook-form@7.66.0:
     resolution: {integrity: sha512-xXBqsWGKrY46ZqaHDo+ZUYiMUgi8suYu5kdrS20EG8KiL7VRQitEbNjm+UcrDYrNi1YLyfpmAeGjCZYXLT9YBw==}
     engines: {node: '>=18.0.0'}
@@ -6190,8 +6230,20 @@ packages:
     peerDependencies:
       react: '*'
 
+  react-innertext@1.1.5:
+    resolution: {integrity: sha512-PWAqdqhxhHIv80dT9znP2KvS+hfkbRovFp4zFYHFFlOoQLRiawIic81gKb3U1wEyJZgMwgs3JoLtwryASRWP3Q==}
+    peerDependencies:
+      '@types/react': '>=0.0.0 <=99'
+      react: '>=0.0.0 <=99'
+
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
+
+  react-joyride@3.0.0-7:
+    resolution: {integrity: sha512-NBgtdm8QehHEVI/Qkakb4EJ/WjKN7bQaZgZmO/01v1p2yBlzAcXyKM36FeS1YZaywX8v8R79bF5Z0OcV5BK1og==}
+    peerDependencies:
+      react: 16.8 - 19
+      react-dom: 16.8 - 19
 
   react-markdown@10.1.0:
     resolution: {integrity: sha512-qKxVopLT/TyA6BX3Ue5NwabOsAzm0Q7kAPwq6L+wWDwisYs7R8vZ0nRXqq6rkueboxpkjvLGU9fWifiX/ZZFxQ==}
@@ -6454,6 +6506,12 @@ packages:
 
   scheduler@0.25.0-rc-603e6108-20241029:
     resolution: {integrity: sha512-pFwF6H1XrSdYYNLfOcGlM28/j8CGLu8IvdrxqhjWULe2bPcKiKW4CV+OWqR/9fT52mywx65l7ysNkjLKBda7eA==}
+
+  scroll@3.0.1:
+    resolution: {integrity: sha512-pz7y517OVls1maEzlirKO5nPYle9AXsFzTMNJrRGmT951mzpIBy7sNHOg5o/0MQd/NqliCiWnAi0kZneMPFLcg==}
+
+  scrollparent@2.1.0:
+    resolution: {integrity: sha512-bnnvJL28/Rtz/kz2+4wpBjHzWoEzXhVg/TE8BeVGJHUqE8THNIRnDxDWMktwM+qahvlRdvlLdsQfYe+cuqfZeA==}
 
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
@@ -6719,6 +6777,14 @@ packages:
   tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
 
+  tree-changes-hook@0.11.3:
+    resolution: {integrity: sha512-cNHPuFc5Qbi2B74VqSqL/Ee/l4n0SFfzYKTnXYViJW1yCFZ0bl97QsgUIw9vdQtqpWDwo83mpNkGUvcjeQc0Xw==}
+    peerDependencies:
+      react: 16.8 - 19
+
+  tree-changes@0.11.3:
+    resolution: {integrity: sha512-r14mvDZ6tqz8PRQmlFKjhUVngu4VZ9d92ON3tp0EGpFBE6PAHOq8Bx8m8ahbNoGE3uI/npjYcJiqVydyOiYXag==}
+
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
 
@@ -6761,6 +6827,10 @@ packages:
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
+
+  type-fest@4.41.0:
+    resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
+    engines: {node: '>=16'}
 
   typed-array-buffer@1.0.3:
     resolution: {integrity: sha512-nAYYwfY3qnzX30IkA6AQZjVbtK6duGontcQm1WSG1MD94YLqK0515GNApXkoxKOWMusVssAHWLh9SeaoefYFGw==}
@@ -6868,6 +6938,12 @@ packages:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  usehooks-ts@3.1.1:
+    resolution: {integrity: sha512-I4diPp9Cq6ieSUH2wu+fDAVQO43xwtulo+fKEidHUwZPnYImbtkTjzIJYcDcJqxgmX31GVqNFURodvcgHcW0pA==}
+    engines: {node: '>=16.15.0'}
+    peerDependencies:
+      react: ^16.8.0  || ^17 || ^18 || ^19 || ^19.0.0-rc
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -7752,6 +7828,17 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@gilbarbara/deep-equal@0.3.1': {}
+
+  '@gilbarbara/hooks@0.8.2(react@18.3.1)':
+    dependencies:
+      '@gilbarbara/deep-equal': 0.3.1
+      react: 18.3.1
+
+  '@gilbarbara/types@0.2.2':
+    dependencies:
+      type-fest: 4.41.0
+
   '@hookform/resolvers@5.2.2(react-hook-form@7.66.0(react@18.3.1))':
     dependencies:
       '@standard-schema/utils': 0.3.0
@@ -8240,6 +8327,8 @@ snapshots:
       '@parcel/watcher-win32-ia32': 2.5.1
       '@parcel/watcher-win32-x64': 2.5.1
     optional: true
+
+  '@popperjs/core@2.11.8': {}
 
   '@posthog/core@1.5.2':
     dependencies:
@@ -11022,6 +11111,10 @@ snapshots:
 
   deep-is@0.1.4: {}
 
+  deepmerge-ts@7.1.5: {}
+
+  deepmerge@4.3.1: {}
+
   define-data-property@1.1.4:
     dependencies:
       es-define-property: 1.0.1
@@ -12040,6 +12133,8 @@ snapshots:
 
   is-hexadecimal@2.0.1: {}
 
+  is-lite@1.2.1: {}
+
   is-map@2.0.3: {}
 
   is-negative-zero@2.0.3: {}
@@ -12292,6 +12387,8 @@ snapshots:
       p-locate: 5.0.0
 
   lodash-es@4.17.21: {}
+
+  lodash.debounce@4.0.8: {}
 
   lodash.merge@4.6.2: {}
 
@@ -13366,6 +13463,15 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
+  react-floater@0.9.5-4(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@popperjs/core': 2.11.8
+      deepmerge-ts: 7.1.5
+      is-lite: 1.2.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      tree-changes-hook: 0.11.3(react@18.3.1)
+
   react-hook-form@7.66.0(react@18.3.1):
     dependencies:
       react: 18.3.1
@@ -13374,7 +13480,29 @@ snapshots:
     dependencies:
       react: 18.3.1
 
+  react-innertext@1.1.5(@types/react@18.3.26)(react@18.3.1):
+    dependencies:
+      '@types/react': 18.3.26
+      react: 18.3.1
+
   react-is@16.13.1: {}
+
+  react-joyride@3.0.0-7(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@gilbarbara/deep-equal': 0.3.1
+      '@gilbarbara/hooks': 0.8.2(react@18.3.1)
+      '@gilbarbara/types': 0.2.2
+      deepmerge: 4.3.1
+      is-lite: 1.2.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      react-floater: 0.9.5-4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-innertext: 1.1.5(@types/react@18.3.26)(react@18.3.1)
+      scroll: 3.0.1
+      scrollparent: 2.1.0
+      tree-changes-hook: 0.11.3(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
 
   react-markdown@10.1.0(@types/react@18.3.26)(react@18.3.1):
     dependencies:
@@ -13723,6 +13851,10 @@ snapshots:
 
   scheduler@0.25.0-rc-603e6108-20241029: {}
 
+  scroll@3.0.1: {}
+
+  scrollparent@2.1.0: {}
+
   semver@6.3.1: {}
 
   semver@7.7.3: {}
@@ -14067,6 +14199,17 @@ snapshots:
 
   tr46@0.0.3: {}
 
+  tree-changes-hook@0.11.3(react@18.3.1):
+    dependencies:
+      '@gilbarbara/deep-equal': 0.3.1
+      react: 18.3.1
+      tree-changes: 0.11.3
+
+  tree-changes@0.11.3:
+    dependencies:
+      '@gilbarbara/deep-equal': 0.3.1
+      is-lite: 1.2.1
+
   trim-lines@3.0.1: {}
 
   trough@2.2.0: {}
@@ -14108,6 +14251,8 @@ snapshots:
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
+
+  type-fest@4.41.0: {}
 
   typed-array-buffer@1.0.3:
     dependencies:
@@ -14266,6 +14411,11 @@ snapshots:
 
   use-sync-external-store@1.6.0(react@18.3.1):
     dependencies:
+      react: 18.3.1
+
+  usehooks-ts@3.1.1(react@18.3.1):
+    dependencies:
+      lodash.debounce: 4.0.8
       react: 18.3.1
 
   util-deprecate@1.0.2: {}
