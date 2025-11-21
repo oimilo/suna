@@ -1,7 +1,8 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useLanguage } from '@/contexts';
-import { AudioLines, CornerDownLeft, Paperclip, X, Image, Presentation, Table2, FileText, Users, Search, Square, Loader2 } from 'lucide-react-native';
+import { AudioLines, CornerDownLeft, Paperclip, X, Image, Presentation, Table2, FileText, Users, Search, Loader2 } from 'lucide-react-native';
+import { StopIcon } from '@/components/ui/StopIcon';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Keyboard, Pressable, ScrollView, TextInput, View, ViewStyle, type ViewProps } from 'react-native';
@@ -16,6 +17,7 @@ import type { Attachment } from '@/hooks/useChat';
 import { AgentSelector } from '../agents/AgentSelector';
 import { AudioWaveform } from '../attachments/AudioWaveform';
 import type { Agent } from '@/api/types';
+import { useAuthDrawerStore } from '@/stores/auth-drawer-store';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -46,10 +48,10 @@ interface ChatInputProps extends ViewProps {
   selectedQuickActionOption?: string | null;
   onClearQuickAction?: () => void;
   isAuthenticated?: boolean;
-  onOpenAuthDrawer?: () => void;
   isAgentRunning?: boolean;
   isSendingMessage?: boolean;
   isTranscribing?: boolean;
+  isGuestMode?: boolean;
 }
 
 /**
@@ -89,10 +91,10 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
   selectedQuickActionOption,
   onClearQuickAction,
   isAuthenticated = true,
-  onOpenAuthDrawer,
   isAgentRunning = false,
   isSendingMessage = false,
   isTranscribing = false,
+  isGuestMode = false,
   style,
   ...props
 }, ref) => {
@@ -236,11 +238,10 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
       // Dismiss keyboard first for better UX
       Keyboard.dismiss();
 
-      // Wait for keyboard to dismiss, then open auth screen
       setTimeout(() => {
         console.log('🔐 Opening auth screen after keyboard dismissal');
-        onOpenAuthDrawer?.();
-      }, 200); // Small delay for smooth transition
+        useAuthDrawerStore.getState().openAuthDrawer();
+      }, 200);
 
       return;
     }
@@ -262,10 +263,9 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
       // Cancel recording first
       onCancelRecording?.();
 
-      // Wait a bit, then open auth screen
       setTimeout(() => {
         console.log('🔐 Opening auth screen after canceling recording');
-        onOpenAuthDrawer?.();
+        useAuthDrawerStore.getState().openAuthDrawer();
       }, 200);
 
       return;
@@ -293,6 +293,14 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
       handleSendMessage();
     } else {
       // Start audio recording
+      if (!isAuthenticated) {
+        console.log('🔐 Guest user tried to record audio, showing auth drawer');
+        useAuthDrawerStore.getState().openAuthDrawer({
+          title: t('auth.drawer.signInToChat'),
+          message: t('auth.drawer.signInToChatMessage')
+        });
+        return;
+      }
       console.log('🎤 Audio record button pressed');
       onAudioRecord?.();
     }
@@ -389,6 +397,18 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
                   ref={textInputRef}
                   value={value}
                   onChangeText={onChangeText}
+                  onFocus={() => {
+                    if (!isAuthenticated) {
+                      console.log('🔐 Guest user focused chat input, showing auth drawer');
+                      textInputRef.current?.blur();
+                      setTimeout(() => {
+                        useAuthDrawerStore.getState().openAuthDrawer({
+                          title: t('auth.drawer.signInToChat'),
+                          message: t('auth.drawer.signInToChatMessage')
+                        });
+                      }, 100);
+                    }
+                  }}
                   placeholder={effectivePlaceholder}
                   placeholderTextColor={
                     colorScheme === 'dark'
@@ -429,7 +449,16 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
                   onPressOut={() => {
                     attachScale.value = withSpring(1, { damping: 15, stiffness: 400 });
                   }}
-                  onPress={onAttachPress}
+                  onPress={() => {
+                    if (!isAuthenticated) {
+                      useAuthDrawerStore.getState().openAuthDrawer({
+                        title: t('auth.drawer.signInToChat'),
+                        message: t('auth.drawer.signInToChatMessage')
+                      });
+                    } else {
+                      onAttachPress?.();
+                    }
+                  }}
                   disabled={isSendingMessage || isAgentRunning || isTranscribing}
                   className="border border-border rounded-[18px] w-10 h-10 items-center justify-center"
                   style={[
@@ -471,10 +500,11 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
 
               {/* Right Actions */}
               <View className="flex-row items-center gap-2">
-                {/* Agent Selector with Full Name */}
-                <AgentSelector onPress={onAgentPress} compact={false} />
-
-                {/* Send/Stop/Audio Button */}
+                <AgentSelector
+                  isGuestMode={isGuestMode}
+                  onPress={isGuestMode ? () => useAuthDrawerStore.getState().openAuthDrawer({ title: t('auth.drawer.signUpToContinue'), message: t('auth.drawer.signUpToContinueMessage') }) : onAgentPress}
+                  compact={false}
+                />
                 <AnimatedPressable
                   onPressIn={() => {
                     sendScale.value = withSpring(0.9, { damping: 15, stiffness: 400 });
@@ -499,17 +529,16 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
                         strokeWidth={2}
                       />
                     </AnimatedView>
+                  ) : isAgentRunning ? (
+                    <StopIcon
+                      size={22}
+                      className="text-background"
+                    />
                   ) : (
                     <Icon
-                      as={
-                        isAgentRunning
-                          ? Square
-                          : hasContent
-                            ? CornerDownLeft
-                            : AudioLines
-                      }
-                      size={isAgentRunning ? 14 : 18}
-                      className={isAgentRunning ? "text-background" : "text-primary-foreground"}
+                      as={hasContent ? CornerDownLeft : AudioLines}
+                      size={18}
+                      className="text-primary-foreground"
                       strokeWidth={2}
                     />
                   )}

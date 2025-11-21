@@ -328,6 +328,7 @@ class Configuration:
     REDIS_USERNAME: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
+    REDIS_MAX_CONNECTIONS: Optional[int] = 128
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None

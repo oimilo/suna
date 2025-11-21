@@ -69,6 +69,77 @@ def normalize_path(path: str) -> str:
         return path  # Return original path if decoding fails
 
 
+def _extract_preview_url(link) -> Optional[str]:
+    """
+    Safely extract the preview URL from a Daytona link object/representation.
+    """
+    if not link:
+        return None
+    if hasattr(link, "url"):
+        return link.url
+    link_str = str(link)
+    if "url='" in link_str:
+        return link_str.split("url='")[1].split("'")[0]
+    return link_str
+
+
+def _extract_preview_token(link) -> Optional[str]:
+    """
+    Extract the preview token if Daytona returns it alongside the URL.
+    """
+    if not link:
+        return None
+    if hasattr(link, "token"):
+        return link.token
+    link_str = str(link)
+    if "token='" in link_str:
+        return link_str.split("token='")[1].split("'")[0]
+    return None
+
+
+async def _create_and_store_project_sandbox(client, project_id: str) -> dict:
+    """
+    Create a sandbox for the given project and persist its metadata.
+    Returns the stored sandbox metadata.
+    """
+    sandbox = None
+    sandbox_pass = str(uuid.uuid4())
+    try:
+        logger.info(f"Creating sandbox for project {project_id} via ensure-active")
+        sandbox = await create_sandbox(sandbox_pass, project_id)
+
+        vnc_link = await sandbox.get_preview_link(6080)
+        website_link = await sandbox.get_preview_link(8080)
+
+        sandbox_payload = {
+            "id": sandbox.id,
+            "pass": sandbox_pass,
+            "vnc_preview": _extract_preview_url(vnc_link),
+            "sandbox_url": _extract_preview_url(website_link),
+            "token": _extract_preview_token(vnc_link),
+        }
+
+        update_result = await client.table("projects").update({"sandbox": sandbox_payload}).eq("project_id", project_id).execute()
+        if not update_result.data:
+            logger.error(f"Failed to persist sandbox metadata for project {project_id}")
+            if sandbox:
+                await delete_sandbox(sandbox.id)
+            raise HTTPException(status_code=500, detail="Failed to persist sandbox metadata")
+
+        logger.info(f"Sandbox {sandbox.id} created and stored for project {project_id}")
+        return sandbox_payload
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create sandbox for project {project_id}: {str(e)}")
+        # Clean up the sandbox if creation succeeded but persisting metadata failed later
+        if sandbox:
+            try:
+                await delete_sandbox(sandbox.id)
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup sandbox {sandbox.id} after error: {cleanup_error}")
+        raise HTTPException(status_code=500, detail=f"Failed to create sandbox: {str(e)}")
+
 
 async def get_sandbox_by_id_safely(client, sandbox_id: str) -> AsyncSandbox:
     """
@@ -383,10 +454,11 @@ async def ensure_project_sandbox_active(
                 raise HTTPException(status_code=403, detail="Not authorized to access this project")
     
     try:
-        # Get sandbox ID from project data
-        sandbox_info = project_data.get('sandbox', {})
+        sandbox_created = False
+        sandbox_info = project_data.get('sandbox') or {}
         if not sandbox_info.get('id'):
-            raise HTTPException(status_code=404, detail="No sandbox found for this project")
+            sandbox_info = await _create_and_store_project_sandbox(client, project_id)
+            sandbox_created = True
             
         sandbox_id = sandbox_info['id']
         
@@ -396,11 +468,22 @@ async def ensure_project_sandbox_active(
         
         logger.debug(f"Successfully ensured sandbox {sandbox_id} is active for project {project_id}")
         
-        return {
-            "status": "success", 
+        response = {
+            "status": "success",
             "sandbox_id": sandbox_id,
+            "sandbox_created": sandbox_created,
             "message": "Sandbox is active"
         }
+
+        # Provide fresh sandbox metadata so the client can update without refetching
+        response["sandbox"] = {
+            "id": sandbox_id,
+            "sandbox_url": sandbox_info.get("sandbox_url"),
+            "vnc_preview": sandbox_info.get("vnc_preview"),
+            "token": sandbox_info.get("token"),
+        }
+
+        return response
     except Exception as e:
         logger.error(f"Error ensuring sandbox is active for project {project_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

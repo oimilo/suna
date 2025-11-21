@@ -45,7 +45,18 @@ def initialize():
     use_ssl = _resolve_bool(raw_ssl, True)
     
     # Connection pool configuration - optimized for production
-    max_connections = 128            # Reasonable limit for production
+    max_connections_env = os.getenv("REDIS_MAX_CONNECTIONS")
+    if max_connections_env:
+        try:
+            max_connections = int(max_connections_env)
+        except ValueError:
+            logger.warning(f"Invalid REDIS_MAX_CONNECTIONS value '{max_connections_env}', falling back to config/default.")
+            max_connections = None
+    else:
+        max_connections = None
+    if max_connections is None:
+        # config already defaults to 128
+        max_connections = int(config.REDIS_MAX_CONNECTIONS or 128)
     socket_timeout = 15.0            # 15 seconds socket timeout
     connect_timeout = 10.0           # 10 seconds connection timeout
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
