@@ -16,10 +16,10 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from langfuse.client import StatefulGenerationClient, StatefulTraceClient
 from core.services.langfuse import langfuse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from core.billing.billing_integration import billing_integration
 from litellm.utils import token_counter
-
+from core.composio_integration.composio_service import ComposioIntegrationService
 ToolChoice = Literal["auto", "required", "none"]
 
 class ThreadManager:
@@ -28,6 +28,9 @@ class ThreadManager:
     def __init__(self, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None):
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
+        self._mcp_sessions: Dict[str, Dict[str, Any]] = {}
+        self._mcp_session_lock = asyncio.Lock()
+        self._composio_service: Optional[ComposioIntegrationService] = None
         
         self.trace = trace
         if not self.trace:
@@ -237,6 +240,104 @@ class ThreadManager:
         except Exception as e:
             logger.error(f"Failed to get messages for thread {thread_id}: {str(e)}", exc_info=True)
             return []
+
+    async def get_mcp_session(self, thread_id: str, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
+        """Return (and lazily create) the Composio MCP session for this thread."""
+        if not self._agent_has_mcp_support():
+            return None
+
+        async with self._mcp_session_lock:
+            existing_session = self._mcp_sessions.get(thread_id)
+            if (
+                existing_session
+                and not force_refresh
+                and not self._is_session_expired(existing_session)
+            ):
+                return existing_session
+
+            try:
+                service = self._get_composio_service()
+            except Exception as exc:
+                logger.debug(
+                    "Composio session service unavailable for thread %s: %s",
+                    thread_id,
+                    exc,
+                )
+                if existing_session and not self._is_session_expired(existing_session):
+                    return existing_session
+                return None
+
+            try:
+                session_payload = await service.start_mcp_session()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to start MCP session for thread %s: %s",
+                    thread_id,
+                    exc,
+                )
+                return None
+
+            if session_payload:
+                session_payload["_cached_at"] = datetime.now(timezone.utc)
+                self._mcp_sessions[thread_id] = session_payload
+            return session_payload
+
+    def _get_composio_service(self) -> ComposioIntegrationService:
+        if self._composio_service is None:
+            self._composio_service = ComposioIntegrationService()
+        return self._composio_service
+
+    def _agent_has_mcp_support(self) -> bool:
+        if not self.agent_config:
+            return False
+        configured = self.agent_config.get("configured_mcps") or []
+        custom = self.agent_config.get("custom_mcps") or []
+        return bool(configured or custom)
+
+    async def _maybe_prime_mcp_session(self, thread_id: str) -> None:
+        if not self._agent_has_mcp_support():
+            return
+        try:
+            await self.get_mcp_session(thread_id)
+        except Exception as exc:
+            logger.debug(
+                "Unable to warm up MCP session for thread %s: %s",
+                thread_id,
+                exc,
+            )
+
+    def _is_session_expired(self, session: Dict[str, Any]) -> bool:
+        cached_at: Optional[datetime] = session.get("_cached_at")
+        ttl = session.get("ttl")
+        expires_at = session.get("expires_at")
+
+        safety_window = timedelta(seconds=5)
+        now = datetime.now(timezone.utc)
+
+        if ttl is not None and cached_at:
+            try:
+                ttl_seconds = int(ttl)
+            except (TypeError, ValueError):
+                ttl_seconds = None
+            if ttl_seconds is not None and ttl_seconds > 0:
+                return cached_at + timedelta(seconds=ttl_seconds) - safety_window <= now
+
+        if expires_at:
+            parsed = self._parse_iso_timestamp(expires_at)
+            if parsed:
+                return parsed - safety_window <= now
+
+        return False
+
+    def _parse_iso_timestamp(self, value: Optional[str]) -> Optional[datetime]:
+        if not value or not isinstance(value, str):
+            return None
+        try:
+            if value.endswith("Z"):
+                value = f"{value[:-1]}+00:00"
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
     
     async def run_thread(
         self,
@@ -257,6 +358,7 @@ class ThreadManager:
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
+        await self._maybe_prime_mcp_session(thread_id)
 
         # Ensure we have a valid ProcessorConfig object
         if processor_config is None:

@@ -4,8 +4,8 @@ from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
 from .mcp_configuration_mixin import MCPConfigurationMixin
-from core.composio_integration.toolkit_service import ToolkitService
 from core.composio_integration.composio_service import get_integration_service
+from core.composio_integration.toolkit_service import ToolkitService
 from core.utils.logger import logger
 
 @tool_metadata(
@@ -49,41 +49,36 @@ class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
         limit: int = 10
     ) -> ToolResult:
         try:
-            toolkit_service = ToolkitService()
             integration_service = get_integration_service()
             
-            if query:
-                toolkits_response = await integration_service.search_toolkits(query, category=category)
-                toolkits = toolkits_response.get("items", [])
-            else:
-                toolkits_response = await toolkit_service.list_toolkits(limit=limit, category=category)
-                toolkits = toolkits_response.get("items", [])
+            queries = [{"use_case": query.strip()}]
+            if category:
+                queries[0]["filters"] = {"category": category}
+
+            search_response = await integration_service.search_toolkits_with_queries(
+                queries=queries,
+                limit=limit,
+            )
+            entries = search_response.get("results", [])
+            primary_entry = entries[0] if entries else {}
+            toolkits = primary_entry.get("results", [])
             
-            if len(toolkits) > limit:
-                toolkits = toolkits[:limit]
-            
-            formatted_toolkits = []
-            for toolkit in toolkits:
-                formatted_toolkits.append({
-                    "name": toolkit.name,
-                    "toolkit_slug": toolkit.slug,
-                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
-                    "logo_url": toolkit.logo or '',
-                    "auth_schemes": toolkit.auth_schemes,
-                    "tags": toolkit.tags,
-                    "categories": toolkit.categories
-                })
-            
-            if not formatted_toolkits:
+            if not toolkits:
                 return ToolResult(
                     success=False,
                     output=json.dumps([], ensure_ascii=False)
                 )
             
-            return ToolResult(
-                success=True,
-                output=json.dumps(formatted_toolkits, ensure_ascii=False)
-            )
+            payload = {
+                "query": query,
+                "limit": limit,
+                "results": toolkits[:limit],
+                "session": search_response.get("session"),
+                "source": search_response.get("source"),
+                "returned": len(toolkits[:limit]),
+            }
+            
+            return self.success_response(payload)
                 
         except Exception as e:
             logger.error(f"Error searching Composio toolkits: {str(e)}")

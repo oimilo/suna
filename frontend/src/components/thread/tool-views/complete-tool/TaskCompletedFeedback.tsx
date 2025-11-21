@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { PromptExamples, type PromptExample } from '@/components/shared/prompt-examples';
+import { PromptExamples, PromptExample } from '@/components/shared/prompt-examples';
 import { backendApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
+// Flag to control whether to show prompt examples
 const SHOW_PROMPT_EXAMPLES = true;
 
 interface MessageFeedback {
@@ -40,17 +34,17 @@ interface TaskCompletedFeedbackProps {
   messageId?: string | null;
 }
 
-export function TaskCompletedFeedback({
+export function TaskCompletedFeedback({ 
   taskSummary,
   followUpPrompts,
   onFollowUpClick,
   samplePromptsTitle = 'Sample prompts',
   isLatestMessage = false,
   threadId,
-  messageId,
+  messageId
 }: TaskCompletedFeedbackProps) {
   const t = useTranslations();
-  const [rating, setRating] = useState<number | null>(null);
+  const [rating, setRating] = useState<number | null>(null); // Can be 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5
   const [feedback, setFeedback] = useState('');
   const [helpImprove, setHelpImprove] = useState(true);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -58,11 +52,11 @@ export function TaskCompletedFeedback({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
+  // Fetch existing feedback on mount
   useEffect(() => {
     if (threadId && messageId) {
       setIsLoadingFeedback(true);
-      backendApi
-        .get<MessageFeedback[]>(`/feedback?thread_id=${threadId}&message_id=${messageId}`)
+      backendApi.get<MessageFeedback[]>(`/feedback?thread_id=${threadId}&message_id=${messageId}`)
         .then((response) => {
           if (response.success && response.data && response.data.length > 0) {
             const feedbackData = response.data[0];
@@ -81,10 +75,10 @@ export function TaskCompletedFeedback({
     }
   }, [threadId, messageId]);
 
-  const promptExamples: PromptExample[] =
-    followUpPrompts && followUpPrompts.length > 0
-      ? followUpPrompts.slice(0, 4).map((prompt) => ({ text: prompt }))
-      : [];
+  // Only use prompts provided from the tool - no fallback generation
+  const promptExamples: PromptExample[] = followUpPrompts && followUpPrompts.length > 0
+    ? followUpPrompts.slice(0, 4).map(prompt => ({ text: prompt }))
+    : [];
 
   const handleStarClick = (value: number) => {
     setRating(value);
@@ -96,24 +90,27 @@ export function TaskCompletedFeedback({
 
     setIsSubmitting(true);
     try {
-      const response = await backendApi.post<MessageFeedback>('/feedback', {
-        rating,
-        feedback_text: feedback.trim() || null,
-        help_improve: helpImprove,
-        thread_id: threadId,
-        message_id: messageId,
-      });
+      const response = await backendApi.post<MessageFeedback>(
+        `/feedback`,
+        {
+          rating,
+          feedback_text: feedback.trim() || null,
+          help_improve: helpImprove,
+          thread_id: threadId,
+          message_id: messageId
+        }
+      );
 
       if (response.success && response.data) {
         setSubmittedFeedback(response.data);
         setShowRatingModal(false);
-        toast.success('Feedback submitted successfully');
+        toast.success(t('thread.feedbackSubmittedSuccess'));
       } else {
-        toast.error('Failed to submit feedback');
+        toast.error(t('thread.feedbackSubmitFailed'));
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      toast.error('Failed to submit feedback');
+      toast.error(t('thread.feedbackSubmitFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,6 +119,7 @@ export function TaskCompletedFeedback({
   return (
     <>
       <div className="space-y-4 mt-4">
+        {/* Task Completed Message with Rating */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -131,117 +129,110 @@ export function TaskCompletedFeedback({
           </div>
           <div className="flex items-center gap-3">
             {!submittedFeedback && (
-              <span className="text-sm text-muted-foreground">
-                How was this result?
-              </span>
+              <span className="text-sm text-muted-foreground">{t('thread.rateThisResult')}</span>
             )}
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((value) => {
-                const fullStarValue = value;
-                const halfStarValue = value - 0.5;
-                const currentRating = submittedFeedback?.rating ?? rating;
-                const isFullStar =
-                  currentRating !== null && currentRating >= fullStarValue;
-                const isHalfStar =
-                  currentRating !== null &&
-                  currentRating >= halfStarValue &&
-                  currentRating < fullStarValue;
-
-                return (
-                  <div key={value} className="relative flex items-center">
-                    <div className="relative">
-                      <Star
-                        className={cn(
-                          'h-4 w-4 transition-colors',
-                          isFullStar
-                            ? 'text-yellow-500 fill-current'
-                            : isHalfStar
-                              ? 'text-yellow-500'
-                              : 'text-muted-foreground/30',
-                        )}
-                      />
-                      {isHalfStar && (
-                        <div
-                          className="absolute inset-0 pointer-events-none overflow-hidden"
-                          style={{ width: '50%' }}
-                        >
-                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        </div>
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((value) => {
+              const fullStarValue = value;
+              const halfStarValue = value - 0.5;
+              const currentRating = submittedFeedback?.rating ?? rating;
+              const isFullStar = currentRating !== null && currentRating >= fullStarValue;
+              const isHalfStar = currentRating !== null && currentRating >= halfStarValue && currentRating < fullStarValue;
+              
+              return (
+                <div key={value} className="relative flex items-center">
+                  {/* Base star for visual display */}
+                  <div className="relative">
+                    <Star
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isFullStar
+                          ? "text-yellow-500 fill-current"
+                          : isHalfStar
+                          ? "text-yellow-500"
+                          : "text-muted-foreground/30"
                       )}
-                    </div>
-                    {!submittedFeedback && (
-                      <button
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const clickX = e.clientX - rect.left;
-                          const isLeftHalf = clickX < rect.width / 2;
-                          handleStarClick(isLeftHalf ? halfStarValue : fullStarValue);
-                        }}
-                        className="absolute inset-0 z-10 hover:scale-110 transition-transform"
-                        style={{ width: '100%', height: '100%' }}
-                      />
+                    />
+                    {/* Visual half star overlay */}
+                    {isHalfStar && (
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ width: '50%' }}>
+                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                      </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                  {/* Clickable overlay for half-star detection */}
+                  {!submittedFeedback && (
+                    <button
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const isLeftHalf = clickX < rect.width / 2;
+                        handleStarClick(isLeftHalf ? halfStarValue : fullStarValue);
+                      }}
+                      className="absolute inset-0 z-10 hover:scale-110 transition-transform"
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
           </div>
         </div>
 
-        {SHOW_PROMPT_EXAMPLES && isLatestMessage && promptExamples.length > 0 && (
+        {/* Prompt Examples - Only show if provided from tool */}
+        {SHOW_PROMPT_EXAMPLES && promptExamples.length > 0 && (
           <PromptExamples
             prompts={promptExamples}
             onPromptClick={onFollowUpClick}
             variant="text"
-            showTitle
+            showTitle={true}
             title={samplePromptsTitle}
           />
         )}
       </div>
 
+      {/* Rating Modal */}
       <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>How was this result?</DialogTitle>
+            <DialogTitle>{t('thread.rateThisResult')}</DialogTitle>
             <DialogDescription>
-              Your feedback helps us improve
+              {t('thread.feedbackHelpsImprove')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Star Rating */}
             <div className="flex items-center justify-center gap-1">
               {[1, 2, 3, 4, 5].map((value) => {
                 const fullStarValue = value;
                 const halfStarValue = value - 0.5;
-                const isFullStar =
-                  rating !== null && rating >= fullStarValue;
-                const isHalfStar =
-                  rating !== null &&
-                  rating >= halfStarValue &&
-                  rating < fullStarValue;
-
+                const isFullStar = rating !== null && rating >= fullStarValue;
+                const isHalfStar = rating !== null && rating >= halfStarValue && rating < fullStarValue;
+                
                 return (
                   <div key={value} className="relative flex items-center">
+                    {/* Base star for visual display */}
                     <div className="relative">
                       <Star
                         className={cn(
-                          'h-8 w-8 transition-colors',
+                          "h-8 w-8 transition-colors",
                           isFullStar
-                            ? 'text-yellow-500 fill-current'
+                            ? "text-yellow-500 fill-current"
                             : isHalfStar
-                              ? 'text-yellow-500'
-                              : 'text-muted-foreground/30',
+                            ? "text-yellow-500"
+                            : "text-muted-foreground/30"
                         )}
                       />
+                      {/* Visual half star overlay */}
                       {isHalfStar && (
-                        <div
-                          className="absolute inset-0 pointer-events-none overflow-hidden"
-                          style={{ width: '50%' }}
-                        >
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ width: '50%' }}>
                           <Star className="h-8 w-8 text-yellow-500 fill-current" />
                         </div>
                       )}
                     </div>
+                    {/* Clickable overlay for half-star detection */}
                     <button
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -257,15 +248,17 @@ export function TaskCompletedFeedback({
               })}
             </div>
 
+            {/* Feedback Textarea */}
             <div className="space-y-2">
               <Textarea
-                placeholder="Additional feedback (optional)"
+                placeholder={t('thread.additionalFeedbackOptional')}
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 className="min-h-[100px] resize-none"
               />
             </div>
 
+            {/* Help Improve Checkbox */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="help-improve"
@@ -276,17 +269,17 @@ export function TaskCompletedFeedback({
                 htmlFor="help-improve"
                 className="text-sm text-foreground cursor-pointer"
               >
-                Help Prophet improve with the feedback
+                {t('thread.helpKortixImprove')}
               </label>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRatingModal(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
-            <Button onClick={handleSubmitRating} disabled={!rating || isSubmitting || isLoadingFeedback}>
-              {isSubmitting ? 'Submitting...' : 'Submit'}
+            <Button onClick={handleSubmitRating} disabled={!rating || isSubmitting}>
+              {isSubmitting ? t('thread.submitting') : t('thread.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

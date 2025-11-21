@@ -278,7 +278,7 @@ async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Respon
         request.url.query
     )
 
-    headers = _prepare_forward_headers(request, metadata["preview_token"])
+    headers = _prepare_forward_headers(request, metadata.get("preview_token"))
     body = await request.body()
 
     timeout = httpx.Timeout(30.0, connect=10.0)
@@ -479,24 +479,37 @@ async def proxy_preview_websocket_path(sandbox_id: str, path: str, websocket: We
 
 
 def _should_refresh_preview_token(sandbox_info: Dict[str, Any]) -> bool:
-    """Determine whether the preview token should be refreshed."""
+    """
+    Determine whether the stored preview token is considered stale.
+
+    Tokens are refreshed on two occasions:
+    - We never persisted a token (legacy sandboxes that only stored `token`)
+    - The configured TTL elapsed since `preview_token_generated_at`
+    """
+
     ttl_seconds = config.DAYTONA_PREVIEW_TOKEN_TTL
     if not ttl_seconds:
         return False
+
     preview_token = sandbox_info.get("preview_token") or sandbox_info.get("token")
     generated_raw = sandbox_info.get("preview_token_generated_at")
+
     if not preview_token:
-        return generated_raw is None
+        # No preview token persisted: attempt to refresh immediately so the proxy
+        # can inject one on the next request.
+        return True
 
     if not generated_raw:
         return True
 
     try:
         generated_at = datetime.fromisoformat(generated_raw)
-        if generated_at.tzinfo is None:
-            generated_at = generated_at.replace(tzinfo=timezone.utc)
     except ValueError:
+        logger.warning("Invalid preview_token_generated_at=%s", generated_raw)
         return True
+
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=timezone.utc)
 
     age_seconds = (datetime.now(timezone.utc) - generated_at).total_seconds()
     return age_seconds >= ttl_seconds

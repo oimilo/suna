@@ -164,7 +164,6 @@ export function AgentConfigurationDialog({
   const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isSunaAgent;
   const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isSunaAgent;
   const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isSunaAgent;
-  const shouldMaskPrompt = Boolean(isSunaAgent);
 
   const hasChanges = useMemo(() => {
     return JSON.stringify(formData) !== JSON.stringify(originalFormData);
@@ -233,7 +232,7 @@ export function AgentConfigurationDialog({
     if (!isNameEditable) {
       if (isSunaAgent) {
         toast.error("Name cannot be edited", {
-          description: "Prophet's name is managed centrally and cannot be changed.",
+          description: "Suna's name is managed centrally and cannot be changed.",
         });
       }
       setEditName(formData.name);
@@ -249,7 +248,7 @@ export function AgentConfigurationDialog({
     if (!isSystemPromptEditable) {
       if (isSunaAgent) {
         toast.error("System prompt cannot be edited", {
-          description: "Prophet's system prompt is managed centrally.",
+          description: "Suna's system prompt is managed centrally.",
         });
       }
       return;
@@ -266,7 +265,7 @@ export function AgentConfigurationDialog({
     if (!areToolsEditable) {
       if (isSunaAgent) {
         toast.error("Tools cannot be edited", {
-          description: "Prophet's tools are managed centrally.",
+          description: "Suna's tools are managed centrally.",
         });
       }
       return;
@@ -391,7 +390,6 @@ export function AgentConfigurationDialog({
                 >
                   {isSunaAgent ? (
                     <AgentAvatar
-                      isSunaDefault={true}
                       agentName={formData.name}
                       size={40}
                       className="ring-1 ring-border"
@@ -500,7 +498,6 @@ export function AgentConfigurationDialog({
                                     iconColor={agent.icon_color}
                                     backgroundColor={agent.icon_background}
                                     agentName={agent.name}
-                                    isSunaDefault={agent.metadata?.is_suna_default}
                                     size={24}
                                     className="flex-shrink-0"
                                   />
@@ -640,29 +637,18 @@ export function AgentConfigurationDialog({
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
                     <Label className="text-base font-semibold mb-3 block flex-shrink-0">System Prompt</Label>
-                    {shouldMaskPrompt ? (
-                      <div className="flex-1 rounded-xl border bg-muted/30 p-6 text-center flex items-center justify-center">
-                        <div>
-                          <p className="font-medium">Prophet's system prompt is hidden.</p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Duplicate this agent to customize instructions.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <ExpandableMarkdownEditor
-                        value={formData.system_prompt}
-                        onSave={handleSystemPromptChange}
-                        disabled={!isSystemPromptEditable}
-                        placeholder="Define how your agent should behave..."
-                        className="flex-1 h-[90%]"
-                      />
-                    )}
+                    <ExpandableMarkdownEditor
+                      value={formData.system_prompt}
+                      onSave={handleSystemPromptChange}
+                      disabled={!isSystemPromptEditable}
+                      placeholder="Define how your agent should behave..."
+                      className="flex-1 h-[90%]"
+                    />
                   </div>
                 </TabsContent>
 
@@ -672,7 +658,7 @@ export function AgentConfigurationDialog({
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Milo Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}

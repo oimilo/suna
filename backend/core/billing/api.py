@@ -1585,7 +1585,7 @@ async def trigger_reconciliation(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
 
-    if admin_key != config.get('ADMIN_API_KEY'):
+    if admin_key != config.ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     try:
@@ -1613,7 +1613,7 @@ async def trigger_reconciliation(
 async def get_circuit_breaker_status(
     admin_key: Optional[str] = Query(None, description="Admin API key")
 ) -> Dict:
-    if admin_key != config.get('ADMIN_API_KEY'):
+    if admin_key != config.ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Unauthorized - admin key required")
     
     try:

@@ -3,14 +3,9 @@
 import React from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarLeft } from '@/components/sidebar/sidebar-left';
-import { useDeleteOperationEffects } from '@/stores/delete-operation-store';
-import { SubscriptionStoreSync } from '@/stores/subscription-store';
-
-// Wrapper component to handle delete operation side effects
-function DeleteOperationEffectsWrapper({ children }: { children: React.ReactNode }) {
-  useDeleteOperationEffects();
-  return <>{children}</>;
-}
+import { DeleteOperationProvider } from '@/contexts/DeleteOperationContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import { BillingProvider } from '@/contexts/BillingContext';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -22,21 +17,23 @@ interface AppProvidersProps {
 /**
  * Shared wrapper component that provides common app-level providers:
  * - DeleteOperationEffectsWrapper
- * - SubscriptionStoreSync
+ * - SubscriptionProvider + BillingProvider (subscription data & billing status)
  * - SidebarProvider + SidebarLeft + SidebarInset (if showSidebar is true)
  */
-export function AppProviders({ 
-  children, 
+export function AppProviders({
+  children,
   showSidebar = true,
   sidebarContent,
   sidebarSiblings
 }: AppProvidersProps) {
   const content = (
-    <DeleteOperationEffectsWrapper>
-      <SubscriptionStoreSync>
-        {children}
-      </SubscriptionStoreSync>
-    </DeleteOperationEffectsWrapper>
+    <BillingProvider>
+      <SubscriptionProvider>
+        <DeleteOperationProvider>
+          {children}
+        </DeleteOperationProvider>
+      </SubscriptionProvider>
+    </BillingProvider>
   );
 
   if (!showSidebar) {

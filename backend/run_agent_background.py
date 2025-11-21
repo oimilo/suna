@@ -19,6 +19,7 @@ from dramatiq.brokers.redis import RedisBroker
 import os
 from core.services.langfuse import langfuse
 from core.utils.retry import retry
+from core.utils.tool_discovery import warm_up_tools_cache_with_retry
 
 import sentry_sdk
 from typing import Dict, Any
@@ -68,8 +69,7 @@ async def initialize():
     await db.initialize()
     
     # Preload tool cache so the first request doesn't pay the import cost
-    from core.utils.tool_discovery import warm_up_tools_cache
-    warm_up_tools_cache()
+    warm_up_tools_cache_with_retry()
 
     _initialized = True
     logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")

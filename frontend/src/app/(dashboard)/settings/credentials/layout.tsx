@@ -1,11 +1,15 @@
 import { Metadata } from 'next';
+import { BRANDING, getPageTitle } from '@/lib/branding';
+
+const title = getPageTitle('App Profiles');
+const description = 'Manage your connected app integrations';
 
 export const metadata: Metadata = {
-  title: 'App Profiles | Prophet',
-  description: 'Manage your connected app integrations',
+  title,
+  description,
   openGraph: {
-    title: 'App Profiles | Prophet',
-    description: 'Manage your connected app integrations',
+    title,
+    description,
     type: 'website',
   },
 };

@@ -4,6 +4,9 @@ import { agentKeys } from './keys';
 import { Agent, AgentUpdateRequest, AgentsParams, createAgent, deleteAgent, getAgent, getAgents, getThreadAgent, updateAgent, ThreadAgentResponse } from './utils';
 import { useRef, useCallback, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { AgentCountLimitError, CustomWorkerLimitError } from '@/lib/api/errors';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
+import { useTranslations } from 'next-intl';
 
 export const useAgents = (
   params: AgentsParams = {},
@@ -43,7 +46,7 @@ export const useCreateAgent = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
       queryClient.setQueryData(agentKeys.detail(data.agent_id), data);
-      toast.success('Agent created successfully');
+      toast.success('Worker created successfully');
     },
     onError: async (error) => {
       const { AgentCountLimitError } = await import('@/lib/api/errors');
@@ -59,7 +62,9 @@ export const useCreateAgent = () => {
 export const useCreateNewAgent = () => {
   const router = useRouter();
   const createAgentMutation = useCreateAgent();
-  
+  const pricingModalStore = usePricingModalStore();
+  const tBilling = useTranslations('billing');
+
   return useMutation({
     mutationFn: async (_: void) => {
       const defaultAgentData = {
@@ -72,15 +77,16 @@ export const useCreateNewAgent = () => {
         icon_color: '#000000',
         icon_background: '#F3F4F6',
       };
-
       const newAgent = await createAgentMutation.mutateAsync(defaultAgentData);
       return newAgent;
     },
-    onSuccess: (newAgent) => {
-    },
     onError: (error) => {
-      console.error('Error creating agent:', error);
-      toast.error('Failed to create agent. Please try again.');
+      if (error instanceof AgentCountLimitError || error instanceof CustomWorkerLimitError) {
+        pricingModalStore.openPricingModal({ 
+          isAlert: true,
+          alertTitle: `${tBilling('reachedLimit')} ${tBilling('workerLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+        });
+      }
     },
   });
 };

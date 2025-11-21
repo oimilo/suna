@@ -147,7 +147,6 @@ const CardAvatar: React.FC<{
   if (isSunaAgent) {
     return (
       <AgentAvatar
-        isSunaDefault={true}
         size={size}
         className="border"
       />

@@ -1,11 +1,15 @@
 import { Metadata } from 'next';
+import { BRANDING, getPageTitle } from '@/lib/branding';
+
+const title = getPageTitle('API Keys');
+const description = `Manage your API keys for programmatic access to ${BRANDING.name}`;
 
 export const metadata: Metadata = {
-  title: 'API Keys | Prophet',
-  description: 'Manage your API keys for programmatic access to Prophet',
+  title,
+  description,
   openGraph: {
-    title: 'API Keys | Prophet',
-    description: 'Manage your API keys for programmatic access to Prophet',
+    title,
+    description,
     type: 'website',
   },
 };

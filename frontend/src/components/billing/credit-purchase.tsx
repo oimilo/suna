@@ -10,11 +10,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { billingApi } from '@/lib/api/billing';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, CreditCard, AlertCircle, Zap, AlertCircleIcon } from 'lucide-react';
+import { backendApi } from '@/lib/api-client';
 import { toast } from 'sonner';
-import { formatCredits } from '@/lib/utils/credit-formatter';
 
 interface CreditPurchaseProps {
     open: boolean;
@@ -39,12 +40,12 @@ const CREDIT_PACKAGES: CreditPackage[] = [
     { amount: 500, price: 500 },
 ];
 
-export function CreditPurchaseModal({
-    open,
-    onOpenChange,
+export function CreditPurchaseModal({ 
+    open, 
+    onOpenChange, 
     currentBalance = 0,
     canPurchase,
-    onPurchaseComplete
+    onPurchaseComplete 
 }: CreditPurchaseProps) {
     const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
     const [customAmount, setCustomAmount] = useState<string>('');
@@ -63,19 +64,19 @@ export function CreditPurchaseModal({
         setIsProcessing(true);
         setError(null);
         try {
-            const response = await billingApi.purchaseCredits({
-                amount: amount,
+            const response = await backendApi.post('/billing/purchase-credits', {
+                amount_dollars: amount,
                 success_url: `${window.location.origin}/dashboard?credit_purchase=success`,
                 cancel_url: `${window.location.origin}/dashboard?credit_purchase=cancelled`
             });
-            if (response.checkout_url) {
-                window.location.href = response.checkout_url;
+            if (response.data.url) {
+                window.location.href = response.data.url;
             } else {
                 throw new Error('No checkout URL received');
             }
         } catch (err: any) {
             console.error('Credit purchase error:', err);
-            const errorMessage = err.details?.detail || err.message || 'Failed to create checkout session';
+            const errorMessage = err.response?.data?.detail || err.message || 'Failed to create checkout session';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
@@ -111,13 +112,13 @@ export function CreditPurchaseModal({
                     <DialogHeader>
                         <DialogTitle>Credits Not Available</DialogTitle>
                         <DialogDescription>
-                            Credit purchases are only available for users on the $200/month subscription tier.
+                            Credit purchases are only available for users on the highest subscription tier ($1000/month).
                         </DialogDescription>
                     </DialogHeader>
                     <Alert>
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                            Please upgrade your subscription to the $200/month tier to unlock credit purchases for unlimited usage.
+                            Please upgrade your subscription to the highest tier to unlock credit purchases for unlimited usage.
                         </AlertDescription>
                     </Alert>
                     <div className="flex justify-end">
@@ -134,33 +135,46 @@ export function CreditPurchaseModal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Get additional credits</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+                        Purchase Credits
+                    </DialogTitle>
                     <DialogDescription>
                         Add credits to your account for usage beyond your subscription limit.
                     </DialogDescription>
                 </DialogHeader>
 
                 {currentBalance > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                        Current balance: {formatCredits(currentBalance, { showDecimals: true })}
-                    </div>
+                    <Alert className="text-purple-600 dark:text-purple-400 bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800">
+                        <AlertCircleIcon className="h-4 w-4" />
+                        <AlertDescription className="text-purple-600 dark:text-purple-400">
+                            Current balance: <strong>${currentBalance.toFixed(2)}</strong>
+                        </AlertDescription>
+                    </Alert>
                 )}
 
                 <div className="space-y-4">
                     <div>
+                        <Label className="text-base font-semibold mb-3 block">Select a Package</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {CREDIT_PACKAGES.map((pkg) => (
                                 <Card
                                     key={pkg.amount}
-                                    className={`cursor-pointer transition-all ${selectedPackage?.amount === pkg.amount
-                                        ? 'ring-2 ring-border'
-                                        : 'hover:border-border/80'
-                                        }`}
+                                    className={`cursor-pointer transition-all ${
+                                        selectedPackage?.amount === pkg.amount
+                                            ? 'ring-2 ring-primary'
+                                            : 'hover:shadow-md'
+                                    }`}
                                     onClick={() => handlePackageSelect(pkg)}
                                 >
-                                    <CardContent className="p-4 text-center">
-                                        <div className="text-xl font-medium">${pkg.amount}</div>
-                                        <div className="text-xs text-muted-foreground mt-1">Credits</div>
+                                    <CardContent className="p-4 text-center relative">
+                                        {pkg.popular && (
+                                            <Badge className="absolute -top-2 -right-2" variant="default">
+                                                Popular
+                                            </Badge>
+                                        )}
+                                        <div className="text-2xl font-bold">${pkg.amount}</div>
+                                        <div className="text-sm text-muted-foreground">credits</div>
                                     </CardContent>
                                 </Card>
                             ))}
@@ -173,19 +187,28 @@ export function CreditPurchaseModal({
                         </Alert>
                     )}
                 </div>
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                        disabled={isProcessing}
+                    >
+                        Cancel
+                    </Button>
                     <Button
                         onClick={handleConfirmPurchase}
                         disabled={isProcessing || (!selectedPackage && !customAmount)}
-                        className="w-full sm:w-auto min-w-[120px]"
                     >
                         {isProcessing ? (
                             <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                                 Processing...
                             </>
                         ) : (
-                            'Continue'
+                            <>
+                                <CreditCard className="h-4 w-4" />
+                                Purchase Credits
+                            </>
                         )}
                     </Button>
                 </div>
@@ -203,7 +226,10 @@ export function CreditBalanceDisplay({ balance, canPurchase, onPurchaseClick }: 
         <Card>
             <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
-                    <span>Credit Balance</span>
+                    <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-yellow-500" />
+                        Credit Balance
+                    </span>
                     {canPurchase && onPurchaseClick && (
                         <Button
                             size="sm"
@@ -216,10 +242,16 @@ export function CreditBalanceDisplay({ balance, canPurchase, onPurchaseClick }: 
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-medium">
-                    {formatCredits(balance)}
+                <div className="text-2xl font-bold">
+                    ${balance.toFixed(2)}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                    {canPurchase 
+                        ? 'Available for usage beyond subscription limits'
+                        : 'Upgrade to highest tier to purchase credits'
+                    }
+                </p>
             </CardContent>
         </Card>
     );
-}
+} 

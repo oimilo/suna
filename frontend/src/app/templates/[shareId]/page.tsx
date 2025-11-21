@@ -4,10 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { motion, useScroll } from 'framer-motion';
-import { backendApi } from '@/lib/api-client';
-import {
-  Download,
-  Share2,
+import { 
+  Download, 
+  Share2, 
   Sparkles,
   Calendar,
   User,
@@ -19,6 +18,7 @@ import {
   Globe,
   Terminal,
   GitBranch,
+  Loader2,
   ArrowLeft,
   Moon,
   Sun,
@@ -26,19 +26,20 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Markdown } from '@/components/ui/markdown';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import ColorThief from 'colorthief';
-import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { DynamicIcon } from 'lucide-react/dynamic';
+import { BRANDING } from '@/lib/branding';
 
 interface MarketplaceTemplate {
   template_id: string;
@@ -55,24 +56,19 @@ interface MarketplaceTemplate {
   download_count: number;
   created_at: string;
   updated_at: string;
+  avatar: string | null;
+  avatar_color: string | null;
+  profile_image_url: string | null;
   icon_name: string | null;
   icon_color: string | null;
   icon_background: string | null;
   metadata: Record<string, any>;
   creator_name: string | null;
-  usage_examples?: Array<{
-    role: string;
-    content: string;
-    tool_calls?: Array<{
-      name: string;
-      arguments?: Record<string, any>;
-    }>;
-  }>;
 }
 
-const IntegrationIcon: React.FC<{
-  qualifiedName: string;
-  displayName: string;
+const IntegrationIcon: React.FC<{ 
+  qualifiedName: string; 
+  displayName: string; 
   customType?: string;
   toolkitSlug?: string;
   size?: number;
@@ -80,22 +76,22 @@ const IntegrationIcon: React.FC<{
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-
+  
   const extractedSlug = React.useMemo(() => {
     if (toolkitSlug) return toolkitSlug;
-
+    
     if (qualifiedName?.startsWith('composio.')) {
       return qualifiedName.substring(9);
     }
-
+    
     if (customType === 'composio' && qualifiedName) {
       const parts = qualifiedName.split('.');
       return parts[parts.length - 1];
     }
-
+    
     return null;
   }, [qualifiedName, customType, toolkitSlug]);
-
+  
   useEffect(() => {
     if (extractedSlug && !hasError) {
       setIsLoading(true);
@@ -114,9 +110,9 @@ const IntegrationIcon: React.FC<{
         });
     }
   }, [extractedSlug, hasError]);
-
+  
   const firstLetter = displayName.charAt(0).toUpperCase();
-
+  
   const iconMap: Record<string, JSX.Element> = {
     'github': <GitBranch size={size} />,
     'browser': <Globe size={size} />,
@@ -124,12 +120,12 @@ const IntegrationIcon: React.FC<{
     'code': <Code size={size} />,
   };
 
-  const fallbackIcon = iconMap[qualifiedName.toLowerCase()] ||
-    iconMap[customType?.toLowerCase() || ''];
+  const fallbackIcon = iconMap[qualifiedName.toLowerCase()] || 
+                       iconMap[customType?.toLowerCase() || ''];
 
   if (isLoading) {
     return (
-      <div
+      <div 
         className="flex items-center justify-center rounded bg-muted animate-pulse"
         style={{ width: size, height: size }}
       />
@@ -156,7 +152,7 @@ const IntegrationIcon: React.FC<{
   }
 
   return (
-    <div
+    <div 
       className="flex items-center justify-center rounded text-xs font-medium bg-muted"
       style={{ width: size, height: size }}
     >
@@ -171,6 +167,7 @@ export default function TemplateSharePage() {
   const params = useParams();
   const templateId = params.shareId as string; // Note: keeping shareId param name for URL compatibility
   const router = useRouter();
+  const { user } = useAuth();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [colorPalette, setColorPalette] = useState<string[]>([]);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -203,7 +200,7 @@ export default function TemplateSharePage() {
     const handleScroll = () => {
       const sections = ['system-prompt', 'integrations', 'triggers', 'tools'];
       let currentSection = '';
-
+      
       // Find the section that's currently in view
       for (const section of sections) {
         const element = document.getElementById(section);
@@ -215,7 +212,7 @@ export default function TemplateSharePage() {
           }
         }
       }
-
+      
       // If no section is in the main view area, find the closest one
       if (!currentSection) {
         let minDistance = Infinity;
@@ -231,7 +228,7 @@ export default function TemplateSharePage() {
           }
         }
       }
-
+      
       if (currentSection && currentSection !== activeSection) {
         setActiveSection(currentSection);
       }
@@ -276,32 +273,31 @@ export default function TemplateSharePage() {
         '#ec4899',
         '#f43f5e'
       ]);
-      if (imageRef.current && imageLoaded) {
-        const colorThief = new ColorThief();
-        try {
-          const palette = colorThief.getPalette(imageRef.current, 6);
-          const colors = palette.map((rgb: number[]) => rgbToHex(rgb[0], rgb[1], rgb[2]));
-          console.log('Extracted colors (hex):', colors);
-          setColorPalette(colors);
-        } catch (error) {
-          console.error('Error extracting colors:', error);
-          setColorPalette([
-            '#6366f1', '#8b5cf6', '#ec4899',
-            '#f43f5e', '#f97316', '#facc15'
-          ]);
-        }
+    } else if (template?.profile_image_url && imageRef.current && imageLoaded) {
+      const colorThief = new ColorThief();
+      try {
+        const palette = colorThief.getPalette(imageRef.current, 6);
+        const colors = palette.map((rgb: number[]) => rgbToHex(rgb[0], rgb[1], rgb[2]));
+        console.log('Extracted colors (hex):', colors);
+        setColorPalette(colors);
+      } catch (error) {
+        console.error('Error extracting colors:', error);
+        setColorPalette([
+          '#6366f1', '#8b5cf6', '#ec4899', 
+          '#f43f5e', '#f97316', '#facc15'
+        ]);
       }
     } else {
       setColorPalette([
-        '#6366f1', '#8b5cf6', '#ec4899',
+        '#6366f1', '#8b5cf6', '#ec4899', 
         '#f43f5e', '#f97316', '#facc15'
       ]);
     }
-  }, [template?.icon_name, template?.icon_background, template?.icon_color, imageLoaded]);
+  }, [template?.profile_image_url, template?.icon_name, template?.icon_background, template?.icon_color, imageLoaded]);
 
   const handleInstall = () => {
     if (!template) return;
-    router.push(`/agents?tab=my-agents&agent=${template.template_id}`);
+    router.push(`/agents?tab=marketplace&agent=${template.template_id}`);
   };
 
   const handleShare = async () => {
@@ -326,7 +322,7 @@ export default function TemplateSharePage() {
     return (
       <div className="min-h-screen">
         <div className="flex items-center justify-center h-screen">
-          <KortixLoader size="large" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     );
@@ -339,8 +335,8 @@ export default function TemplateSharePage() {
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-2">Template not found</h2>
             <p className="text-muted-foreground mb-4">The template you're looking for doesn't exist or has been removed.</p>
-            <Button onClick={() => router.push('/agents?tab=my-agents')} className="rounded-lg">
-              Browse Agents
+            <Button onClick={() => router.push('/agents?tab=marketplace')} className="rounded-lg">
+              Browse Marketplace
             </Button>
           </div>
         </div>
@@ -363,23 +359,29 @@ export default function TemplateSharePage() {
   const hasTools = customTools.length > 0 || agentpressTools.length > 0;
 
   const getDefaultAvatar = () => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
     return (
-      <AgentAvatar
-        iconName={template.icon_name}
-        iconColor={template.icon_color}
-        backgroundColor={template.icon_background}
-        agentName={template.name}
-        size={28}
-      />
+      <div 
+        className="w-full h-full flex items-center justify-center text-6xl bg-muted rounded-2xl"
+        style={{ backgroundColor: color + '10' }}
+      >
+        {template.avatar || '🤖'}
+      </div>
     );
   };
 
-  const [color1, color2, color3, color4, color5, color6] = colorPalette.length >= 6
-    ? colorPalette
+  const [color1, color2, color3, color4, color5, color6] = colorPalette.length >= 6 
+    ? colorPalette 
     : ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#facc15'];
 
   const gradientStyle = {
-    background: `radial-gradient(circle at 30% 20%, ${color2}90 0%, transparent 35%), radial-gradient(circle at 70% 80%, ${color3}80 0%, transparent 35%), radial-gradient(circle at 10% 60%, ${color1}85 0%, transparent 40%), radial-gradient(circle at 50% 50%, ${color4}70 0%, transparent 50%)`,
+    background: `
+      radial-gradient(circle at 30% 20%, ${color2}90 0%, transparent 35%),
+      radial-gradient(circle at 70% 80%, ${color3}80 0%, transparent 35%),
+      radial-gradient(circle at 10% 60%, ${color1}85 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, ${color4}70 0%, transparent 50%)
+    `,
     filter: 'blur(80px) saturate(250%)',
     opacity: 1,
   };
@@ -405,7 +407,11 @@ export default function TemplateSharePage() {
             <div className="flex h-14 items-center">
               <div className="flex items-center">
                 <Link href="/" className="flex items-center">
-                  <KortixLogo size={24} />
+                  <img 
+                    src={resolvedTheme === 'dark' ? '/kortix-logo-white.svg' : '/kortix-logo.svg'} 
+                    alt={BRANDING.company}
+                    className="h-6 opacity-70"
+                  />
                 </Link>
               </div>
               <div className="flex items-center space-x-3 ml-auto">
@@ -419,7 +425,7 @@ export default function TemplateSharePage() {
                   <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   <span className="sr-only">Toggle theme</span>
                 </Button>
-                <Button
+                <Button 
                   variant="ghost"
                   size="icon"
                   onClick={handleShare}
@@ -428,7 +434,7 @@ export default function TemplateSharePage() {
                   <Share2 className="h-4 w-4" />
                   <span className="sr-only">Share</span>
                 </Button>
-                <Button
+                <Button 
                   onClick={handleInstall}
                   className="bg-secondary h-8 flex items-center justify-center text-sm font-normal tracking-wide rounded-full text-primary-foreground dark:text-secondary-foreground w-fit px-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
                 >
@@ -446,43 +452,51 @@ export default function TemplateSharePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-24 space-y-6">
-              <Link
-                href="/agents?tab=my-agents"
+              <Link 
+                href="/agents?tab=marketplace" 
                 className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Agents
+                Back to Marketplace
               </Link>
               <div className="relative">
                 {colorPalette.length > 0 && (
-                  <div
+                  <div 
                     className="absolute -inset-10 rounded-2xl opacity-0 dark:opacity-100 transition-all duration-1000 pointer-events-none"
                     style={gradientStyle}
                   />
                 )}
                 <div className="relative aspect-square w-full max-w-sm mx-auto lg:mx-0 rounded-2xl overflow-hidden bg-background">
-                  <div className="w-full h-full flex items-center justify-center">
-                    <AgentAvatar
-                      iconName={template.icon_name}
-                      iconColor={template.icon_color}
-                      backgroundColor={template.icon_background}
-                      agentName={template.name}
-                      size={120}
-                    />
-                  </div>
-                  <img
-                    ref={imageRef}
-                    src={""}
-                    alt={template.name}
-                    className="w-full h-full object-cover"
-                    crossOrigin="anonymous"
-                    onLoad={() => setImageLoaded(true)}
-                  />
+                  {template.icon_name ? (
+                    <div 
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ backgroundColor: template.icon_background || '#e5e5e5' }}
+                    >
+                      <DynamicIcon 
+                        name={template.icon_name as any}
+                        size={120}
+                        color={template.icon_color || '#000000'}
+                      />
+                    </div>
+                  ) : template.profile_image_url ? (
+                    <>
+                      <img 
+                        ref={imageRef}
+                        src={template.profile_image_url} 
+                        alt={template.name}
+                        className="w-full h-full object-cover"
+                        crossOrigin="anonymous"
+                        onLoad={() => setImageLoaded(true)}
+                      />
+                    </>
+                  ) : (
+                    getDefaultAvatar()
+                  )}
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <h1 className="text-3xl font-medium tracking-tight">{template.name}</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{template.name}</h1>
                   {template.is_kortix_team && (
                     <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
                       <Sparkles className="w-3 h-3 mr-1" />
@@ -643,51 +657,51 @@ export default function TemplateSharePage() {
               </Card>
             )}
             {triggerRequirements.length > 0 && (
-              <Card id="triggers" className="bg-transparent border-0 shadow-none">
-                <CardHeader className="px-0">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    Event Triggers
-                  </CardTitle>
-                  <CardDescription>
-                    Automated triggers that can activate this agent
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="px-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {triggerRequirements.map((trigger: any, index: number) => {
-                      const appName = trigger.display_name?.split(' (')[0] || trigger.display_name;
-                      const triggerName = trigger.display_name?.match(/\(([^)]+)\)/)?.[1] || trigger.display_name;
-
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-background"
-                        >
-                          <IntegrationIcon
-                            qualifiedName={trigger.qualified_name}
-                            displayName={appName || trigger.qualified_name}
-                            customType={trigger.custom_type || (trigger.qualified_name?.startsWith('composio.') ? 'composio' : undefined)}
-                            toolkitSlug={trigger.toolkit_slug}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {triggerName || trigger.display_name || trigger.qualified_name}
-                            </p>
-                            {appName && triggerName && (
-                              <p className="text-xs text-muted-foreground">
-                                {appName}
+                <Card id="triggers" className="bg-transparent border-0 shadow-none">
+                  <CardHeader className="px-0">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Zap className="w-5 h-5" />
+                      Event Triggers
+                    </CardTitle>
+                    <CardDescription>
+                      Automated triggers that can activate this agent
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {triggerRequirements.map((trigger: any, index: number) => {
+                        const appName = trigger.display_name?.split(' (')[0] || trigger.display_name;
+                        const triggerName = trigger.display_name?.match(/\(([^)]+)\)/)?.[1] || trigger.display_name;
+                        
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-background"
+                          >
+                            <IntegrationIcon
+                              qualifiedName={trigger.qualified_name}
+                              displayName={appName || trigger.qualified_name}
+                              customType={trigger.custom_type || (trigger.qualified_name?.startsWith('composio.') ? 'composio' : undefined)}
+                              toolkitSlug={trigger.toolkit_slug}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {triggerName || trigger.display_name || trigger.qualified_name}
                               </p>
-                            )}
+                              {appName && triggerName && (
+                                <p className="text-xs text-muted-foreground">
+                                  {appName}
+                                </p>
+                              )}
+                            </div>
+                            <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
                           </div>
-                          <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             {customTools.length > 0 && (
               <Card id="tools" className="bg-transparent border-0 shadow-none">
                 <CardHeader className="px-0">
@@ -728,10 +742,9 @@ export default function TemplateSharePage() {
                 </CardContent>
               </Card>
             )}
-            {/* 
-            <Card className="bg-muted/30 border-muted/50">
+            {/* <Card className="bg-muted/30 border-muted/50">
               <CardContent className="p-8 text-center">
-                <h3 className="text-2xl font-medium mb-4">Ready to get started?</h3>
+                <h3 className="text-2xl font-bold mb-4">Ready to get started?</h3>
                 <p className="text-muted-foreground mb-6">
                   Install this agent template and customize it for your specific needs
                 </p>
@@ -746,14 +759,13 @@ export default function TemplateSharePage() {
                   <Button 
                     size="lg"
                     variant="outline"
-                    onClick={() => router.push('/agents?tab=my-agents')}
+                    onClick={() => router.push('/agents?tab=marketplace')}
                   >
                     Browse More Agents
                   </Button>
                 </div>
               </CardContent>
-            </Card>
-            */}
+            </Card> */}
           </div>
         </div>
       </div>

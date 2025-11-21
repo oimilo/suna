@@ -37,13 +37,13 @@ import Strike from '@tiptap/extension-strike'
 import { Mathematics } from '@tiptap/extension-mathematics'
 import 'katex/dist/katex.min.css'
 
-import { useEditorStore } from '@/stores/use-editor-store';
+import { useEditorStore } from '@/lib/stores/use-editor-store';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import debounce from 'lodash/debounce';
 
-import { Extension, type Extensions } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { Ruler } from "./ruler";
 
 const FontSize = Extension.create({
@@ -198,7 +198,7 @@ export const Editor = ({
       [onChange, autoSaveDelay, onSaveStateChange]
     );
 
-    const extensions = useMemo<Extensions>(() => {
+    const extensions = useMemo(() => {
       const baseExtensions = [
         Document,
         Paragraph,
@@ -231,9 +231,7 @@ export const Editor = ({
           inline: true,
           allowBase64: true,
           HTMLAttributes: {
-            class: 'w-full h-auto rounded-lg object-contain',
-            loading: 'lazy',
-            decoding: 'async',
+            class: 'max-w-full h-auto rounded-lg',
           },
         }),
         Underline,
@@ -291,7 +289,7 @@ export const Editor = ({
         );
       }
 
-      return baseExtensions as Extensions;
+      return baseExtensions;
     }, [autoSave, ydoc, placeholder]);
 
     const editor = useEditor({
@@ -379,13 +377,13 @@ export const Editor = ({
           setEditor(editor);
         }
       },
-      extensions: extensions as any,
+      extensions,
       editorProps: {
         
         attributes: {
           style: readOnly ? `min-height: ${minHeight};` : `padding-left: 56px; padding-right: 56px; min-height: ${minHeight};`,
           class: readOnly 
-            ? editorClassName || 'focus:outline-none bg-transparent w-full [&_img]:w-full [&_img]:h-auto [&_img]:object-contain'
+            ? editorClassName || 'focus:outline-none bg-transparent w-full'
             : 'focus:outline-none bg-white dark:bg-neutral-900/0 print:border-0 bg-white flex flex-col min-h-[1054px] w-[816px] pt-10 pr-14 pb-10 cursor-text',
           spellcheck: 'true',
         },

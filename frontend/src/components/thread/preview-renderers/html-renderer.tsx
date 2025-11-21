@@ -58,18 +58,11 @@ export function HtmlRenderer({
 
     // Construct HTML file preview URL using the full file path
     const htmlPreviewUrl = useMemo(() => {
-        if (!filePath) {
-            return blobHtmlUrl || previewUrl;
+        if (project?.sandbox?.sandbox_url && filePath) {
+            return constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath);
         }
-
-        return (
-            constructHtmlPreviewUrl({
-                sandboxId: project?.sandbox?.id,
-                sandboxUrl: project?.sandbox?.sandbox_url,
-                filePath,
-            }) ?? blobHtmlUrl ?? previewUrl
-        );
-    }, [project?.sandbox?.id, project?.sandbox?.sandbox_url, filePath, blobHtmlUrl, previewUrl]);
+        return blobHtmlUrl || previewUrl;
+    }, [project?.sandbox?.sandbox_url, filePath, blobHtmlUrl, previewUrl]);
 
     // Clean up blob URL on unmount
     useEffect(() => {

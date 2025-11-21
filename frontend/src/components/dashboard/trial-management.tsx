@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useTrialStatus, useCancelTrial } from '@/hooks/billing';
-import { useAuth } from '@/components/AuthProvider';
+import { useTrialStatus } from '@/hooks/react-query/billing/use-trial-status';
+import { useCancelTrial } from '@/hooks/react-query/billing/use-cancel-trial';
+import { BRANDING } from '@/lib/branding';
 import {
   Card,
   CardContent,
@@ -27,8 +28,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 
 export function TrialManagement() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const { user } = useAuth();
-  const { data: trialStatus, isLoading } = useTrialStatus(!!user);
+  const { data: trialStatus, isLoading } = useTrialStatus();
   const cancelTrialMutation = useCancelTrial();
 
   if (isLoading || !trialStatus) {
@@ -60,7 +60,7 @@ export function TrialManagement() {
             </div>
           </div>
           <CardDescription>
-            You're currently on a 7-day free trial with $5 in credits
+            You're currently on a 7-day free trial with $20 in credits
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -113,7 +113,7 @@ export function TrialManagement() {
                 </li>
               </ul>
               <p className="text-muted-foreground text-sm pt-2">
-                To continue using Prophet after cancelling, you'll need to purchase a subscription.
+                To continue using {BRANDING.name} after cancelling, you'll need to purchase a subscription.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

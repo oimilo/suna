@@ -251,44 +251,64 @@ class AgentCreationTool(Tool):
     async def search_mcp_servers_for_agent(self, search_query: str) -> ToolResult:
         try:
             from core.composio_integration.composio_service import get_integration_service
-            from core.composio_integration.toolkit_service import ToolkitService
             
             integration_service = get_integration_service()
+            queries = [{"use_case": search_query.strip()}]
             
-            toolkits_response = await integration_service.search_toolkits(search_query)
-            toolkits = toolkits_response.get("items", [])
+            search_response = await integration_service.search_toolkits_with_queries(
+                queries=queries,
+                limit=10,
+            )
+            entries = search_response.get("results", [])
+            primary_entry = entries[0] if entries else {}
+            toolkits = primary_entry.get("results", [])
             
             if not toolkits:
                 return self.success_response({
                     "message": f"No MCP servers found matching '{search_query}'",
-                    "toolkits": []
+                    "toolkits": [],
+                    "session": search_response.get("session"),
+                    "search_source": search_response.get("source"),
                 })
             
             result_text = f"## MCP Servers matching '{search_query}'\n\n"
-            for toolkit in toolkits:
-                result_text += f"**{toolkit.name}**\n"
-                result_text += f"- Slug: `{toolkit.slug}`\n"
-                if toolkit.description:
-                    result_text += f"- Description: {toolkit.description}\n"
-                if toolkit.categories:
-                    result_text += f"- Categories: {', '.join(toolkit.categories)}\n"
-                result_text += "\n"
-            
-            result_text += f"\n💡 Use `create_credential_profile_for_agent` with the slug to set up authentication for any of these services."
-            
             formatted_toolkits = []
             for toolkit in toolkits:
+                name = toolkit.get("name") or "Unknown toolkit"
+                slug = toolkit.get("toolkit_slug") or toolkit.get("slug") or ""
+                description = toolkit.get("description") or f"Toolkit for {name}"
+                categories = toolkit.get("categories") or []
+                
+                result_text += f"**{name}**\n"
+                if slug:
+                    result_text += f"- Slug: `{slug}`\n"
+                if description:
+                    result_text += f"- Description: {description}\n"
+                if categories:
+                    result_text += f"- Categories: {', '.join(categories)}\n"
+                result_text += "\n"
+            
                 formatted_toolkits.append({
-                    "name": toolkit.name,
-                    "slug": toolkit.slug,
-                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
-                    "categories": toolkit.categories or []
+                    "name": name,
+                    "slug": slug,
+                    "description": description,
+                    "categories": categories,
+                    "auth_schemes": toolkit.get("auth_schemes") or [],
+                    "supports_managed_auth": toolkit.get("supports_managed_auth", False),
+                    "logo_url": toolkit.get("logo_url"),
                 })
+            
+            result_text += (
+                "\n💡 Use `create_credential_profile_for_agent` with the slug to set up authentication "
+                "for any of these services."
+            )
             
             return self.success_response({
                 "message": result_text,
                 "toolkits": formatted_toolkits,
-                "total_found": len(toolkits)
+                "total_found": len(formatted_toolkits),
+                "session": search_response.get("session"),
+                "search_source": search_response.get("source"),
             })
             
         except Exception as e:

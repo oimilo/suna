@@ -365,6 +365,8 @@ class SandboxVisionTool(SandboxToolsBase):
             )
             sentry_sdk.capture_exception(e)
             raise Exception(f"Sandbox browser-based SVG conversion failed: {str(e)}")
+        finally:
+            await self._schedule_stagehand_keepalive()
     
     async def compress_image(self, image_bytes: bytes, mime_type: str, file_path: str) -> Tuple[bytes, str]:
         """Compress an image to reduce its size while maintaining reasonable quality.

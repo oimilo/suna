@@ -74,6 +74,8 @@ interface UserStats {
     tier: string;
     count: number;
   }>;
+  total_credits_in_system?: number;
+  average_credit_balance?: number;
 }
 
 export function useAdminUserList(params: UserListParams = {}) {

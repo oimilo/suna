@@ -3,8 +3,7 @@ import { siteConfig } from '@/lib/site';
 import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AuthProvider } from '@/components/AuthProvider';
-import { ReactQueryProvider } from './react-query-provider';
+import { Providers } from './providers';
 import { Toaster } from '@/components/ui/sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { GoogleAnalytics } from '@next/third-parties/google';
@@ -204,12 +203,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <I18nProvider>
-            <AuthProvider>
-              <ReactQueryProvider>
-                {children}
-                <Toaster />
-              </ReactQueryProvider>
-            </AuthProvider>
+            <Providers>
+              {children}
+              <Toaster />
+            </Providers>
           </I18nProvider>
           <Analytics />
           <GoogleAnalytics gaId="G-6ETJFB3PT3" />

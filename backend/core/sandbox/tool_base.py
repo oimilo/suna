@@ -7,6 +7,7 @@ from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.tool import Tool
 from daytona_sdk import AsyncSandbox
 from core.sandbox.sandbox import get_or_start_sandbox, create_sandbox, delete_sandbox
+from core.tools.utils.stagehand_keepalive import stagehand_keepalive_manager
 from core.utils.logger import logger
 from core.utils.files_utils import clean_path
 from core.utils.config import config
@@ -156,3 +157,19 @@ class SandboxToolsBase(Tool):
         cleaned_path = clean_path(path, self.workspace_path)
         logger.debug(f"Cleaned path: {path} -> {cleaned_path}")
         return cleaned_path
+
+    async def _schedule_stagehand_keepalive(self, delay_seconds: float = 0.0) -> None:
+        """
+        Opportunistically ping the Stagehand API running inside the sandbox so the
+        browser stays warm between tool runs. Tools that interact with Stagehand
+        (Browser, Vision, previews) should call this after completing their work.
+        """
+
+        if self._sandbox is None:
+            return
+
+        await stagehand_keepalive_manager.schedule(
+            self._sandbox,
+            self._sandbox_id,
+            delay_seconds=delay_seconds,
+        )

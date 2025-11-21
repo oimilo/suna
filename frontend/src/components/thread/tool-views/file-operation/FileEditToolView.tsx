@@ -211,13 +211,10 @@ export function FileEditToolView({
   const hasHighlighting = hasLanguageHighlighting(language);
   const contentLines = splitContentIntoLines(updatedContent);
 
-  const htmlPreviewUrl = isHtml
-    ? constructHtmlPreviewUrl({
-        sandboxId: project?.sandbox?.id,
-        sandboxUrl: project?.sandbox?.sandbox_url,
-        filePath: processedFilePath,
-      })
-    : undefined;
+  const htmlPreviewUrl =
+    isHtml && project?.sandbox?.sandbox_url && processedFilePath
+      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath)
+      : undefined;
 
   const FileIcon = getFileIcon(fileName);
 

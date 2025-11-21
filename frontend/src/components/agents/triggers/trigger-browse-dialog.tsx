@@ -23,7 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { TriggerProvider } from './types';
-import { useTriggerProviders } from '@/hooks/triggers';
+import { useTriggerProviders } from '@/hooks/react-query/triggers';
 
 interface TriggerBrowseDialogProps {
   open: boolean;

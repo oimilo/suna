@@ -71,18 +71,32 @@ export function buildSandboxProxyUrl({
   return undefined;
 }
 
-/**
- * Constructs a preview URL for HTML files in the sandbox environment using the Daytona proxy when available.
- */
-export function constructHtmlPreviewUrl({
-  sandboxId,
-  sandboxUrl,
-  filePath,
-}: {
+type ConstructHtmlPreviewUrlOptions = {
   sandboxId?: string;
   sandboxUrl?: string;
   filePath?: string;
-}): string | undefined {
+};
+
+/**
+ * Constructs a preview URL for HTML files in the sandbox environment using the Daytona proxy when available.
+ * Supports legacy calling signature constructHtmlPreviewUrl(sandboxUrl, filePath).
+ */
+export function constructHtmlPreviewUrl(options: ConstructHtmlPreviewUrlOptions): string | undefined;
+export function constructHtmlPreviewUrl(
+  sandboxUrl?: string,
+  filePath?: string,
+): string | undefined;
+export function constructHtmlPreviewUrl(
+  optionsOrSandboxUrl?: ConstructHtmlPreviewUrlOptions | string,
+  legacyFilePath?: string,
+): string | undefined {
+  const options: ConstructHtmlPreviewUrlOptions =
+    typeof optionsOrSandboxUrl === 'string' || typeof optionsOrSandboxUrl === 'undefined'
+      ? { sandboxUrl: optionsOrSandboxUrl, filePath: legacyFilePath }
+      : optionsOrSandboxUrl ?? {};
+
+  const { sandboxId, sandboxUrl, filePath } = options;
+
   if (!filePath) {
     return undefined;
   }

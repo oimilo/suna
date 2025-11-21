@@ -1,6 +1,7 @@
 export const threadKeys = {
   all: ['threads'] as const,
   lists: () => ['threads', 'list'] as const,
+  limit: () => ['thread-limit'] as const,
   details: (threadId: string) => ['thread', threadId] as const,
   messages: (threadId: string) => ['thread', threadId, 'messages'] as const,
   project: (projectId: string) => ['project', projectId] as const,
@@ -9,7 +10,6 @@ export const threadKeys = {
   agentRuns: (threadId: string) => ['thread', threadId, 'agent-runs'] as const,
   billingStatus: ['billing', 'status'] as const,
   byProject: (projectId: string) => ['project', projectId, 'threads'] as const,
-  limit: () => ['threads', 'limit'] as const,
 } as const;
 
 // Project keys (consolidated from sidebar/keys.ts)
