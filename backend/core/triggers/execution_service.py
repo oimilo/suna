@@ -97,8 +97,6 @@ class SessionManager:
             vnc_url = self._extract_url(vnc_link)
             website_url = self._extract_url(website_link)
             token = self._extract_token(vnc_link)
-            preview_token = self._extract_token(website_link)
-            preview_token_generated_at = datetime.now(timezone.utc).isoformat()
             
             update_result = await client.table('projects').update({
                 'sandbox': {
@@ -106,9 +104,7 @@ class SessionManager:
                     'pass': sandbox_pass,
                     'vnc_preview': vnc_url,
                     'sandbox_url': website_url,
-                    'token': token,
-                    'preview_token': preview_token,
-                    'preview_token_generated_at': preview_token_generated_at
+                    'token': token
                 }
             }).eq('project_id', project_id).execute()
             

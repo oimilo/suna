@@ -141,7 +141,7 @@ export function useAuth() {
             data: {
               full_name: fullName,
             },
-            emailRedirectTo: 'kortix://auth/callback',
+            emailRedirectTo: 'milo://auth/callback',
           },
         });
 
@@ -216,7 +216,7 @@ export function useAuth() {
       }
 
       // Force mobile redirect URL (not web Site URL)
-      const redirectTo = 'kortix://auth/callback';
+      const redirectTo = 'milo://auth/callback';
 
       console.log('📊 Redirect URL:', redirectTo);
 
@@ -336,7 +336,7 @@ export function useAuth() {
       setError(null);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'kortix://auth/reset-password',
+        redirectTo: 'milo://auth/reset-password',
       });
 
       if (resetError) {

@@ -1,25 +1,23 @@
+import { backendApi } from '@/lib/api-client';
 import { Metadata } from 'next';
-import { BRANDING, getPageTitle } from '@/lib/branding';
 
 export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
   const { shareId: templateId } = await params;
-  
+
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${templateId}`);
-    
+
     if (!response.ok) {
       throw new Error('Template not found');
     }
-    
+
     const template = await response.json();
-    const templateTitle = `${template.name} - AI Agent Template`;
-    const title = getPageTitle(templateTitle);
-    const description =
-      template.description ||
-      `Discover and install this AI agent template to enhance your workflow with ${BRANDING.company} ${BRANDING.name}.`;
-    
+
+    const title = `${template.name} - AI Agent Template | Milo`;
+    const description = template.description || 'Discover and install this AI agent template to enhance your workflow with powerful automation capabilities.';
+
     const ogImage = `${process.env.NEXT_PUBLIC_URL}/api/og/template?shareId=${templateId}`;
-    
+
     return {
       title,
       description,
@@ -46,13 +44,11 @@ export async function generateMetadata({ params }: { params: Promise<{ shareId: 
     };
   } catch (error) {
     return {
-      title: getPageTitle('AI Agent Template'),
-      description:
-        `Discover and install AI agent templates to enhance your workflow with ${BRANDING.company} ${BRANDING.name}.`,
+      title: 'AI Agent Template | Milo',
+      description: 'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.',
       openGraph: {
-        title: getPageTitle('AI Agent Template'),
-        description:
-          `Discover and install AI agent templates to enhance your workflow with ${BRANDING.company} ${BRANDING.name}.`,
+        title: 'AI Agent Template | Milo',
+        description: 'Discover and install AI agent templates to enhance your workflow with powerful automation capabilities.',
         type: 'website',
         url: `${process.env.NEXT_PUBLIC_URL}/templates/${templateId}`,
         images: [
@@ -60,7 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ shareId: 
             url: `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`,
             width: 1200,
             height: 630,
-            alt: `${BRANDING.company} ${BRANDING.name} AI Agent Template`,
+            alt: 'Milo AI Agent Template',
           }
         ],
       },

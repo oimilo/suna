@@ -61,7 +61,7 @@ class AgentTemplate:
     
     @property
     def system_prompt(self) -> str:
-        return self.config.get('system_prompt_user') or self.config.get('system_prompt', '')
+        return self.config.get('system_prompt', '')
     
     @property
     def agentpress_tools(self) -> Dict[str, Any]:
@@ -196,7 +196,7 @@ class TemplateService:
             raise TemplateAccessDeniedError("You can only create templates from your own agents")
         
         if self._is_suna_default_agent(agent):
-            raise SunaDefaultAgentTemplateError("Cannot create template from Suna default agent")
+            raise SunaDefaultAgentTemplateError("Cannot create template from Prophet default agent")
         
         version_config = await self._get_agent_version_config(agent)
         if not version_config:
@@ -547,7 +547,6 @@ class TemplateService:
         
         sanitized = {
             'system_prompt': config.get('system_prompt', ''),
-            'system_prompt_user': config.get('system_prompt_user'),
             'model': config.get('model'),
             'tools': {
                 'agentpress': sanitized_agentpress,

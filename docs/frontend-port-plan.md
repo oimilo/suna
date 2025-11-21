@@ -1,6 +1,6 @@
 # Frontend Port Plan
 
-Prepared to align our frontend with the latest upstream (kortix-suna) capabilities before touching the codebase.
+Prepared to align our frontend with the latest upstream (milo-prophet) capabilities before touching the codebase.
 
 ## Objectives
 - Restore the full triggers/automations experience so users can create, edit, toggle and delete tasks directly from the dashboard.
@@ -40,7 +40,7 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
   - Ajustar `ConfiguredMcpList` e `MCPConfigurationNew` para ler o slug via `toolkit_slug`, `config.mcp_qualified_name` ou chaves legadas e alimentar `useComposioToolkitIcon`, garantindo que credenciais criadas pelo agente exibam os ícones corretos.
   - Trocar as keys da lista de MCPs para usar `profile_id` (ou `mcp.config.profile_id`) e evitar warnings de duplicidade quando o agent builder cria múltiplas entradas com o mesmo qualified name.
 - QA & verificação:
-  - Exercitar fluxos Trello/Auth1 via agent builder após o ajuste de slug e confirmar que o link de autenticação espelha o comportamento do Suna original.
+  - Exercitar fluxos Trello/Auth1 via agent builder após o ajuste de slug e confirmar que o link de autenticação espelha o comportamento do Prophet original.
   - Rodar smoke em `/agents` (modal + logos), `/settings/credentials` e nas ferramentas de descoberta do chat depois da limpeza de dados.
 
 ### 3. Knowledge Base & Templates ☐
@@ -55,7 +55,7 @@ Prepared to align our frontend with the latest upstream (kortix-suna) capabiliti
 - ✅ portamos o `UnifiedAgentCard` e atualizamos os grids de marketplace/templates para usarem o mesmo componente do upstream (incluindo badges e estados de ação); seguir avaliando a grid de agentes quando migrarmos o modal de ações completo.
 - ✅ modal de upload da base de conhecimento volta a pré-selecionar a primeira pasta disponível, reseta estado ao fechar e libera o CTA de upload sem passos extras.
 - ✅ granular tool configuration agora lê os defaults do backend quando o agente não tem configuração explícita, deixando todos os core tools habilitados por padrão.
-- ✅ avatars de agentes passaram a usar o componente upstream com ícones dinâmicos/kortix logo, respeitando cores salvas e cache local dos agentes.
+- ✅ avatars de agentes passaram a usar o componente upstream com ícones dinâmicos/milo logo, respeitando cores salvas e cache local dos agentes.
 - ✅ uploads de arquivos no chat normalizam caminhos para `/workspace/uploads/*`, limpam pendências locais e evitam anexos duplicados com erro de preview.
 - ✅ fluxo de streaming do chat acompanha a lógica upstream (`userInitiatedRun` + `lastStreamStartedRef`), então a UI volta a atualizar respostas em tempo real sem precisar de refresh.
 - ✅ ferramentas de visão (`load_image`) agora criam/verificam o bucket público automaticamente e usam o bucket configurável em `SUPABASE_PUBLIC_IMAGE_BUCKET`, evitando o 404 “Bucket not found”.

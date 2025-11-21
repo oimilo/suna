@@ -16,7 +16,7 @@ services:
       retries: 3
 
   backend:
-    image: ghcr.io/oimilo/suna-backend:latest
+    image: ghcr.io/oimilo/prophet-backend:latest
     restart: always
     ports:
       - "127.0.0.1:3008:8000"
@@ -37,7 +37,7 @@ services:
       retries: 3
 
   worker:
-    image: ghcr.io/oimilo/suna-backend:latest
+    image: ghcr.io/oimilo/prophet-backend:latest
     restart: always
     command: python -m dramatiq --processes 4 --threads 4 run_agent_background
     env_file:
@@ -52,7 +52,7 @@ services:
         condition: service_healthy
 
   frontend:
-    image: ghcr.io/oimilo/suna-frontend:latest
+    image: ghcr.io/oimilo/prophet-frontend:latest
     restart: always
     ports:
       - "80:3000"
@@ -69,4 +69,4 @@ volumes:
 
 networks:
   default:
-    name: suna-network
+    name: prophet-network

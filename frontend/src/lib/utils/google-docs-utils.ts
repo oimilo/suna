@@ -1,7 +1,6 @@
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { backendApi } from '../api-client';
-import { buildSandboxProxyUrl } from './url';
 
 export enum DownloadFormat {
   PDF = 'pdf',
@@ -9,28 +8,14 @@ export enum DownloadFormat {
   GOOGLE_DOCS = 'google-docs',
 }
 
-type SandboxReference = {
-  sandbox_url?: string;
-  id?: string;
-};
-
 export async function downloadDocument(
   format: DownloadFormat,
-  sandbox: SandboxReference,
+  sandboxUrl: string,
   docPath: string,
   documentName: string
 ): Promise<void> {
   try {
-    const baseUrl = buildSandboxProxyUrl({
-      sandboxId: sandbox.id,
-      sandboxUrl: sandbox.sandbox_url,
-    });
-
-    if (!baseUrl) {
-      throw new Error('Sandbox URL is required to download the document.');
-    }
-
-    const response = await fetch(`${baseUrl}/document/convert-to-${format}`, {
+    const response = await fetch(`${sandboxUrl}/document/convert-to-${format}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,8 +72,8 @@ export const handleGoogleDocsAuth = async (docPath: string, sandboxUrl: string) 
   }
 };
 
-export const handleGoogleDocsUpload = async (sandbox: SandboxReference, docPath: string) => {
-  if (!sandbox?.sandbox_url || !docPath) {
+export const handleGoogleDocsUpload = async (sandboxUrl: string, docPath: string) => {
+  if (!sandboxUrl || !docPath) {
     throw new Error('Missing required parameters');
   }
   
@@ -102,7 +87,7 @@ export const handleGoogleDocsUpload = async (sandbox: SandboxReference, docPath:
 
     const response = await backendApi.post('/document-tools/convert-and-upload-to-docs', {
       doc_path: docPath,
-      sandbox_url: sandbox.sandbox_url,
+      sandbox_url: sandboxUrl,
     }, {
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -120,7 +105,7 @@ export const handleGoogleDocsUpload = async (sandbox: SandboxReference, docPath:
       toast.info('Redirecting to Google authentication...', {
         duration: 3000,
       });
-      handleGoogleDocsAuth(docPath, sandbox.sandbox_url);
+      handleGoogleDocsAuth(docPath, sandboxUrl);
       return {
         success: false,
         redirected_to_auth: true,
@@ -156,7 +141,7 @@ export const handleGoogleDocsUpload = async (sandbox: SandboxReference, docPath:
       toast.info('Please authenticate with Google first', {
         duration: 3000,
       });
-      handleGoogleDocsAuth(docPath, sandbox.sandbox_url);
+      handleGoogleDocsAuth(docPath, sandboxUrl);
       return {
         success: false,
         redirected_to_auth: true,
@@ -183,7 +168,7 @@ export const checkPendingGoogleDocsUpload = async () => {
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        await handleGoogleDocsUpload({ sandbox_url: intent.sandbox_url }, intent.doc_path);
+        await handleGoogleDocsUpload(intent.sandbox_url, intent.doc_path);
         
         const url = new URL(window.location.href);
         url.searchParams.delete('google_auth');

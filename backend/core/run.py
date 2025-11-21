@@ -19,6 +19,7 @@ from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.prompt import get_system_prompt
 
 from core.utils.logger import logger
+
 from core.billing.billing_integration import billing_integration
 
 from core.services.langfuse import langfuse
@@ -32,7 +33,6 @@ from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.ai_models.manager import model_manager
 from core.tools.vapi_voice_tool import VapiVoiceTool
-from core.utils.tool_runtime import get_disabled_tools
 
 load_dotenv()
 
@@ -82,7 +82,7 @@ class ToolManager:
         # Browser tool
         self._register_browser_tool(disabled_tools)
         
-        # Suna-specific tools (agent creation)
+        # Prophet-specific tools (agent creation)
         if self.account_id:
             self._register_suna_specific_tools(disabled_tools)
         
@@ -207,7 +207,7 @@ class ToolManager:
                     logger.warning(f"❌ Failed to register {tool_name}: {e}")
     
     def _register_suna_specific_tools(self, disabled_tools: List[str]):
-        """Register Suna-specific tools like agent creation."""
+        """Register Prophet-specific tools like agent creation."""
         if 'agent_creation_tool' not in disabled_tools and self.account_id:
             from core.tools.tool_registry import get_tool_info, get_tool_class
             from core.services.supabase import DBConnection
@@ -276,10 +276,9 @@ class ToolManager:
         return get_enabled_methods_for_tool(tool_name, self.migrated_tools)
 
 class MCPManager:
-    def __init__(self, thread_manager: ThreadManager, account_id: str, thread_id: Optional[str] = None):
+    def __init__(self, thread_manager: ThreadManager, account_id: str):
         self.thread_manager = thread_manager
         self.account_id = account_id
-        self.thread_id = thread_id
     
     async def register_mcp_tools(self, agent_config: dict) -> Optional[MCPToolWrapper]:
         all_mcps = []
@@ -322,11 +321,7 @@ class MCPManager:
         if not all_mcps:
             return None
         
-        mcp_wrapper_instance = MCPToolWrapper(
-            mcp_configs=all_mcps,
-            thread_manager=self.thread_manager,
-            thread_id=self.thread_id,
-        )
+        mcp_wrapper_instance = MCPToolWrapper(mcp_configs=all_mcps)
         try:
             await mcp_wrapper_instance.initialize_and_register_tools()
             
@@ -578,10 +573,10 @@ class AgentRunner:
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
         
         if is_suna_agent:
-            logger.debug("Registering Suna-specific tools...")
+            logger.debug("Registering Prophet-specific tools...")
             self._register_suna_specific_tools(disabled_tools)
         else:
-            logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
+            logger.debug("Not a Prophet agent, skipping Prophet-specific tool registration")
     
     def _get_migrated_tools_config(self) -> dict:
         """Migrate tool config once and cache it. This is expensive so we only do it once."""
@@ -619,16 +614,54 @@ class AgentRunner:
                 if enabled_methods is not None:
                     # Register only enabled methods
                     self.thread_manager.add_tool(AgentCreationTool, function_names=enabled_methods, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                    logger.debug(f"Registered agent_creation_tool for Suna with methods: {enabled_methods}")
+                    logger.debug(f"Registered agent_creation_tool for Prophet with methods: {enabled_methods}")
                 else:
                     # Register all methods (backward compatibility)
                     self.thread_manager.add_tool(AgentCreationTool, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                    logger.debug("Registered agent_creation_tool for Suna (all methods)")
+                    logger.debug("Registered agent_creation_tool for Prophet (all methods)")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
     
     def _get_disabled_tools_from_config(self) -> List[str]:
-        disabled_tools = get_disabled_tools(self.config.agent_config)
+        disabled_tools = []
+        
+        if not self.config.agent_config or 'agentpress_tools' not in self.config.agent_config:
+            return disabled_tools
+        
+        raw_tools = self.config.agent_config['agentpress_tools']
+        
+        if not isinstance(raw_tools, dict):
+            return disabled_tools
+        
+        if self.config.agent_config.get('is_suna_default', False) and not raw_tools:
+            return disabled_tools
+        
+        def is_tool_enabled(tool_name: str) -> bool:
+            try:
+                tool_config = raw_tools.get(tool_name, True)
+                if isinstance(tool_config, bool):
+                    return tool_config
+                elif isinstance(tool_config, dict):
+                    return tool_config.get('enabled', True)
+                else:
+                    return True
+            except Exception:
+                return True
+        
+        all_tools = [
+            'sb_shell_tool', 'sb_files_tool', 'sb_expose_tool',
+            'web_search_tool', 'image_search_tool', 'sb_vision_tool', 'sb_presentation_tool', 'sb_image_edit_tool',
+            'sb_kb_tool', 'sb_design_tool', 'sb_upload_file_tool',
+            'sb_docs_tool',
+            'data_providers_tool', 'browser_tool', 'people_search_tool', 'company_search_tool', 
+            'agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool',
+            'agent_creation_tool'
+        ]
+        
+        for tool_name in all_tools:
+            if not is_tool_enabled(tool_name):
+                disabled_tools.append(tool_name)
+                
         logger.debug(f"Disabled tools from config: {disabled_tools}")
         return disabled_tools
     
@@ -636,7 +669,7 @@ class AgentRunner:
         if not self.config.agent_config:
             return None
         
-        mcp_manager = MCPManager(self.thread_manager, self.account_id, self.config.thread_id)
+        mcp_manager = MCPManager(self.thread_manager, self.account_id)
         return await mcp_manager.register_mcp_tools(self.config.agent_config)
     
     async def run(self, cancellation_event: Optional[asyncio.Event] = None) -> AsyncGenerator[Dict[str, Any], None]:

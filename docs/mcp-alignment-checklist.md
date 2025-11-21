@@ -1,15 +1,15 @@
 # MCP/Composio Alignment – Phase 3
 
-- **Objetivo**: alinhar runtime atual ao comportamento do Suna original para MCP/Composio, garantindo que ferramentas Trello (ex.: `TRELLO_GET_MEMBERS_BY_ID_MEMBER`) apareçam no registry e executem sem quedas.
+- **Objetivo**: alinhar runtime atual ao comportamento do Prophet original para MCP/Composio, garantindo que ferramentas Trello (ex.: `TRELLO_GET_MEMBERS_BY_ID_MEMBER`) apareçam no registry e executem sem quedas.
 
 ## 1. Paridade de Código
-- Atualizar seguintes arquivos para a versão paritária do Suna:
+- Atualizar seguintes arquivos para a versão paritária do Prophet:
   - `backend/core/tools/utils/dynamic_tool_builder.py`
   - `backend/core/tools/utils/custom_mcp_handler.py`
   - `backend/core/tools/utils/mcp_tool_executor.py`
   - `backend/core/mcp_module/mcp_service.py`
   - `backend/core/tools/agent_builder_tools/mcp_search_tool.py`
-- Gap identificado em 2025-10-23: `dynamic_tool_builder._parse_tool_name` mantém o nome completo (`trello_get_*`) em vez de recortar o prefixo como o Suna; ajustar para restaurar `method_name = boards_by_id_board` e expor o OpenAPI com esses aliases.
+- Gap identificado em 2025-10-23: `dynamic_tool_builder._parse_tool_name` mantém o nome completo (`trello_get_*`) em vez de recortar o prefixo como o Prophet; ajustar para restaurar `method_name = boards_by_id_board` e expor o OpenAPI com esses aliases.
 - Conferir que o wrapper registra aliases normalizados, trata `ToolExecutionResult`, e efetua fallback HTTP↔SSE.
 - Revisar geração de logs após merge e validar que o `tool_registry` contém o alias completo (`TRELLO_GET_MEMBERS_BY_ID_MEMBER`).
 

@@ -1,4 +1,4 @@
-# Kortix Mobile App - Build & Deploy Guide
+# Milo Mobile App - Build & Deploy Guide
 
 ## 📱 Quick Start
 
@@ -49,7 +49,7 @@ eas update --branch main --message "Test build for team" --platform android
    - App loads instantly! 🎉
 
 **Option 2: QR Code**
-1. Visit your Expo dashboard: `https://expo.dev/accounts/kortix/projects/kortix`
+1. Visit your Expo dashboard: `https://expo.dev/accounts/milo/projects/milo`
 2. Find your published update
 3. Share the QR code with your team
 4. They scan it with Expo Go app
@@ -66,7 +66,7 @@ We have a GitHub Actions workflow (`.github/workflows/mobile-eas-update.yml`) th
 
 **Setup (one-time):**
 1. Get your Expo access token:
-   - Visit: https://expo.dev/accounts/kortix/settings/access-tokens
+   - Visit: https://expo.dev/accounts/milo/settings/access-tokens
    - Create a new token (or use existing one)
 2. Add it as a GitHub secret:
    - Go to your GitHub repo → Settings → Secrets and variables → Actions

@@ -37,31 +37,9 @@ except ImportError as e:
 router = APIRouter(prefix="/presentation", tags=["pptx-conversion"])
 
 # Create output directory for generated PPTXs in workspace downloads
-WORKSPACE_DIR = Path("/workspace").resolve()
-output_dir = WORKSPACE_DIR / "downloads"
+workspace_dir = "/workspace"
+output_dir = Path(workspace_dir) / "downloads"
 output_dir.mkdir(parents=True, exist_ok=True)
-
-
-def _resolve_workspace_path(raw_path: str) -> Path:
-    """
-    Resolve a potentially relative path against the sandbox workspace directory.
-
-    Ensures callers can pass values like `presentations/foo` without causing a 404.
-    """
-    candidate = Path(raw_path)
-    if not candidate.is_absolute():
-        candidate = WORKSPACE_DIR / raw_path.lstrip("/")
-
-    candidate = candidate.resolve()
-    try:
-        candidate.relative_to(WORKSPACE_DIR)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="Presentation path must reside inside /workspace",
-        ) from exc
-
-    return candidate
 
 
 class ConvertRequest(BaseModel):
@@ -153,7 +131,7 @@ class CSSParser:
 class OptimizedHTMLToPPTXConverter:
     def __init__(self, presentation_dir: str):
         """Initialize the optimized converter."""
-        self.presentation_dir = _resolve_workspace_path(presentation_dir)
+        self.presentation_dir = Path(presentation_dir).resolve()
         self.metadata_path = self.presentation_dir / "metadata.json"
         self.metadata = None
         self.slides_info = []
@@ -181,16 +159,11 @@ class OptimizedHTMLToPPTXConverter:
                 title = slide_data.get('title', f'Slide {slide_num}')
                 
                 if file_path:
-                    path_candidate = Path(file_path)
-                    if not path_candidate.is_absolute():
-                        html_path = (WORKSPACE_DIR / path_candidate).resolve()
+                    # Handle both absolute and relative paths
+                    if Path(file_path).is_absolute():
+                        html_path = Path(file_path)
                     else:
-                        html_path = path_candidate.resolve()
-
-                    try:
-                        html_path.relative_to(WORKSPACE_DIR)
-                    except ValueError:
-                        continue
+                        html_path = Path(f"/workspace/{file_path}")
                     
                     # Verify the path exists
                     if html_path.exists():
@@ -1535,17 +1508,17 @@ async def convert_presentation_to_pptx(request: ConvertRequest):
     """
     try:
         # Validate presentation path exists
-        presentation_path = _resolve_workspace_path(request.presentation_path)
+        presentation_path = Path(request.presentation_path)
         if not presentation_path.exists():
-            raise HTTPException(status_code=404, detail=f"Presentation path not found: {presentation_path}")
+            raise HTTPException(status_code=404, detail=f"Presentation path not found: {request.presentation_path}")
         
         # Check if metadata.json exists
         metadata_path = presentation_path / "metadata.json"
         if not metadata_path.exists():
-            raise HTTPException(status_code=400, detail=f"metadata.json not found in: {presentation_path}")
+            raise HTTPException(status_code=400, detail=f"metadata.json not found in: {request.presentation_path}")
         
         # Create converter
-        converter = OptimizedHTMLToPPTXConverter(str(presentation_path))
+        converter = OptimizedHTMLToPPTXConverter(request.presentation_path)
         
         # If download is requested, don't store locally and return file directly
         if request.download:

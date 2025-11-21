@@ -1,6 +1,6 @@
-# Suna Sync
+# Prophet Sync
 
-Escopo: alinhar Prophet ao layout atual do Suna, sem melhorias próprias.
+Escopo: alinhar Prophet ao layout atual do Prophet, sem melhorias próprias.
 
 Checklist (somente upstream):
 - [ ] mcp_tool_wrapper.py (overwrite)

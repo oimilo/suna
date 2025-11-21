@@ -97,7 +97,7 @@ export interface CreateCheckoutSessionResponse {
   session_id?: string;
   url?: string;
   checkout_url?: string;
-  fe_checkout_url?: string;  // Kortix-branded embedded checkout
+  fe_checkout_url?: string;  // Milo-branded embedded checkout
   effective_date?: string;
   message?: string;
   details?: {

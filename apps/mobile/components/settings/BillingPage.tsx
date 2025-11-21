@@ -234,7 +234,7 @@ export function BillingPage({ visible, onClose, onOpenCredits, onOpenUsage, aler
   }, [onClose]);
 
   const handleManageSubscription = React.useCallback(async () => {
-    const returnUrl = 'https://kortix.com/subscription';
+    const returnUrl = 'https://milo.com/subscription';
     createPortalSessionMutation.mutate(
       { return_url: returnUrl },
       {
@@ -269,8 +269,8 @@ export function BillingPage({ visible, onClose, onOpenCredits, onOpenUsage, aler
       // RevenueCat users must cancel in-app
       const isIOS = require('react-native').Platform.OS === 'ios';
       const message = isIOS 
-        ? 'To cancel your subscription, please go to:\n\nSettings → [Your Name] → Subscriptions → Kortix'
-        : 'To cancel your subscription, please go to:\n\nPlay Store → Subscriptions → Kortix';
+        ? 'To cancel your subscription, please go to:\n\nSettings → [Your Name] → Subscriptions → Milo'
+        : 'To cancel your subscription, please go to:\n\nPlay Store → Subscriptions → Milo';
       
       require('react-native').Alert.alert(
         'Manage Subscription',
@@ -578,7 +578,7 @@ export function BillingPage({ visible, onClose, onOpenCredits, onOpenUsage, aler
             <View className="mb-6 bg-muted/30 rounded-2xl p-5">
               <Pressable
                 onPress={() => {
-                  const url = 'https://kortix.com/credits-explained';
+                  const url = 'https://milo.com/credits-explained';
                   Linking.openURL(url);
                 }}
                 className="flex-row items-center gap-3 active:opacity-70"

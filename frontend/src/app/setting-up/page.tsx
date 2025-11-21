@@ -6,8 +6,8 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useInitializeAccount } from '@/hooks/account';
 import { AnimatedBg } from '@/components/ui/animated-bg';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { KortixLogo } from '@/components/sidebar/milo-logo';
+import { KortixLoader } from '@/components/ui/milo-loader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 

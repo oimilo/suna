@@ -10,8 +10,8 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useLanguage } from '@/contexts';
-import KortixSymbolBlack from '@/assets/brand/kortix-symbol-scale-effect-black.svg';
-import KortixSymbolWhite from '@/assets/brand/kortix-symbol-scale-effect-white.svg';
+import MiloSymbolBlack from '@/assets/brand/milo-symbol-scale-effect-black.svg';
+import MiloSymbolWhite from '@/assets/brand/milo-symbol-scale-effect-white.svg';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { openInbox } from 'react-native-email-link';
@@ -25,8 +25,8 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import { KortixLoader } from '@/components/ui/kortix-loader';
-import { KortixLogo } from '@/components/ui/KortixLogo';
+import { MiloLoader } from '@/components/ui/milo-loader';
+import { MiloLogo } from '@/components/ui/MiloLogo';
 import { BackgroundLogo } from '@/components/home';
 import { AnimatedPageWrapper } from '@/components/shared/AnimatedPageWrapper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -169,7 +169,7 @@ export default function AuthScreen() {
 
   const handleOpenTerms = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=terms', {
+    await WebBrowser.openBrowserAsync('https://www.milo.com/legal?tab=terms', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });
@@ -177,7 +177,7 @@ export default function AuthScreen() {
 
   const handleOpenPrivacy = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=privacy', {
+    await WebBrowser.openBrowserAsync('https://www.milo.com/legal?tab=privacy', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });
@@ -364,11 +364,11 @@ function WelcomeView({ onSignUp, onSignIn }: { onSignUp: () => void; onSignIn: (
   }));
 
   const isDark = colorScheme === 'dark';
-  const SymbolComponent = isDark ? KortixSymbolWhite : KortixSymbolBlack;
+  const SymbolComponent = isDark ? MiloSymbolWhite : MiloSymbolBlack;
 
   const handleOpenTerms = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=terms', {
+    await WebBrowser.openBrowserAsync('https://www.milo.com/legal?tab=terms', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });
@@ -376,7 +376,7 @@ function WelcomeView({ onSignUp, onSignIn }: { onSignUp: () => void; onSignIn: (
 
   const handleOpenPrivacy = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=privacy', {
+    await WebBrowser.openBrowserAsync('https://www.milo.com/legal?tab=privacy', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });
@@ -392,7 +392,7 @@ function WelcomeView({ onSignUp, onSignIn }: { onSignUp: () => void; onSignIn: (
       </View>
       <View className="justify-center mb-10">
         <View className="-mb-4">
-          <KortixLogo variant="logomark" size={80} color={isDark ? 'dark' : 'light'} />
+          <MiloLogo variant="logomark" size={80} color={isDark ? 'dark' : 'light'} />
         </View>
         <View className="mb-6">
           <Text className="text-3xl font-roobert-semibold text-foreground leading-tight">
@@ -600,7 +600,7 @@ function SignInView({
       <View className="flex-1">
         <View>
           <View className="-mb-2">
-            <KortixLogo variant="logomark" size={64} color={isDark ? 'dark' : 'light'} />
+            <MiloLogo variant="logomark" size={64} color={isDark ? 'dark' : 'light'} />
           </View>
           <Text className="text-[36px] font-roobert-semibold text-foreground leading-tight mb-8">
             {t('auth.logIn')}
@@ -707,7 +707,7 @@ function SignInView({
           }]}
         >
           {isLoading ? (
-            <KortixLoader size="small" forceTheme={isDark ? 'light' : 'dark'} />
+            <MiloLoader size="small" forceTheme={isDark ? 'light' : 'dark'} />
           ) : (
             <Text style={{ 
               color: isDark ? '#000000' : '#FFFFFF',
@@ -834,7 +834,7 @@ function SignUpView({
       <View className="flex-1">
         <View>
           <View className="-mb-2">
-            <KortixLogo variant="logomark" size={64} color={isDark ? 'dark' : 'light'} />
+            <MiloLogo variant="logomark" size={64} color={isDark ? 'dark' : 'light'} />
           </View>
           <Text className="text-[36px] font-roobert-semibold text-foreground leading-tight mb-8">
             {t('auth.createAccount')}
@@ -981,7 +981,7 @@ function SignUpView({
           }]}
         >
           {isLoading ? (
-            <KortixLoader size="small" forceTheme={isDark ? 'light' : 'dark'} />
+            <MiloLoader size="small" forceTheme={isDark ? 'light' : 'dark'} />
           ) : (
             <Text style={{ 
               color: isDark ? '#000000' : '#FFFFFF',

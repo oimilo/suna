@@ -30,26 +30,9 @@ except ImportError:
 router = APIRouter(prefix="/presentation", tags=["pdf-conversion"])
 
 # Create output directory for generated PDFs in workspace downloads
-WORKSPACE_DIR = Path("/workspace").resolve()
-output_dir = WORKSPACE_DIR / "downloads"
+workspace_dir = "/workspace"
+output_dir = Path(workspace_dir) / "downloads"
 output_dir.mkdir(parents=True, exist_ok=True)
-
-
-def _resolve_workspace_path(raw_path: str) -> Path:
-    candidate = Path(raw_path)
-    if not candidate.is_absolute():
-        candidate = WORKSPACE_DIR / raw_path.lstrip("/")
-
-    candidate = candidate.resolve()
-    try:
-        candidate.relative_to(WORKSPACE_DIR)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="Presentation path must reside inside /workspace",
-        ) from exc
-
-    return candidate
 
 
 class ConvertRequest(BaseModel):
@@ -68,7 +51,7 @@ class ConvertResponse(BaseModel):
 class PresentationToPDFAPI:
     def __init__(self, presentation_dir: str):
         """Initialize the converter with presentation directory."""
-        self.presentation_dir = _resolve_workspace_path(presentation_dir)
+        self.presentation_dir = Path(presentation_dir).resolve()
         self.metadata_path = self.presentation_dir / "metadata.json"
         self.metadata = None
         self.slides_info = []
@@ -96,18 +79,7 @@ class PresentationToPDFAPI:
                 title = slide_data.get('title', f'Slide {slide_num}')
                 
                 if file_path:
-                    path_candidate = Path(file_path)
-                    if not path_candidate.is_absolute():
-                        html_path = (WORKSPACE_DIR / path_candidate).resolve()
-                    else:
-                        html_path = path_candidate.resolve()
-
-                    try:
-                        html_path.relative_to(WORKSPACE_DIR)
-                    except ValueError:
-                        print(f"Warning: Ignoring slide outside workspace: {path_candidate}")
-                        continue
-
+                    html_path = Path(f"/workspace/{file_path}")
                     print(f"Using path: {html_path}")
                     
                     # Verify the path exists
@@ -307,16 +279,8 @@ async def convert_presentation_to_pdf(request: ConvertRequest):
     try:
         print(f"📥 Received conversion request for: {request.presentation_path}")
         
-        presentation_path = _resolve_workspace_path(request.presentation_path)
-        if not presentation_path.exists():
-            raise HTTPException(status_code=404, detail=f"Presentation path not found: {presentation_path}")
-
-        metadata_path = presentation_path / "metadata.json"
-        if not metadata_path.exists():
-            raise HTTPException(status_code=400, detail=f"metadata.json not found in: {presentation_path}")
-        
         # Create converter
-        converter = PresentationToPDFAPI(str(presentation_path))
+        converter = PresentationToPDFAPI(request.presentation_path)
         
         # If download is requested, don't store locally and return file directly
         if request.download:

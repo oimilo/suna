@@ -1,108 +1,14 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
-
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Depends, Body
 from pydantic import BaseModel
-import sentry_sdk
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
-from core.services.langfuse import langfuse
 from . import core_utils as utils
 
 router = APIRouter(tags=["feedback"])
-
-
-async def _annotate_message_feedback(
-    client,
-    message_id: str,
-    feedback_record: Dict[str, Any],
-) -> Optional[Dict[str, Any]]:
-    """
-    Attach feedback metadata to the associated message (usually a tool result)
-    so the frontend and future sessions can display the rating inline.
-    """
-    try:
-        message_result = (
-            await client.table("messages")
-            .select("metadata, thread_id, type")
-            .eq("message_id", message_id)
-            .maybe_single()
-            .execute()
-        )
-        message_data = message_result.data
-        if not message_data:
-            logger.warning("Message %s not found when recording feedback", message_id)
-            return None
-
-        metadata = message_data.get("metadata") or {}
-        metadata["feedback"] = {
-            "feedback_id": feedback_record.get("feedback_id"),
-            "rating": feedback_record.get("rating"),
-            "feedback_text": feedback_record.get("feedback_text"),
-            "help_improve": feedback_record.get("help_improve"),
-            "context": feedback_record.get("context"),
-            "submitted_at": feedback_record.get("updated_at"),
-        }
-
-        await client.table("messages").update(
-            {"metadata": metadata}
-        ).eq("message_id", message_id).execute()
-
-        return {
-            "thread_id": message_data.get("thread_id"),
-            "message_type": message_data.get("type"),
-        }
-    except Exception as exc:
-        logger.warning(
-            "Failed to annotate message %s with feedback: %s", message_id, exc
-        )
-        return None
-
-
-def _track_feedback_observability(
-    feedback_record: Dict[str, Any],
-    message_context: Optional[Dict[str, Any]],
-) -> None:
-    metadata = {
-        "feedback_id": feedback_record.get("feedback_id"),
-        "rating": feedback_record.get("rating"),
-        "help_improve": feedback_record.get("help_improve"),
-        "has_text": bool(feedback_record.get("feedback_text")),
-        "message_type": message_context.get("message_type") if message_context else None,
-    }
-
-    try:
-        langfuse.event(
-            name="tool_result_feedback",
-            session_id=message_context.get("thread_id") if message_context else None,
-            metadata=metadata,
-        )
-    except Exception as exc:
-        logger.debug("Langfuse feedback event failed: %s", exc)
-
-    rating = feedback_record.get("rating") or 0
-    if rating >= 3:
-        return
-
-    try:
-        hub = sentry_sdk.Hub.current
-        if not hub or not hub.client:
-            return
-        with sentry_sdk.push_scope() as scope:
-            scope.set_tag("feedback.rating", rating)
-            if feedback_record.get("feedback_id"):
-                scope.set_tag("feedback.id", feedback_record["feedback_id"])
-            if message_context and message_context.get("thread_id"):
-                scope.set_tag("thread.id", message_context["thread_id"])
-            scope.set_extra("feedback", feedback_record)
-            sentry_sdk.capture_message(
-                "Low-rating tool feedback submitted",
-                level="warning",
-            )
-    except Exception as exc:
-        logger.debug("Sentry feedback capture failed: %s", exc)
 
 
 class FeedbackRequest(BaseModel):
@@ -110,9 +16,9 @@ class FeedbackRequest(BaseModel):
     rating: float
     feedback_text: Optional[str] = None
     help_improve: bool = True
-    thread_id: Optional[str] = None
-    message_id: Optional[str] = None
-    context: Optional[dict] = None
+    thread_id: Optional[str] = None  # Optional - feedback can be standalone
+    message_id: Optional[str] = None  # Optional - feedback can be standalone
+    context: Optional[dict] = None  # Additional context/metadata
 
 
 class FeedbackResponse(BaseModel):
@@ -129,175 +35,131 @@ class FeedbackResponse(BaseModel):
     updated_at: str
 
 
-@router.post(
-    "/feedback",
-    response_model=FeedbackResponse,
-    summary="Submit Feedback",
-    operation_id="submit_feedback",
-)
+@router.post("/feedback", response_model=FeedbackResponse, summary="Submit Feedback", operation_id="submit_feedback")
 async def submit_feedback(
     feedback_data: FeedbackRequest,
-    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
-    """Submit feedback (rating and optional text)."""
-    logger.debug("Submitting feedback from user %s", user_id)
+    """Submit feedback (rating and optional text). Can be associated with a thread/message or standalone."""
+    logger.debug(f"Submitting feedback from user {user_id}")
     client = await utils.db.client
-
+    
     try:
+        # Validate rating (0.5 to 5.0 in 0.5 increments)
         if feedback_data.rating < 0.5 or feedback_data.rating > 5.0:
             raise HTTPException(status_code=400, detail="Rating must be between 0.5 and 5.0")
         if (feedback_data.rating * 2) % 1 != 0:
             raise HTTPException(status_code=400, detail="Rating must be in 0.5 increments")
-
+        
+        # If thread_id and message_id are provided, verify they exist and user has access
         if feedback_data.thread_id:
             from core.utils.auth_utils import verify_and_authorize_thread_access
-
             await verify_and_authorize_thread_access(client, feedback_data.thread_id, user_id)
-
+            
             if feedback_data.message_id:
-                message_result = (
-                    await client.table("messages")
-                    .select("message_id")
-                    .eq("message_id", feedback_data.message_id)
-                    .eq("thread_id", feedback_data.thread_id)
-                    .execute()
-                )
+                # Verify message exists and belongs to thread
+                message_result = await client.table('messages').select('message_id').eq('message_id', feedback_data.message_id).eq('thread_id', feedback_data.thread_id).execute()
                 if not message_result.data:
                     raise HTTPException(status_code=404, detail="Message not found in thread")
-
+        
+        # Check if feedback already exists (for thread_id + message_id combination)
         existing_feedback = None
         if feedback_data.thread_id and feedback_data.message_id:
-            existing_feedback_result = (
-                await client.table("feedback")
-                .select("*")
-                .eq("thread_id", feedback_data.thread_id)
-                .eq("message_id", feedback_data.message_id)
-                .eq("account_id", user_id)
-                .execute()
-            )
+            existing_feedback_result = await client.table('feedback').select('*').eq('thread_id', feedback_data.thread_id).eq('message_id', feedback_data.message_id).eq('account_id', user_id).execute()
             if existing_feedback_result.data:
                 existing_feedback = existing_feedback_result.data[0]
-
+        
         feedback_payload = {
             "account_id": user_id,
             "rating": float(feedback_data.rating),
             "feedback_text": feedback_data.feedback_text,
             "help_improve": feedback_data.help_improve,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
-
+        
+        # Add optional fields
         if feedback_data.thread_id:
             feedback_payload["thread_id"] = feedback_data.thread_id
         if feedback_data.message_id:
             feedback_payload["message_id"] = feedback_data.message_id
         if feedback_data.context:
             feedback_payload["context"] = feedback_data.context
-
-        message_context: Optional[Dict[str, Any]] = None
-
+        
         if existing_feedback:
-            feedback_result = (
-                await client.table("feedback")
-                .update(feedback_payload)
-                .eq("feedback_id", existing_feedback["feedback_id"])
-                .execute()
-            )
+            # Update existing feedback
+            feedback_result = await client.table('feedback').update(feedback_payload).eq('feedback_id', existing_feedback['feedback_id']).execute()
             if not feedback_result.data:
                 raise HTTPException(status_code=500, detail="Failed to update feedback")
-            logger.debug("Updated feedback %s", feedback_result.data[0]["feedback_id"])
-            saved_feedback = feedback_result.data[0]
+            logger.debug(f"Updated feedback {feedback_result.data[0]['feedback_id']}")
+            return feedback_result.data[0]
         else:
+            # Insert new feedback
             feedback_payload["feedback_id"] = str(uuid.uuid4())
             feedback_payload["created_at"] = datetime.now(timezone.utc).isoformat()
-            feedback_result = await client.table("feedback").insert(feedback_payload).execute()
+            feedback_result = await client.table('feedback').insert(feedback_payload).execute()
             if not feedback_result.data:
                 raise HTTPException(status_code=500, detail="Failed to create feedback")
-            logger.debug("Created feedback %s", feedback_result.data[0]["feedback_id"])
-            saved_feedback = feedback_result.data[0]
-
-        if feedback_data.message_id:
-            message_context = await _annotate_message_feedback(
-                client,
-                feedback_data.message_id,
-                saved_feedback,
-            )
-
-        _track_feedback_observability(saved_feedback, message_context)
-        return saved_feedback
-
+            logger.debug(f"Created feedback {feedback_result.data[0]['feedback_id']}")
+            return feedback_result.data[0]
+        
     except HTTPException:
         raise
-    except Exception as exc:
-        logger.error("Error submitting feedback: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {exc}")
+    except Exception as e:
+        logger.error(f"Error submitting feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
 
 
-@router.get(
-    "/feedback",
-    response_model=list[FeedbackResponse],
-    summary="Get Feedback",
-    operation_id="get_feedback",
-)
+@router.get("/feedback", response_model=list[FeedbackResponse], summary="Get Feedback", operation_id="get_feedback")
 async def get_feedback(
     thread_id: Optional[str] = None,
     message_id: Optional[str] = None,
-    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
-    """Get feedback for the current user, optionally filtered by thread/message."""
-    logger.debug("Getting feedback for user %s", user_id)
+    """Get feedback. Can filter by thread_id and/or message_id. Returns user's own feedback."""
+    logger.debug(f"Getting feedback for user {user_id}")
     client = await utils.db.client
-
+    
     try:
-        query = client.table("feedback").select("*").eq("account_id", user_id)
-
+        query = client.table('feedback').select('*').eq('account_id', user_id)
+        
         if thread_id:
+            # Verify thread access
             from core.utils.auth_utils import verify_and_authorize_thread_access
-
             await verify_and_authorize_thread_access(client, thread_id, user_id)
-            query = query.eq("thread_id", thread_id)
-
+            query = query.eq('thread_id', thread_id)
+        
         if message_id:
-            query = query.eq("message_id", message_id)
-
+            query = query.eq('message_id', message_id)
+        
         feedback_result = await query.execute()
+        
         return feedback_result.data or []
-
+        
     except HTTPException:
         raise
-    except Exception as exc:
-        logger.error("Error getting feedback: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to get feedback: {exc}")
+    except Exception as e:
+        logger.error(f"Error getting feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get feedback: {str(e)}")
 
 
-@router.get(
-    "/feedback/{feedback_id}",
-    response_model=Optional[FeedbackResponse],
-    summary="Get Feedback by ID",
-    operation_id="get_feedback_by_id",
-)
+@router.get("/feedback/{feedback_id}", response_model=Optional[FeedbackResponse], summary="Get Feedback by ID", operation_id="get_feedback_by_id")
 async def get_feedback_by_id(
     feedback_id: str,
-    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
-    """Get feedback by ID if it belongs to the current user."""
-    logger.debug("Getting feedback %s for user %s", feedback_id, user_id)
+    """Get a specific feedback by ID (only if it belongs to the current user)."""
+    logger.debug(f"Getting feedback {feedback_id} for user {user_id}")
     client = await utils.db.client
-
+    
     try:
-        feedback_result = (
-            await client.table("feedback")
-            .select("*")
-            .eq("feedback_id", feedback_id)
-            .eq("account_id", user_id)
-            .execute()
-        )
-
+        feedback_result = await client.table('feedback').select('*').eq('feedback_id', feedback_id).eq('account_id', user_id).execute()
+        
         if not feedback_result.data:
             return None
-
+        
         return feedback_result.data[0]
-
-    except Exception as exc:
-        logger.error("Error getting feedback %s: %s", feedback_id, exc)
-        raise HTTPException(status_code=500, detail=f"Failed to get feedback: {exc}")
+        
+    except Exception as e:
+        logger.error(f"Error getting feedback {feedback_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get feedback: {str(e)}")
 

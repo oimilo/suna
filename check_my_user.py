@@ -35,11 +35,11 @@ if result.data:
     prophet_agent = None
     for agent in user_agents.data:
         metadata = agent.get('metadata', {})
-        is_prophet = metadata.get('is_suna_default', False)
+        is_prophet = metadata.get('is_prophet_default', False)
         
         print(f"\n  🤖 {agent['name']} (ID: {agent['agent_id']})")
         print(f"     is_default: {agent.get('is_default', False)}")
-        print(f"     is_suna_default: {is_prophet}")
+        print(f"     is_prophet_default: {is_prophet}")
         print(f"     created_at: {agent['created_at']}")
         
         if is_prophet:
@@ -50,7 +50,7 @@ if result.data:
         print(f"   ID: {prophet_agent['agent_id']}")
         print(f"   Nome: {prophet_agent['name']}")
     else:
-        print(f"\n⚠️  Nenhum agente Prophet (is_suna_default=true) encontrado para seu usuário!")
+        print(f"\n⚠️  Nenhum agente Prophet (is_prophet_default=true) encontrado para seu usuário!")
         print("   Isso pode ser o problema - você precisa de um agente Prophet instalado.")
         
 else:

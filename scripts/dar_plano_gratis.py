@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script amigável para dar planos gratuitos para usuários do Prophet/Suna
+Script amigável para dar planos gratuitos para usuários do Prophet/Prophet
 Autor: Sistema Prophet
 Data: 2025-01-30
 """

@@ -4,14 +4,14 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { useAgents, useUpdateAgent, useDeleteAgent, useOptimisticAgentUpdate, useAgentDeletionState } from '@/hooks/react-query/agents/use-agents';
-import { useMarketplaceTemplates, useInstallTemplate, useMyTemplates, useUnpublishTemplate, usePublishTemplate, useCreateTemplate, useDeleteTemplate } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
+import { useAgents, useUpdateAgent, useDeleteAgent, useOptimisticAgentUpdate, useAgentDeletionState } from '@/hooks/agents/use-agents';
+import { useMarketplaceTemplates, useInstallTemplate, useMyTemplates, useUnpublishTemplate, usePublishTemplate, useCreateTemplate, useDeleteTemplate } from '@/hooks/secure-mcp/use-secure-mcp';
 import { useAuth } from '@/components/AuthProvider';
 
 import { StreamlinedInstallDialog } from '@/components/agents/installation/streamlined-install-dialog';
 import type { MarketplaceTemplate } from '@/components/agents/installation/types';
 
-import { AgentsParams } from '@/hooks/react-query/agents/utils';
+import { AgentsParams } from '@/hooks/agents/utils';
 
 import { AgentsPageHeader } from '@/components/agents/custom-agents-page/header';
 import { TabsNavigation } from '@/components/agents/custom-agents-page/tabs-navigation';
@@ -21,8 +21,7 @@ import { PublishDialog } from '@/components/agents/custom-agents-page/publish-di
 import { LoadingSkeleton } from '@/components/agents/custom-agents-page/loading-skeleton';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { MarketplaceAgentPreviewDialog } from '@/components/agents/marketplace-agent-preview-dialog';
-import { AgentCountLimitDialog } from '@/components/agents/agent-count-limit-dialog';
-import { AgentCountLimitError } from '@/lib/api';
+import { AgentCountLimitError } from '@/lib/api/errors';
 
 type ViewMode = 'grid' | 'list';
 type AgentSortOption = 'name' | 'created_at' | 'updated_at' | 'tools_count';
@@ -72,7 +71,7 @@ export default function AgentsPage() {
   const [selectedItem, setSelectedItem] = useState<MarketplaceTemplate | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'kortix' | 'community' | 'mine'>('all');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'milo' | 'community' | 'mine'>('all');
   
   const [templatesPage, setTemplatesPage] = useState(1);
   const [templatesPageSize, setTemplatesPageSize] = useState(20);
@@ -85,12 +84,22 @@ export default function AgentsPage() {
 
   const [publishingAgentId, setPublishingAgentId] = useState<string | null>(null);
   const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
-  const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
-  const [agentLimitError, setAgentLimitError] = useState<AgentCountLimitError | null>(null);
 
   const activeTab = useMemo(() => {
-    return searchParams.get('tab') || 'my-agents';
+    const tab = searchParams.get('tab');
+    if (tab === 'marketplace') {
+      return 'my-agents';
+    }
+    return tab || 'my-agents';
   }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'marketplace') {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', 'my-agents');
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [searchParams, pathname, router]);
 
   const agentsQueryParams: AgentsParams = useMemo(() => {
     const params: AgentsParams = {
@@ -128,7 +137,7 @@ export default function AgentsPage() {
       sort_order: "desc"
     };
     
-    if (marketplaceFilter === 'kortix') {
+    if (marketplaceFilter === 'milo') {
       params.is_kortix_team = true;
     } else if (marketplaceFilter === 'community') {
       params.is_kortix_team = false;
@@ -185,14 +194,12 @@ export default function AgentsPage() {
           creator_id: template.creator_id,
           name: template.name,
           description: template.description,
+          system_prompt: template.system_prompt,
           tags: template.tags || [],
           download_count: template.download_count || 0,
           creator_name: template.creator_name || 'Anonymous',
           created_at: template.created_at,
           marketplace_published_at: template.marketplace_published_at,
-          profile_image_url: template.profile_image_url,
-          avatar: template.avatar,
-          avatar_color: template.avatar_color,
           icon_name: template.icon_name,
           icon_color: template.icon_color,
           icon_background: template.icon_background,
@@ -200,6 +207,8 @@ export default function AgentsPage() {
           is_kortix_team: template.is_kortix_team,
           mcp_requirements: template.mcp_requirements,
           metadata: template.metadata,
+          usage_examples: template.usage_examples,
+          config: template.config,
         };
 
         items.push(item);
@@ -312,7 +321,7 @@ export default function AgentsPage() {
     // Update URL with agent parameter for sharing
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('agent', agent.id);
-    currentUrl.searchParams.set('tab', 'marketplace');
+    currentUrl.searchParams.set('tab', 'my-agents');
     router.replace(currentUrl.toString(), { scroll: false });
   };
 
@@ -320,7 +329,9 @@ export default function AgentsPage() {
     item: MarketplaceTemplate, 
     instanceName?: string, 
     profileMappings?: Record<string, string>, 
-    customMcpConfigs?: Record<string, Record<string, any>>
+    customMcpConfigs?: Record<string, Record<string, any>>,
+    triggerConfigs?: Record<string, Record<string, any>>,
+    triggerVariables?: Record<string, Record<string, string>>
   ) => {
     setInstallingItemId(item.id);
     
@@ -360,18 +371,37 @@ export default function AgentsPage() {
         return;
       }
 
+      console.log('Installing template with:', {
+        template_id: item.template_id,
+        instance_name: instanceName,
+        profile_mappings: profileMappings,
+        custom_mcp_configs: customMcpConfigs,
+        trigger_configs: triggerConfigs,
+        trigger_variables: triggerVariables
+      });
+      
       const result = await installTemplateMutation.mutateAsync({
         template_id: item.template_id,
         instance_name: instanceName,
         profile_mappings: profileMappings,
-        custom_mcp_configs: customMcpConfigs
+        custom_mcp_configs: customMcpConfigs,
+        trigger_configs: triggerConfigs,
+        trigger_variables: triggerVariables
       });
+      
+      console.log('Installation result:', result);
 
       if (result.status === 'installed') {
         toast.success(`Agent "${instanceName}" installed successfully!`);
         setShowInstallDialog(false);
         handleTabChange('my-agents');
       } else if (result.status === 'configs_required') {
+        if (result.missing_trigger_variables && Object.keys(result.missing_trigger_variables).length > 0) {
+          toast.warning('Please provide values for template trigger variables.');
+          setInstallingItemId('');
+          return;
+        }
+        
         if (result.missing_regular_credentials && result.missing_regular_credentials.length > 0) {
           const updatedRequirements = [
             ...(item.mcp_requirements || []),
@@ -395,7 +425,12 @@ export default function AgentsPage() {
           
           toast.warning('Additional configurations required. Please complete the setup.');
           return;
+        } else if (result.missing_custom_configs && result.missing_custom_configs.length > 0) {
+          console.error('Missing custom configs:', result.missing_custom_configs);
+          toast.error('Please provide all required custom MCP configurations');
+          return;
         } else {
+          console.error('Unknown config required response:', result);
           toast.error('Please provide all required configurations');
           return;
         }
@@ -407,8 +442,6 @@ export default function AgentsPage() {
       console.error('Installation error:', error);
 
       if (error instanceof AgentCountLimitError) {
-        setAgentLimitError(error);
-        setShowAgentLimitDialog(true);
         return;
       }
 
@@ -436,7 +469,6 @@ export default function AgentsPage() {
 
   const getItemStyling = (item: MarketplaceTemplate) => {
     return {
-      avatar: '🤖',
       color: '#6366f1',
     };
   };
@@ -498,7 +530,7 @@ export default function AgentsPage() {
     });
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (usageExamples: any[]) => {
     if (!publishDialog) return;
 
     try {
@@ -509,7 +541,8 @@ export default function AgentsPage() {
         
         const result = await createTemplateMutation.mutateAsync({
           agent_id: publishDialog.templateId,
-          make_public: true
+          make_public: true,
+          usage_examples: usageExamples
         });
         
         toast.success(`${publishDialog.templateName} has been published to the marketplace`);
@@ -517,7 +550,8 @@ export default function AgentsPage() {
         setTemplatesActioningId(publishDialog.templateId);
         
         await publishMutation.mutateAsync({
-          template_id: publishDialog.templateId
+          template_id: publishDialog.templateId,
+          usage_examples: usageExamples
         });
         
         toast.success(`${publishDialog.templateName} has been published to the marketplace`);
@@ -534,7 +568,6 @@ export default function AgentsPage() {
 
   const getTemplateStyling = (template: any) => {
     return {
-      avatar: '🤖',
       color: '#6366f1',
     };
   };
@@ -593,6 +626,7 @@ export default function AgentsPage() {
             />
           )}
 
+          {/* Marketplace tab is disabled
           {activeTab === "marketplace" && (
             <MarketplaceTab
               marketplaceSearchQuery={marketplaceSearchQuery}
@@ -614,7 +648,7 @@ export default function AgentsPage() {
               onMarketplacePageSizeChange={handleMarketplacePageSizeChange}
               marketplacePagination={marketplaceTemplates?.pagination}
             />
-          )}
+          )} */}
         </div>
 
         <PublishDialog
@@ -644,15 +678,6 @@ export default function AgentsPage() {
           onInstall={handlePreviewInstall}
           isInstalling={installingItemId === selectedItem?.id}
         />
-        {agentLimitError && (
-          <AgentCountLimitDialog
-            open={showAgentLimitDialog}
-            onOpenChange={setShowAgentLimitDialog}
-            currentCount={agentLimitError.detail.current_count}
-            limit={agentLimitError.detail.limit}
-            tierName={agentLimitError.detail.tier_name}
-          />
-        )}
       </div>
     </div>
   );

@@ -220,7 +220,7 @@
     "customWorkers": "Workers Personnalisés",
     "scheduledTriggers": "Triggers Programmées",
     "appTriggers": "Triggers d'App",
-    "limitsExceeded": "Tu as atteint tes limites. Améliore ton plan pour chater plus.",
+    "limitsExceeded": "Tu as atteint ta limite de chats ({current}/{limit}). Améliore ton plan pour créer plus de chats.",
     "agentInitiatedSuccessfully": "Agent démarré avec succès",
     "aiAssistantReady": "Ton assistant IA est prêt à aider"
   },
@@ -237,7 +237,7 @@
     "chatDescription": "Conversation simple aller-retour",
     "sampleAnswers": "Exemples de réponses",
     "samplePrompts": "Exemples de prompts",
-    "waitingForUserResponse": "Prophet continuera à travailler de manière autonome après ta réponse.",
+    "waitingForUserResponse": "Milo continuera à travailler de manière autonome après ta réponse.",
     "taskCompleted": "Tâche terminée",
     "uploadingFiles": "Téléchargement de {count} fichier{plural}...",
     "uploadingFilesOne": "Téléchargement de {count} fichier...",
@@ -261,7 +261,7 @@
     "rateThisResult": "Évaluer ce résultat",
     "feedbackHelpsImprove": "Vos commentaires nous aident à nous améliorer",
     "additionalFeedbackOptional": "Commentaire supplémentaire (optionnel)",
-    "helpProphetImprove": "Aidez Prophet à s'améliorer avec vos commentaires",
+    "helpKortixImprove": "Aidez Milo à s'améliorer avec vos commentaires",
     "submit": "Envoyer",
     "submitting": "Envoi en cours...",
     "feedbackSubmittedSuccess": "Commentaire envoyé avec succès",
@@ -312,10 +312,10 @@
     "localModeMessage": "Exécution en mode développement local - fonctionnalités de facturation désactivées",
     "creditsExplainedPage": {
       "title": "Crédits Expliqués",
-      "subtitle": "Tout ce que tu dois savoir sur le fonctionnement des crédits sur Prophet",
+      "subtitle": "Tout ce que tu dois savoir sur le fonctionnement des crédits sur Milo",
       "understandingCredits": {
         "title": "Comprendre les Crédits",
-        "description": "Les crédits servent de monnaie universelle de Prophet pour les opérations de la plateforme. Chaque action que tes agents IA effectuent—de l'analyse de données à la génération de code—consomme des crédits en fonction de la complexité de la tâche et des ressources nécessaires."
+        "description": "Les crédits servent de monnaie universelle de Milo pour les opérations de la plateforme. Chaque action que tes agents IA effectuent—de l'analyse de données à la génération de code—consomme des crédits en fonction de la complexité de la tâche et des ressources nécessaires."
       },
       "howCreditsWork": {
         "title": "Comment Fonctionnent les Crédits",
@@ -333,7 +333,7 @@
       },
       "gettingMoreCredits": {
         "title": "Obtenir Plus de Crédits",
-        "description": "Il y a plusieurs façons d'obtenir des crédits sur Prophet :",
+        "description": "Il y a plusieurs façons d'obtenir des crédits sur Milo :",
         "monthlySubscription": {
           "title": "Crédits d'Abonnement Mensuel",
           "description": "Inclus dans ton plan payant et renouvelés automatiquement chaque mois. Ce sont des crédits avec expiration."
@@ -353,7 +353,7 @@
       },
       "typesOfCredits": {
         "title": "Types de Crédits",
-        "description": "Prophet utilise deux types de crédits pour te donner de la flexibilité dans la gestion de ton utilisation :",
+        "description": "Milo utilise deux types de crédits pour te donner de la flexibilité dans la gestion de ton utilisation :",
         "expiringCredits": {
           "title": "Crédits avec Expiration",
           "description": "Crédits d'abonnement mensuel",
@@ -366,7 +366,7 @@
         },
         "creditPriority": {
           "title": "Priorité des Crédits :",
-          "description": "Quand tu utilises Prophet, les crédits avec expiration sont consommés en premier. Ce n'est qu'après que tes crédits avec expiration soient épuisés que les crédits sans expiration seront utilisés."
+          "description": "Quand tu utilises Milo, les crédits avec expiration sont consommés en premier. Ce n'est qu'après que tes crédits avec expiration soient épuisés que les crédits sans expiration seront utilisés."
         }
       }
     },
@@ -578,7 +578,7 @@
     "fr": "Français",
     "es": "Español"
   },
-  "suna": {
+  "prophet": {
     "samplePrompts": "Exemples de prompts",
     "chooseStyle": "Choisis un style",
     "chooseTemplate": "Choisis un template",

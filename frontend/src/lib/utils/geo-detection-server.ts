@@ -67,4 +67,3 @@ export function detectBestLocaleFromHeaders(acceptLanguage: string | null): Loca
   return detected || defaultLocale;
 }
 
-

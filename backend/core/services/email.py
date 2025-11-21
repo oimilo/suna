@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self.api_token = os.getenv('MAILTRAP_API_TOKEN')
-        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'start@prophet.build')
-        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Prophet Team')
+        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'dom@milo.ai')
+        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Dom from Milo')
         
         if not self.api_token:
             logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
@@ -26,7 +26,7 @@ class EmailService:
         if not user_name:
             user_name = user_email.split('@')[0].title()
         
-        subject = "🎉 Welcome to Prophet — Let's Get Started "
+        subject = "🎉 Welcome to Milo — Let's Get Started "
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -71,7 +71,7 @@ class EmailService:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Prophet</title>
+  <title>Welcome to Milo</title>
   <style>
     body {{
       font-family: Arial, sans-serif;
@@ -137,29 +137,21 @@ class EmailService:
 <body>
   <div class="container">
     <div class="logo-container">
-      <img src="https://www.prophet.build/symbol.png" alt="Prophet Logo" class="logo">
+      <img src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/loaded_images/Profile%20Picture%20Black.png" alt="Milo Logo" class="logo">
     </div>
-    <h1>Welcome to Prophet!</h1>
 
     <p>Hi {user_name},</p>
 
-    <p><em><strong>Welcome to Prophet — we're excited to have you on board!</strong></em></p>
+    <p><em><strong>Welcome to <a href="https://www.milo.com/">Milo.com</a> — we're excited to have you on board!</strong></em></p>
 
     <p>To get started, we'd like to get to know you better: fill out this short <a href="https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform">form</a>!</p>
 
-    <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month to get more usage:</p>
-
+    <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month:</p>
     <p>🎁 Use code <strong>WELCOME15</strong> at checkout.</p>
 
-    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/FjD644cfcs">Discord community</a>.</p>
+    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/RvFhXUdZ9H">Discord community</a>.</p>
 
-    <p><strong>For your business:</strong> if you want to automate manual and ordinary tasks for your company, book a call with us <a href="https://cal.com/team/milo/enterprise-demo">here</a></p>
-
-    <p>Thanks again, and welcome to the Prophet community <span class="emoji">🌞</span></p>
-
-    <p>— The Milo Team</p>
-
-    <a href="https://www.prophet.build/" class="button">Go to the platform</a>
+    <p>Thanks again, and welcome to the Milo community!</p>
   </div>
 </body>
 </html>"""
@@ -167,26 +159,20 @@ class EmailService:
     def _get_welcome_email_text(self, user_name: str) -> str:
         return f"""Hi {user_name},
 
-Welcome to Prophet — we're excited to have you on board!
+Welcome to https://www.milo.com/ — we're excited to have you on board!
 
 To get started, we'd like to get to know you better: fill out this short form!
 https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform
 
-To celebrate your arrival, here's a 15% discount for your first month to get more usage:
+To celebrate your arrival, here's a 15% discount for your first month:
 🎁 Use code WELCOME15 at checkout.
 
-Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/FjD644cfcs
+Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/RvFhXUdZ9H
 
-For your business: if you want to automate manual and ordinary tasks for your company, book a call with us here: https://cal.com/team/milo/enterprise-demo
-
-Thanks again, and welcome to the Prophet community 🌞
-
-— The Milo Team
-
-Go to the platform: https://www.prophet.build/
+Thanks again, and welcome to the Milo community!
 
 ---
 © 2025 Milo. All rights reserved.
-You received this email because you signed up for a Prophet account."""
+You received this email because you signed up for a Milo account."""
 
 email_service = EmailService() 

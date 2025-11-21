@@ -10,8 +10,7 @@ export function useInitializeAccount() {
       if (!session) {
         throw new Error('You must be logged in to initialize account');
       }
-      // Use ensure-free-tier endpoint which gives free tier directly without Stripe
-      const response = await backendApi.post(`/setup/ensure-free-tier`);
+      const response = await backendApi.post(`/setup/initialize`);
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to initialize account');
       }

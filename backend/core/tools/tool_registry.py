@@ -32,7 +32,6 @@ SANDBOX_TOOLS = [
     ('sb_presentation_tool', 'core.tools.sb_presentation_tool', 'SandboxPresentationTool'),
     ('sb_upload_file_tool', 'core.tools.sb_upload_file_tool', 'SandboxUploadFileTool'),
     ('sb_docs_tool', 'core.tools.sb_docs_tool', 'SandboxDocsTool'),
-    ('sb_browser_preview_tool', 'core.tools.sb_browser_preview_tool', 'SandboxBrowserPreviewTool'),
 ]
 
 # Search and research tools

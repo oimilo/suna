@@ -1,4 +1,4 @@
-from kortix import Agent, ModelSettings, function_tool
+from milo import Agent, ModelSettings, function_tool
 
 
 agent = Agent(

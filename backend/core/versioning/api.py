@@ -39,7 +39,6 @@ class VersionResponse(BaseModel):
     version_number: int
     version_name: str
     system_prompt: str
-    system_prompt_user: Optional[str] = None
     model: Optional[str] = None  # Add model field
     configured_mcps: List[Dict[str, Any]]
     custom_mcps: List[Dict[str, Any]]
@@ -94,9 +93,7 @@ async def create_version(
             agentpress_tools=request.agentpress_tools,
             model=request.model,  # Pass model to service
             version_name=request.version_name,
-            change_description=request.description,
-            system_prompt_user=request.system_prompt,
-            apply_tool_base_prompt=True
+            change_description=request.description
         )
         
         return VersionResponse(**version.to_dict())

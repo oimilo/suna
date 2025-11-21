@@ -13,7 +13,7 @@ import Animated, {
   withSpring,
   FadeIn,
 } from 'react-native-reanimated';
-import { KortixLogo } from '../ui/KortixLogo';
+import { MiloLogo } from '../ui/MiloLogo';
 import { useColorScheme } from 'nativewind';
 import { getOfferings, purchasePackage, type RevenueCatProduct } from '@/lib/billing/revenuecat';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
@@ -232,7 +232,7 @@ export function RevenueCatPricingSection({
           className="px-6 flex-row justify-between items-center bg-background border-b border-border/30"
           style={{ paddingTop: insets.top + 16, paddingBottom: 16 }}
         >
-          <KortixLogo variant="logomark" size={72} color={isDark ? 'dark' : 'light'} />
+          <MiloLogo variant="logomark" size={72} color={isDark ? 'dark' : 'light'} />
           <AnimatedPressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -446,12 +446,12 @@ export function RevenueCatPricingSection({
         </AnimatedPressable>
 
         <View className="flex-row justify-center mt-6 gap-6 mb-2">
-          <Pressable onPress={() => Linking.openURL('https://kortix.ai/privacy')}>
+          <Pressable onPress={() => Linking.openURL('https://milo.ai/privacy')}>
             <Text className="text-xs text-muted-foreground/70 font-roobert-medium underline">
               Privacy Policy
             </Text>
           </Pressable>
-          <Pressable onPress={() => Linking.openURL('https://kortix.ai/terms')}>
+          <Pressable onPress={() => Linking.openURL('https://milo.ai/terms')}>
             <Text className="text-xs text-muted-foreground/70 font-roobert-medium underline">
               Terms of Service
             </Text>

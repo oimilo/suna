@@ -16,44 +16,32 @@ interface CodeRendererProps {
   className?: string;
 }
 
-type LanguageFactory = (typeof langs)[keyof typeof langs];
-const availableLangs = langs as unknown as Record<string, LanguageFactory>;
-
 // Map of language aliases to CodeMirror language support
-const languageMap: Record<string, LanguageFactory> = {
-  js: availableLangs.javascript,
-  javascript: availableLangs.javascript,
-  jsx: availableLangs.jsx,
-  ts: availableLangs.typescript,
-  typescript: availableLangs.typescript,
-  tsx: availableLangs.tsx,
-  html: availableLangs.html,
-  css: availableLangs.css,
-  json: availableLangs.json,
-  json5: availableLangs.json,
-  md: availableLangs.markdown,
-  markdown: availableLangs.markdown,
-  py: availableLangs.python,
-  python: availableLangs.python,
-  rust: availableLangs.rust,
-  rs: availableLangs.rust,
-  go: availableLangs.go,
-  java: availableLangs.java,
-  c: availableLangs.c,
-  cpp: availableLangs.cpp,
-  csharp: availableLangs.csharp,
-  cs: availableLangs.csharp,
-  php: availableLangs.php,
-  ruby: availableLangs.ruby,
-  rb: availableLangs.ruby,
-  sh: availableLangs.shell,
-  bash: availableLangs.shell,
-  shell: availableLangs.shell,
-  sql: availableLangs.sql,
-  yaml: availableLangs.yaml,
-  yml: availableLangs.yaml,
-  vue: availableLangs.vue,
-  svelte: availableLangs.svelte,
+const languageMap: Record<string, any> = {
+  js: langs.javascript,
+  jsx: langs.jsx,
+  ts: langs.typescript,
+  tsx: langs.tsx,
+  html: langs.html,
+  css: langs.css,
+  json: langs.json,
+  md: langs.markdown,
+  python: langs.python,
+  py: langs.python,
+  rust: langs.rust,
+  go: langs.go,
+  java: langs.java,
+  c: langs.c,
+  cpp: langs.cpp,
+  cs: langs.csharp,
+  php: langs.php,
+  ruby: langs.ruby,
+  sh: langs.shell,
+  bash: langs.shell,
+  sql: langs.sql,
+  yaml: langs.yaml,
+  yml: langs.yaml,
+  // Add more languages as needed
 };
 
 export function CodeRenderer({

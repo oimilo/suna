@@ -25,8 +25,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { LanguageSwitcher } from './language-switcher';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { isLocalMode } from '@/lib/config';
 import { LocalEnvManager } from '@/components/env-manager/local-env-manager';
@@ -72,6 +70,8 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } 
 import { getPlanName, getPlanIcon } from '../billing/plan-utils';
 import ThreadUsage from '@/components/billing/thread-usage';
 import { formatCredits } from '@/lib/utils/credit-formatter';
+import { LanguageSwitcher } from './language-switcher';
+import { useTranslations } from 'next-intl';
 
 type TabId = 'general' | 'plan' | 'billing' | 'usage' | 'env-manager' | 'knowledge-base' | 'integrations';
 
@@ -337,6 +337,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                         {t('emailCannotChange')}
                     </p>
                 </div>
+
                 <div className="space-y-2 pt-4">
                     <LanguageSwitcher />
                 </div>

@@ -1,4 +1,4 @@
-# Prophet Frontend
+# Milo Frontend
 
 ## Quick Setup
 

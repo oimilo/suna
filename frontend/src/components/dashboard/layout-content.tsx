@@ -1,23 +1,22 @@
 'use client';
 
 import { useEffect } from 'react';
-import { SidebarLeft, FloatingMobileMenuButton } from '@/components/sidebar/sidebar-left';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { useAccounts } from '@/hooks/use-accounts';
+import { FloatingMobileMenuButton } from '@/components/sidebar/sidebar-left';
+import { useAccounts } from '@/hooks/account';
 import { useAuth } from '@/components/AuthProvider';
-import { useMaintenanceNoticeQuery } from '@/hooks/react-query/edge-flags';
+import { useMaintenanceNoticeQuery } from '@/hooks/edge-flags';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-import { useApiHealth } from '@/hooks/react-query';
+import { KortixLoader } from '@/components/ui/milo-loader';
+import { useApiHealth } from '@/hooks/usage/use-health';
 import { MaintenancePage } from '@/components/maintenance/maintenance-page';
-import { DeleteOperationProvider } from '@/contexts/DeleteOperationContext';
 import { StatusOverlay } from '@/components/ui/status-overlay';
+import { useAdminRole } from '@/hooks/admin';
 
-import { useProjects, useThreads } from '@/hooks/react-query/sidebar/use-sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
-import { MaintenanceAlert } from '../maintenance-alert';
+import { useProjects } from '@/hooks/sidebar/use-sidebar';
+import { useIsMobile } from '@/hooks/utils';
+import { PresentationViewerWrapper } from '@/stores/presentation-viewer-store';
+import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
+import { AppProviders } from '@/components/layout/app-providers';
 
 interface DashboardLayoutContentProps {
   children: React.ReactNode;
@@ -26,9 +25,9 @@ interface DashboardLayoutContentProps {
 export default function DashboardLayoutContent({
   children,
 }: DashboardLayoutContentProps) {
-  const { data: accounts } = useAccounts();
-  const personalAccount = accounts?.find((account) => account.personal_account);
   const { user, isLoading } = useAuth();
+  const { data: accounts } = useAccounts({ enabled: !!user });
+  const personalAccount = accounts?.find((account) => account.personal_account);
   const router = useRouter();
   const isMobile = useIsMobile();
   const { data: maintenanceNotice, isLoading: maintenanceLoading } = useMaintenanceNoticeQuery();
@@ -39,33 +38,19 @@ export default function DashboardLayoutContent({
   } = useApiHealth();
 
   const { data: projects } = useProjects();
-  const { data: threads } = useThreads();
-  const { data: agentsResponse } = useAgents({
-    limit: 100,
-    sort_by: 'name',
-    sort_order: 'asc'
-  });
-
-  useEffect(() => {
-    if (maintenanceNotice?.enabled) {
-      // setShowMaintenanceAlert(true); // This line was removed
-    } else {
-      // setShowMaintenanceAlert(false); // This line was removed
-    }
-  }, [maintenanceNotice]);
+  const { data: adminRoleData, isLoading: isCheckingAdminRole } = useAdminRole();
+  const isAdmin = adminRoleData?.isAdmin ?? false;
 
   // Log data prefetching for debugging
   useEffect(() => {
     if (isMobile) {
       console.log('📱 Mobile Layout - Prefetched data:', {
         projects: projects?.length || 0,
-        threads: threads?.length || 0,
-        agents: agentsResponse?.agents?.length || 0,
         accounts: accounts?.length || 0,
         user: !!user
       });
     }
-  }, [isMobile, projects, threads, agentsResponse, accounts, user]);
+  }, [isMobile, projects, accounts, user]);
 
   // API health is now managed by useApiHealth hook
   const isApiHealthy = healthData?.status === 'ok' && !healthError;
@@ -77,13 +62,15 @@ export default function DashboardLayoutContent({
     }
   }, [user, isLoading, router]);
 
-  let mantenanceBanner: React.ReactNode | null = null;
+  const mantenanceBanner: React.ReactNode | null = null;
 
-  // Show loading state while checking auth, health, or maintenance status
-  if (isLoading || isCheckingHealth || maintenanceLoading) {
+  // Show loading state only while checking auth (not maintenance status)
+  // Maintenance check now has placeholder data to prevent flash
+  // Health check errors should show the maintenance page, not infinite loading
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <KortixLoader size="large" />
       </div>
     );
   }
@@ -94,45 +81,37 @@ export default function DashboardLayoutContent({
   }
 
   // Show maintenance page if maintenance mode is enabled
-  if (maintenanceNotice?.enabled) {
-    return <MaintenanceAlert open={true} onOpenChange={() => {}} closeable={false} />;
+  // Only show if we have actual data (not placeholder) or if explicitly enabled
+  // Bypass maintenance for admins after role check completes
+  if (maintenanceNotice?.enabled && !maintenanceLoading && !isCheckingAdminRole && !isAdmin) {
+    return <MaintenancePage/>
   }
 
-  // Show maintenance page if API is not healthy (but not during initial loading)
-  if (!isCheckingHealth && !isApiHealthy) {
+  // Show maintenance page if API is not healthy OR if health check failed
+  // But only after initial check completes (not during loading with placeholder data)
+  // This prevents flash during navigation when placeholder data is being used
+  // Bypass for admins after role check completes
+  if (!isCheckingHealth && !isCheckingAdminRole && (!isApiHealthy || healthError) && !isAdmin) {
     return <MaintenancePage />;
   }
 
   return (
-    <DeleteOperationProvider>
-      <SubscriptionProvider>
-        <SidebarProvider>
-          <SidebarLeft />
-          <SidebarInset>
-            {mantenanceBanner}
-            <div className="bg-background">{children}</div>
-          </SidebarInset>
-
-          {/* <PricingAlert 
-          open={showPricingAlert} 
-          onOpenChange={setShowPricingAlert}
-          closeable={false}
-          accountId={personalAccount?.account_id}
-          /> */}
-
-          {/* <MaintenanceAlert
-            open={showMaintenanceAlert}
-            onOpenChange={setShowMaintenanceAlert}
-            closeable={true}
-          /> */}
-
-          {/* Status overlay for deletion operations */}
-          <StatusOverlay />
-          
-          {/* Floating mobile menu button */}
-          <FloatingMobileMenuButton />
-        </SidebarProvider>
-      </SubscriptionProvider>
-    </DeleteOperationProvider>
+    <AppProviders 
+      showSidebar={true}
+      sidebarSiblings={
+        <>
+            {/* Status overlay for deletion operations */}
+            <StatusOverlay />
+            {/* Floating mobile menu button */}
+            <FloatingMobileMenuButton />
+        </>
+      }
+    >
+      <OnboardingProvider>
+        {mantenanceBanner}
+        <div className="bg-background">{children}</div>
+        </OnboardingProvider>
+        <PresentationViewerWrapper />
+    </AppProviders>
   );
 }

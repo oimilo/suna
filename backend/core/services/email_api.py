@@ -1,84 +1,94 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional
 import os
-import concurrent.futures
-
 from core.services.email import email_service
 from core.utils.logger import logger
 
 router = APIRouter(tags=["email"])
 
-
 class EmailResponse(BaseModel):
     success: bool
     message: str
 
-
 class SupabaseWebhookPayload(BaseModel):
-    """Payload enviado pelo trigger de auth.users"""
-
+    """Payload from Supabase webhook on auth.users insert"""
     type: str
     table: str
+    record: dict
     schema: str
-    record: Dict[str, Any]
-    old_record: Optional[Dict[str, Any]] = None
+    old_record: Optional[dict] = None
 
-
-def verify_webhook_secret(x_webhook_secret: str = Header(...)) -> bool:
-    expected_secret = os.getenv("SUPABASE_WEBHOOK_SECRET")
-
+def verify_webhook_secret(x_webhook_secret: str = Header(...)):
+    """Verify the webhook secret from Supabase"""
+    expected_secret = os.getenv('SUPABASE_WEBHOOK_SECRET')
     if not expected_secret:
-        logger.error("SUPABASE_WEBHOOK_SECRET não configurado")
+        logger.error("SUPABASE_WEBHOOK_SECRET not configured")
         raise HTTPException(status_code=500, detail="Webhook secret not configured")
-
+    
     if x_webhook_secret != expected_secret:
-        logger.warning("Webhook secret inválido recebido")
+        logger.warning("Invalid webhook secret received")
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
-
+    
     return True
-
 
 @router.post("/webhooks/user-created", response_model=EmailResponse)
 async def handle_user_created_webhook(
-    payload: SupabaseWebhookPayload, _: bool = Depends(verify_webhook_secret)
+    payload: SupabaseWebhookPayload,
+    _: bool = Depends(verify_webhook_secret)
 ):
     """
-    Endpoint chamado via trigger no Supabase quando um novo auth.user é criado.
+    Webhook endpoint called by Supabase when a new user is created.
+    This eliminates the need for frontend to trigger welcome emails.
     """
-
     try:
         if payload.type != "INSERT" or payload.table != "users":
-            return EmailResponse(success=False, message="Invalid webhook payload")
-
-        user_record = payload.record or {}
-        email = user_record.get("email")
-
+            return EmailResponse(
+                success=False,
+                message="Invalid webhook payload"
+            )
+        
+        user_record = payload.record
+        email = user_record.get('email')
+        
         if not email:
-            logger.warning("Webhook user-created sem email no payload")
-            return EmailResponse(success=False, message="No email in user record")
-
-        raw_meta = user_record.get("raw_user_meta_data") or {}
+            logger.warning("User created webhook received without email")
+            return EmailResponse(
+                success=False,
+                message="No email in user record"
+            )
+        
+        # Extract user name from metadata or email
+        raw_user_metadata = user_record.get('raw_user_meta_data', {})
         user_name = (
-            raw_meta.get("full_name")
-            or raw_meta.get("name")
-            or email.split("@")[0].replace(".", " ").replace("_", " ").replace("-", " ").title()
+            raw_user_metadata.get('full_name') or 
+            raw_user_metadata.get('name') or
+            email.split('@')[0].replace('.', ' ').replace('_', ' ').replace('-', ' ').title()
         )
-
-        logger.info("📧 Enviando welcome email para novo usuário", email=email)
-
+        
+        logger.info(f"📧 Sending welcome email to new user: {email}")
+        
+        # Send email asynchronously
         def send_email():
             return email_service.send_welcome_email(
                 user_email=email,
-                user_name=user_name,
+                user_name=user_name
             )
-
+        
+        import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(send_email)
-
-        return EmailResponse(success=True, message="Welcome email queued")
-
+            future = executor.submit(send_email)
+        
+        return EmailResponse(
+            success=True,
+            message="Welcome email queued"
+        )
+            
     except Exception as e:
-        logger.error(f"Erro processando webhook user-created: {str(e)}")
-        # Não propagar erro para não bloquear signup
-        return EmailResponse(success=False, message=str(e))
+        logger.error(f"Error handling user created webhook: {str(e)}")
+        # Don't raise exception - we don't want to break user signup if email fails
+        return EmailResponse(
+            success=False,
+            message=str(e)
+        )
+

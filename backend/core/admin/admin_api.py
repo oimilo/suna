@@ -490,14 +490,14 @@ async def get_user_threads_by_email(
 # AGENT & SYSTEM MANAGEMENT
 # ============================================================================
 
-@router.post("/suna-agents/install-user/{account_id}")
+@router.post("/prophet-agents/install-user/{account_id}")
 async def admin_install_suna_for_user(
     account_id: str,
     replace_existing: bool = False,
     _: bool = Depends(verify_admin_api_key)
 ):
-    """Install Suna agent for a specific user."""
-    logger.debug(f"Admin installing Suna agent for user: {account_id}")
+    """Install Prophet agent for a specific user."""
+    logger.debug(f"Admin installing Prophet agent for user: {account_id}")
     
     service = SunaDefaultAgentService()
     agent_id = await service.install_suna_agent_for_user(account_id, replace_existing)
@@ -505,13 +505,13 @@ async def admin_install_suna_for_user(
     if agent_id:
         return {
             "success": True,
-            "message": f"Successfully installed Suna agent for user {account_id}",
+            "message": f"Successfully installed Prophet agent for user {account_id}",
             "agent_id": agent_id
         }
     else:
         raise HTTPException(
             status_code=500, 
-            detail=f"Failed to install Suna agent for user {account_id}"
+            detail=f"Failed to install Prophet agent for user {account_id}"
         )
 
 @router.get("/env-vars")

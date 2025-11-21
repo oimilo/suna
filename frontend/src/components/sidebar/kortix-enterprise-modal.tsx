@@ -5,19 +5,20 @@ import {
   DialogTrigger,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { useMediaQuery } from '@/hooks/utils';
 import Image from 'next/image';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import { useTheme } from 'next-themes';
 import { Check, Calendar } from 'lucide-react';
-import { BRANDING } from '@/lib/branding';
+import { KortixLogo } from './milo-logo';
+
 interface EnterpriseModalProps {
   children: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
-export function KortixEnterpriseModal({ 
+export function KortixEnterpriseModal({
   children,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange
@@ -63,13 +64,7 @@ export function KortixEnterpriseModal({
           <div className="p-6 lg:p-8 flex flex-col bg-white dark:bg-black relative h-full overflow-y-auto border-r border-gray-200 dark:border-gray-800">
             <div className="relative z-10 flex flex-col h-full">
               <div className="mb-6 flex-shrink-0">
-                <Image
-                  src={isDarkMode ? '/kortix-logo-white.svg' : '/kortix-logo.svg'}
-                  alt={`${BRANDING.company} Logo`}
-                  width={80}
-                  height={28}
-                  className="h-7 w-auto"
-                />
+                <KortixLogo size={30} variant="logomark" />
               </div>
 
               <div className="mb-6 flex-shrink-0">
@@ -77,7 +72,7 @@ export function KortixEnterpriseModal({
                   <div className="w-2 h-2 rounded-full bg-primary"></div>
                   <span className="text-xs font-medium text-primary">Enterprise Implementation</span>
                 </div>
-                
+
                 <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight mb-3 text-foreground">
                   Let's Design Your Custom AI Solution
                 </h2>
@@ -119,7 +114,7 @@ export function KortixEnterpriseModal({
             <div className="h-full overflow-auto">
               <Cal
                 namespace="enterprise-demo"
-                calLink="team/kortix/enterprise-demo"
+                calLink="team/milo/enterprise-demo"
                 style={{ width: '100%', height: '100%' }}
                 config={{
                   layout: 'month_view',

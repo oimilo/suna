@@ -3,9 +3,8 @@ from typing import Optional
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
-from .mcp_configuration_mixin import MCPConfigurationMixin
-from core.composio_integration.composio_service import get_integration_service
 from core.composio_integration.toolkit_service import ToolkitService
+from core.composio_integration.composio_service import get_integration_service
 from core.utils.logger import logger
 
 @tool_metadata(
@@ -16,7 +15,7 @@ from core.utils.logger import logger
     weight=170,
     visible=True
 )
-class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
+class MCPSearchTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
 
@@ -49,36 +48,41 @@ class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
         limit: int = 10
     ) -> ToolResult:
         try:
+            toolkit_service = ToolkitService()
             integration_service = get_integration_service()
             
-            queries = [{"use_case": query.strip()}]
-            if category:
-                queries[0]["filters"] = {"category": category}
-
-            search_response = await integration_service.search_toolkits_with_queries(
-                queries=queries,
-                limit=limit,
-            )
-            entries = search_response.get("results", [])
-            primary_entry = entries[0] if entries else {}
-            toolkits = primary_entry.get("results", [])
+            if query:
+                toolkits_response = await integration_service.search_toolkits(query, category=category)
+                toolkits = toolkits_response.get("items", [])
+            else:
+                toolkits_response = await toolkit_service.list_toolkits(limit=limit, category=category)
+                toolkits = toolkits_response.get("items", [])
             
-            if not toolkits:
+            if len(toolkits) > limit:
+                toolkits = toolkits[:limit]
+            
+            formatted_toolkits = []
+            for toolkit in toolkits:
+                formatted_toolkits.append({
+                    "name": toolkit.name,
+                    "toolkit_slug": toolkit.slug,
+                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
+                    "logo_url": toolkit.logo or '',
+                    "auth_schemes": toolkit.auth_schemes,
+                    "tags": toolkit.tags,
+                    "categories": toolkit.categories
+                })
+            
+            if not formatted_toolkits:
                 return ToolResult(
                     success=False,
                     output=json.dumps([], ensure_ascii=False)
                 )
             
-            payload = {
-                "query": query,
-                "limit": limit,
-                "results": toolkits[:limit],
-                "session": search_response.get("session"),
-                "source": search_response.get("source"),
-                "returned": len(toolkits[:limit]),
-            }
-            
-            return self.success_response(payload)
+            return ToolResult(
+                success=True,
+                output=json.dumps(formatted_toolkits, ensure_ascii=False)
+            )
                 
         except Exception as e:
             logger.error(f"Error searching Composio toolkits: {str(e)}")
@@ -182,7 +186,7 @@ class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
                 return self.fail_response("Failed to discover tools")
             
             available_tools = result.tools or []
-            auto_config_summary = await self._auto_configure_profile_if_needed(profile, available_tools)
+            
             return self.success_response({
                 "message": f"Found {len(available_tools)} MCP tools available for {profile.toolkit_name} profile '{profile.profile_name}'",
                 "profile_info": {
@@ -192,9 +196,7 @@ class MCPSearchTool(MCPConfigurationMixin, AgentBuilderBaseTool):
                     "is_connected": profile.is_connected
                 },
                 "tools": available_tools,
-                "total_tools": len(available_tools),
-                "auto_configured": bool(auto_config_summary),
-                "configuration_details": auto_config_summary
+                "total_tools": len(available_tools)
             })
             
         except Exception as e:

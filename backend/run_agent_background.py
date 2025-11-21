@@ -19,34 +19,15 @@ from dramatiq.brokers.redis import RedisBroker
 import os
 from core.services.langfuse import langfuse
 from core.utils.retry import retry
-from core.utils.tool_discovery import warm_up_tools_cache_with_retry
 
 import sentry_sdk
 from typing import Dict, Any
 
-redis_url = os.getenv("REDIS_URL")
-redis_host = os.getenv("REDIS_HOST", "redis")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-redis_password = os.getenv("REDIS_PASSWORD", "")
-redis_use_tls = os.getenv("REDIS_USE_TLS", "").lower() == "true" or os.getenv("REDIS_SSL", "").lower() == "true"
+redis_host = os.getenv('REDIS_HOST', 'redis')
+redis_port = int(os.getenv('REDIS_PORT', 6379))
 
-if redis_url:
-    logger.info(f"🔧 Configuring Dramatiq broker with Redis URL configuration")
-    redis_broker = RedisBroker(url=redis_url, middleware=[dramatiq.middleware.AsyncIO()])
-else:
-    logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
-    broker_kwargs = {
-        "host": redis_host,
-        "port": redis_port,
-        "password": redis_password or None,
-        "middleware": [dramatiq.middleware.AsyncIO()],
-    }
-
-    if redis_use_tls:
-        broker_kwargs["ssl"] = True
-        broker_kwargs["ssl_cert_reqs"] = None
-
-    redis_broker = RedisBroker(**broker_kwargs)
+logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
+redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
 
 dramatiq.set_broker(redis_broker)
 
@@ -68,8 +49,9 @@ async def initialize():
     await retry(lambda: redis.initialize_async())
     await db.initialize()
     
-    # Preload tool cache so the first request doesn't pay the import cost
-    warm_up_tools_cache_with_retry()
+    # Pre-load tool classes to avoid first-request delay
+    from core.utils.tool_discovery import warm_up_tools_cache
+    warm_up_tools_cache()
 
     _initialized = True
     logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")
@@ -111,11 +93,39 @@ async def run_agent_background(
     lock_acquired = await redis.set(run_lock_key, instance_id, nx=True, ex=redis.REDIS_KEY_TTL)
     
     if not lock_acquired:
-        # Check if the run is already being handled by another instance
+        # Lock exists - check if it's stale (previous worker crashed)
         existing_instance = await redis.get(run_lock_key)
-        if existing_instance:
-            logger.info(f"Agent run {agent_run_id} is already being processed by instance {existing_instance.decode() if isinstance(existing_instance, bytes) else existing_instance}. Skipping duplicate execution.")
-            return
+        existing_instance_str = existing_instance.decode() if isinstance(existing_instance, bytes) else existing_instance if existing_instance else None
+        
+        if existing_instance_str:
+            # Check if the instance that holds the lock is still alive
+            instance_active_key = f"active_run:{existing_instance_str}:{agent_run_id}"
+            instance_still_alive = await redis.get(instance_active_key)
+            
+            # Also check database status to see if run is actually running
+            client = await db.client
+            db_run_status = None
+            try:
+                run_result = await client.table('agent_runs').select('status').eq('id', agent_run_id).maybe_single().execute()
+                if run_result.data:
+                    db_run_status = run_result.data.get('status')
+            except Exception as db_err:
+                logger.warning(f"Failed to check database status for {agent_run_id}: {db_err}")
+            
+            # If instance is still alive OR run is still running in DB, skip
+            if instance_still_alive or db_run_status == 'running':
+                logger.info(f"Agent run {agent_run_id} is already being processed by instance {existing_instance_str}. Skipping duplicate execution.")
+                return
+            else:
+                # Stale lock detected - the instance is dead and run is not running
+                logger.warning(f"Stale lock detected for {agent_run_id} (instance {existing_instance_str} is dead, DB status: {db_run_status}). Attempting to acquire lock.")
+                # Try to delete the stale lock and acquire it
+                await redis.delete(run_lock_key)
+                lock_acquired = await redis.set(run_lock_key, instance_id, nx=True, ex=redis.REDIS_KEY_TTL)
+                if not lock_acquired:
+                    # Race condition - another worker got it first
+                    logger.info(f"Another worker acquired lock for {agent_run_id} while cleaning up stale lock. Skipping.")
+                    return
         else:
             # Lock exists but no value, try to acquire again
             lock_acquired = await redis.set(run_lock_key, instance_id, nx=True, ex=redis.REDIS_KEY_TTL)
@@ -306,7 +316,7 @@ async def run_agent_background(
         await _cleanup_redis_response_list(agent_run_id)
 
         # Remove the instance-specific active run key
-        await _cleanup_redis_instance_key(agent_run_id)
+        await _cleanup_redis_instance_key(agent_run_id, instance_id)
 
         # Clean up the run lock
         await _cleanup_redis_run_lock(agent_run_id)
@@ -319,7 +329,7 @@ async def run_agent_background(
 
         logger.debug(f"Agent run background task fully completed for: {agent_run_id} (Instance: {instance_id}) with final status: {final_status}")
 
-async def _cleanup_redis_instance_key(agent_run_id: str):
+async def _cleanup_redis_instance_key(agent_run_id: str, instance_id: str):
     """Clean up the instance-specific Redis key for an agent run."""
     if not instance_id:
         logger.warning("Instance ID not set, cannot clean up instance key.")
@@ -342,8 +352,8 @@ async def _cleanup_redis_run_lock(agent_run_id: str):
     except Exception as e:
         logger.warning(f"Failed to clean up Redis run lock key {run_lock_key}: {str(e)}")
 
-# TTL for Redis response lists (shorter to reduce lingering large payloads)
-REDIS_RESPONSE_LIST_TTL = 3600 * 6
+# TTL for Redis response lists (24 hours)
+REDIS_RESPONSE_LIST_TTL = 3600 * 24
 
 async def _cleanup_redis_response_list(agent_run_id: str):
     """Set TTL on the Redis response list."""

@@ -1,15 +1,15 @@
-# Guia de Correção de Contas Suna + Basejump
+# Guia de Correção de Contas Prophet + Basejump
 
 ## O Problema
 
-O Suna foi projetado para usar `user_id` diretamente como `account_id` para contas pessoais. Porém, o Basejump por padrão cria IDs diferentes, causando problemas de foreign key e dados divididos entre múltiplas contas.
+O Prophet foi projetado para usar `user_id` diretamente como `account_id` para contas pessoais. Porém, o Basejump por padrão cria IDs diferentes, causando problemas de foreign key e dados divididos entre múltiplas contas.
 
 ## A Solução
 
 Modificamos o Basejump para criar contas pessoais onde `account_id = user_id`. Isso garante que:
 
 1. Não há confusão entre IDs
-2. O código do Suna funciona sem modificações
+2. O código do Prophet funciona sem modificações
 3. Queries são mais simples e eficientes
 4. Não há problemas de foreign key
 
@@ -17,7 +17,7 @@ Modificamos o Basejump para criar contas pessoais onde `account_id = user_id`. I
 
 ### 1. Para Instalação Nova
 
-Se você está instalando o Suna do zero:
+Se você está instalando o Prophet do zero:
 
 1. Execute as migrações do Supabase normalmente
 2. O trigger do Basejump já está configurado corretamente no arquivo de migração
@@ -64,8 +64,8 @@ Todos devem mostrar "✓ OK".
 - ✅ Sem problemas de foreign key
 - ✅ Código mais simples e direto
 - ✅ Performance melhor
-- ✅ Compatível com design original do Suna
+- ✅ Compatível com design original do Prophet
 
 ## Importante
 
-**NÃO tente "corrigir" isso para usar IDs separados!** O Suna foi projetado para funcionar desta forma. Tentar separar os IDs só causará problemas.
+**NÃO tente "corrigir" isso para usar IDs separados!** O Prophet foi projetado para funcionar desta forma. Tentar separar os IDs só causará problemas.

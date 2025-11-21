@@ -66,7 +66,10 @@ export async function signUp(prevState: any, formData: FormData) {
     return { message: error.message || 'Could not create account' };
   }
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
+  // Welcome email is now sent automatically by Supabase database trigger
+  // See: backend/supabase/migrations/20251113000000_welcome_email_webhook.sql
+
+  const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
     email,
     password,
   });

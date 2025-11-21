@@ -38,7 +38,7 @@
 ## Como Substituir os Logos
 
 ### Método 1: Substituição Direta
-1. Renomeie os arquivos atuais com prefixo `kortix-` para backup
+1. Renomeie os arquivos atuais com prefixo `milo-` para backup
 2. Adicione seus novos logos com os nomes corretos na pasta `/frontend/public/`
 
 ### Método 2: Via Variáveis de Ambiente

@@ -1,10 +1,5 @@
 from typing import List, Dict, Any, Optional
-from core.utils.pagination import (
-    PaginationService,
-    PaginationParams,
-    PaginatedResponse,
-    PaginationMeta,
-)
+from core.utils.pagination import PaginationService, PaginationParams, PaginatedResponse
 from core.utils.logger import logger
 from .agent_loader import AgentLoader
 from core.utils.query_utils import batch_query_in
@@ -41,8 +36,7 @@ class AgentService:
         self,
         user_id: str,
         pagination_params: PaginationParams,
-        filters: AgentFilters,
-        include_config: bool = False
+        filters: AgentFilters
     ) -> PaginatedResponse[Dict[str, Any]]:
         try:
             logger.debug(f"Fetching content for user {user_id} with filters: {filters.__dict__}")
@@ -52,7 +46,7 @@ class AgentService:
                 return await self._get_user_templates_paginated(user_id, pagination_params, filters)
             else:
                 # Default behavior: show only agents (content_type == "agents" or None)
-                return await self._get_only_agents_paginated(user_id, pagination_params, filters, include_config)
+                return await self._get_only_agents_paginated(user_id, pagination_params, filters)
                 
         except Exception as e:
             logger.error(f"Error fetching content for user {user_id}: {e}", exc_info=True)
@@ -62,19 +56,17 @@ class AgentService:
         self,
         user_id: str,
         pagination_params: PaginationParams,
-        filters: AgentFilters,
-        include_config: bool = False
+        filters: AgentFilters
     ) -> PaginatedResponse[Dict[str, Any]]:
         """Get only agents (not templates) with pagination"""
         base_query = self._build_base_query(user_id, filters)
         count_query = self._build_count_query(user_id, filters)
         
         needs_post_processing = (
-            filters.has_mcp_tools is not None
-            or filters.has_agentpress_tools is not None
-            or len(filters.tools) > 0
-            or filters.sort_by == "tools_count"
-            or include_config
+            filters.has_mcp_tools is not None or 
+            filters.has_agentpress_tools is not None or 
+            len(filters.tools) > 0 or
+            filters.sort_by == "tools_count"
         )
         
         if needs_post_processing:
@@ -201,7 +193,7 @@ class AgentService:
         if not all_agents:
             return PaginatedResponse(
                 data=[],
-                pagination=PaginationMeta(
+                pagination=PaginationService.PaginationMeta(
                     current_page=pagination_params.page,
                     page_size=pagination_params.page_size,
                     total_items=0,

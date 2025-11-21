@@ -1,7 +1,7 @@
 # Composio MCP – Fluxo "Queries + Session"
 
 ## Objetivo
-Garantir que o runtime Suna utilize o fluxo recomendado pelo Composio — **search → session → execução** — para manter o contexto do agente saudável, evitar dumps gigantes e registrar as ferramentas corretas antes de chamá-las.
+Garantir que o runtime Prophet utilize o fluxo recomendado pelo Composio — **search → session → execução** — para manter o contexto do agente saudável, evitar dumps gigantes e registrar as ferramentas corretas antes de chamá-las.
 
 ## Visão Geral
 1. **Busca estruturada (`search_mcp_servers*`)**

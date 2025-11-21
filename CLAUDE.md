@@ -1,8 +1,8 @@
-# 🌟 CLAUDE.md - Suna AI Development Assistant Guide
+# 🌟 CLAUDE.md - Prophet AI Development Assistant Guide
 
 ## 🎭 Contexto e Identidade
 
-O **Suna** é um fork do Prophet AI focado em uso pessoal e pequenas equipes. Este guia fornece contexto completo para IAs assistentes (Claude, Cursor, etc.) ajudarem no desenvolvimento.
+O **Prophet** é um fork do Prophet AI focado em uso pessoal e pequenas equipes. Este guia fornece contexto completo para IAs assistentes (Claude, Cursor, etc.) ajudarem no desenvolvimento.
 
 ### Principais Diferenças do Prophet Original:
 - **Simplicidade em Produção**: Sem RabbitMQ/Dramatiq em produção
@@ -267,11 +267,11 @@ export function useProjetos(userId: string) {
 }
 ```
 
-## 🎨 Design System Suna
+## 🎨 Design System Prophet
 
 ### Princípios de Design
 
-O Suna adota um design **minimalista e moderno** com foco em:
+O Prophet adota um design **minimalista e moderno** com foco em:
 - **Sutileza**: Bordas e backgrounds com transparências muito baixas
 - **Hierarquia clara**: Uso de opacidade para criar níveis visuais
 - **Feedback suave**: Transições e hovers delicados
@@ -737,7 +737,7 @@ if (!secret) {
 2. **"Sandbox not responding"**
    ```bash
    # Reinicie o sandbox
-   docker restart suna-sandbox
+   docker restart prophet-sandbox
    ```
 
 3. **"Unauthorized" no frontend**
@@ -837,7 +837,7 @@ setData(validateResponse(response))
 
 ### Sistema de Duplo Schema
 
-Tools no Suna usam decoradores duplos para compatibilidade:
+Tools no Prophet usam decoradores duplos para compatibilidade:
 
 ```python
 from agentpress.tool import agent_tool, openapi_schema, xml_schema
@@ -978,7 +978,7 @@ count_result = await db.client.table('messages')\
 # Inicializar shadcn/ui (já feito no projeto)
 npx shadcn-ui@latest init
 
-# Componentes essenciais do Suna
+# Componentes essenciais do Prophet
 npx shadcn-ui@latest add button
 npx shadcn-ui@latest add card
 npx shadcn-ui@latest add form
@@ -1264,5 +1264,5 @@ async def test_create_project(authenticated_client):
 ---
 
 **Última atualização**: Janeiro 2025
-**Mantenedor**: Equipe Suna
+**Mantenedor**: Equipe Prophet
 **Versão**: 1.1.0

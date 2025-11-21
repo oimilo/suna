@@ -21,7 +21,7 @@ async def test_list_available_tools():
     print("-" * 50)
     
     # Configuração de teste
-    TEST_AGENT_ID = "00000000-0000-0000-0000-000000000001"  # Suna default agent
+    TEST_AGENT_ID = "00000000-0000-0000-0000-000000000001"  # Prophet default agent
     
     # Inicializa conexão com DB
     db = DBConnection()

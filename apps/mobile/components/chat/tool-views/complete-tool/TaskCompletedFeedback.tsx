@@ -329,7 +329,7 @@ export function TaskCompletedFeedback({
                 )}
               </View>
               <Text className="text-sm font-roobert text-foreground flex-1">
-                Help Kortix improve with my feedback
+                Help Milo improve with my feedback
               </Text>
             </Pressable>
 

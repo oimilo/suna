@@ -32,7 +32,6 @@ class BrowserAutomation {
         this.router.post('/act', this.act.bind(this));
         this.router.post('/extract', this.extract.bind(this));
         this.router.post('/convert-svg', this.convertSvg.bind(this));
-        this.router.get('/state', this.state.bind(this));
 
     }
 
@@ -424,40 +423,6 @@ class BrowserAutomation {
         }
     }
 
-    async state(_req: express.Request, res: express.Response) {
-        try {
-            if (!this.browserInitialized || !this.page || this.page.isClosed()) {
-                res.status(503).json({
-                    success: false,
-                    message: "Browser not initialized",
-                    url: "",
-                    title: "",
-                    screenshot_base64: "",
-                } as BrowserActionResult);
-                return;
-            }
-
-            const page_info = await this.get_stagehand_state();
-
-            res.json({
-                success: true,
-                message: "Captured current browser state",
-                url: page_info.url,
-                title: page_info.title,
-                screenshot_base64: page_info.screenshot_base64,
-            } as BrowserActionResult);
-        } catch (error) {
-            console.error("Error capturing browser state", error);
-            res.status(500).json({
-                success: false,
-                message: "Failed to capture browser state",
-                url: "",
-                title: "",
-                screenshot_base64: "",
-                error: String(error),
-            } as BrowserActionResult);
-        }
-    }
 }
 
 const browserAutomation = new BrowserAutomation();

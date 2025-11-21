@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { KortixLoader } from '@/components/ui/milo-loader';
 import { VoiceRecorder } from './voice-recorder';
 import { useTheme } from 'next-themes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -206,7 +206,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
+    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Prophet Agent Modes feature flag
     const ENABLE_SUNA_AGENT_MODES = false;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
@@ -282,12 +282,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: agentsResponse, isLoading: isLoadingAgents } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
 
-    // Check if selected agent is Suna based on agent data
-    // While loading, default to Suna (assume Suna is the default agent)
+    // Check if selected agent is Prophet based on agent data
+    // While loading, default to Prophet (assume Prophet is the default agent)
     const selectedAgent = agents.find(agent => agent.agent_id === selectedAgentId);
     const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
     const isSunaAgent = isLoadingAgents 
-        ? true // Show Suna modes while loading
+        ? true // Show Prophet modes while loading
         : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
     const { initializeFromAgents } = useAgentSelection();
@@ -705,7 +705,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </TooltipProvider>
           )}
 
-          {/* Agent Mode Switcher - Only for Suna */}
+          {/* Agent Mode Switcher - Only for Prophet */}
           {ENABLE_SUNA_AGENT_MODES && (isStagingMode() || isLocalMode()) && isSunaAgent && (
             <TooltipProvider>
               <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg">

@@ -2,7 +2,7 @@ from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Dict, Optional, Union
 import json
 import os
 from datetime import datetime
@@ -24,9 +24,6 @@ class SandboxPresentationTool(SandboxToolsBase):
     Each slide is created as a basic HTML document without predefined CSS styling.
     Users can include their own CSS styling inline or in style tags as needed.
     """
-    
-    _warmup_lock = asyncio.Lock()
-    _sandbox_warmups: Dict[str, bool] = {}
     
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
@@ -52,34 +49,6 @@ class SandboxPresentationTool(SandboxToolsBase):
         except:
             pass
         return safe_name, presentation_path
-
-    async def _warmup_presentation_services(self) -> None:
-        """
-        The first request to the HTML→PDF/PPTX conversion server inside the sandbox
-        can take several seconds because Playwright spins up Chromium lazily. We ping
-        the `/presentation/health` endpoint once per sandbox to keep the service warm
-        so that export operations feel instant for end users.
-        """
-
-        await self._ensure_sandbox()
-        sandbox_id = self._sandbox_id
-
-        async with self._warmup_lock:
-            if self._sandbox_warmups.get(sandbox_id):
-                return
-
-            try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    health_url = f"{self.sandbox_url}/presentation/health"
-                    await client.get(health_url)
-                self._sandbox_warmups[sandbox_id] = True
-                logger.info("Presentation services warmed for sandbox %s", sandbox_id)
-            except Exception as exc:
-                logger.warning(
-                    "Presentation warmup failed for sandbox %s: %s",
-                    sandbox_id,
-                    exc,
-                )
 
     def _sanitize_filename(self, name: str) -> str:
         """Convert presentation name to safe filename"""
@@ -135,73 +104,6 @@ class SandboxPresentationTool(SandboxToolsBase):
         metadata["updated_at"] = datetime.now().isoformat()
         metadata_path = f"{presentation_path}/metadata.json"
         await self.sandbox.fs.upload_file(json.dumps(metadata, indent=2).encode(), metadata_path)
-
-    def _extract_slide_title(self, slide_html: Optional[str]) -> Optional[str]:
-        """Extract a human-friendly title from slide HTML content"""
-        if not slide_html:
-            return None
-
-        # Prefer the <title> tag if available
-        title_match = re.search(r'<title[^>]*>(.*?)</title>', slide_html, re.IGNORECASE | re.DOTALL)
-        if title_match:
-            extracted = re.sub(r'\s+', ' ', title_match.group(1)).strip()
-            if extracted:
-                return extracted
-
-        # Fallback to the first heading tag (h1/h2)
-        heading_match = re.search(r'<h[12][^>]*>(.*?)</h[12]>', slide_html, re.IGNORECASE | re.DOTALL)
-        if heading_match:
-            extracted = re.sub(r'\s+', ' ', heading_match.group(1)).strip()
-            if extracted:
-                return extracted
-
-        return None
-
-    async def ensure_slide_metadata(
-        self,
-        presentation_name: str,
-        slide_number: int,
-        slide_filename: str,
-        slide_html: Optional[str] = None,
-        presentation_title: Optional[str] = None,
-    ) -> Dict:
-        """Ensure slide metadata exists and is up to date for a given slide"""
-        await self._ensure_sandbox()
-        safe_name, presentation_path = await self._ensure_presentation_dir(presentation_name)
-
-        metadata = await self._load_presentation_metadata(presentation_path)
-        metadata["presentation_name"] = presentation_name
-
-        if presentation_title:
-            metadata["title"] = presentation_title
-
-        slides = metadata.setdefault("slides", {})
-        slide_key = str(slide_number)
-        existing_entry = slides.get(slide_key, {})
-
-        created_at = existing_entry.get("created_at") or datetime.now().isoformat()
-        title = existing_entry.get("title")
-
-        extracted_title = self._extract_slide_title(slide_html)
-        if extracted_title:
-            title = extracted_title
-
-        if not title:
-            title = presentation_title or existing_entry.get("filename") or f"Slide {slide_number}"
-
-        normalized_filename = slide_filename or existing_entry.get("filename") or f"slide_{slide_number:02d}.html"
-
-        slides[slide_key] = {
-            "title": title,
-            "filename": normalized_filename,
-            "file_path": f"{self.presentations_dir}/{safe_name}/{normalized_filename}",
-            "preview_url": f"/workspace/{self.presentations_dir}/{safe_name}/{normalized_filename}",
-            "created_at": created_at,
-            "updated_at": datetime.now().isoformat(),
-        }
-
-        await self._save_presentation_metadata(presentation_path, metadata)
-        return slides[slide_key]
 
     def _load_template_metadata(self, template_name: str) -> Dict:
         """Load metadata from a template on the backend filesystem"""
@@ -337,7 +239,7 @@ class SandboxPresentationTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "list_templates",
-            "description": "List all available presentation templates. **WHEN TO USE**: Call this tool when a user requests a presentation (e.g., 'make a ppt on X', 'create a presentation about Y') but has NOT specified a template name. **WHEN TO SKIP**: Do NOT call this tool if: (1) the user explicitly specifies a template name (e.g., 'use minimalist template', 'template hipster'), or (2) the user explicitly requests a custom theme. **IMPORTANT**: When presenting the templates to the user after calling this tool, always mention that if they don't like any of the templates, they can choose a custom theme instead. After the user selects a template, use load_template_design to load it.",
+            "description": "List all available presentation templates. ** CRITICAL: ONLY USE WHEN USER EXPLICITLY REQUESTS TEMPLATES ** **WHEN TO USE**: Call this tool ONLY when the user explicitly asks for templates (e.g., 'use a template', 'show me templates', 'use the minimalist template', 'I want to use a template'). **WHEN TO SKIP**: Do NOT call this tool by default. The default workflow is CUSTOM THEME which creates truly unique designs. Do NOT call this tool if: (1) the user requests a presentation without mentioning templates (use custom theme instead), (2) the user explicitly requests a custom theme, or (3) the user wants a unique/original design. **IMPORTANT**: Templates are optional - only use when explicitly requested. The default is always a custom, unique design based on the topic's actual brand colors and visual identity.",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -696,7 +598,6 @@ class SandboxPresentationTool(SandboxToolsBase):
             response_data = {
                 "message": f"Slide {slide_number} '{slide_title}' created/updated successfully",
                 "presentation_name": presentation_name,
-                "safe_presentation_name": safe_name,
                 "presentation_path": f"{self.presentations_dir}/{safe_name}",
                 "slide_number": slide_number,
                 "slide_title": slide_title,
@@ -793,7 +694,6 @@ class SandboxPresentationTool(SandboxToolsBase):
             return self.success_response({
                 "message": f"Found {len(slides_info)} slides in presentation '{presentation_name}'",
                 "presentation_name": presentation_name,
-                "safe_presentation_name": safe_name,
                 "presentation_title": metadata.get("title", "Presentation"),
                 "slides": slides_info,
                 "total_slides": len(slides_info),
@@ -1149,7 +1049,6 @@ print(json.dumps(result))
         """Export presentation to PPTX format via sandbox conversion service"""
         try:
             await self._ensure_sandbox()
-            await self._warmup_presentation_services()
             
             if not presentation_name:
                 return self.fail_response("Presentation name is required.")
@@ -1251,7 +1150,6 @@ print(json.dumps(result))
         """Export presentation to PDF format via sandbox conversion service"""
         try:
             await self._ensure_sandbox()
-            await self._warmup_presentation_services()
             
             if not presentation_name:
                 return self.fail_response("Presentation name is required.")
@@ -1326,161 +1224,3 @@ print(json.dumps(result))
         
         except Exception as e:
             return self.fail_response(f"Failed to export presentation to PDF: {str(e)}")
-
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "present_presentation",
-            "description": "Present the final presentation to the user. Use this tool when: 1) All slides have been created and formatted, 2) The presentation is ready for user review, 3) You want to show the user the complete presentation with all files, 4) The presentation creation process is finished and you want to deliver the final result. IMPORTANT: This tool is specifically for presenting completed presentations, not for intermediate steps. Include the presentation name, slide count, and all relevant file attachments. This tool provides a special UI for presentation delivery. This tool allows users to download the presentation as PDF, PPTX, or upload to Google Slides. **IMPORTANT: Whenever a user wants to download the presentation as PDF, PPTX, or upload to Google Slides, use this tool to present the presentation to the user.**",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "presentation_name": {
-                        "type": "string",
-                        "description": "The identifier/folder name of the presentation (e.g., 'test_presentation'). This should match the presentation_name used in create_slide."
-                    },
-                    "presentation_title": {
-                        "type": "string",
-                        "description": "The human-readable title of the presentation (e.g., 'Test Presentation'). This will be displayed prominently to the user."
-                    },
-                    "presentation_path": {
-                        "type": "string",
-                        "description": "The file path where the presentation is located (e.g., 'presentations/my-presentation/'). This helps users locate the files."
-                    },
-                    "slide_count": {
-                        "type": "integer",
-                        "description": "The total number of slides in the presentation. This gives users a quick overview of the presentation size."
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "A summary or description of the presentation to present to the user. Include: 1) What the presentation covers, 2) Key highlights or features, 3) Any important notes about the presentation, 4) How to use or view the presentation."
-                    },
-                    "attachments": {
-                        "anyOf": [
-                            {"type": "string"},
-                            {"items": {"type": "string"}, "type": "array"}
-                        ],
-                        "description": "List of HTML slide files to attach (e.g., 'presentations/my-presentation/slide_01.html'). The UI will provide buttons for users to download as PDF, PPTX, or upload to Google Slides, so you only need to provide the HTML files. Always use relative paths to /workspace directory."
-                    },
-                    "presentation_url": {
-                        "type": "string",
-                        "description": "(Optional) A direct URL to view the presentation if available. This could be a hosted version or a specific viewing link."
-                    }
-                },
-                "required": ["presentation_name", "presentation_title", "presentation_path", "slide_count", "text", "attachments"]
-            }
-        }
-    })
-    async def present_presentation(
-        self, 
-        presentation_name: str,
-        presentation_title: str,
-        presentation_path: str,
-        slide_count: int,
-        text: str,
-        attachments: Union[str, List[str]],
-        presentation_url: Optional[str] = None
-    ) -> ToolResult:
-        """Present the final presentation to the user.
-
-        Args:
-            presentation_name: The identifier/folder name of the presentation
-            presentation_title: The human-readable title of the presentation
-            presentation_path: The file path where the presentation is located
-            slide_count: The total number of slides in the presentation
-            text: A summary or description of the presentation
-            attachments: List of presentation files to attach
-            presentation_url: Optional direct URL to view the presentation
-
-        Returns:
-            ToolResult indicating successful presentation delivery
-        """
-        try:
-            await self._ensure_sandbox()
-            
-            # Convert single attachment to list for consistent handling
-            if attachments and isinstance(attachments, str):
-                attachments = [attachments]
-
-            # Normalize presentation name - extract from path if presentation_name contains path separators
-            # The presentation_path might be like "presentations/llm_tool_calls" or just "llm_tool_calls"
-            if presentation_name and '/' in presentation_name:
-                # presentation_name is actually a path, extract the name
-                presentation_name = presentation_name.split('/')[-1]
-            elif not presentation_name and presentation_path:
-                # Extract name from presentation_path if presentation_name is not provided
-                clean_path = presentation_path.replace('/workspace/', '').lstrip('/')
-                if '/' in clean_path:
-                    presentation_name = clean_path.split('/')[-1]
-                else:
-                    presentation_name = clean_path
-            elif not presentation_name:
-                # Fallback: generate from title
-                presentation_name = self._sanitize_filename(presentation_title)
-
-            # Ensure presentation directory exists and metadata.json is created/updated
-            safe_name, full_presentation_path = await self._ensure_presentation_dir(presentation_name)
-            
-            # Load or create metadata
-            metadata = await self._load_presentation_metadata(full_presentation_path)
-            
-            # Update metadata with presentation info
-            metadata["presentation_name"] = presentation_name
-            metadata["title"] = presentation_title
-            metadata["description"] = text
-            metadata["slide_count"] = slide_count
-            if presentation_url:
-                metadata["presentation_url"] = presentation_url
-            
-            existing_slides = metadata.get("slides", {}) or {}
-            metadata["slides"] = existing_slides
-            
-            # Ensure all slides from attachments are in metadata while dropping stale entries
-            if attachments:
-                updated_slides: Dict[str, Any] = {}
-                
-                for idx, attachment in enumerate(attachments):
-                    # Extract slide number from filename (e.g., slide_01.html -> 1)
-                    slide_match = re.search(r'slide[_\s]*(\d+)', attachment, re.IGNORECASE)
-                    slide_number = int(slide_match.group(1)) if slide_match else (idx + 1)
-                    
-                    # Normalize attachment path
-                    normalized_path = attachment.replace('/workspace/', '').lstrip('/')
-                    filename = os.path.basename(normalized_path)
-                    
-                    slide_key = str(slide_number)
-                    previous = existing_slides.get(slide_key, {})
-                    
-                    updated_slides[slide_key] = {
-                        "title": previous.get("title") or f"Slide {slide_number}",
-                        "filename": filename,
-                        "file_path": normalized_path,
-                        "preview_url": f"/workspace/{normalized_path}",
-                        "created_at": previous.get("created_at") or datetime.now().isoformat(),
-                        "updated_at": datetime.now().isoformat(),
-                    }
-                
-                metadata["slides"] = updated_slides
-            
-            # Save updated metadata
-            await self._save_presentation_metadata(full_presentation_path, metadata)
-            
-            # Create a structured response with all presentation data
-            normalized_presentation_path = f"{self.presentations_dir}/{safe_name}"
-
-            result_data = {
-                "presentation_name": presentation_name,
-                "safe_presentation_name": safe_name,
-                "presentation_title": presentation_title,
-                "presentation_path": normalized_presentation_path,
-                "slide_count": slide_count,
-                "text": text,
-                "attachments": attachments,
-                "presentation_url": presentation_url,
-                "status": "presentation_delivered"
-            }
-                
-            return self.success_response(result_data)
-        except Exception as e:
-            logger.error(f"Error presenting presentation: {str(e)}", exc_info=True)
-            return self.fail_response(f"Error presenting presentation: {str(e)}")

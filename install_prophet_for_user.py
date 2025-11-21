@@ -34,7 +34,7 @@ def install_prophet_agent():
         "avatar": "🌞",
         "avatar_color": "#F59E0B",
         "metadata": {
-            "is_suna_default": True,
+            "is_prophet_default": True,
             "centrally_managed": True,
             "restrictions": {
                 "system_prompt_editable": False,
@@ -53,7 +53,7 @@ def install_prophet_agent():
                 "agentpress": {}
             },
             "metadata": {
-                "is_suna_default": True,
+                "is_prophet_default": True,
                 "centrally_managed": True
             }
         },
