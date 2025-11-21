@@ -1,17 +1,13 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import {
   useSubscriptionStore,
   useSubscriptionStoreSync,
   type SubscriptionStoreState,
 } from '@/stores/subscription-store';
+import { useShallow } from 'zustand/react/shallow';
 
 interface SubscriptionContextType {
   subscriptionData: SubscriptionStoreState['subscriptionData'];
@@ -27,16 +23,16 @@ const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   useSubscriptionStoreSync();
 
-  const contextValue = useSubscriptionStore((state) => ({
-    subscriptionData: state.subscriptionData,
-    creditBalance: state.creditBalance,
-    isLoading: state.isLoading,
-    error: state.error,
-    refetch: state.refetch,
-    refetchBalance: state.refetchBalance,
-  }));
-
-  const value = useMemo(() => contextValue, [contextValue]);
+  const value = useSubscriptionStore(
+    useShallow((state) => ({
+      subscriptionData: state.subscriptionData,
+      creditBalance: state.creditBalance,
+      isLoading: state.isLoading,
+      error: state.error,
+      refetch: state.refetch,
+      refetchBalance: state.refetchBalance,
+    })),
+  );
 
   return (
     <SubscriptionContext.Provider value={value}>
