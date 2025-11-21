@@ -25,9 +25,31 @@ from typing import Dict, Any
 
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
+redis_username = os.getenv("REDIS_USERNAME")
+redis_password = os.getenv("REDIS_PASSWORD")
+redis_url = os.getenv("REDIS_URL")
+redis_ssl = os.getenv("REDIS_SSL", "true").lower() == "true"
 
-logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+broker_kwargs = {"middleware": [dramatiq.middleware.AsyncIO()]}
+
+if redis_url:
+    logger.info(f"🔧 Configuring Dramatiq broker with Redis URL {redis_url}")
+    broker_kwargs["url"] = redis_url
+else:
+    logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
+    broker_kwargs.update({
+        "host": redis_host,
+        "port": redis_port,
+    })
+    if redis_password:
+        broker_kwargs["password"] = redis_password
+    if redis_username:
+        broker_kwargs["username"] = redis_username
+    if redis_ssl:
+        broker_kwargs["ssl"] = True
+        broker_kwargs["ssl_cert_reqs"] = None
+
+redis_broker = RedisBroker(**broker_kwargs)
 
 dramatiq.set_broker(redis_broker)
 
