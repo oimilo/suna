@@ -138,9 +138,6 @@ class ToolkitService:
                 
                 auth_schemes = toolkit_data.get("auth_schemes", [])
                 composio_managed_auth_schemes = toolkit_data.get("composio_managed_auth_schemes", [])
-
-                if "OAUTH2" not in auth_schemes or "OAUTH2" not in composio_managed_auth_schemes:
-                    continue
                 
                 logo_url = None
                 meta = toolkit_data.get("meta", {})
