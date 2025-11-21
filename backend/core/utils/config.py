@@ -325,6 +325,7 @@ class Configuration:
     # Redis configuration
     REDIS_HOST: Optional[str] = "localhost"
     REDIS_PORT: Optional[int] = 6379
+    REDIS_USERNAME: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
     
