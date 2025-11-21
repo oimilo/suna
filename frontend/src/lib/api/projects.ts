@@ -25,6 +25,73 @@ export type Project = {
 // Use useProjects() hook instead, which derives projects from cached threads
 // This avoids duplicate API calls
 
+const ensureSandboxActiveInternal = async (
+  projectId: string,
+  { maxRetries = 5, baseDelay = 2000 } = {},
+) => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const sandboxResponse = await backendApi.post(
+        `/project/${projectId}/sandbox/ensure-active`,
+        {},
+        { showErrors: false },
+      );
+
+      if (sandboxResponse.error) {
+        if (attempt < maxRetries - 1) {
+          const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000);
+          console.log(
+            `Sandbox ensure-active failed (${sandboxResponse.error.code}), retrying in ${delay}ms (attempt ${
+              attempt + 1
+            }/${maxRetries})...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.warn(
+          `Failed to ensure sandbox is active after all retries: ${sandboxResponse.error.message}`,
+        );
+        return;
+      }
+
+      try {
+        const result = sandboxResponse.data;
+        const sandboxId = result?.sandbox_id;
+        if (sandboxId) {
+          console.log('Sandbox is active:', sandboxId);
+
+          window.dispatchEvent(
+            new CustomEvent('sandbox-active', {
+              detail: { sandboxId, projectId },
+            }),
+          );
+        }
+      } catch (parseError) {
+        console.warn('Sandbox active but failed to parse response:', parseError);
+      }
+      return;
+    } catch (sandboxError) {
+      if (attempt < maxRetries - 1) {
+        const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000);
+        console.log(
+          `Error ensuring sandbox active, retrying in ${delay}ms (attempt ${
+            attempt + 1
+          }/${maxRetries})...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      console.warn('Failed to ensure sandbox is active after all retries:', sandboxError);
+    }
+  }
+};
+
+export const ensureSandboxActive = async (projectId: string | undefined) => {
+  if (!projectId) return;
+  return ensureSandboxActiveInternal(projectId);
+};
+
 // Note: getProject() should not be called directly anymore
 // Use useProjectQuery() hook instead, which derives from cached threads
 // This is kept for backward compatibility but should be deprecated
@@ -53,59 +120,7 @@ export const getProject = async (projectId: string): Promise<Project> => {
 
     // Ensure sandbox is active if it exists
     if (projectData.sandbox?.id) {
-      const ensureSandboxActive = async () => {
-        const maxRetries = 5;
-        const baseDelay = 2000;
-        
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            const sandboxResponse = await backendApi.post(
-              `/project/${projectId}/sandbox/ensure-active`,
-              {},
-              { showErrors: false }
-            );
-
-            if (sandboxResponse.error) {
-              if (attempt < maxRetries - 1) {
-                const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000);
-                console.log(`Sandbox ensure-active failed (${sandboxResponse.error.code}), retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue;
-              }
-              
-              console.warn(
-                `Failed to ensure sandbox is active after all retries: ${sandboxResponse.error.message}`,
-              );
-              return;
-            }
-            
-            try {
-              const result = sandboxResponse.data;
-              const sandboxId = result?.sandbox_id;
-              if (sandboxId) {
-                console.log('Sandbox is active:', sandboxId);
-                
-                window.dispatchEvent(new CustomEvent('sandbox-active', {
-                  detail: { sandboxId, projectId }
-                }));
-              }
-            } catch (parseError) {
-              console.warn('Sandbox active but failed to parse response:', parseError);
-            }
-            return;
-          } catch (sandboxError) {
-            if (attempt < maxRetries - 1) {
-              const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000);
-              console.log(`Error ensuring sandbox active, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            }
-            console.warn('Failed to ensure sandbox is active after all retries:', sandboxError);
-          }
-        }
-      };
-
-      ensureSandboxActive();
+      ensureSandboxActiveInternal(projectId);
     }
 
     const mappedProject: Project = {

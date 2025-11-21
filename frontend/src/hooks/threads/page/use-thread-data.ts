@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Project } from '@/lib/api/projects';
+import { Project, ensureSandboxActive } from '@/lib/api/projects';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { useMessagesQuery } from '@/hooks/threads/use-messages';
 import { useProjectQuery } from '@/hooks/threads/use-project';
@@ -37,6 +37,7 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   const [error, setError] = useState<string | null>(null);
   
   const initialLoadCompleted = useRef<boolean>(false);
+  const sandboxEnsuredRef = useRef<boolean>(false);
   const messagesLoadedRef = useRef(false);
   const agentRunsCheckedRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
@@ -77,14 +78,20 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
         if (!isMounted) return;
 
         if (projectQuery.data) {
-          setProject(projectQuery.data);
-          if (typeof projectQuery.data.sandbox === 'string') {
-            setSandboxId(projectQuery.data.sandbox);
-          } else if (projectQuery.data.sandbox?.id) {
-            setSandboxId(projectQuery.data.sandbox.id);
+          const projectData = projectQuery.data;
+          setProject(projectData);
+          if (typeof projectData.sandbox === 'string') {
+            setSandboxId(projectData.sandbox);
+          } else if (projectData.sandbox?.id) {
+            setSandboxId(projectData.sandbox.id);
+          } else if (!sandboxEnsuredRef.current && effectiveProjectId) {
+            sandboxEnsuredRef.current = true;
+            ensureSandboxActive(effectiveProjectId).catch((err) => {
+              console.warn('Failed to ensure sandbox is active:', err);
+            });
           }
 
-          setProjectName(projectQuery.data.name || '');
+          setProjectName(projectData.name || '');
         }
 
         if (messagesQuery.data && !messagesLoadedRef.current) {
@@ -185,7 +192,8 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     threadQuery.error,
     projectQuery.data,
     messagesQuery.data,
-    agentRunsQuery.data
+    agentRunsQuery.data,
+    effectiveProjectId
   ]);
 
   // Force message reload when thread changes or new data arrives
