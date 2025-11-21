@@ -5,6 +5,9 @@ import { dehydrate, QueryClient } from '@tanstack/react-query';
 
 import { AuthProvider } from '@/components/AuthProvider';
 import { ReactQueryProvider } from '@/providers/react-query-provider';
+import { BillingProvider } from '@/contexts/BillingContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import { DeleteOperationProvider } from '@/contexts/DeleteOperationContext';
 
 export interface ParsedTag {
   tagName: string;
@@ -38,7 +41,13 @@ export function Providers({ children }: { children: ReactNode }) {
     <AuthProvider>
       <ToolCallsContext.Provider value={{ toolCalls, setToolCalls }}>
         <ReactQueryProvider dehydratedState={dehydratedState}>
-          {children}
+          <BillingProvider>
+            <SubscriptionProvider>
+              <DeleteOperationProvider>
+                {children}
+              </DeleteOperationProvider>
+            </SubscriptionProvider>
+          </BillingProvider>
         </ReactQueryProvider>
       </ToolCallsContext.Provider>
     </AuthProvider>
