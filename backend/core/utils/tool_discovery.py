@@ -7,12 +7,12 @@ Tools are discovered via Tool.__subclasses__() rather than filesystem scanning.
 
 import importlib
 import inspect
-import time
 from typing import Dict, List, Any, Optional, Type
 from pathlib import Path
 
 from core.agentpress.tool import Tool, ToolMetadata, MethodMetadata
 from core.utils.logger import logger
+
 
 def _ensure_tools_imported():
     """Ensure all tool modules are imported so classes are registered.
@@ -118,6 +118,7 @@ def _generate_display_name(name: str) -> str:
     s3 = s2.replace('_', ' ')
     return s3.title()
 
+
 # Cache for discovered tools to avoid repeated expensive imports
 _TOOLS_CACHE = None
 
@@ -129,36 +130,11 @@ def warm_up_tools_cache():
     user request paying the ~4s cost of importing all tool modules.
     """
     logger.info("🔥 Warming up worker: loading tool classes...")
+    import time
     start = time.time()
     discover_tools()
     elapsed = time.time() - start
     logger.info(f"✅ Worker ready: {len(_TOOLS_CACHE)} tools loaded in {elapsed:.2f}s")
-
-
-def warm_up_tools_cache_with_retry(max_attempts: int = 3, delay_seconds: float = 1.5) -> bool:
-    """Warm up the cache with retries to avoid cold starts after deploys."""
-    last_error: Optional[Exception] = None
-    for attempt in range(1, max_attempts + 1):
-        try:
-            warm_up_tools_cache()
-            if attempt > 1:
-                logger.info(f"Tool cache warm-up succeeded on attempt {attempt}")
-            return True
-        except Exception as exc:  # pragma: no cover - defensive logging only
-            last_error = exc
-            wait_time = delay_seconds * attempt
-            logger.warning(
-                "Tool cache warm-up failed (attempt %s/%s). Retrying in %.1fs: %s",
-                attempt,
-                max_attempts,
-                wait_time,
-                exc,
-                exc_info=True,
-            )
-            if attempt < max_attempts:
-                time.sleep(wait_time)
-    logger.error("Tool cache warm-up failed after %s attempts: %s", max_attempts, last_error)
-    return False
 
 
 def discover_tools() -> Dict[str, Type[Tool]]:

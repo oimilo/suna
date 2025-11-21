@@ -1,18 +1,17 @@
 import { Metadata } from 'next';
 import { siteConfig } from '@/lib/site';
-import { BRANDING } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
-  keywords: ['Prophet', 'Prophet AI', 'Milo', 'AI', 'Agent', 'Open Source', 'AI assistant', 'generalist AI worker'],
+  keywords: ['Milo', 'Milo AI', 'Prophet', 'Milo Prophet', 'AI', 'Agent', 'Open Source', 'AI assistant', 'generalist AI worker'],
   authors: [
     {
-      name: BRANDING.teamName,
-      url: BRANDING.companyUrl,
+      name: 'Milo AI Corp',
+      url: 'https://milo.com',
     },
   ],
-  creator: BRANDING.teamName,
+  creator: 'Milo AI Corp',
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -33,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteConfig.name,
     description: siteConfig.description,
-    creator: '@prophetbuild',
+    creator: '@milo',
     images: ['/banner.png'],
   },
   robots: {

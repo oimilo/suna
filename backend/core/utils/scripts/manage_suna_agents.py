@@ -2,13 +2,13 @@
 """
 Prophet Default Agent Management Script (Simplified)
 
-This script provides administrative functions for managing the Prophet default agent across all users.
+This script provides administrative functions for managing Prophet default agents across all users.
 
 Usage:
     # 🚀 MAIN COMMANDS
     python manage_suna_agents.py install-all          # Install Prophet for all users who don't have it
     python manage_suna_agents.py stats                # Show Prophet agent statistics
-    python manage_suna_agents.py install-user <id>    # Install Prophet for a specific user
+    python manage_suna_agents.py install-user <id>    # Install Prophet for specific user
 
 Examples:
     python manage_suna_agents.py install-all
@@ -38,7 +38,7 @@ class SunaAgentManager:
         self.service = SunaDefaultAgentService()
     
     async def install_all_users(self):
-        """Install Prophet default agent for all users who don't have it"""
+        """Install Prophet agent for all users who don't have it"""
         print("🚀 Installing Prophet default agent for all users who don't have it...")
         
         result = await self.service.install_for_all_users()
@@ -62,11 +62,11 @@ class SunaAgentManager:
         print("=" * 50)
         print("🔧 Prophet agents automatically use the current configuration from config.py")
         print("📝 No sync needed - changes are applied immediately when agents run")
-        print("💡 To update Prophet behavior, simply modify backend/agent/suna/config.py")
+        print("💡 To update Prophet behavior, simply modify backend/agent/prophet/config.py")
         print("\n✅ All Prophet agents are always up-to-date with your latest configuration!")
     
     async def install_user(self, account_id):
-        """Install Prophet default agent for specific user"""
+        """Install Prophet agent for specific user"""
         print(f"🚀 Installing Prophet default agent for user {account_id}...")
         
         agent_id = await self.service.install_suna_agent_for_user(account_id)

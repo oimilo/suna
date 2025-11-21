@@ -1,9 +1,9 @@
 import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
-import { BRANDING } from '@/lib/branding';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Providers } from './providers';
+import { AuthProvider } from '@/components/AuthProvider';
+import { ReactQueryProvider } from './react-query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { GoogleAnalytics } from '@next/third-parties/google';
@@ -13,6 +13,8 @@ import { PostHogIdentify } from '@/components/posthog-identify';
 import '@/lib/polyfills';
 import { roobert } from './fonts/roobert';
 import { roobertMono } from './fonts/roobert-mono';
+import { PlanSelectionModal } from '@/components/billing/pricing/plan-selection-modal';
+import { Suspense } from 'react';
 import { I18nProvider } from '@/components/i18n-provider';
 
 
@@ -44,20 +46,19 @@ export const metadata: Metadata = {
     'research assistant',
     'data analysis',
     'task automation',
-    'Prophet',
     'Milo',
     'generalist AI',
   ],
   authors: [
-    {
-      name: BRANDING.teamName,
-      url: BRANDING.companyUrl,
-    },
+    { 
+      name: 'Milo Team', 
+      url: 'https://milo.com' 
+    }
   ],
-  creator: BRANDING.teamName,
-  publisher: BRANDING.teamName,
+  creator: 'Milo Team',
+  publisher: 'Milo Team',
   category: 'Technology',
-  applicationName: BRANDING.name,
+  applicationName: 'Milo',
   formatDetection: {
     telephone: false,
     email: false,
@@ -77,27 +78,27 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    title: `${BRANDING.name} - Open Source Generalist AI Worker`,
+    title: 'Milo - Open Source Generalist AI Worker',
     description: siteConfig.description,
     url: siteConfig.url,
-    siteName: BRANDING.name,
+    siteName: 'Milo',
     locale: 'en_US',
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: `${BRANDING.name} - Open Source Generalist AI Worker`,
+        alt: 'Milo - Open Source Generalist AI Worker',
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRANDING.name} - Open Source Generalist AI Worker`,
+    title: 'Milo - Open Source Generalist AI Worker',
     description: siteConfig.description,
-    creator: '@prophetbuild',
-    site: '@prophetbuild',
+    creator: '@milo',
+    site: '@milo',
     images: ['/banner.png'],
   },
   icons: {
@@ -130,21 +131,21 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: BRANDING.company,
-              alternateName: [BRANDING.name, `${BRANDING.company} ${BRANDING.name}`],
-              url: BRANDING.companyUrl,
-              logo: `${BRANDING.companyUrl.replace(/\/$/, '')}/favicon.png`,
+              name: 'Milo',
+              alternateName: ['Prophet', 'Milo AI'],
+              url: 'https://milo.com',
+              logo: 'https://milo.com/favicon.png',
               description: siteConfig.description,
               foundingDate: '2024',
               sameAs: [
-                BRANDING.social.github,
-                BRANDING.social.twitter,
-                BRANDING.social.linkedin,
-              ].filter(Boolean),
+                'https://github.com/milo-ai',
+                'https://x.com/milo',
+                'https://linkedin.com/company/milo',
+              ],
               contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'Customer Support',
-                url: BRANDING.companyUrl,
+                url: 'https://milo.com',
               },
             }),
           }}
@@ -157,8 +158,8 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: BRANDING.name,
-              alternateName: BRANDING.company,
+              name: 'Milo',
+              alternateName: 'Prophet',
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, macOS, Windows, Linux',
               offers: {
@@ -203,10 +204,15 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <I18nProvider>
-            <Providers>
+          <AuthProvider>
+            <ReactQueryProvider>
               {children}
               <Toaster />
-            </Providers>
+              <Suspense fallback={null}>
+                <PlanSelectionModal />
+              </Suspense>
+            </ReactQueryProvider>
+          </AuthProvider>
           </I18nProvider>
           <Analytics />
           <GoogleAnalytics gaId="G-6ETJFB3PT3" />

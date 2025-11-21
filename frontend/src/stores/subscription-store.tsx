@@ -30,8 +30,6 @@ interface SubscriptionStore {
   }) => void;
 }
 
-export type SubscriptionStoreState = SubscriptionStore;
-
 export const useSubscriptionStore = create<SubscriptionStore>()(
   devtools(
     (set, get) => ({

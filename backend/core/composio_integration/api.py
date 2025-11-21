@@ -245,26 +245,8 @@ async def list_toolkits(
         service = get_integration_service()
         
         if search:
-            queries = [{"use_case": search}]
-            if category:
-                queries[0]["filters"] = {"category": category}
-            result = await service.search_toolkits_with_queries(queries, limit=limit, cursor=cursor)
-            search_entries = result.get("results", [])
-            primary_entry = search_entries[0] if search_entries else {}
-            toolkits = primary_entry.get("results", [])
-            response_payload = {
-                "success": True,
-                "toolkits": toolkits,
-                "total_items": primary_entry.get("total_results", len(toolkits)),
-                "total_pages": 1,
-                "current_page": 1,
-                "next_cursor": None,
-                "has_more": False,
-                "search_session": result.get("session"),
-                "search_source": result.get("source"),
-            }
-            return response_payload
-
+            result = await service.search_toolkits(search, category=category, limit=limit, cursor=cursor)
+        else:
             result = await service.list_available_toolkits(limit, cursor=cursor, category=category)
         
         return {
@@ -558,8 +540,7 @@ async def discover_composio_tools(
             "profile_id": profile_id,
             "toolkit_name": config.get('toolkit_name', 'Unknown'),
             "tools": result.tools,
-            "total_tools": result.total_tools,
-            "returned_tools": result.returned_tools
+            "total_tools": len(result.tools)
         }
         
     except HTTPException:
@@ -707,20 +688,14 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
             
             if not limit_check['can_create']:
                 error_detail = {
-                    "message": (
-                        f"Maximum of {limit_check['limit']} app triggers allowed for your plan. "
-                        f"You already have {limit_check['current_count']} app triggers."
-                    ),
+                    "message": f"Maximum of {limit_check['limit']} app triggers allowed for your current plan. You have {limit_check['current_count']} app triggers.",
                     "current_count": limit_check['current_count'],
                     "limit": limit_check['limit'],
-                    "tier_name": limit_check.get('tier_name'),
+                    "tier_name": limit_check['tier_name'],
                     "trigger_type": "app",
                     "error_code": "TRIGGER_LIMIT_EXCEEDED"
                 }
-                logger.warning(
-                    f"Trigger limit exceeded for account {current_user_id}: "
-                    f"{limit_check['current_count']}/{limit_check['limit']} app triggers"
-                )
+                logger.warning(f"Trigger limit exceeded for account {current_user_id}: {limit_check['current_count']}/{limit_check['limit']} app triggers")
                 raise HTTPException(status_code=402, detail=error_detail)
 
         profile_service = ComposioProfileService(db)
@@ -860,7 +835,7 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
         if not composio_trigger_id:
             raise HTTPException(status_code=500, detail="Failed to get Composio trigger id from response")
 
-        # Build Suna trigger config
+        # Build Prophet trigger config
         suna_config: Dict[str, Any] = {
             "provider_id": "composio",
             "composio_trigger_id": composio_trigger_id,
@@ -873,7 +848,7 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
         if req.agent_prompt:
             suna_config["agent_prompt"] = req.agent_prompt
 
-        # Create Suna trigger
+        # Create Prophet trigger
         trigger_service = get_trigger_service(db)
         trigger = await trigger_service.create_trigger(
             agent_id=req.agent_id,
@@ -898,8 +873,9 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create Composio trigger: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e) if e else "Unknown error"
+        logger.error(f"Failed to create Composio trigger: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.post("/webhook")

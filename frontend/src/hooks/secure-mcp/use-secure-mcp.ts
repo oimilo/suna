@@ -490,9 +490,9 @@ export function useDeleteTemplate() {
   });
 }
 
-export function useKortixTeamTemplates() {
+export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['secure-mcp', 'kortix-templates-all'],
+    queryKey: ['secure-mcp', 'milo-templates-all'],
     queryFn: async (): Promise<MarketplaceTemplatesResponse> => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -501,7 +501,7 @@ export function useKortixTeamTemplates() {
         throw new Error('You must be logged in to view Milo templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/kortix-all`, {
+      const response = await fetch(`${API_URL}/templates/milo-all`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -514,6 +514,8 @@ export function useKortixTeamTemplates() {
       
       return response.json();
     },
+    enabled: options?.enabled !== false,
+    ...options,
   });
 }
 

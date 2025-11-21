@@ -30,10 +30,11 @@ export function PromptExamples({
   title = 'Prompt example',
   showTitle = true,
   columns = 2,
-  variant = 'text',
+  variant = 'text', // Default to text variant (list style)
 }: PromptExamplesProps) {
   if (!prompts || prompts.length === 0) return null;
 
+  // Text variant (list style like RESEARCH mode) - exact match
   if (variant === 'text') {
     return (
       <div className={cn('space-y-2', className)}>
@@ -69,6 +70,7 @@ export function PromptExamples({
     );
   }
 
+  // Card variant (grid style like image/slides modes)
   return (
     <div className={cn('space-y-3', className)}>
       {showTitle && (
@@ -76,12 +78,10 @@ export function PromptExamples({
           {title}
         </p>
       )}
-      <div
-        className={cn(
-          'grid gap-3',
-          columns === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2',
-        )}
-      >
+      <div className={cn(
+        'grid gap-3',
+        columns === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+      )}>
         {prompts.map((prompt, index) => (
           <motion.div
             key={`${prompt.text}-${index}`}

@@ -29,10 +29,15 @@ export async function GET(request: NextRequest) {
       }
 
       if (data.user) {
+        // Welcome email is now sent automatically by Supabase database trigger
+        // See: backend/supabase/migrations/20251113000000_welcome_email_webhook.sql
+
+        // NOTE: This is server-side route handler, so direct Supabase queries are acceptable
+        // for performance. Only client-side (browser) code should use backend API.
         const { data: accountData } = await supabase
           .schema('basejump')
           .from('accounts')
-          .select('id')
+          .select('id, created_at')
           .eq('primary_owner_user_id', data.user.id)
           .eq('personal_account', true)
           .single();
@@ -44,30 +49,7 @@ export async function GET(request: NextRequest) {
             .eq('account_id', accountData.id)
             .single();
 
-          // If no credit account or tier is 'none', ensure free tier automatically
-          if (!creditAccount || creditAccount.tier === 'none' || !creditAccount.tier) {
-            try {
-              const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-              if (backendUrl && data.session?.access_token) {
-                const response = await fetch(`${backendUrl}/setup/ensure-free-tier`, {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${data.session.access_token}`,
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                if (response.ok) {
-                  // Free tier was given, continue to dashboard
-                  return NextResponse.redirect(`${baseUrl}${next}`)
-                }
-              }
-            } catch (error) {
-              console.error('Error ensuring free tier in callback:', error);
-              // Continue anyway - middleware will handle it
-            }
-            
-            // If API call failed or no backend URL, redirect to setting-up page
+          if (creditAccount && (creditAccount.tier === 'none' || !creditAccount.stripe_subscription_id)) {
             return NextResponse.redirect(`${baseUrl}/setting-up`);
           }
         }

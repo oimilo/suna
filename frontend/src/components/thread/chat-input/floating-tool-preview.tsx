@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CircleDashed, Maximize2 } from 'lucide-react';
 import { getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
 import { cn } from '@/lib/utils';
-import { BRANDING } from '@/lib/branding';
 import { Button } from '@/components/ui/button';
 
 export interface ToolCallInput {
@@ -160,7 +159,7 @@ export const FloatingToolPreview: React.FC<FloatingToolPreviewProps> = ({
                   )} />
                   <span className="text-xs text-muted-foreground truncate">
                     {isStreaming
-                      ? `${agentName || BRANDING.defaultAgentName} is working...`
+                      ? `${agentName || 'Prophet'} is working...`
                       : isSuccess
                         ? "Success"
                         : "Failed"

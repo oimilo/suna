@@ -1,6 +1,6 @@
 # 🎁 Script para Dar Planos Gratuitos
 
-Este script permite dar planos gratuitos para qualquer usuário do Prophet/Suna usando o Stripe com cupom de 100% de desconto.
+Este script permite dar planos gratuitos para qualquer usuário do Prophet/Prophet usando o Stripe com cupom de 100% de desconto.
 
 ## 📋 Como Usar
 

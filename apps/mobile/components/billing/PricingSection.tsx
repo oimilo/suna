@@ -20,7 +20,7 @@ import Animated, {
   withSpring,
   FadeIn,
 } from 'react-native-reanimated';
-import { KortixLogo } from '../ui/KortixLogo';
+import { MiloLogo } from '../ui/MiloLogo';
 import BasicSvg from '@/assets/brand/tiers/basic.svg';
 import PlusSvg from '@/assets/brand/tiers/plus.svg';
 import ProSvg from '@/assets/brand/tiers/pro.svg';
@@ -305,7 +305,7 @@ export function PricingSection({
           style={{ paddingTop: insets.top + 16 }}
         >
           <View>
-            <KortixLogo variant="logomark" size={72} color={isDark ? 'dark' : 'light'} />
+            <MiloLogo variant="logomark" size={72} color={isDark ? 'dark' : 'light'} />
           </View>
           <AnimatedPressable
             onPress={() => {
@@ -553,7 +553,7 @@ export function PricingSection({
           <AnimatedPressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              Linking.openURL('https://kortix.com/help/credits-explained');
+              Linking.openURL('https://milo.com/help/credits-explained');
             }}
             onPressIn={() => {
               creditsLinkScale.value = withSpring(0.95, { damping: 15, stiffness: 400 });

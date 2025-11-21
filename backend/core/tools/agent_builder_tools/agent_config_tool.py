@@ -137,7 +137,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
                     if system_prompt is not None:
                         current_system_prompt = system_prompt
                     else:
-                        current_system_prompt = current_version.get('system_prompt_user') or current_version.get('system_prompt', '')
+                        current_system_prompt = current_version.get('system_prompt', '')
                     
                     if agentpress_tools is not None:
                         # Validate and normalize the tool configuration
@@ -203,28 +203,11 @@ class AgentConfigTool(AgentBuilderBaseTool):
                         custom_mcps=current_custom_mcps,
                         agentpress_tools=current_agentpress_tools,
                         version_name=f"v{current_version.get('version_number', 1) + 1}",
-                        change_description="Updated via agent builder",
-                        system_prompt_user=current_system_prompt,
-                        apply_tool_base_prompt=True
+                        change_description="Updated via agent builder"
                     )
                     
                     version_created = True
                     logger.debug(f"Created new version {new_version.version_id} for agent {self.agent_id}")
-
-                    runtime_config = current_version.get('config')
-                    if not runtime_config:
-                        runtime_config = {
-                            'system_prompt': current_system_prompt,
-                            'model': current_version.get('model'),
-                            'agentpress_tools': current_agentpress_tools,
-                            'tools': {
-                                'agentpress': current_agentpress_tools,
-                                'mcp': current_configured_mcps,
-                                'custom_mcp': current_custom_mcps
-                            }
-                        }
-
-                    await self._refresh_runtime_tools(account_id, runtime_config)
                     
                 except Exception as e:
                     logger.error(f"Failed to create new version: {str(e)}")
@@ -237,14 +220,11 @@ class AgentConfigTool(AgentBuilderBaseTool):
             if version_created:
                 updated_fields.append("version_created")
             
-            tool_flow_state = await self._get_tool_flow_state()
-
             return self.success_response({
                 "message": "Agent updated successfully",
                 "updated_fields": updated_fields,
                 "agent": updated_agent,
-                "version_created": version_created,
-                "tool_flow": tool_flow_state
+                "version_created": version_created
             })
             
         except Exception as e:
@@ -314,13 +294,9 @@ class AgentConfigTool(AgentBuilderBaseTool):
             
             summary_text = f"Agent '{config_summary['name']}' (version: {config_summary['current_version']}) has {tools_count} tools enabled, {mcps_count} MCP servers configured, and {custom_mcps_count} custom MCP integrations."
             
-            tool_flow_state = self._derive_tool_flow_state(config_summary)
-            config_summary["tool_flow"] = tool_flow_state
-            
             return self.success_response({
                 "summary": summary_text,
-                "configuration": config_summary,
-                "tool_flow": tool_flow_state
+                "configuration": config_summary
             })
             
         except Exception as e:

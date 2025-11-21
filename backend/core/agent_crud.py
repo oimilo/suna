@@ -1,7 +1,7 @@
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query, Request
 
-from core.utils.auth_utils import verify_and_get_user_id_from_jwt
+from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_optional_user_id_from_jwt
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
 from core.utils.pagination import PaginationParams
@@ -120,7 +120,6 @@ async def update_agent(
                     "version_number": 1,
                     "version_name": "v1",
                     "system_prompt": existing_data.get('system_prompt', ''),
-                    "system_prompt_user": existing_data.get('system_prompt', ''),
                     "model": existing_data.get('model'),
                     "configured_mcps": existing_data.get('configured_mcps', []),
                     "custom_mcps": existing_data.get('custom_mcps', []),
@@ -134,8 +133,7 @@ async def update_agent(
                     agentpress_tools=initial_version_data["agentpress_tools"],
                     configured_mcps=initial_version_data["configured_mcps"],
                     custom_mcps=initial_version_data["custom_mcps"],
-                    triggers=triggers,
-                    system_prompt_user=initial_version_data["system_prompt"]
+                    triggers=triggers
                 )
                 initial_version_data["config"] = initial_config
                 
@@ -153,7 +151,6 @@ async def update_agent(
                 else:
                     current_version_data = {
                         'system_prompt': existing_data.get('system_prompt', ''),
-                        'system_prompt_user': existing_data.get('system_prompt', ''),
                         'model': existing_data.get('model'),
                         'configured_mcps': existing_data.get('configured_mcps', []),
                         'custom_mcps': existing_data.get('custom_mcps', []),
@@ -183,9 +180,7 @@ async def update_agent(
             except (TypeError, ValueError):
                 return new_val != old_val
         
-        current_visible_prompt = (current_version_data.get('system_prompt_user') or current_version_data.get('system_prompt', '')) if current_version_data else ''
-
-        if values_different(agent_data.system_prompt, current_visible_prompt):
+        if values_different(agent_data.system_prompt, current_version_data.get('system_prompt')):
             needs_new_version = True
             version_changes['system_prompt'] = agent_data.system_prompt
         
@@ -231,7 +226,7 @@ async def update_agent(
         if config.ENV_MODE == EnvMode.STAGING:
             print(f"[DEBUG] update_agent: Prepared update_data with icon fields - icon_name={update_data.get('icon_name')}, icon_color={update_data.get('icon_color')}, icon_background={update_data.get('icon_background')}")
         
-        current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_visible_prompt
+        current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_version_data.get('system_prompt', '')
         current_model = agent_data.model if agent_data.model is not None else current_version_data.get('model')
 
         if agent_data.configured_mcps is not None:
@@ -274,9 +269,7 @@ async def update_agent(
                     configured_mcps=current_configured_mcps,
                     custom_mcps=current_custom_mcps,
                     agentpress_tools=current_agentpress_tools,
-                    change_description="Configuration updated",
-                    system_prompt_user=current_system_prompt,
-                    apply_tool_base_prompt=True
+                    change_description="Configuration updated"
                 )
                 
                 new_version_id = new_version.version_id
@@ -342,7 +335,6 @@ async def update_agent(
                     version_number=current_version_data['version_number'],
                     version_name=current_version_data['version_name'],
                     system_prompt=current_version_data['system_prompt'],
-                    system_prompt_user=current_version_data.get('system_prompt_user'),
                     model=current_version_data.get('model'),
                     configured_mcps=current_version_data.get('configured_mcps', []),
                     custom_mcps=current_version_data.get('custom_mcps', []),
@@ -365,7 +357,6 @@ async def update_agent(
                 'version_number': current_version.version_number,
                 'version_name': current_version.version_name,
                 'system_prompt': current_version.system_prompt,
-                'system_prompt_user': current_version.system_prompt_user,
                 'model': current_version.model,
                 'configured_mcps': current_version.configured_mcps,
                 'custom_mcps': current_version.custom_mcps,
@@ -453,7 +444,8 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
 
 @router.get("/agents", response_model=AgentsResponse, summary="List Agents", operation_id="list_agents")
 async def get_agents(
-    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+    request: Request,
+    user_id: Optional[str] = Depends(get_optional_user_id_from_jwt),
     page: Optional[int] = Query(1, ge=1, description="Page number (1-based)"),
     limit: Optional[int] = Query(20, ge=1, le=100, description="Number of items per page"),
     search: Optional[str] = Query(None, description="Search in name"),
@@ -463,11 +455,23 @@ async def get_agents(
     has_mcp_tools: Optional[bool] = Query(None, description="Filter by agents with MCP tools"),
     has_agentpress_tools: Optional[bool] = Query(None, description="Filter by agents with AgentPress tools"),
     tools: Optional[str] = Query(None, description="Comma-separated list of tools to filter by"),
-    content_type: Optional[str] = Query(None, description="Content type filter: 'agents', 'templates', or None for agents only"),
-    include_config: Optional[bool] = Query(False, description="If true, load agent configurations for each result")
+    content_type: Optional[str] = Query(None, description="Content type filter: 'agents', 'templates', or None for agents only")
 ):
     try:
         from .agent_service import AgentService, AgentFilters
+        from core.guest_session import guest_session_service
+        
+        if not user_id:
+            guest_session_id = request.headers.get('X-Guest-Session')
+            if guest_session_id:
+                if isinstance(guest_session_id, list):
+                    guest_session_id = guest_session_id[0]
+
+                session = await guest_session_service.get_or_create_session(request, guest_session_id)
+                user_id = session['session_id']
+                logger.info(f"Guest user fetching agents: {user_id}")
+            else:
+                raise HTTPException(status_code=401, detail="Authentication required")
         
         tools_list = []
         if tools:
@@ -497,8 +501,7 @@ async def get_agents(
         paginated_result = await agent_service.get_agents_paginated(
             user_id=user_id,
             pagination_params=pagination_params,
-            filters=filters,
-            include_config=include_config or False
+            filters=filters
         )
         
         agent_responses = []
@@ -591,10 +594,12 @@ async def create_agent(
         
         try:
             version_service = await _get_version_service()
+            from .suna_config import SUNA_CONFIG
             from .config_helper import _get_default_agentpress_tools
             from core.ai_models import model_manager
             
-            user_system_prompt = (agent_data.system_prompt or "").strip()
+            system_prompt = SUNA_CONFIG["system_prompt"]
+            
             agentpress_tools = agent_data.agentpress_tools if agent_data.agentpress_tools else _get_default_agentpress_tools()
             agentpress_tools = ensure_core_tools_enabled(agentpress_tools)
             
@@ -603,15 +608,13 @@ async def create_agent(
             version = await version_service.create_version(
                 agent_id=agent['agent_id'],
                 user_id=user_id,
-                system_prompt=user_system_prompt,
+                system_prompt=system_prompt,
                 model=default_model,
                 configured_mcps=agent_data.configured_mcps or [],
                 custom_mcps=agent_data.custom_mcps or [],
                 agentpress_tools=agentpress_tools,
                 version_name="v1",
-                change_description="Initial version",
-                system_prompt_user=user_system_prompt,
-                apply_tool_base_prompt=True
+                change_description="Initial version"
             )
             
             agent['current_version_id'] = version.version_id
@@ -623,7 +626,6 @@ async def create_agent(
                 version_number=version.version_number,
                 version_name=version.version_name,
                 system_prompt=version.system_prompt,
-                system_prompt_user=version.system_prompt_user,
                 model=version.model,
                 configured_mcps=version.configured_mcps,
                 custom_mcps=version.custom_mcps,

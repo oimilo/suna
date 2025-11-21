@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { BRANDING } from '@/lib/branding';
 
 export const runtime = 'edge';
 
@@ -79,8 +78,6 @@ export async function GET(request: NextRequest) {
                 width: '120px',
                 height: '120px',
                 borderRadius: '24px',
-                backgroundColor: (template.avatar_color || '#6366f1') + '30',
-                border: `3px solid ${template.avatar_color || '#6366f1'}50`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -88,7 +85,7 @@ export async function GET(request: NextRequest) {
                 marginBottom: '32px',
               }}
             >
-              {template.avatar || '🤖'}
+              🤖
             </div>
             <h1
               style={{
@@ -170,9 +167,7 @@ export async function GET(request: NextRequest) {
                 bottom: '40px',
               }}
             >
-              <span style={{ color: '#64748b', fontSize: '20px' }}>
-                {`${BRANDING.company} ${BRANDING.name}`}
-              </span>
+              <span style={{ color: '#64748b', fontSize: '20px' }}>Milo</span>
               <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
@@ -233,7 +228,7 @@ export async function GET(request: NextRequest) {
                 color: '#94a3b8',
               }}
             >
-              {`Discover powerful AI agents on ${BRANDING.company} ${BRANDING.name}`}
+              Discover powerful AI agents on Milo
             </p>
           </div>
         </div>

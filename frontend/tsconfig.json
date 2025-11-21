@@ -29,9 +29,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "react-joyride": [
-        "./src/lib/shims/react-joyride"
       ]
     }
   },

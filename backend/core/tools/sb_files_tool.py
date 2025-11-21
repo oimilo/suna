@@ -275,27 +275,11 @@ class SandboxFilesTool(SandboxToolsBase):
             if slide_match:
                 presentation_name = slide_match.group(1)
                 slide_number = int(slide_match.group(2))
-                slide_filename = os.path.basename(file_path)
-                
-                slide_metadata_updated = False
                 
                 try:
                     # Import and instantiate the presentation tool to access validate_slide
                     from core.tools.sb_presentation_tool import SandboxPresentationTool
                     presentation_tool = SandboxPresentationTool(self.project_id, self.thread_manager)
-
-                    try:
-                        await presentation_tool.ensure_slide_metadata(
-                            presentation_name=presentation_name,
-                            slide_number=slide_number,
-                            slide_filename=slide_filename,
-                            slide_html=file_contents,
-                        )
-                        slide_metadata_updated = True
-                    except Exception as metadata_error:
-                        logger.warning(
-                            f"Failed to update presentation metadata for '{presentation_name}' slide {slide_number}: {metadata_error}"
-                        )
                     
                     # Call validate_slide
                     validation_result = await presentation_tool.validate_slide(presentation_name, slide_number)
@@ -313,9 +297,6 @@ class SandboxFilesTool(SandboxToolsBase):
                         # If validation failed to run, append a warning but don't fail the rewrite
                         logger.warning(f"Slide validation failed to execute: {validation_result.output}")
                         message += f"\n\n⚠️ Note: Slide validation could not be completed."
-
-                    if slide_metadata_updated:
-                        message += "\n\n✓ Presentation metadata atualizado automaticamente."
                         
                 except Exception as e:
                     # Log the error but don't fail the file rewrite

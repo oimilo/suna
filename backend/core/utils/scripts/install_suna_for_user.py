@@ -2,7 +2,7 @@
 """
 Prophet Agent Installation Script for Individual Users
 
-Simple script to install the Prophet default agent for users by email address or account ID.
+Simple script to install Prophet agents for users by email address or account ID.
 
 Usage:
     # Install Prophet for a user by email
@@ -121,22 +121,22 @@ class SunaUserInstaller:
         account_id = account['id']
         print(f"✅ Found account: {account['name']} ({account_id})")
         
-        print(f"🚀 Installing Prophet default agent...")
+        print(f"🚀 Installing Prophet agent...")
         agent_id = await self.service.install_suna_agent_for_user(
             account_id, 
             replace_existing=replace
         )
         
         if agent_id:
-            print(f"✅ Successfully installed the Prophet default agent!")
+            print(f"✅ Successfully installed Prophet agent!")
             print(f"   🤖 Agent ID: {agent_id}")
             print(f"   👤 User: {email}")
             print(f"   📦 Account: {account_id}")
         else:
-            print(f"❌ Failed to install Prophet default agent for {email}")
+            print(f"❌ Failed to install Prophet agent for {email}")
     
     async def install_for_account_id(self, account_id: str, replace: bool = False):
-        print(f"🚀 Installing Prophet default agent for account: {account_id}")
+        print(f"🚀 Installing Prophet agent for account: {account_id}")
         
         try:
             agent_id = await self.service.install_suna_agent_for_user(
@@ -145,11 +145,11 @@ class SunaUserInstaller:
             )
             
             if agent_id:
-                print(f"✅ Successfully installed the Prophet default agent!")
+                print(f"✅ Successfully installed Prophet agent!")
                 print(f"   🤖 Agent ID: {agent_id}")
                 print(f"   📦 Account: {account_id}")
             else:
-                print(f"❌ Failed to install Prophet default agent for account {account_id}")
+                print(f"❌ Failed to install Prophet agent for account {account_id}")
         
         except Exception as e:
             print(f"❌ Error: {str(e)}")
@@ -159,14 +159,14 @@ class SunaUserInstaller:
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="Install Prophet default agent for a user by email or account ID",
+        description="Install Prophet agent for a user by email or account ID",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
     
     parser.add_argument('identifier', help='Email address or account ID (UUID) of the user')
     parser.add_argument('--replace', action='store_true', 
-                       help='Replace existing Prophet default agent if present')
+                       help='Replace existing Prophet agent if present')
     parser.add_argument('--account-id', action='store_true',
                        help='Treat identifier as account ID instead of email')
     

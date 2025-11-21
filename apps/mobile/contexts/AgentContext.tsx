@@ -22,7 +22,7 @@ interface AgentContextType {
   loadAgents: () => Promise<void>;
   getDefaultAgent: () => Agent | null;
   getCurrentAgent: () => Agent | null;
-  isSunaAgent: () => boolean;
+  isProphetAgent: () => boolean;
   clearSelection: () => Promise<void>;
 }
 
@@ -138,9 +138,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        // Otherwise, find the Suna agent (metadata.is_suna_default) or first agent
-        const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-        const defaultAgent = sunaAgent || agents[0];
+        // Otherwise, find the Prophet agent (metadata.is_prophet_default) or first agent
+        const prophetAgent = agents.find(agent => agent.metadata?.is_prophet_default);
+        const defaultAgent = prophetAgent || agents[0];
         
         if (defaultAgent) {
           setSelectedAgentId(defaultAgent.agent_id);
@@ -185,8 +185,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   }, [refetch]);
   
   const getDefaultAgent = React.useCallback((): Agent | null => {
-    const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-    return sunaAgent || agents[0] || null;
+    const prophetAgent = agents.find(agent => agent.metadata?.is_prophet_default);
+    return prophetAgent || agents[0] || null;
   }, [agents]);
   
   const getCurrentAgent = React.useCallback((): Agent | null => {
@@ -194,9 +194,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     return agents.find(agent => agent.agent_id === selectedAgentId) || null;
   }, [selectedAgentId, agents]);
   
-  const isSunaAgent = React.useCallback((): boolean => {
+  const isProphetAgent = React.useCallback((): boolean => {
     const currentAgent = getCurrentAgent();
-    return currentAgent?.metadata?.is_suna_default || false;
+    return currentAgent?.metadata?.is_prophet_default || false;
   }, [getCurrentAgent]);
   
   const clearSelection = React.useCallback(async () => {
@@ -225,7 +225,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     loadAgents,
     getDefaultAgent,
     getCurrentAgent,
-    isSunaAgent,
+    isProphetAgent,
     clearSelection,
   };
   

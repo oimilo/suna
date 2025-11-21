@@ -1,15 +1,11 @@
 import { Metadata } from 'next';
-import { BRANDING, getPageTitle } from '@/lib/branding';
-
-const title = getPageTitle('App Profiles');
-const description = 'Manage your connected app integrations';
 
 export const metadata: Metadata = {
-  title,
-  description,
+  title: 'App Profiles | Milo',
+  description: 'Manage your connected app integrations',
   openGraph: {
-    title,
-    description,
+    title: 'App Profiles | Milo',
+    description: 'Manage your connected app integrations',
     type: 'website',
   },
 };

@@ -13,14 +13,13 @@ import {
     safeJsonParse,
     HIDE_STREAMING_XML_TAGS,
 } from '@/components/thread/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { KortixLogo } from '@/components/sidebar/milo-logo';
 import { AgentLoader } from './loader';
 import { parseXmlToolCalls, isNewXmlFormat } from '@/components/thread/tool-views/xml-parser';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/complete-tool/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
-import { BRANDING } from '@/lib/branding';
 
 // Configuration for prompt/answer rendering
 const PROMPT_SAMPLES_CONFIG = {
@@ -171,7 +170,7 @@ export function renderMarkdownContent(
                                 <div className="flex items-center gap-2">
                                     <Clock className="h-4 w-4 text-orange-500 flex-shrink-0" />
                                     <p className="text-sm text-muted-foreground">
-                                        {t ? t('thread.waitingForUserResponse') : 'Kortix will proceed to work autonomously after you answer.'}
+                                        {t ? t('thread.waitingForUserResponse') : 'Milo will proceed to work autonomously after you answer.'}
                                     </p>
                                 </div>
                             )}
@@ -339,7 +338,7 @@ export function renderMarkdownContent(
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-orange-500 flex-shrink-0" />
                             <p className="text-sm text-muted-foreground">
-                                {t ? t('thread.waitingForUserResponse') : 'Kortix will proceed to work autonomously after you answer.'}
+                                {t ? t('thread.waitingForUserResponse') : 'Milo will proceed to work autonomously after you answer.'}
                             </p>
                         </div>
                     )}
@@ -440,7 +439,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     sandboxId,
     project,
     isPreviewMode = false,
-    agentName = BRANDING.defaultAgentName,
+    agentName = 'Prophet',
     agentAvatar = <KortixLogo size={16} />,
     emptyStateComponent,
     threadMetadata,
@@ -506,7 +505,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             };
         }
         return {
-            name: agentName || BRANDING.defaultAgentName,
+            name: agentName || 'Prophet',
             avatar: agentAvatar
         };
     }, [threadMetadata, displayMessages, agentName, agentAvatar]);

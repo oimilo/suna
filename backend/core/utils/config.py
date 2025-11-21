@@ -80,6 +80,8 @@ class Configuration:
     
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
+    
+    GUEST_MODE_ADMIN_USER_ID: Optional[str] = None
 
 
     # Subscription tier IDs - Production
@@ -305,10 +307,8 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://www.prophet.build"
-    OR_APP_NAME: Optional[str] = "Prophet AI"
-    STAGEHAND_API_HOST: Optional[str] = "localhost"
-    STAGEHAND_API_PORT: Optional[int] = 8004
+    OR_SITE_URL: Optional[str] = "https://milo.ai"
+    OR_APP_NAME: Optional[str] = "Milo AI"
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
@@ -332,11 +332,6 @@ class Configuration:
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
-    DAYTONA_PROXY_ORIGIN: Optional[str] = None
-    DAYTONA_PREVIEW_PATH_PREFIX: Optional[str] = "/preview"
-    DAYTONA_PREVIEW_SKIP_WARNING: bool = True
-    DAYTONA_PREVIEW_DISABLE_CORS: bool = False
-    DAYTONA_PREVIEW_TOKEN_TTL: Optional[int] = 900
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
@@ -355,22 +350,22 @@ class Configuration:
     # Freestyle deployment configuration
     FREESTYLE_API_KEY: Optional[str] = None
     
-    # Admin & internal access
-    ADMIN_MASTER_PASSWORD: Optional[str] = None
-    
     # Stripe configuration
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
     STRIPE_DEFAULT_PLAN_ID: Optional[str] = None
     STRIPE_DEFAULT_TRIAL_DAYS: Optional[int] = 14
     
+    # RevenueCat configuration
+    REVENUECAT_WEBHOOK_SECRET: Optional[str] = None
+    
     # Stripe Product IDs
     STRIPE_PRODUCT_ID_PROD: Optional[str] = 'prod_SCl7AQ2C8kK1CD'
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.25"
-    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.25"
+    SANDBOX_IMAGE_NAME = "milo/prophet:0.1.3.25"
+    SANDBOX_SNAPSHOT_NAME = "milo/prophet:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
     # LangFuse configuration
@@ -379,7 +374,7 @@ class Configuration:
     LANGFUSE_HOST: Optional[str] = "https://cloud.langfuse.com"
 
     # Admin API key for server-side operations
-    ADMIN_API_KEY: Optional[str] = None
+    KORTIX_ADMIN_API_KEY: Optional[str] = None
 
     # API Keys system configuration
     API_KEY_SECRET: Optional[str] = "default-secret-key-change-in-production"
@@ -395,7 +390,7 @@ class Configuration:
     # Webhook configuration
     WEBHOOK_BASE_URL: Optional[str] = None
     TRIGGER_WEBHOOK_SECRET: Optional[str] = None
-    SUPABASE_WEBHOOK_SECRET: Optional[str] = None
+    SUPABASE_WEBHOOK_SECRET: Optional[str] = None  # Secret for Supabase database webhook authentication
     
     # Email configuration
     
@@ -483,36 +478,14 @@ class Configuration:
         return self.STRIPE_PRODUCT_ID_PROD
     
     @property
-    def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
-        """
-        Base URL (origin + path prefix) exposta via Daytona proxy.
-        Retorna um fallback padrão quando as variáveis não estão configuradas.
-        """
-        # Determine base origin
-        if not self.DAYTONA_PROXY_ORIGIN:
-            origin = {
-                EnvMode.PRODUCTION: "https://prophet-milo-f3hr5.ondigitalocean.app",
-            }.get(self.ENV_MODE, "http://localhost:8000")
-        else:
-            origin = self.DAYTONA_PROXY_ORIGIN
-
-        origin = origin.rstrip("/")
-
-        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
-        if not path_prefix.startswith("/"):
-            path_prefix = f"/{path_prefix}"
-
-        return f"{origin}{path_prefix.rstrip('/')}"
-    
-    @property
     def FRONTEND_URL(self) -> str:
         """
         Get the frontend URL based on environment.
         
         Returns:
-        - Production: 'https://www.prophet.build' (or FRONTEND_URL/FRONTEND_URL_ENV if set)
-        - Staging: 'https://staging.prophet.build' (or FRONTEND_URL/FRONTEND_URL_ENV if set)
-        - Local: FRONTEND_URL/FRONTEND_URL_ENV or 'http://localhost:3000'
+        - Production: 'https://milo.com' (or FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.milo.com' (or FRONTEND_URL_ENV if set)
+        - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
         """
         # Check for environment variable override first
         if self.FRONTEND_URL_ENV:
@@ -520,9 +493,10 @@ class Configuration:
         
         # Environment-based defaults
         if self.ENV_MODE == EnvMode.PRODUCTION:
-            return 'https://www.prophet.build'
+            return 'https://milo.com'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'https://staging.prophet.build'
+            return 'http://localhost:3000'
+            # return 'https://staging.prophet.so'
         else:
             return 'http://localhost:3000'
     
@@ -550,20 +524,10 @@ class Configuration:
         # Load configuration from environment variables
         self._load_from_env()
         
-        # Ensure Daytona preview prefix aligns with environment defaults
-        default_preview_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/api/preview").strip()
-        if not default_preview_prefix.startswith("/"):
-            default_preview_prefix = f"/{default_preview_prefix}"
-        
-        if self.ENV_MODE == EnvMode.PRODUCTION and default_preview_prefix == "/preview":
-            self.DAYTONA_PREVIEW_PATH_PREFIX = "/api/preview"
-        else:
-            self.DAYTONA_PREVIEW_PATH_PREFIX = default_preview_prefix
-        
         # Auto-generate admin API key if not present
-        if not self.ADMIN_API_KEY:
-            self.ADMIN_API_KEY = self._generate_admin_api_key()
-            logger.info("Auto-generated ADMIN_API_KEY for administrative functions")
+        if not self.KORTIX_ADMIN_API_KEY:
+            self.KORTIX_ADMIN_API_KEY = self._generate_admin_api_key()
+            logger.info("Auto-generated KORTIX_ADMIN_API_KEY for administrative functions")
         
         # Perform validation
         self._validate()

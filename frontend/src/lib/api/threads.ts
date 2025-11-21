@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
-import { NoAccessTokenAvailableError } from './errors';
 
 export type Thread = {
   thread_id: string;
@@ -114,12 +113,25 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
       };
     }
 
+    // Log raw response to see what backend returns
+    if (response.data.threads && response.data.threads.length > 0) {
+      const firstThread = response.data.threads[0];
+      console.log('🧵 getThreadsPaginated: Raw thread from backend', {
+        thread_id: firstThread.thread_id,
+        project_id: firstThread.project_id,
+        hasProject: !!firstThread.project,
+        allKeys: Object.keys(firstThread),
+        projectKeys: firstThread.project ? Object.keys(firstThread.project) : []
+      });
+    }
+    
     let threads = response.data.threads.map((thread: any) => ({
       thread_id: thread.thread_id,
       project_id: thread.project_id,
       created_at: thread.created_at,
       updated_at: thread.updated_at,
       metadata: thread.metadata || {},
+      project: thread.project, // Preserve project data for getProjects to use
     }));
 
     if (projectId) {
@@ -154,19 +166,25 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
 };
 
 export const getThread = async (threadId: string): Promise<Thread> => {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('threads')
-    .select('*')
-    .eq('thread_id', threadId)
-    .single();
+  try {
+    const response = await backendApi.get<Thread>(`/threads/${threadId}`, {
+      showErrors: false,
+    });
 
-  if (error) {
+    if (response.error) {
+      handleApiError(response.error, { operation: 'load thread', resource: `thread ${threadId}` });
+      throw new Error(response.error.message || 'Failed to fetch thread');
+    }
+
+    if (!response.data) {
+      throw new Error('Thread not found');
+    }
+
+    return response.data;
+  } catch (error) {
     handleApiError(error, { operation: 'load thread', resource: `thread ${threadId}` });
     throw error;
   }
-
-  return data;
 };
 
 export const createThread = async (projectId: string): Promise<Thread> => {
@@ -199,6 +217,13 @@ export const createThread = async (projectId: string): Promise<Thread> => {
   const data = await response.json();
   return data;
 };
+
+export class NoAccessTokenAvailableError extends Error {
+  constructor() {
+    super('No access token available');
+    this.name = 'NoAccessTokenAvailableError';
+  }
+}
 
 export const addUserMessage = async (
   threadId: string,

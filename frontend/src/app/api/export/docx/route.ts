@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import HTMLtoDOCX from 'html-to-docx';
-import { BRANDING } from '@/lib/branding';
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,8 +85,8 @@ export async function POST(request: NextRequest) {
         right: 720,
       },
       title: fileName,
-      creator: `${BRANDING.company} ${BRANDING.name}`,
-      description: `Document exported from ${BRANDING.company} ${BRANDING.name}`,
+      creator: 'Prophet AI',
+      description: 'Document exported from Prophet AI',
       font: 'Calibri',
       fontSize: 22,
     };

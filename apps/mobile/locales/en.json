@@ -77,7 +77,7 @@
     "openEmailApp": "Open email app",
     "goToSignIn": "Go to sign in",
     "verifyEmailInstructions": "Click the link in the email to verify your account, then sign in.",
-    "welcomeTitle": "Hire Kortix for",
+    "welcomeTitle": "Hire Milo for",
     "rotatingPhrases": {
       "presentations": "presentations",
       "writing": "writing",
@@ -180,8 +180,8 @@
   },
   "chat": {
     "newChat": "New Chat",
-    "placeholder": "Give Kortix a task...",
-    "inputPlaceholder": "Ask Kortix to do anything...",
+    "placeholder": "Give Milo a task...",
+    "inputPlaceholder": "Ask Milo to do anything...",
     "recording": "Recording...",
     "cancelRecording": "Cancel recording",
     "stopRecording": "Stop recording",
@@ -203,7 +203,7 @@
     "newWorker": "New Worker",
     "myWorkers": "My Workers",
     "searchAgents": "Search workers",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Milo",
     "defaultDescription": "General purpose AI for all tasks",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -368,7 +368,7 @@
     "chooseModelFor": "Choose a model for {{agent}}"
   },
   "placeholders": {
-    "default": "Give Kortix a task...",
+    "default": "Give Milo a task...",
     "search": "Search...",
     "searchConversations": "Search chats",
     "searchAgents": "Search workers",

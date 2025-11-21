@@ -38,17 +38,17 @@ class XMLToolParser:
     
     # Regex patterns for extracting XML blocks
     FUNCTION_CALLS_PATTERN = re.compile(
-        r'<function_calls\b[^>]*>(.*?)</function_calls\s*>',
+        r'<function_calls>(.*?)</function_calls>',
         re.DOTALL | re.IGNORECASE
     )
     
     INVOKE_PATTERN = re.compile(
-        r'<invoke\b[^>]*name=["\']([^"\']+)["\'][^>]*>(.*?)</invoke\s*>',
+        r'<invoke\s+name=["\']([^"\']+)["\']>(.*?)</invoke>',
         re.DOTALL | re.IGNORECASE
     )
     
     PARAMETER_PATTERN = re.compile(
-        r'<parameter\b[^>]*name=["\']([^"\']+)["\'][^>]*>(.*?)</parameter\s*>',
+        r'<parameter\s+name=["\']([^"\']+)["\']>(.*?)</parameter>',
         re.DOTALL | re.IGNORECASE
     )
     
@@ -70,11 +70,6 @@ class XMLToolParser:
         
         # Find function_calls blocks
         function_calls_matches = self.FUNCTION_CALLS_PATTERN.findall(content)
-        
-        # Fallback: if no explicit <function_calls> wrapper, attempt to parse entire content
-        if not function_calls_matches and '<invoke' in content:
-            logger.info("XMLToolParser fallback triggered: parsing invoke blocks without <function_calls> wrapper")
-            function_calls_matches = [content]
         
         for fc_content in function_calls_matches:
             # Find all invoke blocks within this function_calls block
@@ -122,7 +117,7 @@ class XMLToolParser:
         
         # Extract the raw XML for this specific invoke
         invoke_pattern = re.compile(
-            rf'<invoke\b[^>]*name=["\']{re.escape(function_name)}["\'][^>]*>.*?</invoke\s*>',
+            rf'<invoke\s+name=["\']{re.escape(function_name)}["\']>.*?</invoke>',
             re.DOTALL | re.IGNORECASE
         )
         raw_xml_match = invoke_pattern.search(full_block)

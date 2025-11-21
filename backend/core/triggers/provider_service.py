@@ -67,53 +67,31 @@ class ScheduleProvider(TriggerProvider):
         except Exception as e:
             raise ValueError(f"Invalid cron expression: {str(e)}")
         
-        # Enforce minimum 1 hour frequency to avoid abusive schedules
+        # Block schedules that run more frequently than once per hour
         cron_parts = config['cron_expression'].split()
         if len(cron_parts) == 5:
             minute, hour, day, month, weekday = cron_parts
-
-            # Runs more than once per hour when hour is wildcard and minute repeats frequently
+            
+            # Check if it runs more frequently than hourly
+            # If minute is '*' or starts with '*/' and hour is '*', it runs more than once per hour
             if hour == '*' and (minute == '*' or minute.startswith('*/')):
-                raise ValueError(
-                    "Schedules that run more frequently than once per hour are not allowed. "
-                    "Minimum interval is 1 hour."
-                )
-
-            # Patterns like */X minutes where X < 60 also violate the minimum interval
+                raise ValueError("Schedules that run more frequently than once per hour are not allowed. Minimum interval is 1 hour.")
+            
+            # Also check for patterns like '*/X' where X < 60 (runs every X minutes)
             if minute.startswith('*/'):
                 try:
                     interval = int(minute[2:])
                     if interval < 60:
-                        raise ValueError(
-                            "Schedules that run more frequently than once per hour are not allowed. "
-                            "Minimum interval is 1 hour."
-                        )
+                        raise ValueError("Schedules that run more frequently than once per hour are not allowed. Minimum interval is 1 hour.")
                 except ValueError:
-                    # Non-numeric interval—let croniter's validation handle it
-                    pass
+                    pass  # Not a numeric interval, let croniter handle validation
         
         return config
     
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
-            base_url = config.WEBHOOK_BASE_URL
-            if not base_url:
-                env_override = os.getenv("WEBHOOK_BASE_URL")
-                if env_override:
-                    base_url = env_override
-            if base_url:
-                base_url = base_url.rstrip("/")
-            if not base_url:
-                if config.ENV_MODE == EnvMode.LOCAL:
-                    base_url = "http://localhost:8000"
-                else:
-                    logger.error(
-                        "WEBHOOK_BASE_URL is not configured for scheduler in %s mode",
-                        config.ENV_MODE.value if hasattr(config.ENV_MODE, "value") else config.ENV_MODE,
-                    )
-                    return False
-
-            webhook_url = f"{base_url}/api/triggers/{trigger.trigger_id}/webhook"
+            # Note: webhook_url removed - scheduled triggers may need alternative configuration
+            webhook_url = f"http://localhost:8000/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')
 

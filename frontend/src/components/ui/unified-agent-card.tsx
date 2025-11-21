@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { KortixLogo } from '@/components/sidebar/milo-logo';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 
@@ -147,6 +147,7 @@ const CardAvatar: React.FC<{
   if (isSunaAgent) {
     return (
       <AgentAvatar
+        isSunaDefault={true}
         size={size}
         className="border"
       />

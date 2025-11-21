@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { KortixLoader } from '@/components/ui';
+import { MiloLoader } from '@/components/ui';
 import { useAuthContext } from '@/contexts';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAccountSetup } from '@/hooks/useAccountSetup';
@@ -38,7 +38,7 @@ export default function SplashScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 bg-background items-center justify-center">
-        <KortixLoader size="xlarge" />
+        <MiloLoader size="xlarge" />
       </View>
     </>
   );

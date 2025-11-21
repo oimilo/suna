@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
-import { KortixLoader } from '@/components/ui';
+import { MiloLoader } from '@/components/ui';
 
 export default function AuthCallback() {
   useEffect(() => {
@@ -10,7 +10,7 @@ export default function AuthCallback() {
 
   return (
     <View className="flex-1 items-center justify-center bg-background">
-      <KortixLoader size="large" />
+      <MiloLoader size="large" />
       <Text className="text-foreground font-roobert-medium mt-4">
         Completing sign in...
       </Text>

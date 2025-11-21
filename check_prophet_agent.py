@@ -24,20 +24,20 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 async def check_prophet_agents():
     """Verificar agentes Prophet no banco"""
-    print("\n🔍 Buscando agentes com is_suna_default=true...")
+    print("\n🔍 Buscando agentes com is_prophet_default=true...")
     
     try:
-        # Buscar todos os agentes com is_suna_default
+        # Buscar todos os agentes com is_prophet_default
         result = supabase.table('agents').select('*').execute()
         
         prophet_agents = []
         for agent in result.data:
             metadata = agent.get('metadata', {})
-            if metadata.get('is_suna_default') == True:
+            if metadata.get('is_prophet_default') == True:
                 prophet_agents.append(agent)
         
         print(f"\n📊 Total de agentes no banco: {len(result.data)}")
-        print(f"📊 Agentes Prophet (is_suna_default=true): {len(prophet_agents)}")
+        print(f"📊 Agentes Prophet (is_prophet_default=true): {len(prophet_agents)}")
         
         if prophet_agents:
             print("\n✅ Agentes Prophet encontrados:")
@@ -49,18 +49,18 @@ async def check_prophet_agents():
                 print(f"     Created: {agent['created_at']}")
                 print(f"     Metadata: {agent.get('metadata', {})}")
         else:
-            print("\n⚠️  Nenhum agente Prophet (is_suna_default=true) encontrado!")
+            print("\n⚠️  Nenhum agente Prophet (is_prophet_default=true) encontrado!")
             
-        # Verificar também agentes com nome "Prophet" ou "Suna"
+        # Verificar também agentes com nome "Prophet" ou "Prophet"
         print("\n🔍 Buscando agentes por nome...")
-        prophet_by_name = [a for a in result.data if a['name'] in ['Prophet', 'Suna']]
+        prophet_by_name = [a for a in result.data if a['name'] in ['Prophet', 'Prophet']]
         
         if prophet_by_name:
-            print(f"\n📊 Agentes com nome Prophet/Suna: {len(prophet_by_name)}")
+            print(f"\n📊 Agentes com nome Prophet/Prophet: {len(prophet_by_name)}")
             for agent in prophet_by_name:
                 metadata = agent.get('metadata', {})
                 print(f"\n  🤖 {agent['name']} (ID: {agent['agent_id']})")
-                print(f"     is_suna_default: {metadata.get('is_suna_default', 'não definido')}")
+                print(f"     is_prophet_default: {metadata.get('is_prophet_default', 'não definido')}")
                 print(f"     is_default: {agent.get('is_default', False)}")
         
         # Listar primeiros 5 agentes para debug
@@ -84,7 +84,7 @@ async def check_specific_user_agents(user_id=None):
             for agent in result.data:
                 metadata = agent.get('metadata', {})
                 print(f"\n  🤖 {agent['name']} (ID: {agent['agent_id']})")
-                print(f"     is_suna_default: {metadata.get('is_suna_default', False)}")
+                print(f"     is_prophet_default: {metadata.get('is_prophet_default', False)}")
                 print(f"     is_default: {agent.get('is_default', False)}")
                 
         except Exception as e:

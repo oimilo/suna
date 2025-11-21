@@ -59,7 +59,7 @@
     "logIn": "Entrar",
     "passwordsDontMatch": "Senhas não coincidem",
     "passwordTooShort": "Senha deve ter pelo menos 8 caracteres",
-    "welcomeTitle": "Contrate o Kortix para",
+    "welcomeTitle": "Contrate o Milo para",
     "rotatingPhrases": {
       "presentations": "apresentações",
       "writing": "escrita",
@@ -149,7 +149,7 @@
   },
   "chat": {
     "newChat": "Novo Chat",
-    "placeholder": "Dê uma tarefa para o Kortix...",
+    "placeholder": "Dê uma tarefa para o Milo...",
     "recording": "Gravando...",
     "cancelRecording": "Cancelar gravação",
     "stopRecording": "Parar gravação",
@@ -165,7 +165,7 @@
     "newWorker": "Novo Worker",
     "myWorkers": "Meus Workers",
     "searchAgents": "Buscar workers",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Milo",
     "defaultDescription": "IA para todas as tarefas",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -431,7 +431,7 @@
     "chooseModelFor": "Escolhe um modelo para {{agent}}"
   },
   "placeholders": {
-    "default": "Dê uma tarefa para o Kortix...",
+    "default": "Dê uma tarefa para o Milo...",
     "search": "Buscar...",
     "searchConversations": "Buscar chats",
     "searchAgents": "Buscar workers",

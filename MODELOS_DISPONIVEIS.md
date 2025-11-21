@@ -1,4 +1,4 @@
-# Modelos Disponíveis no Prophet/Suna
+# Modelos Disponíveis no Prophet/Prophet
 
 ## 🆓 Modelos FREE (Plano Gratuito)
 

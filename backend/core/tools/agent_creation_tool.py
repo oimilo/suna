@@ -6,7 +6,6 @@ from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
 from core.utils.core_tools_helper import ensure_core_tools_enabled
 from core.utils.config import config
-from core.utils.tool_runtime import refresh_runtime_tools
 
 @tool_metadata(
     display_name="Agent Builder",
@@ -185,19 +184,6 @@ class AgentCreationTool(Tool):
                     "current_version_id": version.version_id
                 }).eq("agent_id", agent_id).execute()
 
-                runtime_config = {
-                    'system_prompt': system_prompt,
-                    'model': default_model,
-                    'agentpress_tools': agentpress_tools,
-                    'tools': {
-                        'agentpress': agentpress_tools,
-                        'mcp': configured_mcps,
-                        'custom_mcp': []
-                    }
-                }
-
-                await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, runtime_config)
-
                 success_message = f"✅ Successfully created agent '{name}'!\n\n"
                 success_message += f"**Icon**: {icon_name} ({icon_color} on {icon_background})\n"
                 success_message += f"**Default Agent**: {'Yes' if is_default else 'No'}\n"
@@ -251,64 +237,44 @@ class AgentCreationTool(Tool):
     async def search_mcp_servers_for_agent(self, search_query: str) -> ToolResult:
         try:
             from core.composio_integration.composio_service import get_integration_service
+            from core.composio_integration.toolkit_service import ToolkitService
             
             integration_service = get_integration_service()
-            queries = [{"use_case": search_query.strip()}]
             
-            search_response = await integration_service.search_toolkits_with_queries(
-                queries=queries,
-                limit=10,
-            )
-            entries = search_response.get("results", [])
-            primary_entry = entries[0] if entries else {}
-            toolkits = primary_entry.get("results", [])
+            toolkits_response = await integration_service.search_toolkits(search_query)
+            toolkits = toolkits_response.get("items", [])
             
             if not toolkits:
                 return self.success_response({
                     "message": f"No MCP servers found matching '{search_query}'",
-                    "toolkits": [],
-                    "session": search_response.get("session"),
-                    "search_source": search_response.get("source"),
+                    "toolkits": []
                 })
             
             result_text = f"## MCP Servers matching '{search_query}'\n\n"
-            formatted_toolkits = []
             for toolkit in toolkits:
-                name = toolkit.get("name") or "Unknown toolkit"
-                slug = toolkit.get("toolkit_slug") or toolkit.get("slug") or ""
-                description = toolkit.get("description") or f"Toolkit for {name}"
-                categories = toolkit.get("categories") or []
-                
-                result_text += f"**{name}**\n"
-                if slug:
-                    result_text += f"- Slug: `{slug}`\n"
-                if description:
-                    result_text += f"- Description: {description}\n"
-                if categories:
-                    result_text += f"- Categories: {', '.join(categories)}\n"
+                result_text += f"**{toolkit.name}**\n"
+                result_text += f"- Slug: `{toolkit.slug}`\n"
+                if toolkit.description:
+                    result_text += f"- Description: {toolkit.description}\n"
+                if toolkit.categories:
+                    result_text += f"- Categories: {', '.join(toolkit.categories)}\n"
                 result_text += "\n"
             
-                formatted_toolkits.append({
-                    "name": name,
-                    "slug": slug,
-                    "description": description,
-                    "categories": categories,
-                    "auth_schemes": toolkit.get("auth_schemes") or [],
-                    "supports_managed_auth": toolkit.get("supports_managed_auth", False),
-                    "logo_url": toolkit.get("logo_url"),
-                })
+            result_text += f"\n💡 Use `create_credential_profile_for_agent` with the slug to set up authentication for any of these services."
             
-            result_text += (
-                "\n💡 Use `create_credential_profile_for_agent` with the slug to set up authentication "
-                "for any of these services."
-            )
+            formatted_toolkits = []
+            for toolkit in toolkits:
+                formatted_toolkits.append({
+                    "name": toolkit.name,
+                    "slug": toolkit.slug,
+                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
+                    "categories": toolkit.categories or []
+                })
             
             return self.success_response({
                 "message": result_text,
                 "toolkits": formatted_toolkits,
-                "total_found": len(formatted_toolkits),
-                "session": search_response.get("session"),
-                "search_source": search_response.get("source"),
+                "total_found": len(toolkits)
             })
             
         except Exception as e:
@@ -669,8 +635,6 @@ class AgentCreationTool(Tool):
                 'current_version_id': new_version.version_id,
                 'version_count': agent_data['version_count'] + 1
             }).eq('agent_id', agent_id).execute()
-
-            await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, current_config)
             
             try:
                 from core.tools.mcp_tool_wrapper import MCPToolWrapper
@@ -1171,8 +1135,7 @@ class AgentCreationTool(Tool):
                 await client.table('agents').update(agent_updates).eq('agent_id', agent_id).execute()
             
             version_changes = False
-            base_system_prompt = current_config.get('system_prompt', '')
-            new_system_prompt = system_prompt if system_prompt is not None else base_system_prompt
+            new_system_prompt = system_prompt if system_prompt is not None else current_config.get('system_prompt', '')
             new_model = model if model is not None else current_config.get('model')
             new_agentpress_tools = agentpress_tools if agentpress_tools is not None else current_config.get('tools', {}).get('agentpress', {})
             
@@ -1212,14 +1175,6 @@ class AgentCreationTool(Tool):
                     'current_version_id': new_version.version_id,
                     'version_count': agent_data['version_count'] + 1
                 }).eq('agent_id', agent_id).execute()
-
-                current_config['system_prompt'] = new_system_prompt
-                current_config['model'] = new_model
-                current_tools = current_config.get('tools', {})
-                current_tools['agentpress'] = new_agentpress_tools
-                current_config['tools'] = current_tools
-
-                await refresh_runtime_tools(self.thread_manager, self.db, agent_id, account_id, current_config)
                 
                 try:
                     await self._sync_triggers_to_version_config(agent_id)

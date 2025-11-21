@@ -6,49 +6,54 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Globe } from 'lucide-react';
-import { type Locale } from '@/i18n/config';
-import { useTranslations } from 'next-intl';
+import { locales, type Locale } from '@/i18n/config';
+
+const languageNames: Record<Locale, string> = {
+  en: 'English',
+  de: 'Deutsch',
+  it: 'Italiano',
+  zh: '中文',
+  ja: '日本語',
+  pt: 'Português',
+  fr: 'Français',
+  es: 'Español',
+};
 
 export function LanguageSwitcher() {
   const { locale, setLanguage, availableLanguages } = useLanguage();
-  const languageCopy = useTranslations('settings.general.language');
-  const languageNames = useTranslations('languages');
-
-  const getLanguageName = (lang: Locale) => {
-    try {
-      return languageNames(lang);
-    } catch {
-      return lang;
-    }
-  };
 
   return (
     <div className="space-y-2">
       <Label htmlFor="language-select" className="flex items-center gap-2">
         <Globe className="h-4 w-4" />
-        {languageCopy('title')}
+        Language
       </Label>
-      <p className="text-sm text-muted-foreground">{languageCopy('description')}</p>
-      <Select value={locale} onValueChange={(value) => setLanguage(value as Locale)}>
+      <p className="text-sm text-muted-foreground">
+        Choose your preferred language
+      </p>
+      <Select
+        value={locale}
+        onValueChange={(value) => setLanguage(value as Locale)}
+      >
         <SelectTrigger id="language-select" className="w-full">
-          <SelectValue placeholder={languageCopy('select')}>
-            {getLanguageName(locale as Locale)}
+          <SelectValue>
+            {languageNames[locale as Locale] || locale}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {availableLanguages.map((lang) => (
             <SelectItem key={lang} value={lang}>
-              {getLanguageName(lang)}
+              {languageNames[lang]}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        {languageCopy('current')}: {getLanguageName(locale as Locale)}
+        Current Language: {languageNames[locale as Locale] || locale}
       </p>
     </div>
   );

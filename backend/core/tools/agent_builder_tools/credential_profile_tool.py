@@ -1,13 +1,13 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from uuid import uuid4
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
 from core.composio_integration.composio_service import get_integration_service
 from core.composio_integration.composio_profile_service import ComposioProfileService
+from core.mcp_module.mcp_service import mcp_service
 from .mcp_search_tool import MCPSearchTool
 from core.utils.logger import logger
-from .mcp_configuration_mixin import MCPConfigurationMixin
 
 @tool_metadata(
     display_name="Credentials Manager",
@@ -17,7 +17,7 @@ from .mcp_configuration_mixin import MCPConfigurationMixin
     weight=180,
     visible=True
 )
-class CredentialProfileTool(MCPConfigurationMixin, AgentBuilderBaseTool):
+class CredentialProfileTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
         self.composio_search = MCPSearchTool(thread_manager, db_connection, agent_id)
@@ -59,13 +59,10 @@ class CredentialProfileTool(MCPConfigurationMixin, AgentBuilderBaseTool):
                     "is_default": profile.is_default
                 })
             
-            tool_flow_state = await self._get_tool_flow_state()
-
             return self.success_response({
                 "message": f"Found {len(formatted_profiles)} credential profiles",
                 "profiles": formatted_profiles,
-                "total_count": len(formatted_profiles),
-                "tool_flow": tool_flow_state
+                "total_count": len(formatted_profiles)
             })
             
         except Exception as e:
@@ -143,9 +140,6 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             else:
                 response_data["instructions"] = f"This {result.toolkit.name} profile has been created and is ready to use."
             
-            tool_flow_state = await self._get_tool_flow_state()
-            response_data["tool_flow"] = tool_flow_state
-            
             return self.success_response(response_data)
             
         except Exception as e:
@@ -217,6 +211,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             current_config = version_result.data['config']
             current_tools = current_config.get('tools', {})
             current_custom_mcps = current_tools.get('custom_mcp', [])
+            
             new_mcp_config = {
                 'name': profile.toolkit_name,
                 'type': 'composio',
@@ -283,16 +278,11 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             except Exception as e:
                 logger.warning(f"Could not dynamically register MCP tools in current runtime: {str(e)}. Tools will be available on next agent run.")
 
-            await self._refresh_runtime_tools(account_id, current_config)
-
-            tool_flow_state = await self._get_tool_flow_state()
-
             return self.success_response({
                 "message": f"Profile '{profile.profile_name}' configured with {len(enabled_tools)} tools and registered in current runtime",
                 "enabled_tools": enabled_tools,
                 "total_tools": len(enabled_tools),
-                "runtime_registration": "success",
-                "tool_flow": tool_flow_state
+                "runtime_registration": "success"
             })
             
         except Exception as e:
@@ -365,22 +355,18 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                                 agentpress_tools=current_config.get('tools', {}).get('agentpress', {}),
                                 change_description=f"Deleted credential profile {profile.display_name}"
                             )
-                            await self._refresh_runtime_tools(account_id, current_config)
                         except Exception as e:
                             return self.fail_response("Failed to update agent config")
             
             # Delete the profile
             await profile_service.delete_profile(profile_id)
             
-            tool_flow_state = await self._get_tool_flow_state()
-            
             return self.success_response({
                 "message": f"Successfully deleted credential profile '{profile.display_name}' for {profile.toolkit_name}",
                 "deleted_profile": {
                     "profile_name": profile.profile_name,
                     "toolkit_name": profile.toolkit_name
-                },
-                "tool_flow": tool_flow_state
+                }
             })
             
         except Exception as e:

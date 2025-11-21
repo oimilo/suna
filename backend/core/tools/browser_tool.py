@@ -3,13 +3,11 @@ from core.agentpress.thread_manager import ThreadManager
 from core.sandbox.tool_base import SandboxToolsBase
 from core.utils.logger import logger
 from core.utils.s3_upload_utils import upload_base64_image
-from typing import Any, Dict, List, Optional
 import asyncio
 import json
 import base64
 import io
 import traceback
-import sentry_sdk
 from PIL import Image
 from core.utils.config import config
 
@@ -39,81 +37,6 @@ class BrowserTool(SandboxToolsBase):
     def __init__(self, project_id: str, thread_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
         self.thread_id = thread_id
-        self.stagehand_host = config.STAGEHAND_API_HOST or "localhost"
-        try:
-            self.stagehand_port = int(config.STAGEHAND_API_PORT or 8004)
-        except (TypeError, ValueError):
-            self.stagehand_port = 8004
-
-    def _stagehand_base_url(self, port: Optional[int] = None) -> str:
-        target_port = port or self.stagehand_port
-        return f"http://{self.stagehand_host}:{target_port}"
-
-    def _candidate_stagehand_ports(self) -> List[int]:
-        candidates: List[int] = []
-        for port in [self.stagehand_port, 8004, 8003]:
-            if port is None:
-                continue
-            try:
-                port_int = int(port)
-            except (TypeError, ValueError):
-                continue
-            if port_int not in candidates:
-                candidates.append(port_int)
-        return candidates
-
-    def _sentry_enabled(self) -> bool:
-        try:
-            return bool(sentry_sdk.Hub.current and sentry_sdk.Hub.current.client)
-        except Exception:
-            return False
-
-    def _stagehand_context(self) -> Dict[str, Any]:
-        return {
-            "project_id": getattr(self, "project_id", None),
-            "thread_id": self.thread_id,
-            "stagehand_host": self.stagehand_host,
-            "stagehand_port": self.stagehand_port,
-        }
-
-    def _record_stagehand_breadcrumb(
-        self,
-        message: str,
-        data: Optional[Dict[str, Any]] = None,
-        level: str = "info",
-    ) -> None:
-        if not self._sentry_enabled():
-            return
-        breadcrumb_data = self._stagehand_context()
-        if data:
-            breadcrumb_data.update(data)
-        sentry_sdk.add_breadcrumb(
-            category="stagehand",
-            message=message,
-            data=breadcrumb_data,
-            level=level,
-        )
-
-    def _capture_stagehand_event(
-        self,
-        message: str,
-        *,
-        extra: Optional[Dict[str, Any]] = None,
-        level: str = "error",
-    ) -> None:
-        if not self._sentry_enabled():
-            return
-        with sentry_sdk.push_scope() as scope:
-            context = self._stagehand_context()
-            for key, value in context.items():
-                if key in {"project_id", "thread_id"} and value is not None:
-                    scope.set_tag(key, value)
-                else:
-                    scope.set_extra(key, value)
-            if extra:
-                for key, value in extra.items():
-                    scope.set_extra(key, value)
-            sentry_sdk.capture_message(message, level=level)
     
     def _validate_base64_image(self, base64_string: str, max_size_mb: int = 10) -> tuple[bool, str]:
         """
@@ -195,19 +118,10 @@ class BrowserTool(SandboxToolsBase):
             processes = response.result if response.exit_code == 0 else "Failed to get process list"
             
             # Check what ports are listening
-            ports_to_check = sorted(set(self._candidate_stagehand_ports()))
-            if ports_to_check:
-                port_pattern = "|".join(str(port) for port in ports_to_check)
-                netstat_cmd = (
-                    f"netstat -tlnp 2>/dev/null | grep -E ':({port_pattern})' "
-                    f"|| ss -tlnp 2>/dev/null | grep -E ':({port_pattern})' "
-                    "|| echo 'No netstat/ss available'"
-                )
-            else:
-                netstat_cmd = "echo 'No candidate ports to inspect'"
+            netstat_cmd = "netstat -tlnp 2>/dev/null | grep -E ':(8003|8004)' || ss -tlnp 2>/dev/null | grep -E ':(8003|8004)' || echo 'No netstat/ss available'"
             response2 = await self.sandbox.process.exec(netstat_cmd, timeout=10)
             
-            ports = response2.result if response2.exit_code == 0 else "Failed to get port info"
+            ports = response2.result if response2.exit_code == 0 else "Failed to get port list"
             
             debug_info = f"""
             === Sandbox Services Debug Info ===
@@ -228,221 +142,70 @@ class BrowserTool(SandboxToolsBase):
         """Check if the Stagehand API server is running and accessible"""
         try:
             await self._ensure_sandbox()
-            candidates = self._candidate_stagehand_ports()
-            failure_debug: Optional[str] = None
+            
+            # Retry logic: The browser API server takes a few seconds to start
+            # after the sandbox initializes. We'll retry with exponential backoff.
+            max_retries = 5
+            retry_delays = [1, 2, 3, 5, 5]  # seconds between retries
+            
+            for attempt in range(max_retries):
+                # Simple health check curl command
+                curl_cmd = "curl -s -X GET 'http://localhost:8004/api' -H 'Content-Type: application/json'"
+                
+                if attempt > 0:
+                    logger.info(f"Retrying Stagehand API health check (attempt {attempt + 1}/{max_retries})...")
+                
+                response = await self.sandbox.process.exec(curl_cmd, timeout=10)
+                
+                if response.exit_code == 0:
+                    try:
+                        result = json.loads(response.result)
+                        if result.get("status") == "healthy":
+                            logger.info("✅ Stagehand API server is running and healthy")
+                            return True
+                        else:
+                            # If the browser api is not healthy, we need to initialize it
+                            logger.info("Stagehand API server responded but browser not initialized. Initializing...")
+                            # Pass API key securely as environment variable instead of command line argument
+                            env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
 
-            for port in candidates:
-                success, failure_debug = await self._attempt_stagehand_health_for_port(port)
-                if success:
-                    if port != self.stagehand_port:
-                        self.stagehand_port = port
-                        self._record_stagehand_breadcrumb(
-                            "stagehand.port.detected",
-                            {"port": port},
-                        )
-                    return True
-
-            if not failure_debug:
-                failure_debug = await self._debug_sandbox_services()
-            logger.error("Stagehand API server failed to start after trying candidate ports")
-            self._record_stagehand_breadcrumb(
-                "stagehand.health_check.failed_all_ports",
-                {"ports": candidates},
-                level="error",
-            )
-            self._capture_stagehand_event(
-                "Stagehand API server failed health check retries on all ports",
-                extra={
-                    "ports": candidates,
-                    "debug_info": failure_debug,
-                },
-            )
+                            response = await self.sandbox.process.exec(
+                                'curl -s -X POST "http://localhost:8004/api/init" -H "Content-Type: application/json" -d "{\\"api_key\\": \\"$GEMINI_API_KEY\\"}"',
+                                timeout=90,
+                                env=env_vars
+                            )
+                            if response.exit_code == 0:
+                                try:
+                                    init_result = json.loads(response.result)
+                                    if init_result.get("status") == "healthy":
+                                        logger.info("✅ Stagehand API server initialized successfully")
+                                        return True
+                                    else:
+                                        logger.warning(f"Stagehand API initialization failed: {init_result}")
+                                        # Don't return False yet, might succeed on retry
+                                except json.JSONDecodeError:
+                                    logger.warning(f"Init endpoint returned invalid JSON: {response.result}")
+                            else:
+                                logger.warning(f"Stagehand API initialization request failed: {response.result}")
+                    except json.JSONDecodeError:
+                        logger.warning(f"Stagehand API server responded but with invalid JSON: {response.result}")
+                elif response.exit_code == 7:
+                    # Connection refused - server not ready yet
+                    logger.debug(f"Browser API server not ready yet (connection refused)")
+                else:
+                    logger.debug(f"Health check failed with exit code {response.exit_code}")
+                
+                # Wait before retrying (except on last attempt)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delays[attempt])
+            
+            # All retries exhausted
+            logger.error(f"Stagehand API server failed to start after {max_retries} attempts")
             return False
                 
         except Exception as e:
             logger.error(f"Error checking Stagehand API health: {e}")
-            self._capture_stagehand_event(
-                "Stagehand API health check raised exception",
-                extra={"error": str(e)},
-            )
-            sentry_sdk.capture_exception(e)
             return False
-
-    async def _attempt_stagehand_health_for_port(self, port: int) -> tuple[bool, Optional[str]]:
-        max_retries = 5
-        retry_delays = [1, 2, 3, 5, 5]
-        debug_info: Optional[str] = None
-
-        self._record_stagehand_breadcrumb(
-            "stagehand.health_check.start",
-            {"max_retries": max_retries, "port": port},
-        )
-        
-        for attempt in range(max_retries):
-            stagehand_health_url = f"{self._stagehand_base_url(port)}/api"
-            curl_cmd = f"curl -s -X GET '{stagehand_health_url}' -H 'Content-Type: application/json'"
-            
-            if attempt > 0:
-                logger.info(
-                    f"Retrying Stagehand API health check on port {port} "
-                    f"(attempt {attempt + 1}/{max_retries})..."
-                )
-
-            self._record_stagehand_breadcrumb(
-                "stagehand.health_check.attempt",
-                {"attempt": attempt + 1, "health_url": stagehand_health_url, "port": port},
-            )
-            
-            response = await self.sandbox.process.exec(curl_cmd, timeout=10)
-            
-            if response.exit_code == 0:
-                try:
-                    result = json.loads(response.result)
-                    if result.get("status") == "healthy":
-                        logger.info(
-                            f"✅ Stagehand API server is running and healthy on port {port}"
-                        )
-                        self._record_stagehand_breadcrumb(
-                            "stagehand.health_check.success",
-                            {"attempt": attempt + 1, "port": port},
-                        )
-                        return True, None
-                    else:
-                        logger.info(
-                            "Stagehand API server responded but browser not initialized. Initializing..."
-                        )
-                        self._record_stagehand_breadcrumb(
-                            "stagehand.health_check.unhealthy_response",
-                            {"response": result, "port": port},
-                            level="warning",
-                        )
-                        initialized = await self._attempt_stagehand_init_for_port(port, result)
-                        if initialized:
-                            return True, None
-                except json.JSONDecodeError:
-                    logger.warning(
-                        f"Stagehand API server responded but with invalid JSON: {response.result}"
-                    )
-                    self._record_stagehand_breadcrumb(
-                        "stagehand.health_check.invalid_json",
-                        {"response": response.result, "port": port},
-                        level="warning",
-                    )
-            elif response.exit_code == 7:
-                logger.debug(
-                    f"Browser API server not ready yet on port {port} (connection refused)"
-                )
-                self._record_stagehand_breadcrumb(
-                    "stagehand.health_check.connection_refused",
-                    {"attempt": attempt + 1, "port": port},
-                    level="debug",
-                )
-            else:
-                logger.debug(
-                    f"Health check failed with exit code {response.exit_code} on port {port}"
-                )
-                self._record_stagehand_breadcrumb(
-                    "stagehand.health_check.exec_failure",
-                    {
-                        "attempt": attempt + 1,
-                        "exit_code": response.exit_code,
-                        "response": response.result,
-                        "port": port,
-                    },
-                    level="warning",
-                )
-            
-            if attempt < max_retries - 1:
-                await asyncio.sleep(retry_delays[attempt])
-        
-        debug_info = await self._debug_sandbox_services()
-        return False, debug_info
-
-    async def _attempt_stagehand_init_for_port(self, port: int, health_response: Dict[str, Any]) -> bool:
-        env_vars = {"GEMINI_API_KEY": config.GEMINI_API_KEY}
-
-        init_endpoints = [
-            f"{self._stagehand_base_url(port)}/api/init",
-            f"{self._stagehand_base_url(port)}/init",
-        ]
-
-        initialization_attempted = False
-
-        for init_url in init_endpoints:
-            initialization_attempted = True
-            self._record_stagehand_breadcrumb(
-                "stagehand.init.attempt",
-                {"endpoint": init_url, "port": port},
-            )
-            init_cmd = (
-                f"curl -s -X POST \"{init_url}\" "
-                "-H \"Content-Type: application/json\" "
-                "-d \"{\\\"api_key\\\": \\\"$GEMINI_API_KEY\\\"}\""
-            )
-            response = await self.sandbox.process.exec(init_cmd, timeout=90, env=env_vars)
-            if response.exit_code == 0:
-                try:
-                    init_result = json.loads(response.result)
-                    if init_result.get("status") == "healthy":
-                        logger.info(
-                            f"✅ Stagehand API server initialized successfully via {init_url}"
-                        )
-                        self._record_stagehand_breadcrumb(
-                            "stagehand.init.success",
-                            {"endpoint": init_url, "port": port},
-                        )
-                        return True
-                    else:
-                        logger.warning(
-                            f"Stagehand API initialization failed via {init_url}: {init_result}"
-                        )
-                        self._record_stagehand_breadcrumb(
-                            "stagehand.init.failure",
-                            {"endpoint": init_url, "response": init_result, "port": port},
-                            level="warning",
-                        )
-                except json.JSONDecodeError:
-                    logger.warning(
-                        f"Init endpoint returned invalid JSON from {init_url}: {response.result}"
-                    )
-                    self._record_stagehand_breadcrumb(
-                        "stagehand.init.invalid_json",
-                        {"endpoint": init_url, "response": response.result, "port": port},
-                        level="warning",
-                    )
-            elif response.exit_code in (22,):
-                logger.warning(
-                    f"Stagehand API initialization endpoint {init_url} returned HTTP error: {response.result}"
-                )
-                self._record_stagehand_breadcrumb(
-                    "stagehand.init.http_error",
-                    {"endpoint": init_url, "response": response.result, "port": port},
-                    level="warning",
-                )
-                continue
-            else:
-                logger.warning(
-                    f"Stagehand API initialization request failed for {init_url}: {response.result}"
-                )
-                self._record_stagehand_breadcrumb(
-                    "stagehand.init.exec_failure",
-                    {
-                        "endpoint": init_url,
-                        "response": response.result,
-                        "exit_code": response.exit_code,
-                        "port": port,
-                    },
-                    level="warning",
-                )
-
-        if not initialization_attempted:
-            logger.warning("Stagehand API initialization skipped (no endpoints attempted)")
-            self._record_stagehand_breadcrumb(
-                "stagehand.init.skipped",
-                level="warning",
-                data={"health_response": health_response, "port": port},
-            )
-        return False
 
     async def _execute_stagehand_api(self, endpoint: str, params: dict = None, method: str = "POST") -> ToolResult:
         """Execute a Stagehand action through the sandbox API"""
@@ -465,15 +228,11 @@ class BrowserTool(SandboxToolsBase):
                 error_msg += f"\n\nDebug information:\n{debug_info}"
                 
                 logger.error(error_msg)
-                self._capture_stagehand_event(
-                    "Stagehand API unavailable when executing tool",
-                    extra={"debug_info": debug_info, "endpoint": endpoint},
-                )
                 return self.fail_response(error_msg)
             
             
             # Build the curl command to call the local Stagehand API
-            url = f"{self._stagehand_base_url()}/api/{endpoint}"  # curl runs inside the sandbox container
+            url = f"http://localhost:8004/api/{endpoint}"  # Fixed localhost as curl runs inside container
             
             if method == "GET" and params:
                 query_params = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -562,35 +321,17 @@ class BrowserTool(SandboxToolsBase):
             else:
                 # Check if it's a connection error (exit code 7)
                 if response.exit_code == 7:
-                    error_msg = (
-                        f"Stagehand API server is not available on port {self.stagehand_port}. "
-                        f"Please ensure the Stagehand API server is running. Error: {response}"
-                    )
+                    error_msg = f"Stagehand API server is not available on port 8004. Please ensure the Stagehand API server is running. Error: {response}"
                     logger.error(error_msg)
-                    self._capture_stagehand_event(
-                        "Stagehand API connection refused during request",
-                        extra={"endpoint": endpoint, "response": response.result},
-                    )
                     return self.fail_response(error_msg)
                 else:
                     logger.error(f"Stagehand API request failed: {response}")
-                    self._capture_stagehand_event(
-                        "Stagehand API request failed",
-                        extra={"endpoint": endpoint, "response": response.result, "exit_code": response.exit_code},
-                    )
                     return self.fail_response(f"Stagehand API request failed: {response}")
 
         except Exception as e:
             logger.error(f"Error executing Stagehand action: {e}")
             logger.debug(traceback.format_exc())
-            self._capture_stagehand_event(
-                "Stagehand tool execution raised exception",
-                extra={"error": str(e), "endpoint": endpoint},
-            )
-            sentry_sdk.capture_exception(e)
             return self.fail_response(f"Error executing Stagehand action: {e}")
-        finally:
-            await self._schedule_stagehand_keepalive()
 
     # Core Functions Only
     

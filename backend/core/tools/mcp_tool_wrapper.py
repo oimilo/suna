@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional
 from core.agentpress.tool import Tool, ToolResult, ToolSchema, SchemaType, tool_metadata
 from core.mcp_module import mcp_service
 from core.utils.logger import logger
@@ -12,9 +12,6 @@ from core.tools.utils.custom_mcp_handler import CustomMCPHandler
 from core.tools.utils.dynamic_tool_builder import DynamicToolBuilder
 from core.tools.utils.mcp_tool_executor import MCPToolExecutor
 from core.services import redis as redis_service
-
-if TYPE_CHECKING:
-    from core.agentpress.thread_manager import ThreadManager
 
 
 class MCPSchemaRedisCache:
@@ -120,13 +117,7 @@ _redis_cache = MCPSchemaRedisCache(ttl_seconds=3600)
     visible=False
 )
 class MCPToolWrapper(Tool):
-    def __init__(
-        self,
-        mcp_configs: Optional[List[Dict[str, Any]]] = None,
-        use_cache: bool = True,
-        thread_manager: Optional["ThreadManager"] = None,
-        thread_id: Optional[str] = None,
-    ):
+    def __init__(self, mcp_configs: Optional[List[Dict[str, Any]]] = None, use_cache: bool = True):
         self.mcp_manager = mcp_service
         self.mcp_configs = mcp_configs or []
         self._initialized = False
@@ -134,8 +125,6 @@ class MCPToolWrapper(Tool):
         self._dynamic_tools = {}
         self._custom_tools = {}
         self.use_cache = use_cache
-        self.thread_manager = thread_manager
-        self.thread_id = thread_id
         
         self.connection_manager = MCPConnectionManager()
         self.custom_handler = CustomMCPHandler(self.connection_manager)
@@ -314,22 +303,6 @@ class MCPToolWrapper(Tool):
         # for method_name in self._schemas:
         #     # logger.debug(f"  - Schema available for: {method_name}")
         return self._schemas
-
-    async def get_active_mcp_session(self, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
-        if not self.thread_manager or not self.thread_id:
-            return None
-        get_session = getattr(self.thread_manager, "get_mcp_session", None)
-        if not get_session:
-            return None
-        try:
-            return await get_session(self.thread_id, force_refresh=force_refresh)
-        except Exception as exc:
-            logger.debug(
-                "Failed to fetch MCP session for thread %s: %s",
-                self.thread_id,
-                exc,
-            )
-            return None
     
     def __getattr__(self, name: str):
         if hasattr(self, 'tool_builder') and self.tool_builder:

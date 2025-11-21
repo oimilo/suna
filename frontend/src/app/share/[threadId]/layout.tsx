@@ -1,20 +1,18 @@
 import { Metadata } from 'next';
-import { getThread, getProject } from '@/lib/api-server';
-import { BRANDING, getPageTitle } from '@/lib/branding';
+import { getThread } from '@/lib/api/threads';
+import { getProject } from '@/lib/api/projects';
 
 export async function generateMetadata({ params }): Promise<Metadata> {
   const { threadId } = await params;
-  const fallbackTitle = getPageTitle('Shared Conversation');
-  const fallbackDescription = `Replay this agent conversation on ${BRANDING.company} ${BRANDING.name}`;
   const fallbackMetaData = {
-    title: fallbackTitle,
-    description: fallbackDescription,
+    title: 'Shared Conversation | Milo',
+    description: 'Replay this Agent conversation on Korti',
     alternates: {
       canonical: `${process.env.NEXT_PUBLIC_URL}/share/${threadId}`,
     },
     openGraph: {
-      title: fallbackTitle,
-      description: fallbackDescription,
+      title: 'Shared Conversation | Milo',
+      description: 'Replay this Agent conversation on Milo',
       images: [`${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`],
     },
   };
@@ -32,10 +30,10 @@ export async function generateMetadata({ params }): Promise<Metadata> {
       process.env.NEXT_PUBLIC_ENV_MODE === 'LOCAL' ||
       process.env.NEXT_PUBLIC_ENV_MODE === 'local';
 
-    const title = projectData.name
-      ? getPageTitle(projectData.name)
-      : fallbackTitle;
-    const description = projectData.description || fallbackDescription;
+    const title = projectData.name || 'Shared Conversation | Milo';
+    const description =
+      projectData.description ||
+      'Replay this Agent conversation on Milo';
     const ogImage = isDevelopment
       ? `${process.env.NEXT_PUBLIC_URL}/share-page/og-fallback.png`
       : `${process.env.NEXT_PUBLIC_URL}/api/share-page/og-image?title=${projectData.name}`;
@@ -64,5 +62,9 @@ export async function generateMetadata({ params }): Promise<Metadata> {
 }
 
 export default async function ThreadLayout({ children }) {
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+    </>
+  );
 }

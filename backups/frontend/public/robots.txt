@@ -1,0 +1,15 @@
+# Prophet Robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.prophet.build/sitemap.xml
+
+# Disallow sensitive routes
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# Allow crawling of public pages
+# (Add additional routes here if new marketing pages are introduced)
+

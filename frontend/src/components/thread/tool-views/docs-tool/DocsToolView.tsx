@@ -136,14 +136,8 @@ export function DocsToolView({
       
       setIsExporting(true);
       try {
-        const sandboxId =
-          (project?.sandbox as any)?.sandbox_id ?? project?.sandbox?.id ?? undefined;
-
         const result = await handleGoogleDocsUpload(
-          {
-            sandbox_url: project.sandbox.sandbox_url,
-            id: sandboxId,
-          },
+          project.sandbox.sandbox_url,
           data.document.path
         );
         if (result?.redirected_to_auth) {

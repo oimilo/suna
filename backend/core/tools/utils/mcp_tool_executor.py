@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from core.agentpress.tool import ToolResult
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
@@ -104,50 +104,20 @@ class MCPToolExecutor:
     async def _execute_http_tool(self, tool_name: str, arguments: Dict[str, Any], tool_info: Dict[str, Any]) -> ToolResult:
         custom_config = tool_info['custom_config']
         original_tool_name = tool_info['original_name']
-        custom_type = tool_info.get('custom_type', 'http')
         
         url = custom_config['url']
-        attempts = 0
-        force_refresh = False
         
-        while attempts < 2:
-            attempts += 1
-            headers = dict(custom_config.get('headers') or {})
-            session_payload = None
-
-            if custom_type == 'composio':
-                session_payload = await self._get_session_payload(force_refresh=force_refresh)
-                session_id = session_payload.get('id') if session_payload else None
-                if session_id:
-                    headers.setdefault("x-composio-session-id", session_id)
-                    logger.debug(
-                        "Attached Composio session %s to HTTP tool %s (attempt %s)",
-                        session_id,
-                        tool_name,
-                        attempts,
-                    )
-
-            try:
-                async with asyncio.timeout(30):
-                    async with streamablehttp_client(url, headers=headers or None) as (read, write, _):
-                        async with ClientSession(read, write) as session:
-                            await session.initialize()
-                            result = await session.call_tool(original_tool_name, arguments)
-                            return self._create_success_result(self._extract_content(result))
-            except Exception as e:
-                if self._should_retry_with_session_refresh(custom_type, e) and attempts < 2:
-                    logger.warning(
-                        "HTTP MCP tool %s failed with possible session expiry (%s). Refreshing session and retrying.",
-                        tool_name,
-                        e,
-                    )
-                    force_refresh = True
-                    continue
-
-                logger.error(f"Error executing HTTP MCP tool: {str(e)}")
-                return self._create_error_result(f"Error executing HTTP tool: {str(e)}")
-
-        return self._create_error_result("HTTP MCP tool execution failed after retries")
+        try:
+            async with asyncio.timeout(30):
+                async with streamablehttp_client(url) as (read, write, _):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        result = await session.call_tool(original_tool_name, arguments)
+                        return self._create_success_result(self._extract_content(result))
+                        
+        except Exception as e:
+            logger.error(f"Error executing HTTP MCP tool: {str(e)}")
+            return self._create_error_result(f"Error executing HTTP tool: {str(e)}")
     
     async def _execute_json_tool(self, tool_name: str, arguments: Dict[str, Any], tool_info: Dict[str, Any]) -> ToolResult:
         custom_config = tool_info['custom_config']
@@ -165,24 +135,6 @@ class MCPToolExecutor:
                     await session.initialize()
                     result = await session.call_tool(original_tool_name, arguments)
                     return self._create_success_result(self._extract_content(result))
-    
-    async def _get_session_payload(self, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
-        if not self.tool_wrapper:
-            return None
-        get_session = getattr(self.tool_wrapper, "get_active_mcp_session", None)
-        if not get_session:
-            return None
-        return await get_session(force_refresh=force_refresh)
-    
-    def _should_retry_with_session_refresh(self, custom_type: str, error: Exception) -> bool:
-        if custom_type != 'composio':
-            return False
-        status_code = getattr(error, "status", None) or getattr(error, "status_code", None)
-        if status_code in {401, 403, 410}:
-            return True
-        message = str(error).lower()
-        retry_tokens = ("401", "403", "410", "session expired", "session invalid", "session not found")
-        return any(token in message for token in retry_tokens)
     
     async def _resolve_external_user_id(self, custom_config: Dict[str, Any]) -> str:
         profile_id = custom_config.get('profile_id')

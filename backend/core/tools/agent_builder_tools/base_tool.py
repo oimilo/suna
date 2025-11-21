@@ -1,10 +1,8 @@
 import structlog
-from typing import Optional, Dict, Any
+from typing import Optional
 from core.agentpress.tool import Tool, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
-from core.utils.tool_runtime import refresh_runtime_tools
-from .tool_flow_mixin import ToolFlowMixin
 
 @tool_metadata(
     display_name="Agent Builder Base",
@@ -14,7 +12,7 @@ from .tool_flow_mixin import ToolFlowMixin
     weight=900,
     visible=False
 )
-class AgentBuilderBaseTool(ToolFlowMixin, Tool):
+class AgentBuilderBaseTool(Tool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__()
         self.thread_manager = thread_manager
@@ -31,15 +29,6 @@ class AgentBuilderBaseTool(ToolFlowMixin, Tool):
         
         from core.utils.auth_utils import get_account_id_from_thread
         return await get_account_id_from_thread(thread_id, self.db)
-
-    async def _refresh_runtime_tools(self, account_id: str, agent_config: Dict[str, Any]):
-        await refresh_runtime_tools(
-            self.thread_manager,
-            self.db,
-            self.agent_id,
-            account_id,
-            agent_config
-        )
 
     async def _get_agent_data(self) -> Optional[dict]:
         try:

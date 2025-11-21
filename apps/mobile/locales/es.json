@@ -64,7 +64,7 @@
     "resetFailed": "No pudimos enviar el email. Intenta de nuevo.",
     "passwordsDontMatch": "Las contraseñas no coinciden",
     "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
-    "welcomeTitle": "Contrata Kortix para",
+    "welcomeTitle": "Contrata Milo para",
     "rotatingPhrases": {
       "presentations": "presentaciones",
       "writing": "redacción",
@@ -154,8 +154,8 @@
   },
   "chat": {
     "newChat": "Nuevo Chat",
-    "placeholder": "Dale a Kortix una tarea...",
-    "inputPlaceholder": "Pídele a Kortix hacer cualquier cosa...",
+    "placeholder": "Dale a Milo una tarea...",
+    "inputPlaceholder": "Pídele a Milo hacer cualquier cosa...",
     "recording": "Grabando...",
     "cancelRecording": "Cancelar grabación",
     "stopRecording": "Detener grabación",
@@ -171,7 +171,7 @@
     "newWorker": "Nuevo Worker",
     "myWorkers": "Mis Workers",
     "searchAgents": "Buscar workers",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Milo",
     "defaultDescription": "IA para todo tipo de tareas",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -451,7 +451,7 @@
     "chooseModelFor": "Elige un modelo para {{agent}}"
   },
   "placeholders": {
-    "default": "Dale a Kortix una tarea...",
+    "default": "Dale a Milo una tarea...",
     "search": "Buscar...",
     "searchConversations": "Buscar chats",
     "searchAgents": "Buscar workers",

@@ -316,9 +316,7 @@ class JsonImportService:
                 agentpress_tools=agent_config['tools']['agentpress'],
                 configured_mcps=agent_config['tools']['mcp'],
                 custom_mcps=agent_config['tools']['custom_mcp'],
-            change_description="Initial version from JSON import",
-            system_prompt_user=system_prompt,
-            apply_tool_base_prompt=True
+                change_description="Initial version from JSON import"
             )
             
             logger.info(f"Successfully created initial version {version.version_id} for JSON imported agent {agent_id}")

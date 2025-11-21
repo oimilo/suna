@@ -1,9 +1,9 @@
 /**
  * Tool Groups Types and Utilities
- *
+ * 
  * FULLY API-DRIVEN - NO STATIC DATA
  * All tool metadata is fetched from the backend auto-discovery system.
- *
+ * 
  * Use the useToolsMetadata() hook to fetch tool data:
  * import { useToolsMetadata } from '@/hooks/tools/use-tools-metadata';
  */
@@ -16,7 +16,7 @@ export interface ToolMethod {
   enabled: boolean;
   isCore?: boolean;
   is_core?: boolean;
-  visible?: boolean;
+  visible?: boolean; // Whether method is visible in UI
 }
 
 export interface ToolGroup {
@@ -32,10 +32,13 @@ export interface ToolGroup {
   enabled: boolean;
   isCore?: boolean;
   is_core?: boolean;
-  weight?: number;
-  visible?: boolean;
+  weight?: number; // Sort order (lower = higher priority)
+  visible?: boolean; // Whether tool is visible in UI
 }
 
+/**
+ * Convert API response format to frontend format
+ */
 export function normalizeToolGroup(apiToolGroup: any): ToolGroup {
   return {
     name: apiToolGroup.name,
@@ -46,25 +49,27 @@ export function normalizeToolGroup(apiToolGroup: any): ToolGroup {
     color: apiToolGroup.color,
     toolClass: apiToolGroup.tool_class || apiToolGroup.toolClass,
     tool_class: apiToolGroup.tool_class,
-    methods:
-      apiToolGroup.methods?.map((m: any) => ({
-        name: m.name,
-        displayName: m.display_name || m.displayName,
-        display_name: m.display_name,
-        description: m.description,
-        enabled: m.enabled ?? true,
-        isCore: m.is_core || m.isCore,
-        is_core: m.is_core,
-        visible: m.visible,
-      })) || [],
+    methods: apiToolGroup.methods?.map((m: any) => ({
+      name: m.name,
+      displayName: m.display_name || m.displayName,
+      display_name: m.display_name,
+      description: m.description,
+      enabled: m.enabled ?? true,
+      isCore: m.is_core || m.isCore,
+      is_core: m.is_core,
+      visible: m.visible, // Use API value directly - backend controls visibility
+    })) || [],
     enabled: apiToolGroup.enabled ?? true,
     isCore: apiToolGroup.is_core || apiToolGroup.isCore,
     is_core: apiToolGroup.is_core,
     weight: apiToolGroup.weight ?? 100,
-    visible: apiToolGroup.visible,
+    visible: apiToolGroup.visible, // Use API value directly - backend controls visibility
   };
 }
 
+/**
+ * Sort tools by weight (lower = higher priority)
+ */
 export function sortToolsByWeight(tools: Record<string, ToolGroup>): ToolGroup[] {
   return Object.values(tools).sort((a, b) => (a.weight ?? 100) - (b.weight ?? 100));
 }
@@ -76,7 +81,7 @@ export function getToolGroup(toolName: string, toolsData?: Record<string, any>):
 
 export function getAllToolGroups(toolsData?: Record<string, any>): Record<string, ToolGroup> {
   if (!toolsData) return {};
-
+  
   const normalized: Record<string, ToolGroup> = {};
   for (const [name, data] of Object.entries(toolsData)) {
     normalized[name] = normalizeToolGroup(data);
@@ -87,12 +92,18 @@ export function getAllToolGroups(toolsData?: Record<string, any>): Record<string
 export function hasGranularControl(toolName: string, toolsData?: Record<string, any>): boolean {
   const group = getToolGroup(toolName, toolsData);
   if (!group) return false;
-
-  const visibleMethods = group.methods.filter((m) => m.visible !== false);
+  
+  // Only count visible methods for granular control (visible=true or visible=undefined counts as visible)
+  const visibleMethods = group.methods.filter(m => m.visible !== false);
+  console.log(`[hasGranularControl] ${toolName}: ${group.methods.length} total methods, ${visibleMethods.length} visible`, group.methods.map(m => ({ name: m.name, visible: m.visible })));
   return visibleMethods.length > 1;
 }
 
-export function getEnabledMethodsForTool(toolName: string, config: any, toolsData?: Record<string, any>): string[] {
+export function getEnabledMethodsForTool(
+  toolName: string, 
+  config: any, 
+  toolsData?: Record<string, any>
+): string[] {
   const toolGroup = getToolGroup(toolName, toolsData);
   if (!toolGroup) {
     return [];
@@ -104,7 +115,7 @@ export function getEnabledMethodsForTool(toolName: string, config: any, toolsDat
   }
 
   if (toolConfig === true || toolConfig === undefined) {
-    return toolGroup.methods.filter((method) => method.enabled).map((method) => method.name);
+    return toolGroup.methods.filter(method => method.enabled).map(method => method.name);
   }
 
   if (typeof toolConfig === 'object' && toolConfig !== null) {
@@ -134,10 +145,13 @@ export function getEnabledMethodsForTool(toolName: string, config: any, toolsDat
     return enabledMethods;
   }
 
-  return toolGroup.methods.filter((method) => method.enabled).map((method) => method.name);
+  return toolGroup.methods.filter(method => method.enabled).map(method => method.name);
 }
 
-export function validateToolConfig(config: Record<string, any>, toolsData?: Record<string, any>): Record<string, any> {
+export function validateToolConfig(
+  config: Record<string, any>, 
+  toolsData?: Record<string, any>
+): Record<string, any> {
   const normalizedConfig: Record<string, any> = {};
 
   for (const [toolName, toolConfig] of Object.entries(config)) {
@@ -189,13 +203,13 @@ export function validateToolConfig(config: Record<string, any>, toolsData?: Reco
 
 export function convertLegacyToolConfig(
   legacyTools: Record<string, boolean | { enabled: boolean; description: string }>,
-  toolsData?: Record<string, any>,
+  toolsData?: Record<string, any>
 ): Record<string, any> {
   const convertedConfig: Record<string, any> = {};
 
   for (const [toolName, toolConfig] of Object.entries(legacyTools)) {
     const toolGroup = getToolGroup(toolName, toolsData);
-
+    
     if (!toolGroup) {
       convertedConfig[toolName] = toolConfig;
       continue;
@@ -213,5 +227,5 @@ export function convertLegacyToolConfig(
   return convertedConfig;
 }
 
+// Legacy export for backward compatibility - components should pass toolsData
 export const TOOL_GROUPS: Record<string, ToolGroup> = {};
-

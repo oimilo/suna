@@ -33,14 +33,16 @@ import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
-from core.routes import daytona_proxy
 
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 db = DBConnection()
-instance_id = "single"
+# Generate unique instance ID per process/worker
+# This is critical for distributed locking - each worker needs a unique ID
+import uuid
+instance_id = str(uuid.uuid4())[:8]
 
 # Rate limiter state
 ip_tracker = OrderedDict()
@@ -57,7 +59,6 @@ async def lifespan(app: FastAPI):
             instance_id
         )
         
-        daytona_proxy.initialize(db)
         
         sandbox_api.initialize(db)
         
@@ -81,10 +82,17 @@ async def lifespan(app: FastAPI):
         from core import limits_api
         limits_api.initialize(db)
         
+        from core.guest_session import guest_session_service
+        guest_session_service.start_cleanup_task()
+        logger.debug("Guest session cleanup task started")
+        
         yield
         
         logger.debug("Cleaning up agent resources")
         await core_api.cleanup()
+        
+        logger.debug("Stopping guest session cleanup task")
+        await guest_session_service.stop_cleanup_task()
         
         try:
             logger.debug("Closing Redis connection")
@@ -138,10 +146,7 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = [
-    "https://www.prophet.build",
-    "https://prophet.build",
-]
+allowed_origins = ["https://www.milo.com", "https://milo.com", "https://www.prophet.so", "https://prophet.so"]
 allow_origin_regex = None
 
 # Add staging-specific origins
@@ -151,10 +156,10 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.prophet.build")
+    allowed_origins.append("https://staging.prophet.so")
     allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments for both legacy and new project names
-    allow_origin_regex = r"https://(prophet|suna|kortixcom)-.*-prjcts\.vercel\.app"
+    allow_origin_regex = r"https://(prophet|kortixcom)-.*-prjcts\.vercel\.app"
 
 # Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:
@@ -201,9 +206,6 @@ api_router.include_router(triggers_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
-
-from core import limits_api
-api_router.include_router(limits_api.router)
 
 from core.google.google_slides_api import router as google_slides_router
 api_router.include_router(google_slides_router)
@@ -321,21 +323,6 @@ async def health_check_docker():
 
 
 app.include_router(api_router, prefix="/api")
-
-preview_prefix = config.DAYTONA_PREVIEW_PATH_PREFIX or "/preview"
-if not preview_prefix.startswith("/"):
-    preview_prefix = f"/{preview_prefix}"
-
-app.include_router(daytona_proxy.router, prefix=preview_prefix)
-
-# Backwards compatibility for legacy /preview path (pre-commit bb31384a)
-if preview_prefix != "/preview":
-    logger.warning(
-        "Registering legacy preview prefix '/preview' for backwards compatibility. "
-        "Update frontend envs to use %s.",
-        preview_prefix,
-    )
-    app.include_router(daytona_proxy.router, prefix="/preview")
 
 
 if __name__ == "__main__":
