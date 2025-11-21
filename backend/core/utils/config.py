@@ -307,7 +307,7 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://milo.ai"
+    OR_SITE_URL: Optional[str] = "https://prophet.build"
     OR_APP_NAME: Optional[str] = "Milo AI"
     
     # Frontend URL configuration
@@ -365,8 +365,8 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "milo/prophet:0.1.3.25"
-    SANDBOX_SNAPSHOT_NAME = "milo/prophet:0.1.3.25"
+    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.25"
+    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
     # LangFuse configuration
