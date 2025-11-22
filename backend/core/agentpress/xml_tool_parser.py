@@ -68,12 +68,12 @@ class XMLToolParser:
         """
         tool_calls = []
         
-        # Find function_calls blocks
-        function_calls_matches = self.FUNCTION_CALLS_PATTERN.findall(content)
+        # Find function_calls blocks (with fallback for incomplete chunks)
+        function_calls_matches = self._extract_function_call_blocks(content)
         
         for fc_content in function_calls_matches:
             # Find all invoke blocks within this function_calls block
-            invoke_matches = self.INVOKE_PATTERN.findall(fc_content)
+            invoke_matches = self._extract_invoke_blocks(fc_content)
             
             for function_name, invoke_content in invoke_matches:
                 try:
@@ -88,6 +88,84 @@ class XMLToolParser:
                     logger.error(f"Error parsing invoke block for {function_name}: {e}")
         
         return tool_calls
+
+    def _extract_function_call_blocks(self, content: str) -> List[str]:
+        """Extract <function_calls> blocks, tolerating missing closing tags."""
+        matches = self.FUNCTION_CALLS_PATTERN.findall(content)
+        if matches:
+            return matches
+        
+        # Fallback: manually slice blocks even if closing tag is missing
+        blocks: List[str] = []
+        lower_content = content.lower()
+        search_pos = 0
+        
+        while True:
+            start_idx = lower_content.find("<function_calls", search_pos)
+            if start_idx == -1:
+                break
+            
+            start_tag_end = content.find(">", start_idx)
+            if start_tag_end == -1:
+                break
+            start_tag_end += 1
+            
+            end_idx = lower_content.find("</function_calls>", start_tag_end)
+            if end_idx == -1:
+                block = content[start_tag_end:]
+                if block.strip():
+                    blocks.append(block)
+                break
+            
+            block = content[start_tag_end:end_idx]
+            if block.strip():
+                blocks.append(block)
+            search_pos = end_idx + len("</function_calls>")
+        
+        return blocks
+
+    def _extract_invoke_blocks(self, fc_content: str) -> List[Tuple[str, str]]:
+        """Extract <invoke> blocks, tolerating missing closing tags."""
+        invoke_matches = self.INVOKE_PATTERN.findall(fc_content)
+        if invoke_matches:
+            return invoke_matches
+        
+        # Fallback: manual extraction if closing tags are missing
+        matches: List[Tuple[str, str]] = []
+        lower_content = fc_content.lower()
+        search_pos = 0
+        
+        while True:
+            start_idx = lower_content.find("<invoke", search_pos)
+            if start_idx == -1:
+                break
+            
+            start_tag_end = fc_content.find(">", start_idx)
+            if start_tag_end == -1:
+                break
+            start_tag = fc_content[start_idx:start_tag_end + 1]
+            
+            name_match = re.search(r'name=["\']([^"\']+)["\']', start_tag, re.IGNORECASE)
+            if not name_match:
+                search_pos = start_tag_end + 1
+                continue
+            
+            function_name = name_match.group(1)
+            content_start = start_tag_end + 1
+            end_tag = "</invoke>"
+            end_idx = lower_content.find(end_tag, content_start)
+            
+            if end_idx == -1:
+                # Missing closing tag: use rest of block
+                invoke_body = fc_content[content_start:]
+                matches.append((function_name, invoke_body))
+                break
+            
+            invoke_body = fc_content[content_start:end_idx]
+            matches.append((function_name, invoke_body))
+            search_pos = end_idx + len(end_tag)
+        
+        return matches
     
     def _parse_invoke_block(
         self, 
