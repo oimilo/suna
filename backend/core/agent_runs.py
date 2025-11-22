@@ -77,21 +77,21 @@ async def _find_shared_suna_agent(client):
         if admin_suna and admin_suna.data:
             loader = await get_agent_loader()
             agent_data = await loader.load_agent(admin_suna.data['agent_id'], admin_user_id, load_config=True)
-            logger.info(f"✅ Using system Prophet agent from admin user: {agent_data.name} ({agent_data.agent_id})")
+            logger.info(f"✅ Using system Suna agent from admin user: {agent_data.name} ({agent_data.agent_id})")
             return agent_data
         else:
-            logger.warning(f"⚠️ GUEST_MODE_ADMIN_USER_ID configured but no Prophet agent found for user {admin_user_id}")
+            logger.warning(f"⚠️ GUEST_MODE_ADMIN_USER_ID configured but no Suna agent found for user {admin_user_id}")
     
-    # Fallback: search for any Prophet agent
+    # Fallback: search for any Suna agent
     any_suna = await client.table('agents').select('agent_id, account_id').eq('metadata->>is_suna_default', 'true').limit(1).maybe_single().execute()
     
     if any_suna and any_suna.data:
         loader = await get_agent_loader()
         agent_data = await loader.load_agent(any_suna.data['agent_id'], any_suna.data['account_id'], load_config=True)
-        logger.info(f"Using shared Prophet agent: {agent_data.name} ({agent_data.agent_id})")
+        logger.info(f"Using shared Suna agent: {agent_data.name} ({agent_data.agent_id})")
         return agent_data
     
-    logger.error("❌ No Prophet agent found! Set GUEST_MODE_ADMIN_USER_ID in .env")
+    logger.error("❌ No Suna agent found! Set GUEST_MODE_ADMIN_USER_ID in .env")
     return None
 
 
@@ -122,7 +122,7 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
             agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
             logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
         else:
-            logger.warning(f"[AGENT LOAD] No default agent found for account {account_id}, searching for shared Prophet")
+            logger.warning(f"[AGENT LOAD] No default agent found for account {account_id}, searching for shared Suna")
             agent_data = await _find_shared_suna_agent(client)
             
             if not agent_data:

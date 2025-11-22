@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle, Zap, Server, Globe } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/milo-loader';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import {
   Card,

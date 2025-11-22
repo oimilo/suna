@@ -7,7 +7,7 @@ import { detectBestLocaleFromHeaders } from '@/lib/utils/geo-detection-server';
 // Marketing pages that support locale routing for SEO (/de, /it, etc.)
 const MARKETING_ROUTES = [
   '/',
-  '/prophet',
+  '/suna',
   '/enterprise',
   '/legal',
   '/support',
@@ -30,7 +30,7 @@ const PUBLIC_ROUTES = [
   '/master-login', // Master password admin login
   '/checkout', // Public checkout wrapper for Apple compliance
   '/support', // Support page should be public
-  '/prophet', // Prophet rebrand page should be public for SEO
+  '/suna', // Suna rebrand page should be public for SEO
   '/model-pricing', // Model pricing page should be public
   // Add locale routes for marketing pages
   ...locales.flatMap(locale => MARKETING_ROUTES.map(route => `/${locale}${route === '/' ? '' : route}`)),
@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
   const pathSegments = pathname.split('/').filter(Boolean);
   const firstSegment = pathSegments[0];
   
-  // Check if first segment is a locale (e.g., /de, /it, /de/prophet)
+  // Check if first segment is a locale (e.g., /de, /it, /de/suna)
   if (firstSegment && locales.includes(firstSegment as Locale)) {
     const locale = firstSegment as Locale;
     const remainingPath = '/' + pathSegments.slice(1).join('/') || '/';
@@ -82,7 +82,7 @@ export async function middleware(request: NextRequest) {
     });
     
     if (isRemainingPathMarketing) {
-      // Rewrite /de to /, /de/prophet to /prophet, etc.
+      // Rewrite /de to /, /de/suna to /suna, etc.
       const response = NextResponse.rewrite(new URL(remainingPath, request.url));
       response.cookies.set('locale', locale, {
         path: '/',
