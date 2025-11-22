@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ExternalLink,
   CheckCircle,
@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '../shared/LoadingState';
+import { getProxyPreviewUrl } from '@/lib/utils/daytona';
 
 export function ExposePortToolView({
   name = 'expose-port',
@@ -25,6 +26,7 @@ export function ExposePortToolView({
   isStreaming = false,
   assistantTimestamp,
   toolTimestamp,
+  project,
 }: ToolViewProps) {
 
   const {
@@ -42,6 +44,13 @@ export function ExposePortToolView({
   );
 
   const toolTitle = getToolTitle(name);
+  const proxiedUrl = useMemo(
+    () => getProxyPreviewUrl({ project, originalUrl: url }),
+    [project?.sandbox?.id, url],
+  );
+  const resolvedUrl = proxiedUrl ?? url;
+  const originalUrl =
+    proxiedUrl && url && proxiedUrl !== url ? url : undefined;
 
   return (
     <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
@@ -59,9 +68,9 @@ export function ExposePortToolView({
           </div>
           
           <div className='flex items-center gap-2'>
-            {url && !isStreaming && (
+            {resolvedUrl && !isStreaming && (
               <Button variant="outline" size="sm" className="h-8 text-xs bg-white dark:bg-muted/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-none" asChild>
-                <a href={url} target="_blank" rel="noopener noreferrer">
+                <a href={resolvedUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                   Open in Browser
                 </a>
@@ -99,7 +108,7 @@ export function ExposePortToolView({
             filePath={port?.toString()}
             showProgress={true}
           />
-        ) : url ? (
+        ) : resolvedUrl ? (
           <div className="flex flex-col h-full">
             {/* Port Information Header */}
             <div className="p-4 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
@@ -109,14 +118,20 @@ export function ExposePortToolView({
                     Exposed URL
                   </h3>
                   <a
-                    href={url}
+                    href={resolvedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 break-all"
                   >
-                    {url}
+                    {resolvedUrl}
                     <ExternalLink className="flex-shrink-0 h-3.5 w-3.5" />
                   </a>
+                  {originalUrl && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 break-all">
+                      Original Daytona URL:{' '}
+                      <span className="font-mono">{originalUrl}</span>
+                    </p>
+                  )}
                 </div>
                 {/* {port && (
                   <div className="flex items-center">
@@ -141,7 +156,7 @@ export function ExposePortToolView({
             {/* Iframe Preview */}
             <div className="flex-1 bg-white dark:bg-zinc-950">
               <iframe
-                src={url}
+                src={resolvedUrl}
                 title={`Port ${port} Preview`}
                 className="w-full h-full border-0"
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
