@@ -29,12 +29,27 @@ type PreviewUrlOptions = {
   path?: string;
 };
 
+const extractPathFromUrl = (targetUrl?: string): string | undefined => {
+  if (!targetUrl) return undefined;
+  try {
+    const parsed = new URL(targetUrl);
+    const pathname = parsed.pathname?.replace(/^\/+/, '') ?? '';
+    const queryAndHash = `${parsed.search ?? ''}${parsed.hash ?? ''}`;
+    const combinedPath = `${pathname}${queryAndHash}`;
+    return combinedPath || undefined;
+  } catch (error) {
+    console.warn('Failed to parse Daytona preview path from URL:', error);
+    return undefined;
+  }
+};
+
 export const getProxyPreviewUrl = ({
   project,
   originalUrl,
   path,
 }: PreviewUrlOptions) => {
   const sandboxId = getSandboxIdFromProject(project) ?? getSandboxIdFromUrl(originalUrl);
-  return buildProxyPreviewUrl(sandboxId, path);
+  const effectivePath = path ?? extractPathFromUrl(originalUrl);
+  return buildProxyPreviewUrl(sandboxId, effectivePath);
 };
 
