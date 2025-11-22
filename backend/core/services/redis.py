@@ -15,7 +15,9 @@ _initialized = False
 _init_lock = asyncio.Lock()
 
 # Constants
-REDIS_KEY_TTL = 3600 * 24  # 24 hour TTL as safety mechanism
+# Keep Redis locks/heartbeats short so stale workers release runs quickly.
+# TTL is refreshed periodically by active workers, so 5 minutes is enough margin.
+REDIS_KEY_TTL = 300
 
 
 def _resolve_bool(value: Optional[bool | str], default: bool) -> bool:
