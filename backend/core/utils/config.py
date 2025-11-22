@@ -334,6 +334,11 @@ class Configuration:
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
+    DAYTONA_PROXY_ORIGIN: Optional[str] = None
+    DAYTONA_PREVIEW_PATH_PREFIX: str = "/preview"
+    DAYTONA_PREVIEW_SKIP_WARNING: bool = True
+    DAYTONA_PREVIEW_DISABLE_CORS: bool = False
+    DAYTONA_PREVIEW_TOKEN_TTL: int = 900
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
