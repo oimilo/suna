@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-21   | `ed70428cc`     | `fix: make credit purchases for mobile` |
+| 2025-11-22   | `5ea542275`     | `Merge pull request #2121 from escapade-mckv/yearly-plans` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.) e dos commits novos do upstream posteriores à data registrada.
 
@@ -65,7 +65,7 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 - **Proxy Daytona**: ajustes em `frontend/src/lib/utils/daytona.ts` e correlatos para reconstruir URLs de preview (inclui encoding segmentado e path derivado automaticamente).
 - **Parser XML**: fallback para `<function_calls>` incompletos em `backend/core/agentpress/xml_tool_parser.py`, garantindo que `create_file` não quebre quando o streaming corta `</invoke>`.
 - **Branding/UI**: alterações visuais da versão Prophet (logos, landing/hero, cores) e landing page custom (`frontend/src/...` + assets em `public/`).
-- **Landing Page estática**: `landing_page.html` Precisa continuar servindo via nossas rotas (mantemos favicon personalizado, assets e textos PT-BR).
+- **Landing Page estática**: `landing_page.html` precisa continuar servindo via nossas rotas (mantemos favicon personalizado e assets).
 
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
 
