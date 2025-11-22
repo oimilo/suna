@@ -21,6 +21,7 @@ from pydantic import BaseModel
 import uuid
 
 from core import api as core_api
+from core.routes import daytona_proxy
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI):
         
         
         sandbox_api.initialize(db)
+        daytona_proxy.initialize(db)
         
         # Initialize Redis connection
         from core.services import redis
@@ -326,6 +328,17 @@ async def health_check_docker():
 
 
 app.include_router(api_router, prefix="/api")
+
+def _normalize_preview_prefix(prefix: str) -> str:
+    if not prefix:
+        return "/preview"
+    return prefix if prefix.startswith("/") else f"/{prefix}"
+
+app.include_router(
+    daytona_proxy.router,
+    prefix=_normalize_preview_prefix(config.DAYTONA_PREVIEW_PATH_PREFIX),
+    tags=["daytona-preview"],
+)
 
 
 if __name__ == "__main__":
