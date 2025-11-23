@@ -245,14 +245,29 @@ class AuthConfigService:
         try:
             logger.debug(f"Listing auth configs for toolkit: {toolkit_slug}")
             
-            if toolkit_slug:
-                response = self.client.auth_configs.list(toolkit=toolkit_slug)
-            else:
-                response = self.client.auth_configs.list()
+            response = self.client.auth_configs.list()
+            response_items = getattr(response, 'items', [])
+
+            items = []
+            for item in response_items:
+                toolkit_value = None
+                if hasattr(item, 'toolkit_slug'):
+                    toolkit_value = item.toolkit_slug
+                elif hasattr(item, 'toolkit'):
+                    toolkit_attr = getattr(item, 'toolkit')
+                    if isinstance(toolkit_attr, str):
+                        toolkit_value = toolkit_attr
+                    elif hasattr(toolkit_attr, '__dict__'):
+                        toolkit_value = toolkit_attr.__dict__.get('slug')
+                elif isinstance(item, dict):
+                    toolkit_value = item.get('toolkit_slug') or item.get('toolkit')
+
+                if toolkit_slug and toolkit_value and toolkit_value != toolkit_slug:
+                    continue
+
+                items.append(item)
             
             auth_configs = []
-            items = getattr(response, 'items', [])
-            
             for item in items:
                 auth_config = AuthConfig(
                     id=item.id,
