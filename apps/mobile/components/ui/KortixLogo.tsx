@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { View, type ViewProps, type ViewStyle } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import MiloSymbolBlack from '@/assets/brand/milo-symbol.svg';
-import MiloSymbolWhite from '@/assets/brand/Symbol.svg';
+import KortixSymbolBlack from '@/assets/brand/kortix-symbol.svg';
+import KortixSymbolWhite from '@/assets/brand/Symbol.svg';
 import LogomarkBlack from '@/assets/brand/Logomark-Black.svg';
 import LogomarkWhite from '@/assets/brand/Logomark-White.svg';
 
-interface MiloLogoProps extends Omit<ViewProps, 'style'> {
+interface KortixLogoProps extends Omit<ViewProps, 'style'> {
   size?: number;
   variant?: 'symbol' | 'logomark';
   className?: string;
@@ -14,14 +14,14 @@ interface MiloLogoProps extends Omit<ViewProps, 'style'> {
   color?: 'light' | 'dark';
 }
 
-export function MiloLogo({ 
+export function KortixLogo({ 
   size = 24, 
   variant = 'symbol',
   className,
   style,
   color = 'dark',
   ...props 
-}: MiloLogoProps) {
+}: KortixLogoProps) {
   const { colorScheme } = useColorScheme();
   
   const isDark = colorScheme === 'dark';
@@ -50,7 +50,7 @@ export function MiloLogo({
     );
   }
 
-  const SymbolComponent = color === 'dark' ? MiloSymbolWhite : MiloSymbolBlack;
+  const SymbolComponent = color === 'dark' ? KortixSymbolWhite : KortixSymbolBlack;
 
   return (
     <View 

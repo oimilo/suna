@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Milo",
-    "slug": "milo",
+    "name": "Kortix",
+    "slug": "kortix",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/AppIcon-Light.png",
-    "scheme": "milo",
+    "scheme": "kortix",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -18,8 +18,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.milo.app",
-      "usesAppleSignIn": true
+      "bundleIdentifier": "com.kortix.app",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This app uses analytics to improve your experience and understand how features are used. Your data helps us make the app better for everyone."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
@@ -27,7 +30,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.milo.app",
+      "package": "com.kortix.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
@@ -49,6 +52,12 @@
         }
       ],
       [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "This app uses analytics to improve your experience and understand how features are used. Your data helps us make the app better for everyone."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {
@@ -65,7 +74,7 @@
         "projectId": "9fca3cff-a291-41c9-88b9-feb8053b990f"
       }
     },
-    "owner": "milo",
+    "owner": "kortix",
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/9fca3cff-a291-41c9-88b9-feb8053b990f"

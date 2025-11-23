@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Dimensions, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import MiloSymbolBlack from '@/assets/brand/milo-symbol-scale-effect-black.svg';
-import MiloSymbolWhite from '@/assets/brand/milo-symbol-scale-effect-white.svg';
+import KortixSymbolBlack from '@/assets/brand/kortix-symbol-scale-effect-black.svg';
+import KortixSymbolWhite from '@/assets/brand/kortix-symbol-scale-effect-white.svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -23,7 +23,7 @@ export function BackgroundLogo() {
   }, []);
 
   const leftOffset = (SCREEN_WIDTH - 393) / 2;
-  const SymbolComponent = colorScheme === 'dark' ? MiloSymbolWhite : MiloSymbolBlack;
+  const SymbolComponent = colorScheme === 'dark' ? KortixSymbolWhite : KortixSymbolBlack;
 
   return (
     <Animated.View
