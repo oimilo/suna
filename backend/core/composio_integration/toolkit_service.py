@@ -114,6 +114,7 @@ class ToolkitService:
             logger.debug(f"Fetching toolkits with limit: {limit}, cursor: {cursor}, category: {category}")
             params = {
                 "limit": limit,
+                "managed_by": "composio"
             }
             
             if cursor:
