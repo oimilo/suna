@@ -1,21 +1,25 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { MiloLoader } from '@/components/ui';
-import { useAuthContext } from '@/contexts';
+import { KortixLoader } from '@/components/ui';
+import { useAuthContext, useGuestMode } from '@/contexts';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAccountSetup } from '@/hooks/useAccountSetup';
 
 export default function SplashScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuthContext();
+  const { isGuestMode, isLoading: guestLoading } = useGuestMode();
   const { hasCompletedOnboarding, isLoading: onboardingLoading } = useOnboarding();
   const { isChecking: setupChecking, needsSetup } = useAccountSetup();
 
   React.useEffect(() => {
-    if (!authLoading && !onboardingLoading && !setupChecking) {
+    if (!authLoading && !onboardingLoading && !setupChecking && !guestLoading) {
       const timeoutId = setTimeout(() => {
-        if (!isAuthenticated) {
+        if (isGuestMode) {
+          console.log('👀 Guest mode active, routing to home');
+          router.replace('/home');
+        } else if (!isAuthenticated) {
           console.log('🔐 User not authenticated, routing to sign in');
           router.replace('/auth');
         } else if (needsSetup) {
@@ -32,13 +36,13 @@ export default function SplashScreen() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [authLoading, onboardingLoading, setupChecking, isAuthenticated, needsSetup, hasCompletedOnboarding, router]);
+  }, [authLoading, onboardingLoading, setupChecking, guestLoading, isAuthenticated, isGuestMode, needsSetup, hasCompletedOnboarding, router]);
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 bg-background items-center justify-center">
-        <MiloLoader size="xlarge" />
+        <KortixLoader size="xlarge" />
       </View>
     </>
   );

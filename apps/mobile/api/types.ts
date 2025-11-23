@@ -212,9 +212,9 @@ export interface Agent {
   current_version?: AgentVersion | null;
   metadata?: {
     template_name?: string;
-    milo_template_id?: string;
-    is_milo_team?: boolean;
-    is_prophet_default?: boolean;
+    kortix_template_id?: string;
+    is_kortix_team?: boolean;
+    is_suna_default?: boolean;
     centrally_managed?: boolean;
     management_version?: string;
     restrictions?: {
