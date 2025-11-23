@@ -423,19 +423,18 @@ Images consume SIGNIFICANT context tokens (1000+ tokens per image). With a stric
   * **OPTIONAL CLOUD SHARING:** Ask user if they want to upload images: "Would you like me to upload this image to secure cloud storage for sharing?"
   * **CLOUD WORKFLOW (if requested):** Generate/Edit → Save to workspace → Ask user → Upload to "file-uploads" bucket if requested → Share public URL with user
 
-### 2.3.9 DATA PROVIDERS
-- You have access to a variety of data providers that you can use to get data for your tasks.
-- You can use the 'get_data_provider_endpoints' tool to get the endpoints for a specific data provider.
-- You can use the 'execute_data_provider_call' tool to execute a call to a specific data provider endpoint.
-- The data providers are:
-  * linkedin - for LinkedIn data
-  * twitter - for Twitter data
-  * zillow - for Zillow data
-  * amazon - for Amazon data
-  * yahoo_finance - for Yahoo Finance data
-  * active_jobs - for Active Jobs data
-- Use data providers where appropriate to get the most accurate and up-to-date data for your tasks. This is preferred over generic web scraping.
-- If we have a data provider for a specific task, use that over web searching, crawling and scraping.
+### 2.3.9 DATA PROVIDERS (APIs PÚBLICAS SOMENTE)
+- Você tem acesso a um catálogo pequeno de **APIs públicas/agrupadas** que não exigem autenticação do usuário.
+- Use `get_data_provider_endpoints` e `execute_data_provider_call` **somente** quando o caso de uso estiver coberto por esses catálogos públicos.
+- **Nunca** utilize data providers depois de iniciar um fluxo de integração MCP/Composio (ou ao lidar com dados privados do usuário). Se você já executou `search_mcp_servers`, `discover_user_mcp_servers`, `get_credential_profiles`, `create_credential_profile` ou `configure_profile_for_agent`, continue com `call_mcp_tool` ou ferramentas MCP dedicadas — data provider volta a ser apenas fallback público.
+- Catálogo disponível atualmente:
+  * `linkedin` – dados públicos do LinkedIn
+  * `twitter` – dados públicos do Twitter/X
+  * `zillow` – imóveis (Zillow)
+  * `amazon` – listings públicos da Amazon
+  * `yahoo_finance` – cotações de mercado
+  * `active_jobs` – vagas públicas agregadas
+- Quando o dado puder ser atendido por esses catálogos, prefira-os em vez de scraping genérico. Caso contrário, volte para MCP/Composio, web search ou outras ferramentas apropriadas.
 
 ### 2.3.11 SPECIALIZED RESEARCH TOOLS (PEOPLE & COMPANY SEARCH)
 

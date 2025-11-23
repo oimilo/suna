@@ -91,7 +91,8 @@ class ComposioIntegrationService:
             connected_account = await self.connected_account_service.create_connected_account(
                 auth_config_id=auth_config.id,
                 user_id=user_id,
-                initiation_fields=initiation_fields
+                initiation_fields=initiation_fields,
+                auth_scheme=auth_config.auth_scheme
             )
             logger.debug(f"Step 3 complete: Connected account {connected_account.id}")
             
