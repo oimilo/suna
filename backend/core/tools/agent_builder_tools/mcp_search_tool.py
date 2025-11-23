@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, Iterable
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
@@ -18,6 +18,59 @@ from core.utils.logger import logger
 class MCPSearchTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
+        self._toolkit_service = ToolkitService()
+
+    def _summarize_text(self, text: str, max_length: int = 200) -> str:
+        if not text:
+            return ""
+        text = text.strip()
+        if len(text) <= max_length:
+            return text
+        return text[: max_length - 3].rstrip() + "..."
+
+    def _serialize_toolkit(self, toolkit) -> dict:
+        name = getattr(toolkit, "name", None) or getattr(toolkit, "toolkit_name", "") or ""
+        slug = getattr(toolkit, "slug", None) or getattr(toolkit, "toolkit_slug", "") or ""
+        description = getattr(toolkit, "description", None)
+        if not description and name:
+            description = f"{name} integration"
+
+        auth_schemes = getattr(toolkit, "auth_schemes", None) or []
+        managed_schemes = getattr(toolkit, "managed_auth_schemes", None) or []
+
+        logo = getattr(toolkit, "logo", None)
+        if not logo:
+            meta = getattr(toolkit, "meta", None)
+            if isinstance(meta, dict):
+                logo = meta.get("logo")
+
+        return {
+            "name": name,
+            "toolkit_slug": slug,
+            "description": self._summarize_text(description),
+            "auth_schemes": list(auth_schemes)[:4],
+            "managed_auth_schemes": list(managed_schemes)[:4],
+            "supports_managed_auth": bool(getattr(toolkit, "supports_managed_auth", False)),
+            "logo_url": logo or "",
+        }
+
+    def _build_tool_result(self, toolkits: Iterable, limit: int) -> ToolResult:
+        trimmed = []
+        for toolkit in toolkits:
+            if len(trimmed) >= limit:
+                break
+            trimmed.append(self._serialize_toolkit(toolkit))
+
+        if not trimmed:
+            return ToolResult(
+                success=False,
+                output=json.dumps([], ensure_ascii=False)
+            )
+
+        return ToolResult(
+            success=True,
+            output=json.dumps(trimmed, ensure_ascii=False)
+        )
 
     @openapi_schema({
         "type": "function",
@@ -48,44 +101,64 @@ class MCPSearchTool(AgentBuilderBaseTool):
         limit: int = 10
     ) -> ToolResult:
         try:
-            toolkit_service = ToolkitService()
             integration_service = get_integration_service()
             
             if query:
-                toolkits_response = await integration_service.search_toolkits(query, category=category)
+                toolkits_response = await integration_service.search_toolkits(query, category=category, limit=limit)
                 toolkits = toolkits_response.get("items", [])
             else:
-                toolkits_response = await toolkit_service.list_toolkits(limit=limit, category=category)
+                toolkits_response = await self._toolkit_service.list_toolkits(limit=limit, category=category)
                 toolkits = toolkits_response.get("items", [])
             
-            if len(toolkits) > limit:
-                toolkits = toolkits[:limit]
-            
-            formatted_toolkits = []
-            for toolkit in toolkits:
-                formatted_toolkits.append({
-                    "name": toolkit.name,
-                    "toolkit_slug": toolkit.slug,
-                    "description": toolkit.description or f"Toolkit for {toolkit.name}",
-                    "logo_url": toolkit.logo or '',
-                    "auth_schemes": toolkit.auth_schemes,
-                    "tags": toolkit.tags,
-                    "categories": toolkit.categories
-                })
-            
-            if not formatted_toolkits:
-                return ToolResult(
-                    success=False,
-                    output=json.dumps([], ensure_ascii=False)
-                )
-            
-            return ToolResult(
-                success=True,
-                output=json.dumps(formatted_toolkits, ensure_ascii=False)
-            )
+            return self._build_tool_result(toolkits, limit)
                 
         except Exception as e:
             logger.error(f"Error searching Composio toolkits: {str(e)}")
+            return self.fail_response("Error searching Composio toolkits")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "search_composio_toolkits",
+            "description": "Lightweight search for Composio toolkits using server-side query/filtering. Prefer this over search_mcp_servers to avoid huge payloads.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'trello', 'zendesk', 'crm'). MUST be a specific service name."
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Optional category filter (e.g., 'crm', 'communication')"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default 8, max 25)",
+                        "default": 8
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    })
+    async def search_composio_toolkits(
+        self,
+        query: str,
+        category: Optional[str] = None,
+        limit: int = 8
+    ) -> ToolResult:
+        try:
+            safe_limit = max(1, min(limit, 25))
+            response = await self._toolkit_service.search_toolkits(
+                query=query,
+                category=category,
+                limit=safe_limit
+            )
+            toolkits = response.get("items", [])
+            return self._build_tool_result(toolkits, safe_limit)
+        except Exception as e:
+            logger.error(f"Error performing targeted Composio search: {str(e)}")
             return self.fail_response("Error searching Composio toolkits")
 
     @openapi_schema({
