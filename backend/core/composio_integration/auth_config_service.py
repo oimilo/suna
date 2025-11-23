@@ -98,8 +98,6 @@ class AuthConfigService:
             managed_scheme_set = set(managed_schemes)
             has_managed_for_preferred = preferred_scheme in managed_scheme_set if preferred_scheme else False
 
-            should_use_custom_auth = use_custom_auth or not has_managed_for_preferred
-
             def _merged_credentials() -> Dict[str, Any]:
                 merged: Dict[str, Any] = {}
                 if initiation_fields:
@@ -110,55 +108,93 @@ class AuthConfigService:
                     merged.pop(noise_key, None)
                 return merged
 
-            if should_use_custom_auth:
-                logger.debug("Creating custom auth config (scheme=%s)", preferred_scheme)
-                credentials = _merged_credentials()
-
-                required_fields: List[str] = []
-                if detailed_toolkit and detailed_toolkit.auth_config_details:
-                    for detail in detailed_toolkit.auth_config_details:
-                        if not detail.fields:
-                            continue
-                        for field_group, requirement_map in detail.fields.items():
-                            if preferred_scheme and field_group and field_group.upper() not in {preferred_scheme, f"{preferred_scheme}_AUTH"}:
-                                continue
-                            for requirement, fields in requirement_map.items():
-                                for field in fields:
-                                    field_name = field.name or field.displayName
-                                    if not field_name:
-                                        continue
-                                    if requirement == "required" or field.required:
-                                        required_fields.append(field_name)
-                missing_fields = [
-                    field for field in required_fields
-                    if not credentials.get(field)
-                ]
-                if missing_fields:
-                    raise ValueError(
-                        f"Missing required credential fields for {toolkit_slug}: {', '.join(missing_fields)}"
-                    )
-
-                auth_config_payload = {
-                    "type": "use_custom_auth",
-                    "authScheme": preferred_scheme,
-                    "credentials": credentials,
-                }
-            else:
-                credentials = _merged_credentials()
-                logger.debug("Creating managed auth config for toolkit %s", toolkit_slug)
-                auth_config_payload = {
-                    "type": "use_composio_managed_auth",
-                }
-                if preferred_scheme:
-                    auth_config_payload["authScheme"] = preferred_scheme
-                if credentials:
-                    auth_config_payload["credentials"] = credentials
-            
-            auth_config_payload["name"] = (
+            credentials = _merged_credentials()
+            auth_config_name = (
                 (initiation_fields or {}).get("auth_config_name")
                 or (custom_auth_config or {}).get("name")
                 or f"{toolkit_slug}-auth"
             )
+
+            managed_attempt_error: Optional[Exception] = None
+            if not use_custom_auth:
+                try:
+                    logger.debug(
+                        "Attempting managed auth config for toolkit %s (scheme=%s, managed support=%s)",
+                        toolkit_slug,
+                        preferred_scheme,
+                        has_managed_for_preferred
+                    )
+                    managed_payload = {
+                        "type": "use_composio_managed_auth",
+                        "name": auth_config_name
+                    }
+                    if preferred_scheme:
+                        managed_payload["authScheme"] = preferred_scheme
+                    if credentials:
+                        managed_payload["credentials"] = credentials
+
+                    response = self.client.auth_configs.create(
+                        toolkit={"slug": toolkit_slug},
+                        auth_config=managed_payload
+                    )
+
+                    auth_config_obj = response.auth_config
+                    auth_config = AuthConfig(
+                        id=auth_config_obj.id,
+                        auth_scheme=auth_config_obj.auth_scheme,
+                        is_composio_managed=getattr(auth_config_obj, 'is_composio_managed', True),
+                        restrict_to_following_tools=getattr(auth_config_obj, 'restrict_to_following_tools', []),
+                        toolkit_slug=toolkit_slug
+                    )
+                    logger.debug(
+                        "Managed auth config succeeded for toolkit %s with id %s",
+                        toolkit_slug,
+                        auth_config.id
+                    )
+                    return auth_config
+                except Exception as managed_err:
+                    managed_attempt_error = managed_err
+                    logger.warning(
+                        "Managed auth config attempt failed for toolkit %s (scheme=%s). Falling back to custom auth. Error: %s",
+                        toolkit_slug,
+                        preferred_scheme,
+                        managed_err,
+                        exc_info=True
+                    )
+
+            logger.debug("Creating custom auth config (scheme=%s)", preferred_scheme)
+
+            required_fields: List[str] = []
+            if detailed_toolkit and detailed_toolkit.auth_config_details:
+                for detail in detailed_toolkit.auth_config_details:
+                    if not detail.fields:
+                        continue
+                    for field_group, requirement_map in detail.fields.items():
+                        if preferred_scheme and field_group and field_group.upper() not in {preferred_scheme, f"{preferred_scheme}_AUTH"}:
+                            continue
+                        for requirement, fields in requirement_map.items():
+                            for field in fields:
+                                field_name = field.name or field.displayName
+                                if not field_name:
+                                    continue
+                                if requirement == "required" or field.required:
+                                    required_fields.append(field_name)
+            missing_fields = [
+                field for field in required_fields
+                if not credentials.get(field)
+            ]
+            if missing_fields:
+                error_details = f"Missing required credential fields for {toolkit_slug}: {', '.join(missing_fields)}"
+                if managed_attempt_error:
+                    error_details += f". Managed auth attempt failed with: {managed_attempt_error}"
+                raise ValueError(error_details)
+
+            auth_config_payload = {
+                "type": "use_custom_auth",
+                "name": auth_config_name,
+                "authScheme": preferred_scheme,
+                "credentials": credentials,
+            }
 
             response = self.client.auth_configs.create(
                 toolkit={
@@ -172,7 +208,7 @@ class AuthConfigService:
             auth_config = AuthConfig(
                 id=auth_config_obj.id,
                 auth_scheme=auth_config_obj.auth_scheme,
-                is_composio_managed=getattr(auth_config_obj, 'is_composio_managed', not should_use_custom_auth),
+                is_composio_managed=getattr(auth_config_obj, 'is_composio_managed', False),
                 restrict_to_following_tools=getattr(auth_config_obj, 'restrict_to_following_tools', []),
                 toolkit_slug=toolkit_slug
             )
