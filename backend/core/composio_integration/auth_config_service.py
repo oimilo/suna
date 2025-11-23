@@ -49,8 +49,14 @@ class AuthConfigService:
 
             detailed_toolkit = await self.toolkit_service.get_detailed_toolkit_info(toolkit_slug)
             available_schemes = []
-            if detailed_toolkit and detailed_toolkit.auth_schemes:
-                available_schemes = [scheme.upper() for scheme in detailed_toolkit.auth_schemes if scheme]
+            managed_schemes = []
+            if detailed_toolkit:
+                if detailed_toolkit.auth_schemes:
+                    available_schemes.extend([scheme.upper() for scheme in detailed_toolkit.auth_schemes if scheme])
+                if detailed_toolkit.managed_auth_schemes:
+                    managed_schemes = [scheme.upper() for scheme in detailed_toolkit.managed_auth_schemes if scheme]
+                    available_schemes.extend(managed_schemes)
+            available_schemes = list(dict.fromkeys(available_schemes))
 
             provided_scheme = None
             if custom_auth_config:
@@ -89,11 +95,10 @@ class AuthConfigService:
                 )
                 return matching_existing
             
-            should_use_custom_auth = (
-                use_custom_auth
-                or (detailed_toolkit and not detailed_toolkit.supports_managed_auth)
-                or preferred_scheme != "OAUTH2"
-            )
+            managed_scheme_set = set(managed_schemes)
+            has_managed_for_preferred = preferred_scheme in managed_scheme_set if preferred_scheme else False
+
+            should_use_custom_auth = use_custom_auth or not has_managed_for_preferred
 
             def _merged_credentials() -> Dict[str, Any]:
                 merged: Dict[str, Any] = {}
