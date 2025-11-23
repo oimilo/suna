@@ -30,6 +30,14 @@ litellm.drop_params = True
 MAX_RETRIES = 3
 provider_router = None
 
+DEFAULT_BEDROCK_PROFILE_HAIKU = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+DEFAULT_BEDROCK_PROFILE_SONNET_45 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
+DEFAULT_BEDROCK_PROFILE_SONNET_4 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"
+
+BEDROCK_PROFILE_HAIKU = getattr(config, "BEDROCK_PROFILE_HAIKU", DEFAULT_BEDROCK_PROFILE_HAIKU) or DEFAULT_BEDROCK_PROFILE_HAIKU
+BEDROCK_PROFILE_SONNET_45 = getattr(config, "BEDROCK_PROFILE_SONNET_45", DEFAULT_BEDROCK_PROFILE_SONNET_45) or DEFAULT_BEDROCK_PROFILE_SONNET_45
+BEDROCK_PROFILE_SONNET_4 = getattr(config, "BEDROCK_PROFILE_SONNET_4", DEFAULT_BEDROCK_PROFILE_SONNET_4) or DEFAULT_BEDROCK_PROFILE_SONNET_4
+
 
 class LLMError(Exception):
     """Exception for LLM-related errors."""
@@ -105,22 +113,22 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     fallbacks = [
         # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+            BEDROCK_PROFILE_HAIKU: [
+                BEDROCK_PROFILE_SONNET_4,
+                BEDROCK_PROFILE_SONNET_45,
             ]
         },
         # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            BEDROCK_PROFILE_SONNET_45: [
+                BEDROCK_PROFILE_SONNET_4,
+                BEDROCK_PROFILE_HAIKU,
             ]
         },
         # MAP-tagged Sonnet 4 -> Haiku 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            BEDROCK_PROFILE_SONNET_4: [
+                BEDROCK_PROFILE_HAIKU,
             ]
         }
     ]

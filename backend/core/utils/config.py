@@ -313,8 +313,11 @@ class Configuration:
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
     
-    # AWS Bedrock authentication
+    # AWS Bedrock authentication / inference profiles
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
+    BEDROCK_PROFILE_HAIKU: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+    BEDROCK_PROFILE_SONNET_45: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
+    BEDROCK_PROFILE_SONNET_4: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"
     
     # Supabase configuration
     SUPABASE_URL: str
