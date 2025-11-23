@@ -7,7 +7,7 @@ import json
 
 
 class ConnectionState(BaseModel):
-    auth_scheme: str = "OAUTH2"
+    auth_scheme: Optional[str] = None
     val: Dict[str, Any] = {}
 
 
@@ -60,7 +60,8 @@ class ConnectedAccountService:
         self, 
         auth_config_id: str, 
         user_id: str,
-        initiation_fields: Optional[Dict[str, str]] = None
+        initiation_fields: Optional[Dict[str, str]] = None,
+        auth_scheme: Optional[str] = None
     ) -> ConnectedAccount:
         try:
             print("[DEBUG] Auth config id: ", auth_config_id)
@@ -79,6 +80,8 @@ class ConnectedAccountService:
             
             logger.debug(f"Using state.val: {state_val}")
             logger.debug(f"Final state.val for Composio API: {json.dumps(state_val, indent=2)}")
+
+            selected_auth_scheme = (auth_scheme or "OAUTH2").upper()
             
             response = self.client.connected_accounts.create(
                 auth_config={
@@ -87,7 +90,7 @@ class ConnectedAccountService:
                 connection={
                     "user_id": user_id,
                     "state": {
-                        "authScheme": "OAUTH2",
+                        "authScheme": selected_auth_scheme,
                         "val": state_val,
                     }
                 }
@@ -104,11 +107,11 @@ class ConnectedAccountService:
                 val_dict = self._extract_val_dict(val_obj)
                 
                 connection_data = ConnectionState(
-                    auth_scheme=connection_data_dict.get('auth_scheme', 'OAUTH2'),
+                    auth_scheme=connection_data_dict.get('auth_scheme') or selected_auth_scheme,
                     val=val_dict
                 )
             else:
-                connection_data = ConnectionState()
+                connection_data = ConnectionState(auth_scheme=selected_auth_scheme)
             
             deprecated_obj = getattr(response, 'deprecated', None)
             deprecated_value = self._extract_deprecated_value(deprecated_obj)
@@ -124,7 +127,11 @@ class ConnectedAccountService:
                 deprecated=deprecated_value
             )
             
-            logger.debug(f"Successfully created connected account: {connected_account.id}")
+            logger.debug(
+                "Successfully created connected account %s (auth scheme: %s)",
+                connected_account.id,
+                connection_data.auth_scheme,
+            )
             return connected_account
             
         except Exception as e:
