@@ -19,6 +19,7 @@ class MCPSearchTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
         self._toolkit_service = ToolkitService()
+        self._full_tool_cache: dict[str, dict] = {}
 
     def _summarize_text(self, text: str, max_length: int = 200) -> str:
         if not text:
@@ -220,13 +221,39 @@ class MCPSearchTool(AgentBuilderBaseTool):
                     "profile_id": {
                         "type": "string",
                         "description": "The profile ID from the Composio credential profile"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of tools to return (default 10, max 25)",
+                        "default": 10
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Optional keyword filter to narrow tools (e.g., 'card', 'webhook')"
+                    },
+                    "tool_slugs": {
+                        "type": "array",
+                        "description": "Specific tool slugs to retrieve (exact matches)",
+                        "items": {"type": "string"}
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "description": "Filter by required OAuth scopes",
+                        "items": {"type": "string"}
                     }
                 },
                 "required": ["profile_id"]
             }
         }
     })
-    async def discover_user_mcp_servers(self, profile_id: str) -> ToolResult:
+    async def discover_user_mcp_servers(
+        self,
+        profile_id: str,
+        limit: int = 10,
+        search: Optional[str] = None,
+        tool_slugs: Optional[list[str]] = None,
+        scopes: Optional[list[str]] = None,
+    ) -> ToolResult:
         try:
             account_id = await self._get_current_account_id()
             from core.composio_integration.composio_profile_service import ComposioProfileService
@@ -250,28 +277,105 @@ class MCPSearchTool(AgentBuilderBaseTool):
             if not profile.mcp_url:
                 return self.fail_response("Profile has no MCP URL")
             
+            request_limit = max(1, min(limit, 25))
+            discover_config = {
+                "url": profile.mcp_url,
+                "options": {
+                    "limit": request_limit,
+                    "toolkits": [profile.toolkit_slug] if profile.toolkit_slug else None,
+                    "search": search,
+                    "tools": tool_slugs,
+                    "scopes": scopes,
+                }
+            }
             result = await mcp_service.discover_custom_tools(
                 request_type="http",
-                config={"url": profile.mcp_url}
+                config=discover_config
             )
             
             if not result.success:
                 return self.fail_response("Failed to discover tools")
             
             available_tools = result.tools or []
-            
-            return self.success_response({
-                "message": f"Found {len(available_tools)} MCP tools available for {profile.toolkit_name} profile '{profile.profile_name}'",
+
+            def _summarize_tool(tool: dict) -> dict:
+                slug = tool.get("name") or tool.get("slug") or ""
+                return {
+                    "slug": slug,
+                    "name": tool.get("display_name") or tool.get("name") or slug,
+                    "description": self._summarize_text(tool.get("description") or "", 240),
+                    "scopes": tool.get("scopes") or [],
+                }
+
+            summarized_tools = [_summarize_tool(tool) for tool in available_tools[:request_limit]]
+            for tool in available_tools:
+                slug = tool.get("name") or tool.get("slug")
+                if slug:
+                    self._full_tool_cache[slug] = tool
+
+            response_payload = {
+                "message": (
+                    f"Found {len(summarized_tools)} MCP tools "
+                    f"for {profile.toolkit_name} profile '{profile.profile_name}'"
+                ),
                 "profile_info": {
                     "profile_name": profile.profile_name,
                     "toolkit_name": profile.toolkit_name,
                     "toolkit_slug": profile.toolkit_slug,
                     "is_connected": profile.is_connected
                 },
-                "tools": available_tools,
-                "total_tools": len(available_tools)
-            })
+                "tools": summarized_tools,
+                "total_tools": result.total_tools if hasattr(result, "total_tools") else len(available_tools)
+            }
+
+            if available_tools and len(available_tools) > request_limit:
+                response_payload["note"] = (
+                    f"Showing first {request_limit} tools. "
+                    "Provide 'search', 'tool_slugs' or increase 'limit' (<=25) for more."
+                )
+            
+            return self.success_response(response_payload)
             
         except Exception as e:
             logger.error(f"Error discovering MCP tools: {str(e)}")
             return self.fail_response("Error discovering MCP tools") 
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "get_discovered_tool_details",
+            "description": "Fetch the full schema/details for a tool discovered via discover_user_mcp_servers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tool_slug": {
+                        "type": "string",
+                        "description": "Exact slug returned by discover_user_mcp_servers"
+                    }
+                },
+                "required": ["tool_slug"]
+            }
+        }
+    })
+    async def get_discovered_tool_details(self, tool_slug: str) -> ToolResult:
+        tool_data = self._full_tool_cache.get(tool_slug)
+        if not tool_data:
+            return self.fail_response(
+                "Tool not found in cache. Run discover_user_mcp_servers first "
+                "or specify the correct slug."
+            )
+
+        # Return sanitized payload
+        sanitized = {
+            "slug": tool_slug,
+            "name": tool_data.get("display_name") or tool_data.get("name"),
+            "description": tool_data.get("description"),
+            "scopes": tool_data.get("scopes"),
+            "inputs": tool_data.get("input_schema") or tool_data.get("input"),
+            "outputs": tool_data.get("output_schema") or tool_data.get("output"),
+            "raw": tool_data,  # allow access if needed downstream
+        }
+        return self.success_response({
+            "message": f"Full schema for tool '{tool_slug}'",
+            "tool": sanitized
+        })
