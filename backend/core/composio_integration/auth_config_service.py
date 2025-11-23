@@ -166,6 +166,23 @@ class AuthConfigService:
                 },
                 auth_config=auth_config_payload
             )
+            
+            auth_config_obj = response.auth_config
+            
+            auth_config = AuthConfig(
+                id=auth_config_obj.id,
+                auth_scheme=auth_config_obj.auth_scheme,
+                is_composio_managed=getattr(auth_config_obj, 'is_composio_managed', not should_use_custom_auth),
+                restrict_to_following_tools=getattr(auth_config_obj, 'restrict_to_following_tools', []),
+                toolkit_slug=toolkit_slug
+            )
+            
+            logger.debug(f"Successfully created auth config: {auth_config.id}")
+            return auth_config
+            
+        except Exception as e:
+            logger.error(f"Failed to create auth config for {toolkit_slug}: {e}", exc_info=True)
+            raise
     
     async def get_auth_config(self, auth_config_id: str) -> Optional[AuthConfig]:
         try:
