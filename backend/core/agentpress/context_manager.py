@@ -15,8 +15,17 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from core.ai_models import model_manager
 from core.agentpress.prompt_caching import apply_anthropic_caching_strategy
+from core.utils.config import config
 
 DEFAULT_TOKEN_THRESHOLD = 120000
+
+DEFAULT_BEDROCK_PROFILE_HAIKU = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+DEFAULT_BEDROCK_PROFILE_SONNET_45 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
+DEFAULT_BEDROCK_PROFILE_SONNET_4 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"
+
+BEDROCK_PROFILE_HAIKU = getattr(config, "BEDROCK_PROFILE_HAIKU", DEFAULT_BEDROCK_PROFILE_HAIKU) or DEFAULT_BEDROCK_PROFILE_HAIKU
+BEDROCK_PROFILE_SONNET_45 = getattr(config, "BEDROCK_PROFILE_SONNET_45", DEFAULT_BEDROCK_PROFILE_SONNET_45) or DEFAULT_BEDROCK_PROFILE_SONNET_45
+BEDROCK_PROFILE_SONNET_4 = getattr(config, "BEDROCK_PROFILE_SONNET_4", DEFAULT_BEDROCK_PROFILE_SONNET_4) or DEFAULT_BEDROCK_PROFILE_SONNET_4
 
 class ContextManager:
     """Manages thread context including token counting and summarization."""
