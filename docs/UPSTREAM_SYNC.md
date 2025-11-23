@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-22   | `5ea542275`     | `Merge pull request #2121 from escapade-mckv/yearly-plans` |
+| 2025-11-23   | `f1192bfce`     | `Merge pull request #2128 from kubet/feat/rework-desing-mobile` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.) e dos commits novos do upstream posteriores à data registrada.
 
