@@ -143,7 +143,9 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             return self.success_response(response_data)
             
         except Exception as e:
-            return self.fail_response("Error creating credential profile")
+            logger.error("Failed to create credential profile for %s: %s", toolkit_slug, e, exc_info=True)
+            error_message = str(e) or "Unknown error"
+            return self.fail_response(f"Error creating credential profile: {error_message}")
 
     @openapi_schema({
         "type": "function",
