@@ -14,7 +14,7 @@ import {
   Zap,
   LogOut 
 } from 'lucide-react-native';
-import { MiloLogo } from '@/components/ui/MiloLogo';
+import { KortixLogo } from '@/components/ui/KortixLogo';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
@@ -197,7 +197,7 @@ export default function OnboardingScreen() {
           <BackgroundLogo/>
         </View>
         <View className="pt-16 px-8 pb-4 flex-row justify-between items-center">
-          <MiloLogo variant="logomark" size={60} color={colorScheme === 'dark' ? 'dark' : 'light'} />
+          <KortixLogo variant="logomark" size={60} color={colorScheme === 'dark' ? 'dark' : 'light'} />
           <View className="flex-row items-center gap-4">
             <TouchableOpacity 
               onPress={handleLogout}

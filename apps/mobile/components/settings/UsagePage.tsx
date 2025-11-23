@@ -6,7 +6,7 @@ import { UsageContent } from './UsageContent';
 import { useLanguage } from '@/contexts';
 import { useChat } from '@/hooks';
 import { useRouter } from 'expo-router';
-import { MiloLoader } from '@/components/ui/milo-loader';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 
 interface UsagePageProps {
   visible: boolean;
@@ -57,7 +57,7 @@ export function UsagePage({ visible, onClose }: UsagePageProps) {
       <View className="absolute top-0 left-0 right-0 bottom-0 bg-background">
         {isLoadingThread ? (
           <View className="flex-1 items-center justify-center">
-            <MiloLoader size="large" />
+            <KortixLoader size="large" />
           </View>
         ) : (
           <ScrollView 

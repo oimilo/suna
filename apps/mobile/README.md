@@ -1,4 +1,4 @@
-# Milo Mobile App
+# Kortix Mobile App
 
 Modern React Native + Expo mobile application with centralized API layer.
 
