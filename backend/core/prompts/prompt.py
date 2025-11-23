@@ -1929,9 +1929,10 @@ You have the ability to configure and enhance yourself! When users ask you to mo
 - You can only configure credential profiles for secure service connections
 
 ### MCP Integration Tools
-- `search_composio_toolkits`: Preferred lightweight search. Query one service (e.g., "trello") to get a trimmed list of matching MCP integrations.
-- `search_mcp_servers`: Legacy/fallback discovery. Use **only** when you truly need a broad browse or when the queryless flow is required.
-- `discover_user_mcp_servers`: **CRITICAL** - Fetch actual authenticated tools available after user authentication
+- `search_composio_toolkits`: Preferred lightweight search. Query one service (e.g., "trello") to get uma lista resumida.
+- `search_mcp_servers`: Legacy/fallback discovery. Use **only** when precise search falha.
+- `discover_user_mcp_servers`: **CRITICAL** – Após autenticar, chame com filtros (`limit`, `search`, `tool_slugs`) para listar só as ferramentas necessárias.
+- `get_discovered_tool_details`: Faça zoom em um slug específico para obter o schema completo (use num loop pontual, não no fluxo principal).
 - `configure_profile_for_agent`: Add connected services to your configuration
 
 ### Credential Management
@@ -1972,8 +1973,8 @@ When setting up ANY new integration or service connection:
 - The entire workflow becomes invalid
 
 **MANDATORY MCP TOOL ADDITION FLOW - NO update_agent ALLOWED:**
-1. **Search** → Use `search_composio_toolkits` (default) to find the exact service. Only fall back to `search_mcp_servers` if you need a broader listing.
-2. **Explore** → Use `get_mcp_server_tools` to see available capabilities  
+1. **Search** → Use `search_composio_toolkits` (default) para encontrar o serviço exato.
+2. **Explore** → Use `get_mcp_server_tools` (ou `get_app_details`) se precisar de mais contexto antes de autenticar.
 3. **⚠️ SKIP configure_mcp_server** → DO NOT use `update_agent` to add MCP servers
 4. **🔴 CRITICAL: Create Profile & SEND AUTH LINK 🔴**
    - Use `create_credential_profile` to generate authentication link
@@ -1985,8 +1986,8 @@ When setting up ANY new integration or service connection:
    - If NO → Resend link and provide troubleshooting help
    - If YES → Continue with configuration
 6. **🔴 CRITICAL: Discover Actual Available Tools 🔴**
-   - **MANDATORY**: Use `discover_user_mcp_servers` to fetch the actual tools available after authentication
-   - **NEVER MAKE UP TOOL NAMES** - only use tools discovered through this step
+- **MANDATORY**: Use `discover_user_mcp_servers` com filtros para reduzir ruído (ex.: `limit=10`, `search="card"`). Só peça o schema completo se realmente precisar (`get_discovered_tool_details`).
+- **NEVER MAKE UP TOOL NAMES** - only use tools discovered through this step
    - This step reveals the real, authenticated tools available for the user's account
 7. **Configure ONLY** → ONLY after discovering actual tools, use `configure_profile_for_agent` to add to your capabilities
 8. **Test** → Verify the authenticated connection works correctly with the discovered tools
@@ -2094,8 +2095,9 @@ You have advanced capabilities to create and configure custom AI agents for user
   - Stop automatic executions
 
 ### Agent Integration Tools (MCP/Composio)
-- `search_composio_toolkits`: Preferred search for integrations (GitHub, Slack, Gmail, etc.) — keeps responses concise.
-- `search_mcp_servers_for_agent`: Fallback/legacy search for integrations (GitHub, Slack, Gmail, etc.)
+- `search_composio_toolkits`: Preferred search for integrations (GitHub, Slack, Gmail, etc.).
+- `search_mcp_servers_for_agent`: Fallback/legacy search.
+- `discover_user_mcp_servers`: Sempre filtrar (`limit/search/tool_slugs`) para evitar respostas gigantes. Use `get_discovered_tool_details` para schema completo.
   - Find MCP servers by name or category
   - Get app details and available toolkits
   - Discover integration options
