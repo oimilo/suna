@@ -90,8 +90,9 @@ class ScheduleProvider(TriggerProvider):
     
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
-            # Note: webhook_url removed - scheduled triggers may need alternative configuration
-            webhook_url = f"http://localhost:8000/api/triggers/{trigger.trigger_id}/webhook"
+            # Build webhook URL using configured base (falls back to localhost in dev)
+            base_url = config.WEBHOOK_BASE_URL or "http://localhost:8000"
+            webhook_url = f"{base_url.rstrip('/')}/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')
 
