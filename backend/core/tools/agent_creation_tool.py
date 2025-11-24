@@ -358,22 +358,7 @@ class AgentCreationTool(Tool):
                     "profile_name": {
                         "type": "string",
                         "description": "A friendly name for this credential profile"
-                        },
-                        "auth_mode": {
-                            "type": "string",
-                            "enum": ["managed", "custom"],
-                            "description": "Use 'custom' when the toolkit requires manual API keys/secrets. Defaults to managed OAuth flows.",
-                            "default": "managed"
-                        },
-                        "auth_scheme": {
-                            "type": "string",
-                            "description": "Optional auth scheme to target (e.g., 'OAUTH2', 'API_KEY')."
-                        },
-                        "credentials": {
-                            "type": "object",
-                            "additionalProperties": {"type": "string"},
-                            "description": "Key/value credentials to pass to Composio (e.g., {\"key\": \"trello-api-key\", \"token\": \"...\"})."
-                        }
+                    }
                 },
                 "required": ["toolkit_slug", "profile_name"]
             }
@@ -382,10 +367,7 @@ class AgentCreationTool(Tool):
     async def create_credential_profile_for_agent(
         self,
         toolkit_slug: str,
-        profile_name: str,
-        auth_mode: str = "managed",
-        auth_scheme: Optional[str] = None,
-        credentials: Optional[Dict[str, str]] = None
+        profile_name: str
     ) -> ToolResult:
         try:
             account_id = self.account_id
@@ -397,62 +379,35 @@ class AgentCreationTool(Tool):
             integration_user_id = str(uuid4())
 
             integration_service = get_integration_service(db_connection=self.db)
-            normalized_mode = (auth_mode or "managed").lower()
-            use_custom_auth = normalized_mode == "custom"
-            safe_credentials = credentials or {}
-            custom_auth_config = None
-            if use_custom_auth:
-                custom_auth_config = {}
-                if auth_scheme:
-                    custom_auth_config["auth_scheme"] = auth_scheme
-                custom_auth_config.update(safe_credentials)
             result = await integration_service.integrate_toolkit(
                 toolkit_slug=toolkit_slug,
                 account_id=account_id,
                 user_id=integration_user_id,
                 profile_name=profile_name,
                 display_name=profile_name,
-                save_as_profile=True,
-                initiation_fields=safe_credentials or None,
-                custom_auth_config=custom_auth_config,
-                use_custom_auth=use_custom_auth
+                save_as_profile=True
             )
             
             if not result or not result.profile_id:
                 return self.fail_response("Failed to create credential profile")
             
             auth_url = result.connected_account.redirect_url if result.connected_account else None
-            if not auth_url and not use_custom_auth:
+            
+            if not auth_url:
                 return self.fail_response("Failed to generate authentication URL")
-
+            
             success_message = f"🔐 **AUTHENTICATION REQUIRED FOR {result.toolkit.name.upper()}**\n\n"
             success_message += f"I've created a credential profile for {result.toolkit.name}.\n\n"
-            if use_custom_auth and not auth_url:
-                success_message += (
-                    "Custom credentials were provided and saved. No additional authentication steps are required.\n\n"
-                )
-            else:
-                success_message += f"**⚠️ CRITICAL NEXT STEP - AUTHENTICATION REQUIRED:**\n"
-                success_message += f"1. **Click this link to authenticate:** {auth_url}\n"
-                success_message += f"2. Log in to your {result.toolkit.name} account\n"
-                success_message += f"3. Authorize the connection\n"
-                success_message += f"4. Return here and confirm you've completed authentication\n\n"
-                success_message += (
-                    "**IMPORTANT:** The integration will NOT work without completing this authentication.\n\n"
-                )
+            success_message += f"**⚠️ CRITICAL NEXT STEP - AUTHENTICATION REQUIRED:**\n"
+            success_message += f"1. **Click this link to authenticate:** {auth_url}\n"
+            success_message += f"2. Log in to your {result.toolkit.name} account\n"
+            success_message += f"3. Authorize the connection\n"
+            success_message += f"4. Return here and confirm you've completed authentication\n\n"
+            success_message += f"**IMPORTANT:** The integration will NOT work without completing this authentication.\n\n"
             success_message += f"**Profile Details:**\n"
             success_message += f"- Profile Name: {profile_name}\n"
             success_message += f"- Service: {result.toolkit.name}\n\n"
-            if use_custom_auth and not auth_url:
-                success_message += (
-                    "Credentials already validated. You can now run "
-                    "`discover_mcp_tools_for_agent` with this profile name to list tools."
-                )
-            else:
-                success_message += (
-                    "Once authentication is complete, use `discover_mcp_tools_for_agent` with the profile "
-                    "name to see available tools."
-                )
+            success_message += f"Once authenticated, use `discover_mcp_tools_for_agent` with the profile name to see available tools."
             
             return self.success_response({
                 "message": success_message,
@@ -460,8 +415,7 @@ class AgentCreationTool(Tool):
                 "profile_name": profile_name,
                 "toolkit_name": result.toolkit.name,
                 "toolkit_slug": toolkit_slug,
-                "requires_authentication": not (use_custom_auth and not auth_url),
-                "auth_mode": "custom" if use_custom_auth else "managed"
+                "requires_authentication": True
             })
             
         except Exception as e:

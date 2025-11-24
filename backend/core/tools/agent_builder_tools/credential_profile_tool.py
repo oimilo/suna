@@ -1,11 +1,10 @@
-from typing import Optional, List, Dict
+from typing import Optional, List
 from uuid import uuid4
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
 from core.composio_integration.composio_service import get_integration_service
 from core.composio_integration.composio_profile_service import ComposioProfileService
-from core.composio_integration.toolkit_service import ToolkitService
 from core.mcp_module.mcp_service import mcp_service
 from .mcp_search_tool import MCPSearchTool
 from core.utils.logger import logger
@@ -22,77 +21,6 @@ class CredentialProfileTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
         super().__init__(thread_manager, db_connection, agent_id)
         self.composio_search = MCPSearchTool(thread_manager, db_connection, agent_id)
-        self.toolkit_service = ToolkitService()
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "get_toolkit_auth_requirements",
-            "description": "Inspect a Composio toolkit and list the required/optional auth fields (API keys, tokens, secrets). Use this before requesting credentials from the user for custom auth flows.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "toolkit_slug": {
-                        "type": "string",
-                        "description": "Toolkit slug to inspect (e.g., 'trello', 'zendesk')."
-                    }
-                },
-                "required": ["toolkit_slug"]
-            }
-        }
-    })
-    async def get_toolkit_auth_requirements(self, toolkit_slug: str) -> ToolResult:
-        try:
-            detailed_info = await self.toolkit_service.get_detailed_toolkit_info(toolkit_slug)
-            if not detailed_info:
-                return self.fail_response(f"Unable to fetch auth requirements for '{toolkit_slug}'.")
-
-            modes_summary = []
-            for config in detailed_info.auth_config_details or []:
-                fields = config.fields or {}
-                for scheme_key, requirement_map in fields.items():
-                    required_fields = []
-                    optional_fields = []
-                    for requirement, field_list in requirement_map.items():
-                        target = required_fields if requirement == "required" else optional_fields
-                        for field in field_list:
-                            target.append({
-                                "name": field.name,
-                                "display_name": field.displayName or field.name,
-                                "type": field.type,
-                                "description": field.description,
-                                "required": requirement == "required" or field.required
-                            })
-                    modes_summary.append({
-                        "scheme": scheme_key,
-                        "required_fields": required_fields,
-                        "optional_fields": optional_fields
-                    })
-
-            if not modes_summary:
-                return self.success_response({
-                    "message": f"{detailed_info.name} does not expose structured auth requirements. Default to managed auth if available.",
-                    "toolkit_slug": toolkit_slug,
-                    "auth_modes": []
-                })
-
-            response_text = f"## Auth requirements for {detailed_info.name}\n\n"
-            for mode in modes_summary:
-                response_text += f"- **Scheme:** {mode['scheme']}\n"
-                if mode["required_fields"]:
-                    response_text += "  - Required: " + ", ".join(field["display_name"] for field in mode["required_fields"]) + "\n"
-                if mode["optional_fields"]:
-                    response_text += "  - Optional: " + ", ".join(field["display_name"] for field in mode["optional_fields"]) + "\n"
-            response_text += "\nUse `auth_mode='custom'` plus the listed fields if managed auth fails or is unavailable."
-
-            return self.success_response({
-                "message": response_text,
-                "toolkit_slug": toolkit_slug,
-                "auth_modes": modes_summary
-            })
-        except Exception as e:
-            logger.error("Failed to fetch auth requirements for %s: %s", toolkit_slug, e, exc_info=True)
-            return self.fail_response("Error retrieving toolkit auth requirements")
-
 
     @openapi_schema({
         "type": "function",
@@ -144,36 +72,21 @@ class CredentialProfileTool(AgentBuilderBaseTool):
         "type": "function",
         "function": {
             "name": "create_credential_profile",
-            "description": "Create a new Composio credential profile for a specific toolkit. Supports both managed (OAuth) and custom credential flows. Always gather required API keys/secrets from the user before using custom mode.",
+            "description": "Create a new Composio credential profile for a specific toolkit. This will create the integration and return an authentication link that the user needs to visit to connect their account.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "toolkit_slug": {
                         "type": "string",
-                        "description": "Toolkit slug to integrate (e.g., 'trello', 'github', 'linear')."
+                        "description": "The toolkit slug to create the profile for (e.g., 'github', 'linear', 'slack')"
                     },
                     "profile_name": {
                         "type": "string",
-                        "description": "Friendly name for this credential profile."
+                        "description": "A name for this credential profile (e.g., 'Personal GitHub', 'Work Slack')"
                     },
                     "display_name": {
                         "type": "string",
-                        "description": "Optional label shown to the user (defaults to profile_name)."
-                    },
-                    "auth_mode": {
-                        "type": "string",
-                        "enum": ["managed", "custom"],
-                        "description": "Use 'managed' for Composio-managed OAuth (default) or 'custom' to send manual credentials (API keys, secrets, etc.).",
-                        "default": "managed"
-                    },
-                    "auth_scheme": {
-                        "type": "string",
-                        "description": "Optional auth scheme to target (e.g., 'OAUTH2', 'API_KEY'). Useful when a toolkit exposes multiple schemes."
-                    },
-                    "credentials": {
-                        "type": "object",
-                        "additionalProperties": {"type": "string"},
-                        "description": "Key/value credentials required by the toolkit (e.g., {\"key\": \"trello-api-key\", \"token\": \"...\"}). These are sent to Composio as initiation/custom auth fields."
+                        "description": "Display name for the profile (defaults to profile_name if not provided)"
                     }
                 },
                 "required": ["toolkit_slug", "profile_name"]
@@ -184,24 +97,12 @@ class CredentialProfileTool(AgentBuilderBaseTool):
         self,
         toolkit_slug: str,
         profile_name: str,
-        display_name: Optional[str] = None,
-        auth_mode: str = "managed",
-        auth_scheme: Optional[str] = None,
-        credentials: Optional[Dict[str, str]] = None
+        display_name: Optional[str] = None
     ) -> ToolResult:
         try:
             account_id = await self._get_current_account_id()
             integration_user_id = str(uuid4())
             logger.debug(f"Generated integration user_id: {integration_user_id} for account: {account_id}")
-            normalized_mode = (auth_mode or "managed").lower()
-            use_custom_auth = normalized_mode == "custom"
-            safe_credentials = credentials or {}
-            custom_auth_config = None
-            if use_custom_auth:
-                custom_auth_config = {}
-                if auth_scheme:
-                    custom_auth_config["auth_scheme"] = auth_scheme
-                custom_auth_config.update(safe_credentials)
 
             integration_service = get_integration_service(db_connection=self.db)
             result = await integration_service.integrate_toolkit(
@@ -210,13 +111,9 @@ class CredentialProfileTool(AgentBuilderBaseTool):
                 user_id=integration_user_id,
                 profile_name=profile_name,
                 display_name=display_name or profile_name,
-                save_as_profile=True,
-                initiation_fields=safe_credentials or None,
-                custom_auth_config=custom_auth_config,
-                use_custom_auth=use_custom_auth
+                save_as_profile=True
             )
 
-            redirect_url = result.connected_account.redirect_url if result.connected_account else None
             response_data = {
                 "message": f"Successfully created credential profile '{profile_name}' for {result.toolkit.name}",
                 "profile": {
@@ -225,31 +122,23 @@ class CredentialProfileTool(AgentBuilderBaseTool):
                     "toolkit_slug": toolkit_slug,
                     "toolkit_name": result.toolkit.name,
                     "is_connected": False,
-                    "auth_required": bool(redirect_url),
-                    "auth_mode": "custom" if use_custom_auth else "managed"
+                    "auth_required": bool(result.connected_account.redirect_url)
                 }
             }
             
-            if redirect_url:
-                response_data["connection_link"] = redirect_url
+            if result.connected_account.redirect_url:
+                response_data["connection_link"] = result.connected_account.redirect_url
                 # Include both the toolkit name and slug in a parseable format
                 # Format: [toolkit:slug:name] to help frontend identify the service accurately
                 response_data["instructions"] = f"""🔗 **{result.toolkit.name} Authentication Required**
 
 Please authenticate your {result.toolkit.name} account by clicking the link below:
 
-[toolkit:{toolkit_slug}:{result.toolkit.name}] Authentication: {redirect_url}
+[toolkit:{toolkit_slug}:{result.toolkit.name}] Authentication: {result.connected_account.redirect_url}
 
 After connecting, you'll be able to use {result.toolkit.name} tools in your agent."""
             else:
-                if use_custom_auth:
-                    response_data["instructions"] = (
-                        f"Custom credentials for {result.toolkit.name} were saved. No additional authentication steps are required."
-                    )
-                else:
-                    response_data["instructions"] = (
-                        f"This {result.toolkit.name} profile has been created and is ready to use."
-                    )
+                response_data["instructions"] = f"This {result.toolkit.name} profile has been created and is ready to use."
             
             return self.success_response(response_data)
             
