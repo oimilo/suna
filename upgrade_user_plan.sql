@@ -25,7 +25,15 @@ WITH config AS (
         'tier_6_50'::text                       AS target_tier,
         50::numeric                             AS credits_to_grant,
         'Manual upgrade to tier_6_50 (Pro)'::text AS ledger_description,
-        30::integer                             AS grant_interval_days
+        30::integer                             AS grant_interval_days,
+        true                                    AS set_manual_subscription,
+        'manual_'::text                         AS manual_subscription_prefix
+),
+manual_subscription_ids AS (
+    SELECT
+        account_id,
+        (config.manual_subscription_prefix || replace(account_id::text, '-', ''))::text AS manual_subscription_id
+    FROM config
 ),
 -- Garante que exista uma linha em credit_accounts para o usuário alvo.
 ensure_account AS (
@@ -73,8 +81,24 @@ updated_account AS (
         lifetime_granted  = COALESCE(ca.lifetime_granted, 0) + config.credits_to_grant,
         last_grant_date   = NOW(),
         next_credit_grant = NOW() + (config.grant_interval_days || ' days')::interval,
-        updated_at        = NOW()
+        updated_at        = NOW(),
+        provider          = CASE
+                                WHEN config.set_manual_subscription THEN 'manual'
+                                ELSE COALESCE(ca.provider, 'manual')
+                            END,
+        stripe_subscription_id = CASE
+                                    WHEN config.set_manual_subscription THEN COALESCE(ca.stripe_subscription_id, ms.manual_subscription_id)
+                                    ELSE ca.stripe_subscription_id
+                                  END,
+        stripe_subscription_status = CASE
+                                        WHEN config.set_manual_subscription THEN 'active'
+                                        ELSE ca.stripe_subscription_status
+                                     END,
+        scheduled_tier_change = NULL,
+        scheduled_tier_change_date = NULL,
+        scheduled_price_id = NULL
     FROM config
+    LEFT JOIN manual_subscription_ids ms ON ms.account_id = config.account_id
     WHERE ca.account_id = config.account_id
     RETURNING
         ca.account_id,
@@ -105,6 +129,7 @@ ledger_entry AS (
         TRUE,
         NOW()
     FROM updated_account ua
+    WHERE ua.credits_to_grant <> 0
     RETURNING account_id
 )
 -- Resultado final para conferência rápida.
