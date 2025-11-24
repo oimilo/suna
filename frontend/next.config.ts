@@ -2,6 +2,18 @@ import type { NextConfig } from 'next';
 
 const nextConfig = (): NextConfig => ({
   output: (process.env.NEXT_OUTPUT as 'standalone') || undefined,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets-global.website-files.com',
+      },
+    ],
+  },
   
   async rewrites() {
     return [
