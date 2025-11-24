@@ -149,8 +149,25 @@ class SubscriptionService:
             else:
                 price_id = config.STRIPE_FREE_TIER_ID
             
+            provider = (credit_account.get('provider') or 'stripe').lower()
             stripe_subscription_id = credit_account.get('stripe_subscription_id')
-            if stripe_subscription_id:
+            if provider != 'stripe':
+                manual_subscription_id = stripe_subscription_id or f"manual_{account_id.replace('-', '')}"
+                subscription_data = {
+                    'id': manual_subscription_id,
+                    'status': credit_account.get('stripe_subscription_status') or 'active',
+                    'is_trial': False,
+                    'current_period_end': None,
+                    'cancel_at_period_end': False,
+                    'trial_end': None,
+                    'price_id': price_id,
+                    'created': None,
+                    'metadata': {
+                        'provider': provider,
+                        'manual_subscription': True
+                    }
+                }
+            elif stripe_subscription_id:
                 try:
                     stripe_subscription = await StripeAPIWrapper.retrieve_subscription(
                         stripe_subscription_id
