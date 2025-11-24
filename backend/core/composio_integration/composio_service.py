@@ -2,6 +2,7 @@ import os
 from typing import Optional, List, Dict, Any
 from composio_client import Composio
 from core.utils.logger import logger
+from core.utils.config import config
 from pydantic import BaseModel
 from core.services.supabase import DBConnection
 
@@ -11,6 +12,7 @@ from .auth_config_service import AuthConfigService, AuthConfig
 from .connected_account_service import ConnectedAccountService, ConnectedAccount
 from .mcp_server_service import MCPServerService, MCPServer, MCPUrlResponse
 from .composio_profile_service import ComposioProfileService
+from .managed_toolkit_credentials_service import ManagedToolkitCredentialService
 
 
 class ComposioIntegrationResult(BaseModel):
@@ -31,6 +33,12 @@ class ComposioIntegrationService:
         self.connected_account_service = ConnectedAccountService(api_key)
         self.mcp_server_service = MCPServerService(api_key)
         self.profile_service = ComposioProfileService(db_connection) if db_connection else None
+        self.managed_toolkit_auth_enabled = bool(getattr(config, "MANAGED_TOOLKIT_AUTH_ENABLED", False))
+        self.managed_credentials_service = (
+            ManagedToolkitCredentialService(db_connection)
+            if self.managed_toolkit_auth_enabled
+            else None
+        )
     
     async def integrate_toolkit(
         self, 
@@ -80,11 +88,51 @@ class ComposioIntegrationService:
             #     )
             #     logger.debug(f"Step 2 complete: Created auth config {auth_config.id}")
 
+            managed_credentials = None
+            merged_initiation_fields = dict(initiation_fields or {})
+            merged_custom_auth = dict(custom_auth_config or {})
+            use_custom_auth_mode = use_custom_auth
+
+            if self.managed_toolkit_auth_enabled and self.managed_credentials_service:
+                try:
+                    managed_credentials = await self.managed_credentials_service.get_credentials(
+                        toolkit_slug, account_id=account_id
+                    )
+                except Exception as credential_err:
+                    logger.warning(
+                        "Failed to load managed toolkit credentials for %s: %s",
+                        toolkit_slug,
+                        credential_err,
+                        exc_info=True,
+                    )
+
+            if managed_credentials:
+                secret_payload = managed_credentials.payload or {}
+                auth_scheme_override = managed_credentials.auth_scheme or secret_payload.get("auth_scheme")
+
+                if auth_scheme_override:
+                    merged_custom_auth.setdefault("auth_scheme", auth_scheme_override)
+                    merged_initiation_fields.setdefault("auth_scheme", auth_scheme_override)
+
+                for key, value in secret_payload.items():
+                    if value in (None, ""):
+                        continue
+                    merged_custom_auth.setdefault(key, value)
+                    merged_initiation_fields.setdefault(key, value)
+
+                use_custom_auth_mode = True
+                logger.info(
+                    "Using managed toolkit credentials for %s (scheme=%s, account_id=%s)",
+                    toolkit_slug,
+                    auth_scheme_override,
+                    account_id,
+                )
+
             auth_config = await self.auth_config_service.create_auth_config(
-                toolkit_slug, 
-                initiation_fields=initiation_fields,
-                custom_auth_config=custom_auth_config,
-                use_custom_auth=use_custom_auth
+                toolkit_slug,
+                initiation_fields=merged_initiation_fields or None,
+                custom_auth_config=merged_custom_auth or None,
+                use_custom_auth=use_custom_auth_mode,
             )
             logger.debug(f"Step 2 complete: Created {'custom' if use_custom_auth else 'managed'} auth config {auth_config.id}")
             

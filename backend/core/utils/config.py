@@ -392,6 +392,7 @@ class Configuration:
     
     # MCP (Master Credential Provider) configuration
     MCP_CREDENTIAL_ENCRYPTION_KEY: Optional[str] = None
+    MANAGED_TOOLKIT_AUTH_ENABLED: bool = False
     
     # Composio integration
     COMPOSIO_API_KEY: Optional[str] = None
