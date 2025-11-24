@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { Key, Plus, Trash2, Copy, Shield, ExternalLink, Sparkles } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -240,15 +241,13 @@ export default function APIKeysPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <a
-                    href="https://github.com/milo-ai/prophet/tree/main/sdk"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href="/docs/api"
                     className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   >
-                    <span>View SDK Documentation</span>
+                    <span>Abrir documentação da API & SDK</span>
                     <ExternalLink className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
