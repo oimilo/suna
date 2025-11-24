@@ -9,6 +9,7 @@ from .validation import FileNameValidator, ValidationError, validate_folder_name
 
 # Constants
 MAX_TOTAL_FILE_SIZE = 50 * 1024 * 1024  # 50MB total limit per user
+DEFAULT_FOLDER_NAME = "General"
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 
@@ -93,6 +94,24 @@ class AgentAssignmentRequest(BaseModel):
 db = DBConnection()
 file_processor = FileProcessor()
 
+
+async def ensure_default_folder(account_id: str):
+    """Create a default folder for the account if none exists."""
+    try:
+        client = await db.client
+        existing = await client.table('knowledge_base_folders').select('folder_id').eq('account_id', account_id).limit(1).execute()
+        if existing.data:
+            return
+
+        insert_data = {
+            'account_id': account_id,
+            'name': DEFAULT_FOLDER_NAME,
+            'description': 'Pasta padrão criada automaticamente'
+        }
+        await client.table('knowledge_base_folders').insert(insert_data).execute()
+    except Exception as e:
+        logger.warning(f"Failed to ensure default knowledge base folder for {account_id}: {e}")
+
 # Folder management
 @router.get("/folders", response_model=List[FolderResponse])
 async def get_folders(user_id: str = Depends(verify_and_get_user_id_from_jwt)):
@@ -100,6 +119,8 @@ async def get_folders(user_id: str = Depends(verify_and_get_user_id_from_jwt)):
     try:
         client = await db.client
         account_id = user_id
+
+        await ensure_default_folder(account_id)
         
         result = await client.table('knowledge_base_folders').select(
             'folder_id, name, description, created_at'

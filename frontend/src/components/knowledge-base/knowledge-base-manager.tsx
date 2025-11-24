@@ -160,10 +160,11 @@ export function KnowledgeBaseManager({
     // Build tree structure and auto-expand all folders for assignment mode
     React.useEffect(() => {
         const buildTree = () => {
-            const tree: TreeItem[] = folders.map(folder => {
+            const tree: TreeItem[] = folders.map((folder, index) => {
                 const existingFolder = treeData.find(item => item.id === folder.folder_id);
+                const isFirstFolder = index === 0;
                 // Auto-expand all folders in assignment mode, preserve state otherwise
-                const isExpanded = enableAssignments ? true : (existingFolder?.expanded || false);
+                const isExpanded = enableAssignments ? true : (existingFolder?.expanded ?? isFirstFolder);
 
                 return {
                     id: folder.folder_id,
@@ -185,6 +186,26 @@ export function KnowledgeBaseManager({
 
         buildTree();
     }, [folders, folderEntries, enableAssignments]);
+
+    React.useEffect(() => {
+        if (treeData.length === 0) {
+            if (selectedItem) {
+                setSelectedItem(null);
+            }
+            return;
+        }
+
+        const selectionStillValid = selectedItem && treeData.some(item => item.id === selectedItem.id);
+        if (selectionStillValid) {
+            return;
+        }
+
+        const defaultFolder = treeData[0];
+        setSelectedItem(defaultFolder);
+        if (defaultFolder.type === 'folder' && !folderEntries[defaultFolder.id]) {
+            void fetchFolderEntries(defaultFolder.id);
+        }
+    }, [treeData, selectedItem, folderEntries]);
 
     // Load assignments and auto-fetch all folder entries for assignment mode
     React.useEffect(() => {
