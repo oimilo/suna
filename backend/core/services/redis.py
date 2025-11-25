@@ -5,7 +5,6 @@ import asyncio
 from core.utils.logger import logger
 from typing import List, Any
 from core.utils.retry import retry
-from core.utils.config import config as global_config
 
 # Redis client and connection pool
 client: redis.Redis | None = None
@@ -25,10 +24,10 @@ def get_redis_config():
     """
     load_dotenv()
     
-    redis_host = global_config.REDIS_HOST or os.getenv("REDIS_HOST", "redis")
-    redis_port = int(global_config.REDIS_PORT or os.getenv("REDIS_PORT", 6379))
-    redis_password = global_config.REDIS_PASSWORD or os.getenv("REDIS_PASSWORD", "")
-    redis_username = global_config.REDIS_USERNAME or os.getenv("REDIS_USERNAME", None)
+    redis_host = os.getenv("REDIS_HOST", "redis")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    redis_password = os.getenv("REDIS_PASSWORD", "")
+    redis_username = os.getenv("REDIS_USERNAME", None)
     
     # Build Redis URL for clients that support it (like Dramatiq)
     if redis_username and redis_password:

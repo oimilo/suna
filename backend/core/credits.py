@@ -25,8 +25,14 @@ class CreditService:
         
         if use_cache and self.cache:
             cached = await self.cache.get(cache_key)
-            if cached:
-                return Decimal(cached)
+            if cached is not None:
+                # Ensure we handle any type returned from cache (json.loads can return dict/list/etc)
+                if isinstance(cached, (str, int, float)):
+                    return Decimal(str(cached))
+                else:
+                    # Invalid cache entry, ignore and fetch from DB
+                    logger.warning(f"Invalid cache entry for {cache_key}: expected str/int/float, got {type(cached)}")
+                    await self.cache.invalidate(cache_key)
         
         try:
             client = await self._get_client()
@@ -176,7 +182,7 @@ class CreditService:
     
     async def grant_tier_credits(self, user_id: str, price_id: str, tier_name: str) -> bool:
         try:
-            from billing.config import get_tier_by_price_id
+            from core.billing.shared.config import get_tier_by_price_id
             tier = get_tier_by_price_id(price_id)
             
             if not tier:

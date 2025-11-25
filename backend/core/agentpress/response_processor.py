@@ -39,7 +39,6 @@ from core.utils.json_helpers import (
     to_json_string, format_for_yield
 )
 from core.agentpress.xml_tool_parser import strip_xml_tool_calls
-from litellm import token_counter
 
 # Note: Debug stream saving is controlled by global_config.DEBUG_SAVE_LLM_IO
 
@@ -170,60 +169,6 @@ class ResponseProcessor:
             logger.warning(f"Failed to serialize ModelResponse: {str(e)}, falling back to string representation")
             # Ultimate fallback: convert to string
             return {"raw_response": str(model_response), "serialization_error": str(e)}
-
-    async def _estimate_token_usage(
-        self,
-        prompt_messages: List[Dict[str, Any]],
-        accumulated_content: str,
-        llm_model: str,
-    ) -> Dict[str, Any]:
-        """
-        Estimate token usage when exact usage data is unavailable.
-        Reapplies the prior Prophet fallback chain (ContextManager -> LiteLLM -> word count).
-        """
-        try:
-            from core.agentpress.context_manager import ContextManager
-
-            context_mgr = ContextManager()
-            return await context_mgr.estimate_token_usage(prompt_messages, accumulated_content, llm_model)
-        except Exception as context_error:
-            logger.error(f"Context manager estimation failed: {context_error}, falling back to LiteLLM")
-
-            try:
-                prompt_tokens = token_counter(model=llm_model, messages=prompt_messages)
-                completion_tokens = (
-                    token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
-                )
-
-                logger.warning(
-                    f"⚠️ ESTIMATED TOKEN USAGE (LiteLLM): prompt={prompt_tokens}, completion={completion_tokens}"
-                )
-
-                return {
-                    "prompt_tokens": prompt_tokens,
-                    "completion_tokens": completion_tokens,
-                    "total_tokens": prompt_tokens + completion_tokens,
-                    "estimated": True,
-                }
-            except Exception as lite_llm_error:
-                logger.error(f"LiteLLM estimation failed: {lite_llm_error}, using word count fallback")
-
-                fallback_prompt = len(
-                    " ".join(str(m.get("content", "")) for m in prompt_messages).split()
-                ) * 1.3
-                fallback_completion = len(accumulated_content.split()) * 1.3 if accumulated_content else 0
-
-                logger.warning(
-                    f"⚠️ FALLBACK TOKEN ESTIMATION: prompt≈{int(fallback_prompt)}, completion≈{int(fallback_completion)}"
-                )
-
-                return {
-                    "prompt_tokens": int(fallback_prompt),
-                    "completion_tokens": int(fallback_completion),
-                    "total_tokens": int(fallback_prompt + fallback_completion),
-                    "estimated": True,
-                    "fallback": True,
-                }
 
     async def _add_message_with_agent_info(
         self,
@@ -1207,9 +1152,9 @@ class ResponseProcessor:
                         llm_end_content = self._serialize_model_response(final_llm_response)
                     else:
                         logger.warning("💰 No LLM response with usage - ESTIMATING token usage for billing")
-                        estimated_usage = await self._estimate_token_usage(
-                            prompt_messages, accumulated_content, llm_model
-                        )
+                        from core.agentpress.context_manager import ContextManager
+                        context_mgr = ContextManager()
+                        estimated_usage = await context_mgr.estimate_token_usage(prompt_messages, accumulated_content, llm_model)
                         llm_end_content = {
                             "model": llm_model,
                             "usage": estimated_usage

@@ -44,13 +44,11 @@ class SubscriptionRetrievalHandler:
                 'display_name': tier_obj.display_name
             }
             
-            default_price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
-            price_id = default_price_id
-            subscription_data = None
-            provider = (credit_account.get('provider') or 'stripe').lower()
             stripe_subscription_id = credit_account.get('stripe_subscription_id')
+            provider = (credit_account.get('provider') or 'stripe').lower()
             
             if provider != 'stripe':
+                price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
                 manual_subscription_id = stripe_subscription_id or f"manual_{account_id.replace('-', '')}"
                 subscription_data = {
                     'id': manual_subscription_id,
@@ -66,30 +64,38 @@ class SubscriptionRetrievalHandler:
                         'manual_subscription': True,
                     },
                 }
-            else:
-                # Get actual price_id from Stripe subscription, not from tier config
-                if stripe_subscription_id:
-                    try:
-                        stripe_subscription = await StripeAPIWrapper.retrieve_subscription(stripe_subscription_id)
-                        if (
-                            stripe_subscription.get('items')
-                            and len(stripe_subscription['items']['data']) > 0
-                            and stripe_subscription['items']['data'][0].get('price')
-                        ):
-                            price_id = stripe_subscription['items']['data'][0]['price']['id']
-                            logger.debug(f"[RETRIEVAL] Using actual subscription price_id: {price_id}")
-                        else:
-                            price_id = default_price_id
-                            logger.debug(f"[RETRIEVAL] Fallback to tier config price_id: {price_id}")
-                    except Exception as e:
-                        logger.warning(f"[RETRIEVAL] Error getting subscription price_id: {e}")
-                        price_id = default_price_id
-                else:
-                    price_id = default_price_id
                 
-                subscription_data = await SubscriptionRetrievalHandler._get_stripe_subscription_data(
-                    stripe_subscription_id, price_id, trial_status, trial_ends_at, tier_name
-                )
+                return {
+                    'tier': tier_info,
+                    'price_id': price_id,
+                    'subscription': subscription_data,
+                    'credit_account': credit_account,
+                    'trial_status': trial_status,
+                    'trial_ends_at': trial_ends_at
+                }
+            
+            # Get actual price_id from Stripe subscription, not from tier config
+            if stripe_subscription_id:
+                try:
+                    stripe_subscription = await StripeAPIWrapper.retrieve_subscription(stripe_subscription_id)
+                    if (stripe_subscription.get('items') and 
+                          len(stripe_subscription['items']['data']) > 0 and
+                          stripe_subscription['items']['data'][0].get('price')):
+                        price_id = stripe_subscription['items']['data'][0]['price']['id']
+                        logger.debug(f"[RETRIEVAL] Using actual subscription price_id: {price_id}")
+                    else:
+                        # Fallback to tier config
+                        price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
+                        logger.debug(f"[RETRIEVAL] Fallback to tier config price_id: {price_id}")
+                except Exception as e:
+                    logger.warning(f"[RETRIEVAL] Error getting subscription price_id: {e}")
+                    price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
+            else:
+                price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
+            
+            subscription_data = await SubscriptionRetrievalHandler._get_stripe_subscription_data(
+                stripe_subscription_id, price_id, trial_status, trial_ends_at, tier_name
+            )
             
             return {
                 'tier': tier_info,

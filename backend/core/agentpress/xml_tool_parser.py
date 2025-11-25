@@ -95,7 +95,10 @@ def _parse_invoke_block(function_name: str, invoke_content: str, full_block: str
 
 
 def _extract_function_call_blocks(content: str) -> List[str]:
-    """Extract <function_calls> blocks, tolerating missing closing tags."""
+    """
+    Extract <function_calls> blocks, tolerating missing closing tags.
+    This preserves Prophet's fallback behavior for truncated XML streams.
+    """
     matches = _FUNCTION_CALLS_PATTERN.findall(content)
     if matches:
         return matches
