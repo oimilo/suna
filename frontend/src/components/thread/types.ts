@@ -69,6 +69,18 @@ export interface ParsedMetadata {
   [key: string]: any; // Allow other properties
 }
 
+// Streaming tool call structure used during live tool invocation rendering
+export interface StreamingToolCall {
+  tool_call_id?: string;
+  function_name?: string;
+  arguments?: Record<string, any> | string;
+  source?: 'native' | 'xml';
+  name?: string;
+  tool_name?: string;
+  xml_tag_name?: string;
+  result?: any;
+}
+
 // Extend the base Message type with the expected database fields
 export interface ApiMessageType extends Omit<BaseApiMessageType, 'type'> {
   message_id?: string;

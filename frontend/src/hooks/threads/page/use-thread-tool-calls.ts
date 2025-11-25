@@ -208,16 +208,20 @@ export function useToolCalls(
 
         const toolIndex = historicalToolPairs.length;
         historicalToolPairs.push({
-          assistantCall: {
+          toolCall: {
+            tool_call_id: assistantMsg.message_id || `tool-${toolIndex}`,
+            function_name: toolName,
+            arguments: {},
+            source: 'xml' as const,
             name: toolName,
-            content: assistantMsg.content,
-            timestamp: assistantMsg.created_at,
           },
           toolResult: {
-            content: resultMessage.content,
-            isSuccess: isSuccess,
-            timestamp: resultMessage.created_at,
+            success: isSuccess,
+            output: resultMessage.content,
           },
+          assistantTimestamp: assistantMsg.created_at,
+          toolTimestamp: resultMessage.created_at,
+          isSuccess,
         });
 
         // Map the assistant message ID to its tool index
@@ -354,32 +358,36 @@ export function useToolCalls(
       }
 
       const newToolCall: ToolCallInput = {
-        assistantCall: {
-          name: toolName, 
-          content: formattedContent,
-          timestamp: new Date().toISOString(),
+        toolCall: {
+          tool_call_id: `streaming-${Date.now()}`,
+          function_name: toolName,
+          arguments: {},
+          source: 'xml' as const,
+          name: toolName,
         },
         toolResult: {
-          content: 'STREAMING',
-          isSuccess: true,
-          timestamp: new Date().toISOString(),
+          success: true,
+          output: 'STREAMING',
         },
+        assistantTimestamp: new Date().toISOString(),
+        toolTimestamp: new Date().toISOString(),
+        isSuccess: true,
       };
 
       setToolCalls((prev) => {
         // Check if we're updating an existing streaming tool or adding a new one
         const existingStreamingIndex = prev.findIndex(
-          tc => tc.toolResult?.content === 'STREAMING'
+          tc => tc.toolResult?.output === 'STREAMING'
         );
         
-        if (existingStreamingIndex !== -1 && prev[existingStreamingIndex].assistantCall.name === toolName) {
+        if (existingStreamingIndex !== -1 && prev[existingStreamingIndex].toolCall.function_name === toolName) {
           // Update existing streaming tool
           const updated = [...prev];
           updated[existingStreamingIndex] = {
             ...updated[existingStreamingIndex],
-            assistantCall: {
-              ...updated[existingStreamingIndex].assistantCall,
-              content: formattedContent,
+            toolCall: {
+              ...updated[existingStreamingIndex].toolCall,
+              arguments: {},
             },
           };
           return updated;

@@ -8,6 +8,9 @@ export interface ToolCallData {
   function_name: string;
   arguments: Record<string, any>;
   source: 'native' | 'xml';
+  name?: string;
+  xml_tag_name?: string;
+  tool_name?: string;
 }
 
 /**
@@ -17,12 +20,18 @@ export interface ToolResultData {
   success: boolean;
   output: any;
   error?: string | null;
+  content?: any;
+  timestamp?: string;
+  isSuccess?: boolean;
 }
 
 export interface ToolViewProps {
   // Structured data from metadata - NO CONTENT PARSING
   toolCall: ToolCallData;
   toolResult?: ToolResultData;
+  name?: string;
+  assistantContent?: any;
+  toolContent?: any;
   
   // Metadata
   assistantTimestamp?: string;
