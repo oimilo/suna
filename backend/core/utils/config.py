@@ -81,6 +81,15 @@ class Configuration:
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
     
+    # ===== AGENT TOOL CALLING CONFIGURATION =====
+    # Configure which tool calling format to use (XML vs OpenAI Native)
+    AGENT_XML_TOOL_CALLING: bool = False       # Enable legacy XML <function_calls>
+    AGENT_NATIVE_TOOL_CALLING: bool = True     # Enable native/OpenAI-style function calling
+    AGENT_EXECUTE_ON_STREAM: bool = True       # Execute tools as soon as they stream in
+    AGENT_TOOL_EXECUTION_STRATEGY: str = "parallel"  # "parallel" or "sequential"
+    DEBUG_SAVE_LLM_IO: bool = False            # Persist raw LLM I/O chunks for debugging
+    # ============================================
+    
     GUEST_MODE_ADMIN_USER_ID: Optional[str] = None
 
 
