@@ -237,7 +237,7 @@
     "chatDescription": "Conversación simple de ida y vuelta",
     "sampleAnswers": "Respuestas de ejemplo",
     "samplePrompts": "Prompts de ejemplo",
-    "waitingForUserResponse": "Milo continuará trabajando de forma autónoma después de tu respuesta.",
+    "waitingForUserResponse": "Kortix continuará trabajando de forma autónoma después de tu respuesta.",
     "taskCompleted": "Tarea completada",
     "uploadingFiles": "Subiendo {count} archivo{plural}...",
     "uploadingFilesOne": "Subiendo {count} archivo...",
@@ -261,7 +261,7 @@
     "rateThisResult": "Califica este resultado",
     "feedbackHelpsImprove": "Tu comentario nos ayuda a mejorar",
     "additionalFeedbackOptional": "Comentario adicional (opcional)",
-    "helpKortixImprove": "Ayuda a Milo a mejorar con tu comentario",
+    "helpKortixImprove": "Ayuda a Kortix a mejorar con tu comentario",
     "submit": "Enviar",
     "submitting": "Enviando...",
     "feedbackSubmittedSuccess": "Comentario enviado con éxito",
@@ -295,6 +295,7 @@
     "credits": "Créditos",
     "popular": "Popular",
     "creditsExplained": "Créditos explicados",
+    "creditsExhaustedRefreshIn": "Has agotado tus créditos. Se renovarán en {time}",
     "trialActive": "Prueba Activa",
     "trialBadge": "Prueba de 7 Días",
     "currentPlan": "Plan Actual",
@@ -312,10 +313,10 @@
     "localModeMessage": "Ejecutando en modo de desarrollo local - funciones de facturación deshabilitadas",
     "creditsExplainedPage": {
       "title": "Créditos Explicados",
-      "subtitle": "Todo lo que necesitas saber sobre cómo funcionan los créditos en Milo",
+      "subtitle": "Todo lo que necesitas saber sobre cómo funcionan los créditos en Kortix",
       "understandingCredits": {
         "title": "Entendiendo los Créditos",
-        "description": "Los créditos sirven como moneda universal de Milo para las operaciones de la plataforma. Cada acción que tus agentes de IA realizan—desde analizar datos hasta generar código—consume créditos según la complejidad de la tarea y los recursos necesarios."
+        "description": "Los créditos sirven como moneda universal de Kortix para las operaciones de la plataforma. Cada acción que tus agentes de IA realizan—desde analizar datos hasta generar código—consume créditos según la complejidad de la tarea y los recursos necesarios."
       },
       "howCreditsWork": {
         "title": "Cómo Funcionan los Créditos",
@@ -333,7 +334,7 @@
       },
       "gettingMoreCredits": {
         "title": "Obtener Más Créditos",
-        "description": "Hay varias formas de obtener créditos en Milo:",
+        "description": "Hay varias formas de obtener créditos en Kortix:",
         "monthlySubscription": {
           "title": "Créditos de Suscripción Mensual",
           "description": "Incluidos en tu plan de pago y renovados automáticamente cada mes. Estos son créditos con expiración."
@@ -353,7 +354,7 @@
       },
       "typesOfCredits": {
         "title": "Tipos de Créditos",
-        "description": "Milo usa dos tipos de créditos para darte flexibilidad en cómo gestionas tu uso:",
+        "description": "Kortix usa dos tipos de créditos para darte flexibilidad en cómo gestionas tu uso:",
         "expiringCredits": {
           "title": "Créditos con Expiración",
           "description": "Créditos de suscripción mensual",
@@ -366,7 +367,7 @@
         },
         "creditPriority": {
           "title": "Prioridad de Créditos:",
-          "description": "Cuando usas Milo, los créditos con expiración se consumen primero. Solo después de que tus créditos con expiración se agoten se usarán los créditos sin expiración."
+          "description": "Cuando usas Kortix, los créditos con expiración se consumen primero. Solo después de que tus créditos con expiración se agoten se usarán los créditos sin expiración."
         }
       }
     },
@@ -578,7 +579,7 @@
     "fr": "Français",
     "es": "Español"
   },
-  "prophet": {
+  "suna": {
     "samplePrompts": "Prompts de ejemplo",
     "chooseStyle": "Elige un estilo",
     "chooseTemplate": "Elige una plantilla",

@@ -2,40 +2,20 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-DEFAULT_BEDROCK_PROFILE_HAIKU = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-DEFAULT_BEDROCK_PROFILE_SONNET_45 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
-DEFAULT_BEDROCK_PROFILE_SONNET_4 = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"
-
-def _get_config_value(value: Optional[str], default: str) -> str:
-    return value or default
-
 # SHOULD_USE_ANTHROPIC = False
 # CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
 SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
-
-BEDROCK_PROFILE_HAIKU = _get_config_value(
-    getattr(config, "BEDROCK_PROFILE_HAIKU", None),
-    DEFAULT_BEDROCK_PROFILE_HAIKU,
-)
-BEDROCK_PROFILE_SONNET_45 = _get_config_value(
-    getattr(config, "BEDROCK_PROFILE_SONNET_45", None),
-    DEFAULT_BEDROCK_PROFILE_SONNET_45,
-)
-BEDROCK_PROFILE_SONNET_4 = _get_config_value(
-    getattr(config, "BEDROCK_PROFILE_SONNET_4", None),
-    DEFAULT_BEDROCK_PROFILE_SONNET_4,
-)
 
 if SHOULD_USE_ANTHROPIC:
     FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
     PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5"
 else:  
-    FREE_MODEL_ID = BEDROCK_PROFILE_HAIKU
-    PREMIUM_MODEL_ID = BEDROCK_PROFILE_HAIKU
+    FREE_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+    PREMIUM_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
 
 is_local = config.ENV_MODE == EnvMode.LOCAL
 is_prod = config.ENV_MODE == EnvMode.PRODUCTION
-pricing_multiplier = 0.20 if is_prod else 1.0
+# pricing_multiplier = 0.20 if is_prod else 1.0
 
 class ModelRegistry:
     def __init__(self):
@@ -45,7 +25,7 @@ class ModelRegistry:
     
     def _initialize_models(self):
         self.register(Model(
-            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else BEDROCK_PROFILE_HAIKU,
+            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
             name="Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4-5", "Claude Haiku 4.5", "anthropic/claude-haiku-4-5-20251001", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
@@ -56,18 +36,25 @@ class ModelRegistry:
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00 * pricing_multiplier,
-                output_cost_per_million_tokens=5.00 * pricing_multiplier
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00,
+                cached_read_cost_per_million_tokens=0.10,  # Cache hits & refreshes
+                cache_write_5m_cost_per_million_tokens=1.25,  # 5-minute cache writes
+                cache_write_1h_cost_per_million_tokens=2.00  # 1-hour cache writes
             ),
             tier_availability=["paid"],
             priority=102,
             recommended=True,
             enabled=True,
-            config=ModelConfig()
+            config=ModelConfig(
+                extra_headers={
+                    "anthropic-beta": "fine-grained-tool-streaming-2025-05-14" 
+                },
+            )
         ))
         
         self.register(Model(
-            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else BEDROCK_PROFILE_SONNET_45,
+            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
             name="Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "anthropic/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
@@ -79,8 +66,11 @@ class ModelRegistry:
                 ModelCapability.THINKING,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00 * pricing_multiplier,
-                output_cost_per_million_tokens=15.00 * pricing_multiplier
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00,
+                cached_read_cost_per_million_tokens=0.30,  # Cache hits & refreshes
+                cache_write_5m_cost_per_million_tokens=3.75,  # 5-minute cache writes
+                cache_write_1h_cost_per_million_tokens=6.00  # 1-hour cache writes
             ),
             tier_availability=["paid"],
             priority=101,
@@ -88,13 +78,13 @@ class ModelRegistry:
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
+                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14" 
                 },
             )
         ))
         
         self.register(Model(
-            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else BEDROCK_PROFILE_SONNET_4,
+            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
             name="Sonnet 4",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"],
@@ -106,8 +96,11 @@ class ModelRegistry:
                 ModelCapability.THINKING,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00 * pricing_multiplier,
-                output_cost_per_million_tokens=15.00 * pricing_multiplier
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00,
+                cached_read_cost_per_million_tokens=0.30,  # Cache hits & refreshes
+                cache_write_5m_cost_per_million_tokens=3.75,  # 5-minute cache writes
+                cache_write_1h_cost_per_million_tokens=6.00  # 1-hour cache writes
             ),
             tier_availability=["paid"],
             priority=100,
@@ -115,7 +108,7 @@ class ModelRegistry:
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
+                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14" 
                 },
             )
         ))

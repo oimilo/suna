@@ -127,9 +127,9 @@ export function useVncPreloader(
     const vncUrl = buildVncUrl();
     if (!vncUrl) return;
 
-    setRetryCount(0);
-    setStatus('idle');
-    startPreloading(vncUrl);
+      setRetryCount(0);
+      setStatus('idle');
+      startPreloading(vncUrl);
   }, [buildVncUrl, startPreloading]);
 
   useEffect(() => {

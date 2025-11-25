@@ -4,7 +4,7 @@
  * Handles opening checkout URLs (provided by our backend) in an in-app browser.
  * Our backend handles the actual Stripe integration and returns masked/proxied URLs.
  * 
- * Note: The backend should return kortix.com URLs that wrap/proxy Stripe,
+ * Note: The backend should return prophet.build URLs that wrap/proxy Stripe,
  * not direct stripe.com URLs for compliance.
  */
 
@@ -55,7 +55,7 @@ async function fetchApi<T>(
 // Backend API Functions
 // 
 // These call our backend, which handles Stripe integration and returns
-// checkout URLs (should be kortix.com masked URLs, not direct stripe.com)
+// checkout URLs (should be prophet.build masked URLs, not direct stripe.com)
 // ============================================================================
 
 const checkoutApi = {
@@ -111,7 +111,7 @@ function buildCancelUrl(): string {
  * Open checkout URL in in-app browser
  * 
  * The checkout URL is provided by our backend, which should return
- * a kortix.com masked URL (not direct stripe.com for compliance)
+ * a prophet.build masked URL (not direct stripe.com for compliance)
  */
 async function openCheckoutInBrowser(
   checkoutUrl: string,

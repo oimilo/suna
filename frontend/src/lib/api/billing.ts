@@ -41,13 +41,24 @@ export interface CreditBalance {
   balance: number;
   expiring_credits: number;
   non_expiring_credits: number;
+  daily_credits?: number;
   tier: string;
   next_credit_grant?: string;
   can_purchase_credits: boolean;
   breakdown?: {
     expiring: number;
     non_expiring: number;
+    daily?: number;
     total: number;
+  };
+  daily_credits_info?: {
+    enabled: boolean;
+    daily_amount: number;
+    refresh_interval_hours: number;
+    current_balance: number;
+    last_refresh?: string;
+    next_refresh_at?: string;
+    seconds_until_refresh?: number;
   };
   lifetime_granted?: number;
   lifetime_purchased?: number;
@@ -203,6 +214,9 @@ export interface CreateCheckoutSessionResponse {
   url?: string;
   checkout_url?: string;
   effective_date?: string;
+  scheduled_date?: string;
+  current_tier?: string;
+  target_tier?: string;
   message?: string;
   redirect_to_dashboard?: boolean;
   details?: {
@@ -421,15 +435,9 @@ export const billingApi = {
   },
 
   async createCheckoutSession(request: CreateCheckoutSessionRequest) {
-    // Add tolt_referral if available
-    const requestBody: any = { ...request };
-    if (typeof window !== 'undefined' && (window as any).tolt_referral) {
-      requestBody.tolt_referral = (window as any).tolt_referral;
-    }
-    
     const response = await backendApi.post<CreateCheckoutSessionResponse>(
       '/billing/create-checkout-session',
-      requestBody
+      request
     );
     if (response.error) throw response.error;
     

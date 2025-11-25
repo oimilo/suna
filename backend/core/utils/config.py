@@ -81,6 +81,15 @@ class Configuration:
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
     
+    # ===== AGENT TOOL CALLING CONFIGURATION =====
+    # Configure which tool calling format to use (XML or OpenAI Native).
+    # Only one mode should be enabled at a time.
+    AGENT_XML_TOOL_CALLING: bool = False       # Enable legacy XML <function_calls>
+    AGENT_NATIVE_TOOL_CALLING: bool = True     # Enable native/OpenAI-style function calling
+    AGENT_EXECUTE_ON_STREAM: bool = True       # Execute tools as soon as they stream in
+    AGENT_TOOL_EXECUTION_STRATEGY: str = "parallel"  # "parallel" or "sequential"
+    # ============================================
+    
     GUEST_MODE_ADMIN_USER_ID: Optional[str] = None
 
 
@@ -328,10 +337,11 @@ class Configuration:
     # Redis configuration
     REDIS_HOST: Optional[str] = "localhost"
     REDIS_PORT: Optional[int] = 6379
-    REDIS_USERNAME: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
+    REDIS_USERNAME: Optional[str] = None  # Required for Redis Cloud
     REDIS_SSL: Optional[bool] = True
-    REDIS_MAX_CONNECTIONS: Optional[int] = 128
+    REDIS_MAX_CONNECTIONS: Optional[int] = 10  # Max connections per process
+    REDIS_DRAMATIQ_MAX_CONNECTIONS: Optional[int] = 5  # Broker connections per process
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
@@ -377,6 +387,19 @@ class Configuration:
     SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+    
+    # Debug configuration
+    _DEBUG_SAVE_LLM_IO: Optional[bool] = False  # Persist raw LLM I/O chunks for debugging (non-production only)
+    
+    @property
+    def DEBUG_SAVE_LLM_IO(self) -> bool:
+        """
+        Persist raw LLM I/O streams to disk for debugging.
+        Automatically disabled in production environments.
+        """
+        if self.ENV_MODE == EnvMode.PRODUCTION:
+            return False
+        return bool(self._DEBUG_SAVE_LLM_IO)
 
     # LangFuse configuration
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
@@ -489,6 +512,28 @@ class Configuration:
         return self.STRIPE_PRODUCT_ID_PROD
     
     @property
+    def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
+        """
+        Base URL (origin + path prefix) for the Daytona preview proxy.
+        Returns a default fallback when variables are not configured.
+        """
+        # Determine base origin
+        if not self.DAYTONA_PROXY_ORIGIN:
+            origin = {
+                EnvMode.PRODUCTION: "https://prophet-milo-f3hr5.ondigitalocean.app",
+            }.get(self.ENV_MODE, "http://localhost:8000")
+        else:
+            origin = self.DAYTONA_PROXY_ORIGIN
+
+        origin = origin.rstrip("/")
+
+        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
+        if not path_prefix.startswith("/"):
+            path_prefix = f"/{path_prefix}"
+
+        return f"{origin}{path_prefix.rstrip('/')}"
+    
+    @property
     def FRONTEND_URL(self) -> str:
         """
         Get the frontend URL based on environment.
@@ -511,7 +556,7 @@ class Configuration:
             return 'http://localhost:3000'
     
     def _generate_admin_api_key(self) -> str:
-        """Generate a secure admin API key for Milo administrative functions."""
+        """Generate a secure admin API key for Prophet administrative functions."""
         # Generate 32 random bytes and encode as hex for a readable API key
         key_bytes = secrets.token_bytes(32)
         return key_bytes.hex()
@@ -585,6 +630,11 @@ class Configuration:
         frontend_url_env = os.getenv("FRONTEND_URL")
         if frontend_url_env is not None:
             self.FRONTEND_URL_ENV = frontend_url_env
+        
+        # Custom handling for DEBUG_SAVE_LLM_IO (always False in production)
+        debug_save_llm_io_env = os.getenv("DEBUG_SAVE_LLM_IO")
+        if debug_save_llm_io_env is not None:
+            self._DEBUG_SAVE_LLM_IO = debug_save_llm_io_env.lower() in ('true', 't', 'yes', 'y', '1')
     
     def _validate(self):
         """Validate configuration based on type hints."""

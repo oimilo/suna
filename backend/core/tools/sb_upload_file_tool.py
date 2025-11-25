@@ -1,7 +1,9 @@
 import os
+import re
 import uuid
 import mimetypes
 import structlog
+import unicodedata
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -11,6 +13,27 @@ from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
 from core.utils.config import config
+
+
+def normalize_filename(filename: str) -> str:
+    """
+    Normalize a filename by removing accents and special characters.
+    Converts characters like é→e, ê→e, ç→c, etc.
+    Only allows alphanumeric, hyphens, underscores, and dots.
+    """
+    # Normalize unicode characters (NFD decomposes accented chars)
+    normalized = unicodedata.normalize('NFD', filename)
+    # Remove combining diacritical marks (accents)
+    ascii_text = normalized.encode('ascii', 'ignore').decode('ascii')
+    # Replace spaces with hyphens
+    ascii_text = ascii_text.replace(' ', '-')
+    # Remove any remaining invalid characters (keep alphanumeric, hyphen, underscore, dot)
+    ascii_text = re.sub(r'[^a-zA-Z0-9\-_.]', '', ascii_text)
+    # Remove multiple consecutive hyphens/underscores
+    ascii_text = re.sub(r'[-_]+', '-', ascii_text)
+    # Remove leading/trailing hyphens
+    ascii_text = ascii_text.strip('-_')
+    return ascii_text or 'file'
 
 @tool_metadata(
     display_name="File Upload",
@@ -85,12 +108,16 @@ class SandboxUploadFileTool(SandboxToolsBase):
                 content_type = "application/octet-stream"
             
             if custom_filename:
-                storage_filename = custom_filename
+                storage_filename = normalize_filename(custom_filename)
             else:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 unique_id = str(uuid.uuid4())[:8]
-                name_base = Path(original_filename).stem
-                storage_filename = f"{name_base}_{timestamp}_{unique_id}{file_extension}"
+                name_base = normalize_filename(Path(original_filename).stem)
+                # Normalize extension too (remove any special chars)
+                safe_extension = normalize_filename(file_extension.lstrip('.'))
+                if safe_extension:
+                    safe_extension = f".{safe_extension}"
+                storage_filename = f"{name_base}_{timestamp}_{unique_id}{safe_extension}"
             
             storage_path = f"{account_id}/{storage_filename}"
 
