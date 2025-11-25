@@ -512,6 +512,28 @@ class Configuration:
         return self.STRIPE_PRODUCT_ID_PROD
     
     @property
+    def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
+        """
+        Base URL (origin + path prefix) for the Daytona preview proxy.
+        Returns a default fallback when variables are not configured.
+        """
+        # Determine base origin
+        if not self.DAYTONA_PROXY_ORIGIN:
+            origin = {
+                EnvMode.PRODUCTION: "https://prophet-milo-f3hr5.ondigitalocean.app",
+            }.get(self.ENV_MODE, "http://localhost:8000")
+        else:
+            origin = self.DAYTONA_PROXY_ORIGIN
+
+        origin = origin.rstrip("/")
+
+        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
+        if not path_prefix.startswith("/"):
+            path_prefix = f"/{path_prefix}"
+
+        return f"{origin}{path_prefix.rstrip('/')}"
+    
+    @property
     def FRONTEND_URL(self) -> str:
         """
         Get the frontend URL based on environment.
