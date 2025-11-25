@@ -266,7 +266,7 @@
     "chatDescription": "Einfache Unterhaltung",
     "sampleAnswers": "Beispielantworten",
     "samplePrompts": "Beispiel-Prompts",
-    "waitingForUserResponse": "Milo wird nach deiner Antwort eigenständig weiterarbeiten.",
+    "waitingForUserResponse": "Kortix wird nach deiner Antwort eigenständig weiterarbeiten.",
     "taskCompleted": "Aufgabe abgeschlossen",
     "uploadingFiles": "Lade {count} Datei{plural} hoch...",
     "uploadingFilesOne": "Lade {count} Datei hoch...",
@@ -290,7 +290,7 @@
     "rateThisResult": "Dieses Ergebnis bewerten",
     "feedbackHelpsImprove": "Dein Feedback hilft uns, uns zu verbessern",
     "additionalFeedbackOptional": "Zusätzliches Feedback (optional)",
-    "helpKortixImprove": "Hilf Milo mit deinem Feedback, sich zu verbessern",
+    "helpKortixImprove": "Hilf Kortix mit deinem Feedback, sich zu verbessern",
     "submit": "Absenden",
     "submitting": "Wird gesendet...",
     "feedbackSubmittedSuccess": "Feedback erfolgreich übermittelt",
@@ -316,6 +316,7 @@
     "credits": "Credits",
     "popular": "Beliebt",
     "creditsExplained": "Credits erklärt",
+    "creditsExhaustedRefreshIn": "Ihre Credits sind aufgebraucht. Sie werden in {time} erneuert",
     "trialActive": "Testversion aktiv",
     "trialBadge": "7-Tage-Testversion",
     "currentPlan": "Aktueller Plan",
@@ -333,10 +334,10 @@
     "localModeMessage": "Läuft im lokalen Entwicklungsmodus - Abrechnungsfunktionen sind deaktiviert",
     "creditsExplainedPage": {
       "title": "Credits erklärt",
-      "subtitle": "Alles, was du über die Funktionsweise von Credits bei Milo wissen musst",
+      "subtitle": "Alles, was du über die Funktionsweise von Credits bei Kortix wissen musst",
       "understandingCredits": {
         "title": "Credits verstehen",
-        "description": "Credits dienen als universelle Währung von Milo für Plattformoperationen. Jede Aktion, die deine KI-Agenten ausführen – von der Datenanalyse bis zur Codegenerierung – verbraucht Credits basierend auf der Komplexität der Aufgabe und den erforderlichen Ressourcen."
+        "description": "Credits dienen als universelle Währung von Kortix für Plattformoperationen. Jede Aktion, die deine KI-Agenten ausführen – von der Datenanalyse bis zur Codegenerierung – verbraucht Credits basierend auf der Komplexität der Aufgabe und den erforderlichen Ressourcen."
       },
       "howCreditsWork": {
         "title": "Wie Credits funktionieren",
@@ -354,7 +355,7 @@
       },
       "gettingMoreCredits": {
         "title": "Mehr Credits erhalten",
-        "description": "Es gibt mehrere Möglichkeiten, Credits bei Milo zu erhalten:",
+        "description": "Es gibt mehrere Möglichkeiten, Credits bei Kortix zu erhalten:",
         "monthlySubscription": {
           "title": "Monatliche Abonnement-Credits",
           "description": "Im Rahmen deines kostenpflichtigen Plans enthalten und jeden Monat automatisch erneuert. Dies sind ablaufende Credits."
@@ -374,7 +375,7 @@
       },
       "typesOfCredits": {
         "title": "Arten von Credits",
-        "description": "Milo verwendet zwei Arten von Credits, um dir Flexibilität bei der Verwaltung deiner Nutzung zu geben:",
+        "description": "Kortix verwendet zwei Arten von Credits, um dir Flexibilität bei der Verwaltung deiner Nutzung zu geben:",
         "expiringCredits": {
           "title": "Ablaufende Credits",
           "description": "Monatliche Abonnement-Credits",
@@ -387,7 +388,7 @@
         },
         "creditPriority": {
           "title": "Credit-Priorität:",
-          "description": "Wenn du Milo verwendest, werden zuerst ablaufende Credits verbraucht. Erst nachdem deine ablaufenden Credits aufgebraucht sind, werden nicht ablaufende Credits verwendet."
+          "description": "Wenn du Kortix verwendest, werden zuerst ablaufende Credits verbraucht. Erst nachdem deine ablaufenden Credits aufgebraucht sind, werden nicht ablaufende Credits verwendet."
         }
       }
     },
@@ -598,7 +599,7 @@
     "de": "Deutsch",
     "it": "Italiano"
   },
-  "prophet": {
+  "suna": {
     "samplePrompts": "Beispiel-Prompts",
     "chooseStyle": "Wähle einen Stil",
     "chooseTemplate": "Wähle eine Vorlage",

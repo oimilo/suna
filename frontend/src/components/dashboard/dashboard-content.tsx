@@ -22,19 +22,20 @@ import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
 import { useInitiateAgentWithInvalidation } from '@/hooks/dashboard/use-initiate-agent';
+import { useCreditBalance } from '@/hooks/billing';
 
 import { useAgents } from '@/hooks/agents/use-agents';
 import { PlanSelectionModal } from '@/components/billing/pricing';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
-import { SunaModesPanel } from './prophet-modes-panel';
+import { SunaModesPanel } from './suna-modes-panel';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
 import { CustomAgentsSection } from './custom-agents-section';
 import { toast } from 'sonner';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
-import { useSunaModePersistence } from '@/stores/prophet-modes-store';
+import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { CreditsDisplay } from '@/components/billing/credits-display';
 import { Button } from '../ui/button';
 import { Info, X } from 'lucide-react';
@@ -57,7 +58,7 @@ export function DashboardContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [autoSubmit, setAutoSubmit] = useState(false);
   
-  // Use centralized Prophet modes persistence hook
+  // Use centralized Suna modes persistence hook
   const {
     selectedMode,
     selectedCharts,
@@ -103,20 +104,39 @@ export function DashboardContent() {
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
   const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
-  const displayName = selectedAgent?.name || 'Prophet';
+  const displayName = selectedAgent?.name || 'Suna';
   const agentAvatar = undefined;
-  // Show Prophet modes while loading (assume Prophet is default) or when Prophet agent is selected
+  // Show Suna modes while loading (assume Suna is default) or when Suna agent is selected
   const isSunaAgent = isLoadingAgents 
-    ? true // Show Prophet modes while loading
+    ? true // Show Suna modes while loading
     : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
   const { data: limits, isLoading: isLimitsLoading } = useLimits();
+  const { data: balance } = useCreditBalance(!!user);
   const canCreateThread = limits?.thread_count?.can_create || false;
   
   const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
-  // Only show alert after loading is complete and limit is actually exceeded
-  const showAlert = !isLimitsLoading && !canCreateThread && !isDismissed;
+  const threadLimitExceeded = !isLimitsLoading && !canCreateThread && !isDismissed;
+  
+  const dailyCreditsInfo = balance?.daily_credits_info;
+  const hasLowCredits = (balance?.balance || 0) <= 10;
+  const hasDailyRefresh = dailyCreditsInfo?.enabled && dailyCreditsInfo?.seconds_until_refresh;
+  
+  const alertType = hasLowCredits && hasDailyRefresh 
+    ? 'daily_refresh' 
+    : threadLimitExceeded 
+    ? 'thread_limit' 
+    : null;
+  
+  const formatTimeUntilRefresh = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
 
   React.useEffect(() => {
     if (agents.length > 0) {
@@ -391,7 +411,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Milo Super Worker
+                    Prophet Super Worker
                   </button>
                   <button
                     onClick={() => {
@@ -450,11 +470,34 @@ export function DashboardContent() {
                           selectedTemplate={selectedTemplate}
                         />
 
-                        {showAlert && (
+                        {alertType === 'daily_refresh' && (
+                          <div 
+                            className='w-full h-16 p-2 px-4 dark:bg-blue-500/5 bg-blue-500/10 dark:border-blue-500/10 border-blue-700/10 border rounded-b-3xl flex items-center justify-between overflow-hidden'
+                            style={{
+                              marginTop: '-40px',
+                              transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
+                            }}
+                          >
+                            <span className='-mb-3.5 dark:text-blue-400 text-blue-700 text-sm'>
+                              {tBilling('creditsExhausted', { time: formatTimeUntilRefresh(dailyCreditsInfo!.seconds_until_refresh!) })}
+                            </span>
+                            <div className='flex items-center -mb-3.5'>
+                              <Button 
+                                size='sm' 
+                                className='h-6 text-xs'
+                                onClick={() => pricingModalStore.openPricingModal()}
+                              >
+                              {tCommon('upgrade')}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {alertType === 'thread_limit' && (
                           <div 
                             className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-between overflow-hidden'
                             style={{
-                              marginTop: '-32px',
+                              marginTop: '-40px',
                               transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
                             }}
                           >
@@ -471,18 +514,7 @@ export function DashboardContent() {
                                 onClick={() => pricingModalStore.openPricingModal()}
                               >
                                 {tCommon('upgrade')}
-                                </Button>
-                              {/* <Button 
-                                size='icon' 
-                                variant='ghost' 
-                                className='h-6 text-muted-foreground'
-                                onClick={() => {
-                                  sessionStorage.setItem('threadLimitAlertDismissed', 'true');
-                                  window.dispatchEvent(new Event('storage'));
-                                }}
-                              >
-                                <X/>
-                              </Button> */}
+                              </Button>
                             </div>
                           </div>
                         )}

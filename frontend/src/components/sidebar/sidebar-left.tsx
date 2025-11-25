@@ -10,7 +10,7 @@ import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
 import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
-import { KortixLogo } from '@/components/sidebar/milo-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { siteConfig } from '@/lib/home';
 import {
   Sidebar,
@@ -55,7 +55,7 @@ import { useSubscriptionData } from '@/stores/subscription-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { isLocalMode } from '@/lib/config';
-import { KortixProcessModal } from './milo-enterprise-modal';
+import { KortixProcessModal } from './kortix-enterprise-modal';
 
 import { getPlanIcon, getPlanName } from '@/components/billing/plan-utils';
 import { Kbd } from '../ui/kbd';
@@ -282,7 +282,7 @@ export function SidebarLeft({
             <PanelLeftClose className="!h-5 !w-5" />
           </Button>
         </div>
-      </SidebarHeader >
+      </SidebarHeader>
       <SidebarContent className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <AnimatePresence mode="wait">
           {state === 'collapsed' ? (
@@ -464,7 +464,7 @@ export function SidebarLeft({
         open={showSearchModal}
         onOpenChange={setShowSearchModal}
       />
-    </Sidebar >
+    </Sidebar>
   );
 }
 

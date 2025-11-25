@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self.api_token = os.getenv('MAILTRAP_API_TOKEN')
-        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'dom@milo.ai')
-        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Dom from Milo')
+        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'dom@kortix.ai')
+        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Dom from Kortix')
         
         if not self.api_token:
             logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
@@ -26,7 +26,7 @@ class EmailService:
         if not user_name:
             user_name = user_email.split('@')[0].title()
         
-        subject = "🎉 Welcome to Milo — Let's Get Started "
+        subject = "🎉 Welcome to Kortix — Let's Get Started "
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -71,7 +71,7 @@ class EmailService:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Milo</title>
+  <title>Welcome to Kortix</title>
   <style>
     body {{
       font-family: Arial, sans-serif;
@@ -137,12 +137,12 @@ class EmailService:
 <body>
   <div class="container">
     <div class="logo-container">
-      <img src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/loaded_images/Profile%20Picture%20Black.png" alt="Milo Logo" class="logo">
+      <img src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/loaded_images/Profile%20Picture%20Black.png" alt="Kortix Logo" class="logo">
     </div>
 
     <p>Hi {user_name},</p>
 
-    <p><em><strong>Welcome to <a href="https://www.milo.com/">Milo.com</a> — we're excited to have you on board!</strong></em></p>
+    <p><em><strong>Welcome to <a href="https://www.kortix.com/">Kortix.com</a> — we're excited to have you on board!</strong></em></p>
 
     <p>To get started, we'd like to get to know you better: fill out this short <a href="https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform">form</a>!</p>
 
@@ -151,7 +151,7 @@ class EmailService:
 
     <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/RvFhXUdZ9H">Discord community</a>.</p>
 
-    <p>Thanks again, and welcome to the Milo community!</p>
+    <p>Thanks again, and welcome to the Kortix community!</p>
   </div>
 </body>
 </html>"""
@@ -159,7 +159,7 @@ class EmailService:
     def _get_welcome_email_text(self, user_name: str) -> str:
         return f"""Hi {user_name},
 
-Welcome to https://www.milo.com/ — we're excited to have you on board!
+Welcome to https://www.kortix.com/ — we're excited to have you on board!
 
 To get started, we'd like to get to know you better: fill out this short form!
 https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform
@@ -169,10 +169,10 @@ To celebrate your arrival, here's a 15% discount for your first month:
 
 Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/RvFhXUdZ9H
 
-Thanks again, and welcome to the Milo community!
+Thanks again, and welcome to the Kortix community!
 
 ---
-© 2025 Milo. All rights reserved.
-You received this email because you signed up for a Milo account."""
+© 2025 Kortix. All rights reserved.
+You received this email because you signed up for a Kortix account."""
 
 email_service = EmailService() 

@@ -1,3 +1,19 @@
+###############################################################################
+# PROPHET DOCKER COMPOSE - LOCAL DEVELOPMENT
+###############################################################################
+# This compose file runs the local Prophet stack (Backend, Worker, Frontend,
+# Redis). Supabase still runs outside of Docker (cloud or local CLI).
+#
+# Quick reference:
+#   docker compose up -d          # Start all services
+#   docker compose down           # Stop all services
+#   docker compose logs -f        # Tail all logs
+#
+# Exposed services:
+#   - Backend API:  http://localhost:8000
+#   - Frontend:     http://localhost:3000
+###############################################################################
+
 services:
   redis:
     image: redis:7-alpine

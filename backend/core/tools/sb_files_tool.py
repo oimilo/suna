@@ -11,6 +11,33 @@ import openai
 import asyncio
 import re
 from typing import Optional
+from urllib.parse import urlparse
+
+
+def _build_proxy_url(sandbox_id: str, raw_url: str) -> Optional[str]:
+    """
+    Convert a Daytona preview URL into the Prophet proxy URL when possible.
+    Falls back to None if configuration is missing.
+    """
+    base = config.DAYTONA_PREVIEW_BASE
+    if not base or not sandbox_id:
+        return None
+
+    try:
+        parsed = urlparse(raw_url)
+    except ValueError:
+        logger.warning("Failed to parse Daytona preview URL %s", raw_url)
+        return None
+
+    base = base.rstrip("/")
+    path = parsed.path.lstrip("/")
+    proxy_url = f"{base}/{sandbox_id}"
+    if path:
+        proxy_url = f"{proxy_url}/{path}"
+    if parsed.query:
+        proxy_url = f"{proxy_url}?{parsed.query}"
+
+    return proxy_url
 
 @tool_metadata(
     display_name="Files & Folders",
@@ -141,7 +168,9 @@ class SandboxFilesTool(SandboxToolsBase):
             if file_path.lower() == 'index.html':
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
-                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
+                    website_url = proxy_url or raw_url
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
@@ -263,7 +292,9 @@ class SandboxFilesTool(SandboxToolsBase):
             if file_path.lower() == 'index.html':
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
-                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
+                    website_url = proxy_url or raw_url
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:

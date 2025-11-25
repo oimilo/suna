@@ -3,6 +3,7 @@
  */
 export { useAgentVersionData } from './use-agent-version-data';
 export { useModelSelection, type ModelOption } from './use-model-selection';
-export { useAgentStream, type UseAgentStreamResult, type AgentStreamCallbacks } from './useAgentStream';
+// Re-export for backwards compatibility
+export { useAgentStream, type UseAgentStreamResult, type AgentStreamCallbacks } from '../messages';
 
 
