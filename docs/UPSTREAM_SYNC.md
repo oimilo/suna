@@ -65,9 +65,48 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
   - `.github/workflows/mobile-eas-update.yml`: `EXPO_PUBLIC_BACKEND_URL` aponta para `https://prophet-milo-f3hr5.ondigitalocean.app/api`, mantendo o Supabase atual.
   - `apps/mobile/eas.json`: espelha o mesmo backend URL nos perfis development/production/testflight, evitando divergência com o workflow.
 
+### Bloco aplicado — Prophet proxy URL fix + XML tool limit (custom)
+- Restauramos a lógica de proxy para URLs do Daytona que foi perdida no merge:
+  - `backend/core/utils/config.py`: adicionada property `DAYTONA_PREVIEW_BASE` que constrói a URL base do proxy baseada no ambiente.
+  - `backend/core/tools/sb_expose_tool.py`: restaurada função `_build_proxy_url()` que converte URLs do Daytona para URLs do proxy Prophet.
+  - `backend/core/tools/sb_files_tool.py`: adicionada função `_build_proxy_url()` para converter as URLs quando o agente cria/reescreve um `index.html`.
+- Adicionamos `max_xml_tool_calls = 3` ao `ProcessorConfig` para permitir até 3 tool calls por resposta LLM antes de parar com `xml_tool_limit_reached`.
+- Adicionamos normalização de caracteres especiais em nomes de arquivos para upload (`sb_upload_file_tool.py`), convertendo acentos (é→e, ç→c, etc.) para evitar erros `InvalidKey` no Supabase Storage.
+- **Testes locais:** backend reiniciado via `docker compose restart backend worker`, `curl --http1.0 http://127.0.0.1:8000/api/health` confirmou operação normal.
+
+### Próximos commits do upstream (611bd3dfd - 2025-11-25)
+Os seguintes commits ainda precisam ser integrados:
+
+**1. Daily Credits Refresh (feature nova)**
+- `90b5ff057` feat: daily credit refresh for free tier
+- `25a9955b0`, `7212781ef` Merge PRs #2140, #2141
+- `de6de4bb3` cleanup
+- Arquivos: `backend/core/credits.py`, 4 novas migrations (`20251125*.sql`), `frontend/src/components/billing/credits-display.tsx`, `frontend/src/lib/api/billing.ts`
+- Adiciona refresh diário de créditos para tier free com intervalo configurável
+
+**2. Knowledge Base improvements**
+- `ce0aab452` fix: kb
+- Arquivos: `backend/core/knowledge_base/api.py`, novo `file_processor.py`, `frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx`
+
+**3. Mobile Design Rework**
+- `611bd3dfd`, `5fd83e05c`, `628a87d87` Merge PRs #2142, #2143, #2144
+- `c963a0ef7` fix: showcase section
+- `05bd9ccc4` fix: update seo
+- Arquivos: `apps/mobile/**`, `frontend/src/app/layout.tsx`, `frontend/src/app/metadata.ts`, `frontend/src/app/sitemap.ts`
+
+**4. Billing refactors (RevenueCat)**
+- `2bd2f3495`, `8bb4c4f26`, `bbedac2e4`, `e26492e14` refactor: revenuecat, billing refactor
+- Arquivos: `backend/core/billing/**`
+
+**5. Translations**
+- Novas entradas em `frontend/translations/*.json`
+
 ### Próximo bloco
+- Aplicar os commits de daily credits refresh (migrations + backend + frontend)
+- Sincronizar knowledge base improvements
+- Atualizar mobile design (já temos parte do mobile, verificar diff)
 - Garantir que as secrets citadas acima estão configuradas no repositório (`STAGING_PROJECT_DIR`, `STAGING_LEGACY_DIR`, `PROD_PROJECT_DIR`, `AWS_ECS_CLUSTER`, `AWS_ECS_API_FILTER`, `AWS_ECS_WORKER_FILTER`, `EXPO_TOKEN`, etc.) antes de habilitar os jobs na branch principal.
-- Rodar os lints/builds específicos do app mobile (Expo/EAS) para garantir que o bloco “mobile refinements” não trouxe regressões de build.
+- Rodar os lints/builds específicos do app mobile (Expo/EAS) para garantir que o bloco "mobile refinements" não trouxe regressões de build.
 - Se o ambiente permitir no futuro, remover ou arquivar os `.cursor/rules/*.md` extras para acompanhar o upstream; por ora estão protegidos pelo runtime.
 
 ## Passo a passo para sincronizar
