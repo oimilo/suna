@@ -70,6 +70,7 @@ class ProcessorConfig:
         execute_tools: Whether to automatically execute detected tool calls
         execute_on_stream: For streaming, execute tools as they appear vs. at the end
         tool_execution_strategy: How to execute multiple tools ("sequential" or "parallel")
+        max_xml_tool_calls: Maximum number of XML tool calls to process per response (0 = no limit)
         
     NOTE: Default values are loaded from core.utils.config (backend/core/utils/config.py)
     Change AGENT_XML_TOOL_CALLING, AGENT_NATIVE_TOOL_CALLING, etc. in config.py
@@ -82,6 +83,7 @@ class ProcessorConfig:
     execute_tools: bool = True
     execute_on_stream: bool = None  # Set in __post_init__ from global config
     tool_execution_strategy: ToolExecutionStrategy = None  # Set in __post_init__ from global config
+    max_xml_tool_calls: int = 3  # Maximum XML tool calls per response (0 = no limit)
     
     def __post_init__(self):
         """Load defaults from global config and validate configuration."""
@@ -492,6 +494,17 @@ class ResponseProcessor:
                                             "tool_index": tool_index, "context": context
                                         })
                                         tool_index += 1
+
+                                # Check if XML tool call limit reached
+                                if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls:
+                                    logger.debug(f"Reached XML tool call limit ({config.max_xml_tool_calls})")
+                                    finish_reason = "xml_tool_limit_reached"
+                                    break  # Stop processing more XML chunks in this delta
+
+                        # Break out of main stream loop if XML limit reached
+                        if finish_reason == "xml_tool_limit_reached":
+                            logger.debug("Stopping stream processing due to XML tool call limit")
+                            break
 
                     # --- Process Native Tool Call Chunks ---
                     if config.native_tool_calling and delta and hasattr(delta, 'tool_calls') and delta.tool_calls:
