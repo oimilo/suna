@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-25   | `05e6be0d7`     | `Merge pull request #2139 from KrishavRajSingh/fix/warmup` |
+| 2025-11-25   | `611bd3dfd`     | `Merge pull request #2144 from kubet/feat/rework-desing-mobile` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -74,32 +74,22 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - Adicionamos normalização de caracteres especiais em nomes de arquivos para upload (`sb_upload_file_tool.py`), convertendo acentos (é→e, ç→c, etc.) para evitar erros `InvalidKey` no Supabase Storage.
 - **Testes locais:** backend reiniciado via `docker compose restart backend worker`, `curl --http1.0 http://127.0.0.1:8000/api/health` confirmou operação normal.
 
-### Próximos commits do upstream (611bd3dfd - 2025-11-25)
-Os seguintes commits ainda precisam ser integrados:
+### Bloco aplicado — daily credits refresh + KB improvements (611bd3dfd)
+- Sincronizamos `backend/core/credits.py` com a nova função `check_and_refresh_daily_credits()` que verifica e atualiza créditos diários para usuários do tier free.
+- Atualizamos `backend/core/billing/shared/config.py` com o novo campo `daily_credit_config` no dataclass `Tier`. O tier free agora recebe $2.00 diariamente (refresh a cada 24h) em vez de $2.00 one-time.
+- Aplicamos 4 migrations via MCP Supabase para suportar daily credits: `20251125151140_daily_credits_refresh.sql`, `20251125152753_add_daily_grant_type.sql`, `20251125154048_fix_daily_refresh.sql`, `20251125175846_cleanup_daily_refresh.sql`.
+- Sincronizamos `backend/core/knowledge_base/api.py` e `file_processor.py` com melhorias do upstream.
+- Atualizamos componentes frontend: `credits-display.tsx`, `dashboard-content.tsx` (com branding Prophet), `unified-kb-entry-modal.tsx`.
+- Sincronizamos todas as translations em `frontend/translations/*.json`.
+- **Testes locais:** backend reiniciado via `docker compose restart backend worker`, `curl http://127.0.0.1:8000/api/health` confirmou operação normal.
 
-**1. Daily Credits Refresh (feature nova)**
-- `90b5ff057` feat: daily credit refresh for free tier
-- `25a9955b0`, `7212781ef` Merge PRs #2140, #2141
-- `de6de4bb3` cleanup
-- Arquivos: `backend/core/credits.py`, 4 novas migrations (`20251125*.sql`), `frontend/src/components/billing/credits-display.tsx`, `frontend/src/lib/api/billing.ts`
-- Adiciona refresh diário de créditos para tier free com intervalo configurável
+**Arquivos de SEO/layout não atualizados (preservando branding Prophet):**
+- `frontend/src/app/layout.tsx`, `frontend/src/app/metadata.ts` - já têm branding Prophet
+- `frontend/src/app/sitemap.ts` - já está alinhado com upstream
 
-**2. Knowledge Base improvements**
-- `ce0aab452` fix: kb
-- Arquivos: `backend/core/knowledge_base/api.py`, novo `file_processor.py`, `frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx`
-
-**3. Mobile Design Rework**
-- `611bd3dfd`, `5fd83e05c`, `628a87d87` Merge PRs #2142, #2143, #2144
-- `c963a0ef7` fix: showcase section
-- `05bd9ccc4` fix: update seo
-- Arquivos: `apps/mobile/**`, `frontend/src/app/layout.tsx`, `frontend/src/app/metadata.ts`, `frontend/src/app/sitemap.ts`
-
-**4. Billing refactors (RevenueCat)**
-- `2bd2f3495`, `8bb4c4f26`, `bbedac2e4`, `e26492e14` refactor: revenuecat, billing refactor
-- Arquivos: `backend/core/billing/**`
-
-**5. Translations**
-- Novas entradas em `frontend/translations/*.json`
+**Mobile Design Rework (já parcialmente aplicado em blocos anteriores):**
+- Os commits de mobile design (`611bd3dfd`, `5fd83e05c`, `628a87d87`) afetam principalmente `apps/mobile/**` que já foi sincronizado em blocos anteriores
+- Verificar se há diferenças pendentes no mobile app
 
 ### Próximo bloco
 - Aplicar os commits de daily credits refresh (migrations + backend + frontend)
