@@ -25,7 +25,7 @@ import { usePricingModalStore } from '@/stores/pricing-modal-store';
 export interface UseAgentStreamResult {
   status: string;
   textContent: string;
-  toolCall: ParsedContent | null;
+  toolCall: UnifiedMessage | null; // Streaming tool call chunk as full message
   error: string | null;
   agentRunId: string | null; // Expose the currently managed agentRunId
   startStreaming: (runId: string) => void;
@@ -40,6 +40,7 @@ export interface AgentStreamCallbacks {
   onClose?: (finalStatus: string) => void; // Optional: Notify when streaming definitively ends
   onAssistantStart?: () => void; // Optional: Notify when assistant starts streaming
   onAssistantChunk?: (chunk: { content: string }) => void; // Optional: Notify on each assistant message chunk
+  onToolCallChunk?: (message: UnifiedMessage) => void; // Optional: Notify when tool call metadata chunks arrive
 }
 
 export function useAgentStream(
@@ -83,7 +84,7 @@ export function useAgentStream(
           // Set new throttle for smooth updates (16ms ≈ 60fps)
     throttleRef.current = setTimeout(flushPendingContent, 16);
   }, [flushPendingContent]);
-  const [toolCall, setToolCall] = useState<ParsedContent | null>(null);
+  const [toolCall, setToolCall] = useState<UnifiedMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [agentRunId, setAgentRunId] = useState<string | null>(null);
 
@@ -430,7 +431,10 @@ export function useAgentStream(
 
       switch (message.type) {
         case 'assistant':
-          if (
+          if (parsedMetadata.stream_status === 'tool_call_chunk') {
+            setToolCall(message);
+            callbacks.onToolCallChunk?.(message);
+          } else if (
             parsedMetadata.stream_status === 'chunk' &&
             parsedContent.content
           ) {
@@ -459,34 +463,19 @@ export function useAgentStream(
           break;
         case 'status':
           switch (parsedContent.status_type) {
-            case 'tool_started':
-              setToolCall({
-                role: 'assistant',
-                status_type: 'tool_started',
-                name: parsedContent.function_name,
-                arguments: parsedContent.arguments,
-                xml_tag_name: parsedContent.xml_tag_name,
-                tool_index: parsedContent.tool_index,
-              });
-              break;
             case 'tool_completed':
             case 'tool_failed':
             case 'tool_error':
-              if (toolCall?.tool_index === parsedContent.tool_index) {
-                setToolCall(null);
-              }
+              setToolCall(null);
               break;
             case 'finish':
               // Optional: Handle finish reasons like 'xml_tool_limit_reached'
-              // Don't finalize here, wait for thread_run_end or completion message
               break;
             case 'error':
               setError(parsedContent.message || 'Agent run failed');
               finalizeStream('error', currentRunIdRef.current);
               break;
-            // Ignore thread_run_start, thread_run_end, assistant_response_start etc. for now
             default:
-              // console.debug('[useAgentStream] Received unhandled status type:', parsedContent.status_type);
               break;
           }
           break;
@@ -512,7 +501,6 @@ export function useAgentStream(
     },
     [
       status,
-      toolCall,
       callbacks,
       finalizeStream,
       updateStatus,

@@ -31,7 +31,9 @@ export type SubscriptionStatus = 'no_subscription' | 'active';
 import {
   UnifiedMessage,
   ApiMessageType,
+  ParsedMetadata,
 } from '@/components/thread/types';
+import { safeJsonParse } from '@/components/thread/utils';
 import {
   useThreadData,
   useThreadToolCalls,
@@ -841,9 +843,43 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
 
   useEffect(() => {
-    if (streamingToolCall) {
-      handleStreamingToolCall(streamingToolCall);
+    if (!streamingToolCall) {
+      return;
     }
+
+    const metadata = safeJsonParse<ParsedMetadata & { tool_calls?: Array<Record<string, any>> }>(
+      streamingToolCall.metadata,
+      {},
+    );
+
+    const toolCalls = Array.isArray(metadata.tool_calls)
+      ? metadata.tool_calls
+      : [];
+
+    if (toolCalls.length === 0) {
+      return;
+    }
+
+    toolCalls.forEach((toolCall, index) => {
+      const rawName =
+        toolCall.function_name ||
+        toolCall.tool_name ||
+        toolCall.xml_tag_name ||
+        toolCall.name ||
+        'Unknown Tool';
+      const args =
+        typeof toolCall.arguments === 'string'
+          ? toolCall.arguments
+          : JSON.stringify(toolCall.arguments ?? '');
+
+      handleStreamingToolCall({
+        id: toolCall.tool_call_id ?? toolCall.id ?? `${rawName}-${index}`,
+        name: rawName,
+        arguments: args,
+        index: toolCall.tool_index ?? index,
+        xml_tag_name: toolCall.xml_tag_name,
+      });
+    });
   }, [streamingToolCall, handleStreamingToolCall]);
 
   useEffect(() => {
