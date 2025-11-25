@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import Request, HTTPException
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
-from core.billing.config import TOKEN_PRICE_MULTIPLIER
+from core.billing.shared.config import TOKEN_PRICE_MULTIPLIER
 from core.vapi_config import vapi_config
 from decimal import Decimal
 import json
@@ -228,7 +228,7 @@ class VapiWebhookHandler:
             
             if user_id and cost > 0:
                 try:
-                    from core.billing.credit_manager import CreditManager
+                    from core.billing.credits.manager import CreditManager
                     credit_manager = CreditManager()
                     
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
@@ -393,7 +393,7 @@ class VapiWebhookHandler:
             
             if user_id and cost > 0:
                 try:
-                    from core.billing.credit_manager import CreditManager
+                    from core.billing.credits.manager import CreditManager
                     credit_manager = CreditManager()
                     
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
