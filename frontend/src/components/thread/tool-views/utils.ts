@@ -1425,3 +1425,43 @@ export const getFileIconAndColor = (filename: string) => {
   }
 };
 
+/**
+ * Extract tool data from content using the new parser with backwards compatibility.
+ * Provides a normalized shape consumed by legacy tool view helpers.
+ */
+export function extractToolData(content: any): {
+  toolResult: ParsedToolResult | null;
+  arguments: Record<string, any>;
+  filePath: string | null;
+  fileContent: string | null;
+  command: string | null;
+  url: string | null;
+  query: string | null;
+} {
+  const toolResult = parseToolResult(content);
+
+  if (toolResult) {
+    const args = toolResult.arguments || {};
+    return {
+      toolResult,
+      arguments: args,
+      filePath: args.file_path || args.path || null,
+      fileContent: args.file_contents || args.content || null,
+      command: args.command || null,
+      url: args.url || null,
+      query: args.query || null,
+    };
+  }
+
+  // Fallback to legacy parsing if new format not detected
+  return {
+    toolResult: null,
+    arguments: {},
+    filePath: null,
+    fileContent: null,
+    command: null,
+    url: null,
+    query: null,
+  };
+}
+
