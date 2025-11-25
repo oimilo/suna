@@ -11,15 +11,14 @@ import { AgentRunLimitError, ProjectLimitError, BillingError } from '@/lib/api/e
 import { toast } from 'sonner';
 import { ChatInput } from '@/components/thread/chat-input/chat-input';
 import { useSidebar, SidebarContext } from '@/components/ui/sidebar';
-import { useAgentStream } from '@/hooks/agents';
+import { useAgentStream } from '@/hooks/messages';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/utils';
 import { isLocalMode } from '@/lib/config';
 import { ThreadContent } from '@/components/thread/content/ThreadContent';
 import { ThreadSkeleton } from '@/components/thread/content/ThreadSkeleton';
 import { PlaybackFloatingControls } from '@/components/thread/content/PlaybackFloatingControls';
-import { usePlaybackController } from '@/hooks/usePlaybackController';
-import { useAddUserMessageMutation } from '@/hooks/threads/use-messages';
+import { usePlaybackController, useAddUserMessageMutation } from '@/hooks/messages';
 import {
   useStartAgentMutation,
   useStopAgentMutation,
@@ -31,15 +30,13 @@ export type SubscriptionStatus = 'no_subscription' | 'active';
 import {
   UnifiedMessage,
   ApiMessageType,
-  ParsedMetadata,
 } from '@/components/thread/types';
-import { safeJsonParse } from '@/components/thread/utils';
 import {
   useThreadData,
-  useThreadToolCalls,
   useThreadBilling,
   useThreadKeyboardShortcuts,
 } from '@/hooks/threads/page';
+import { useThreadToolCalls } from '@/hooks/messages';
 import { ThreadError, ThreadLayout } from '@/components/thread/layout';
 import { PlanSelectionModal } from '@/components/billing/pricing';
 import { useBillingModal } from '@/hooks/billing/use-billing-modal';
@@ -56,6 +53,7 @@ import { fileQueryKeys } from '@/hooks/files';
 import { useProjectRealtime } from '@/hooks/threads';
 import { handleGoogleSlidesUpload } from './tool-views/utils/presentation-utils';
 import { useTranslations } from 'next-intl';
+import { backendApi } from '@/lib/api-client';
 
 interface ThreadComponentProps {
   projectId: string;
@@ -506,6 +504,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       onStatusChange: handleStreamStatusChange,
       onError: handleStreamError,
       onClose: handleStreamClose,
+      onToolCallChunk: (message) => {
+        // Pass the UnifiedMessage with metadata.tool_calls to handleStreamingToolCall
+        handleStreamingToolCall(message);
+      },
     },
     threadId,
     setMessages,
@@ -630,15 +632,20 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const handleOpenFileViewer = useCallback(
     (filePath?: string, filePathList?: string[]) => {
-      if (filePath) {
-        setFileToView(filePath);
-      } else {
-        setFileToView(null);
+      // Invalidate project query to ensure fresh data when opening modal
+      // The modal's refetchOnMount will handle the actual refetch
+      if (projectId) {
+        queryClient.invalidateQueries({
+          queryKey: threadKeys.project(projectId),
+          refetchType: 'active',
+        });
       }
+      
+      setFileToView(filePath || null);
       setFilePathList(filePathList);
       setFileViewerOpen(true);
     },
-    [],
+    [projectId, queryClient],
   );
 
   const toolViewAssistant = useCallback(
@@ -793,7 +800,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Milo`;
+      document.title = `${projectName} | Kortix`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -801,13 +808,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Milo`,
+          `${projectName} - Interactive agent conversation powered by Kortix`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Milo`);
+        ogTitle.setAttribute('content', `${projectName} | Kortix`);
       }
 
       const ogDescription = document.querySelector(
@@ -843,43 +850,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
 
   useEffect(() => {
-    if (!streamingToolCall) {
-      return;
+    if (streamingToolCall) {
+      handleStreamingToolCall(streamingToolCall);
     }
-
-    const metadata = safeJsonParse<ParsedMetadata & { tool_calls?: Array<Record<string, any>> }>(
-      streamingToolCall.metadata,
-      {},
-    );
-
-    const toolCalls = Array.isArray(metadata.tool_calls)
-      ? metadata.tool_calls
-      : [];
-
-    if (toolCalls.length === 0) {
-      return;
-    }
-
-    toolCalls.forEach((toolCall, index) => {
-      const rawName =
-        toolCall.function_name ||
-        toolCall.tool_name ||
-        toolCall.xml_tag_name ||
-        toolCall.name ||
-        'Unknown Tool';
-      const args =
-        typeof toolCall.arguments === 'string'
-          ? toolCall.arguments
-          : JSON.stringify(toolCall.arguments ?? '');
-
-      handleStreamingToolCall({
-        id: toolCall.tool_call_id ?? toolCall.id ?? `${rawName}-${index}`,
-        name: rawName,
-        arguments: args,
-        index: toolCall.tool_index ?? index,
-        xml_tag_name: toolCall.xml_tag_name,
-      });
-    });
   }, [streamingToolCall, handleStreamingToolCall]);
 
   useEffect(() => {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Project, ensureSandboxActive } from '@/lib/api/projects';
+import { Project } from '@/lib/api/threads';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
-import { useMessagesQuery } from '@/hooks/threads/use-messages';
+import { useMessagesQuery } from '@/hooks/messages';
 import { useProjectQuery } from '@/hooks/threads/use-project';
 import { useAgentRunsQuery } from '@/hooks/threads/use-agent-run';
 import { ApiMessageType, UnifiedMessage, AgentStatus } from '@/components/thread/types';
@@ -28,16 +28,12 @@ interface UseThreadDataReturn {
 
 export function useThreadData(threadId: string, projectId: string, isShared: boolean = false): UseThreadDataReturn {
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
-  const [project, setProject] = useState<Project | null>(null);
-  const [sandboxId, setSandboxId] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState<string>('');
   const [agentRunId, setAgentRunId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const initialLoadCompleted = useRef<boolean>(false);
-  const sandboxEnsuredRef = useRef<boolean>(false);
   const messagesLoadedRef = useRef(false);
   const agentRunsCheckedRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
@@ -48,10 +44,18 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   
   // For shared pages, projectId might be empty - get it from thread data
   const effectiveProjectId = projectId || threadQuery.data?.project_id || '';
-  const projectQuery = useProjectQuery(effectiveProjectId);
+  const projectQuery = useProjectQuery(effectiveProjectId, {
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
   
   // Only fetch agent runs if not in shared mode (requires authentication)
   const agentRunsQuery = useAgentRunsQuery(threadId, { enabled: !isShared });
+
+  // Derive values from projectQuery directly - no duplicate state
+  const project = projectQuery.data || null;
+  const sandboxId = project?.sandbox?.id || (typeof project?.sandbox === 'string' ? project.sandbox : null);
+  const projectName = project?.name || '';
   
   // (debug logs removed)
 
@@ -77,28 +81,11 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
         }
         if (!isMounted) return;
 
-        if (projectQuery.data) {
-          const projectData = projectQuery.data;
-          setProject(projectData);
-          if (typeof projectData.sandbox === 'string') {
-            setSandboxId(projectData.sandbox);
-          } else if (projectData.sandbox?.id) {
-            setSandboxId(projectData.sandbox.id);
-          } else if (!sandboxEnsuredRef.current && effectiveProjectId) {
-            sandboxEnsuredRef.current = true;
-            ensureSandboxActive(effectiveProjectId).catch((err) => {
-              console.warn('Failed to ensure sandbox is active:', err);
-            });
-          }
-
-          setProjectName(projectData.name || '');
-        }
-
         if (messagesQuery.data && !messagesLoadedRef.current) {
           // (debug logs removed)
 
+          // Backend now filters out status messages, so no need to filter here
           const unifiedMessages = (messagesQuery.data || [])
-            .filter((msg) => msg.type !== 'status')
             .map((msg: ApiMessageType) => ({
               message_id: msg.message_id || null,
               thread_id: msg.thread_id || threadId,
@@ -192,8 +179,7 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     threadQuery.error,
     projectQuery.data,
     messagesQuery.data,
-    agentRunsQuery.data,
-    effectiveProjectId
+    agentRunsQuery.data
   ]);
 
   // Force message reload when thread changes or new data arrives
@@ -207,8 +193,8 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
       if (shouldReload) {
         // (debug logs removed)
         
+        // Backend now filters out status messages, so no need to filter here
         const unifiedMessages = (messagesQuery.data || [])
-          .filter((msg) => msg.type !== 'status')
           .map((msg: ApiMessageType) => ({
             message_id: msg.message_id || null,
             thread_id: msg.thread_id || threadId,

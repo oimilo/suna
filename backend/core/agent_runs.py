@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from typing import Optional, List, Tuple, Dict
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, Body, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
-import dramatiq
-
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_user_id_from_stream_auth, verify_and_authorize_thread_access, get_optional_user_id_from_jwt
 from core.utils.logger import logger, structlog
 from core.billing.credits.integration import billing_integration
@@ -17,6 +15,7 @@ from core.services import redis
 from core.sandbox.sandbox import create_sandbox, delete_sandbox, get_or_start_sandbox
 from core.utils.sandbox_utils import generate_unique_filename, get_uploads_directory
 from run_agent_background import run_agent_background
+import dramatiq
 
 from core.ai_models import model_manager
 
@@ -294,7 +293,7 @@ async def _trigger_agent_background(agent_run_id: str, thread_id: str, project_i
     logger.info(f"🚀 Sending agent run {agent_run_id} to Dramatiq queue (thread: {thread_id}, model: {effective_model})")
     
     try:
-        message: Optional[dramatiq.Message] = run_agent_background.send(
+        message = run_agent_background.send(
             agent_run_id=agent_run_id,
             thread_id=thread_id,
             instance_id=utils.instance_id,
@@ -303,7 +302,7 @@ async def _trigger_agent_background(agent_run_id: str, thread_id: str, project_i
             agent_id=agent_id,  # Pass agent_id instead of full agent_config
             request_id=request_id,
         )
-        message_id = message.message_id if isinstance(message, dramatiq.Message) else 'N/A'
+        message_id = message.message_id if hasattr(message, 'message_id') else 'N/A'
         logger.info(f"✅ Successfully enqueued agent run {agent_run_id} to Dramatiq (message_id: {message_id})")
     except Exception as e:
         logger.error(f"❌ Failed to enqueue agent run {agent_run_id} to Dramatiq: {e}", exc_info=True)
@@ -868,7 +867,7 @@ async def get_active_agent_runs(user_id: str = Depends(verify_and_get_user_id_fr
                 'started_at': run.get('started_at')
             }
             for run in agent_runs_data
-            if run and run.get('id')
+            if run and run.get('id')  # Ensure run exists and has required fields
         ]
         
         logger.debug(f"Found {len(accessible_runs)} active agent runs for user: {user_id}")
@@ -936,7 +935,6 @@ async def get_thread_agent(thread_id: str, user_id: str = Depends(verify_and_get
         effective_agent_id = None
         agent_source = "none"
         
-        # Get the most recently used agent from agent_runs
         recent_agent_result = await client.table('agent_runs').select('agent_id', 'agent_version_id').eq('thread_id', thread_id).not_.is_('agent_id', 'null').order('created_at', desc=True).limit(1).execute()
         if recent_agent_result.data:
             effective_agent_id = recent_agent_result.data[0]['agent_id']
