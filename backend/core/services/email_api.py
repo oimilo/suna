@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import os
 from core.services.email import email_service
@@ -16,7 +16,7 @@ class SupabaseWebhookPayload(BaseModel):
     type: str
     table: str
     record: dict
-    schema: str
+    schema_name: str = Field(alias="schema")
     old_record: Optional[dict] = None
 
 def verify_webhook_secret(x_webhook_secret: str = Header(...)):
