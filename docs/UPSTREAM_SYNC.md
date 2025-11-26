@@ -153,6 +153,14 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 - **Parser XML**: fallback para `<function_calls>` incompletos em `backend/core/agentpress/xml_tool_parser.py`, garantindo que `create_file` não quebre quando o streaming corta `</invoke>`.
 - **Branding/UI**: alterações visuais da versão Prophet (logos, landing/hero, cores) e landing page custom (`frontend/src/...` + assets em `public/`).
 - **Landing Page estática**: `landing_page.html` precisa continuar servindo via nossas rotas (mantemos favicon personalizado e assets).
+- **Redis SSL/TLS**: suporte a `REDIS_SSL=true` para Upstash e outros provedores cloud (não presente no upstream).
 
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
+
+## Hotfixes aplicados (pós-sync)
+
+### 2025-11-26 — Redis SSL/TLS para Upstash
+- **Problema**: `Connection closed by server` em produção porque Upstash requer TLS.
+- **Solução**: Adicionamos `REDIS_SSL` env var e lógica de SSL em `redis.py` e `redis_worker.py`.
+- **Ação necessária**: Configurar `REDIS_SSL=true` no ambiente de produção (DigitalOcean).
 
