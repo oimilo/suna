@@ -1,5 +1,6 @@
 import redis.asyncio as redis
 import os
+import ssl
 from dotenv import load_dotenv
 import asyncio
 from core.utils.logger import logger
@@ -97,8 +98,11 @@ def initialize():
     
     # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
     if redis_ssl:
-        pool_kwargs["ssl"] = True
-        pool_kwargs["ssl_cert_reqs"] = None  # Don't require certificate verification for managed Redis
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        pool_kwargs["connection_class"] = redis.connection.SSLConnection
+        pool_kwargs["ssl_context"] = ssl_context
     
     pool = redis.ConnectionPool(**pool_kwargs)
 
