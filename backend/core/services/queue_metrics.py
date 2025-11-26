@@ -3,9 +3,12 @@ Queue metrics service for monitoring Dramatiq queue depth.
 
 Provides:
 - Queue depth metrics from Redis
-- CloudWatch publishing for ECS auto-scaling
+- CloudWatch publishing for ECS auto-scaling (AWS only)
+
+Set CLOUDWATCH_ENABLED=false to disable CloudWatch publishing.
 """
 import asyncio
+import os
 from datetime import datetime, timezone
 
 from core.utils.logger import logger
@@ -14,12 +17,16 @@ from core.utils.config import config, EnvMode
 # CloudWatch client (lazy initialized)
 _cloudwatch_client = None
 
+# Check if CloudWatch is enabled (default: true in production for AWS deployments)
+CLOUDWATCH_ENABLED = os.getenv("CLOUDWATCH_ENABLED", "true").lower() == "true"
+
 
 def _get_cloudwatch_client():
-    """Get or create CloudWatch client (production only)."""
+    """Get or create CloudWatch client (production only, when enabled)."""
     global _cloudwatch_client
 
-    if config.ENV_MODE != EnvMode.PRODUCTION:
+    # Skip if not production or explicitly disabled
+    if config.ENV_MODE != EnvMode.PRODUCTION or not CLOUDWATCH_ENABLED:
         return None
 
     if _cloudwatch_client is None:
@@ -100,6 +107,10 @@ async def start_cloudwatch_publisher(interval_seconds: int = 60):
     Args:
         interval_seconds: How often to publish (default 60s)
     """
+    if not CLOUDWATCH_ENABLED:
+        logger.info("CloudWatch publishing disabled (CLOUDWATCH_ENABLED=false)")
+        return
+    
     logger.info(
         f"Starting CloudWatch queue metrics publisher (interval: {interval_seconds}s)"
     )
