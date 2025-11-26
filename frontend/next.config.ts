@@ -15,22 +15,8 @@ const nextConfig = (): NextConfig => ({
     ],
   },
   
-  async rewrites() {
-    return [
-      {
-        source: '/ingest/static/:path*',
-        destination: 'https://eu-assets.i.posthog.com/static/:path*',
-      },
-      {
-        source: '/ingest/:path*',
-        destination: 'https://eu.i.posthog.com/:path*',
-      },
-      {
-        source: '/ingest/flags',
-        destination: 'https://eu.i.posthog.com/flags',
-      },
-    ];
-  },
+  // PostHog rewrites removed - now configured directly via env vars
+  // If you need proxy mode for ad-blockers, re-add rewrites matching your NEXT_PUBLIC_POSTHOG_HOST
   skipTrailingSlashRedirect: true,
 });
 
