@@ -68,9 +68,10 @@ def initialize():
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
 
     auth_info = f"user={config['username']} " if config['username'] else ""
+    ssl_info = "ssl=True " if config.get('ssl') else ""
     logger.info(
         f"Initializing WORKER Redis pool to {config['host']}:{config['port']} "
-        f"{auth_info}with max {max_connections} connections, "
+        f"{auth_info}{ssl_info}with max {max_connections} connections, "
         f"{max_concurrent_ops} concurrent operations"
     )
 
@@ -90,6 +91,11 @@ def initialize():
     
     if config["username"]:
         pool_kwargs["username"] = config["username"]
+    
+    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
+    if config.get("ssl"):
+        pool_kwargs["ssl"] = True
+        pool_kwargs["ssl_cert_reqs"] = None  # Don't require certificate verification for managed Redis
     
     pool = redis_lib.ConnectionPool(**pool_kwargs)
     client = redis_lib.Redis(connection_pool=pool)
