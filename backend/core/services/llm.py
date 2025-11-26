@@ -206,6 +206,14 @@ async def make_llm_api_call(
     from core.ai_models import model_manager
     resolved_model_name = model_manager.resolve_model_id(model_name)
     
+    # Use model's max_output_tokens as default if max_tokens not specified
+    effective_max_tokens = max_tokens
+    if effective_max_tokens is None:
+        model = model_manager.get_model(resolved_model_name)
+        if model and model.max_output_tokens:
+            effective_max_tokens = model.max_output_tokens
+            logger.debug(f"Using model's max_output_tokens as default: {effective_max_tokens}")
+    
     # Only pass headers/extra_headers if they are not None to avoid overriding model config
     override_params = {
         "messages": messages,
@@ -215,7 +223,8 @@ async def make_llm_api_call(
         "stream": stream,
         "api_key": api_key,
         "api_base": api_base,
-        "stop": stop
+        "stop": stop,
+        "max_tokens": effective_max_tokens,
     }
     
     # Only add headers if they are provided (not None)

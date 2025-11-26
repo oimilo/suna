@@ -37,6 +37,7 @@ class ModelRegistry:
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4-5", "Claude Haiku 4.5", "anthropic/claude-haiku-4-5-20251001", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", BEDROCK_HAIKU],
             context_window=200_000,
+            max_output_tokens=16_384,  # Claude Haiku 4.5 supports up to 64K, using 16K as sensible default
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -66,6 +67,7 @@ class ModelRegistry:
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "anthropic/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", BEDROCK_SONNET_45],
             context_window=1_000_000,
+            max_output_tokens=16_384,  # Claude Sonnet 4.5 supports up to 64K, using 16K as sensible default
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -96,6 +98,7 @@ class ModelRegistry:
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", BEDROCK_SONNET_4],
             context_window=1_000_000,
+            max_output_tokens=16_384,  # Claude Sonnet 4 supports up to 64K, using 16K as sensible default
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
