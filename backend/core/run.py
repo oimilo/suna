@@ -61,32 +61,53 @@ class ToolManager:
             agent_id: Optional agent ID for agent builder tools
             disabled_tools: List of tool names to exclude from registration
         """
+        import time
+        start = time.time()
+        timings = {}
+        
         disabled_tools = disabled_tools or []
         
         # Migrate tool config ONCE at the start to avoid repeated expensive operations
+        t = time.time()
         self.migrated_tools = self._get_migrated_tools_config()
+        timings['migrate_config'] = (time.time() - t) * 1000
         
         # Core tools - always enabled
+        t = time.time()
         self._register_core_tools()
+        timings['core_tools'] = (time.time() - t) * 1000
         
         # Sandbox tools
+        t = time.time()
         self._register_sandbox_tools(disabled_tools)
+        timings['sandbox_tools'] = (time.time() - t) * 1000
         
         # Data and utility tools
+        t = time.time()
         self._register_utility_tools(disabled_tools)
+        timings['utility_tools'] = (time.time() - t) * 1000
         
         # Agent builder tools - register if agent_id provided
         if agent_id:
+            t = time.time()
             self._register_agent_builder_tools(agent_id, disabled_tools)
+            timings['agent_builder_tools'] = (time.time() - t) * 1000
         
         # Browser tool
+        t = time.time()
         self._register_browser_tool(disabled_tools)
+        timings['browser_tool'] = (time.time() - t) * 1000
         
         # Suna-specific tools (agent creation)
         if self.account_id:
+            t = time.time()
             self._register_suna_specific_tools(disabled_tools)
+            timings['suna_tools'] = (time.time() - t) * 1000
         
-        logger.info(f"Tool registration complete. Registered {len(self.thread_manager.tool_registry.tools)} functions")
+        total = (time.time() - start) * 1000
+        timing_str = " | ".join([f"{k}: {v:.1f}ms" for k, v in timings.items()])
+        logger.info(f"⏱️ [TIMING] Tool registration breakdown: {timing_str}")
+        logger.info(f"Tool registration complete. {len(self.thread_manager.tool_registry.tools)} functions in {total:.1f}ms")
     
     def _register_core_tools(self):
         """Register core tools that are always available."""

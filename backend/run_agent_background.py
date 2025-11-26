@@ -72,6 +72,17 @@ async def initialize():
     logger.info(f"Initializing worker async resources with Redis at {redis_host}:{redis_port}")
     await retry(lambda: redis.initialize_async())
     await db.initialize()
+    
+    # Pre-load tool classes to avoid first-request delay
+    from core.utils.tool_discovery import warm_up_tools_cache
+    warm_up_tools_cache()
+    
+    # Pre-cache default Suna agent configs (eliminates 1+ second delay on first request)
+    try:
+        from core.runtime_cache import warm_up_suna_config_cache
+        await warm_up_suna_config_cache()
+    except Exception as e:
+        logger.warning(f"Failed to pre-cache Suna configs (non-fatal): {e}")
 
     _initialized = True
     logger.info(f"✅ Worker async resources initialized successfully (instance: {instance_id})")
