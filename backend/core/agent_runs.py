@@ -97,7 +97,10 @@ async def _find_shared_suna_agent(client):
 
 
 async def _load_agent_config(client, agent_id: Optional[str], account_id: str, user_id: str, is_new_thread: bool = False):
-    from .agent_loader import get_agent_loader
+    import time
+    t_start = time.time()
+    
+    from .agent_loader import get_agent_loader, AgentData
     loader = await get_agent_loader()
     
     agent_data = None
@@ -105,8 +108,51 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
     logger.debug(f"[AGENT LOAD] Loading agent: {agent_id or 'default'}")
 
     if agent_id:
-        agent_data = await loader.load_agent(agent_id, user_id, load_config=True)
-        logger.debug(f"Using agent {agent_data.name} ({agent_id}) version {agent_data.version_name}")
+        # OPTIMIZED: For Suna agents, use fast path (static config + cached MCPs)
+        # This avoids DB queries entirely when cache is warm
+        from core.runtime_cache import get_static_suna_config, get_cached_user_mcps
+        
+        static_config = get_static_suna_config()
+        cached_mcps = await get_cached_user_mcps(agent_id)
+        
+        # Fast path: If we have static config AND cached MCPs, assume it's Suna
+        # (cached MCPs only exist for Suna agents)
+        if static_config and cached_mcps is not None:
+            # Fast path: Use static config + cached MCPs (zero DB calls!)
+            agent_data = AgentData(
+                agent_id=agent_id,
+                name="Suna",
+                description=None,
+                account_id=account_id,
+                is_default=True,
+                is_public=False,
+                tags=[],
+                icon_name=None,
+                icon_color=None,
+                icon_background=None,
+                created_at="",
+                updated_at="",
+                current_version_id=None,
+                version_count=1,
+                metadata={'is_suna_default': True},
+                system_prompt=static_config['system_prompt'],
+                model=static_config['model'],
+                agentpress_tools=static_config['agentpress_tools'],
+                configured_mcps=cached_mcps.get('configured_mcps', []),
+                custom_mcps=cached_mcps.get('custom_mcps', []),
+                triggers=cached_mcps.get('triggers', []),
+                is_suna_default=True,
+                centrally_managed=True,
+                config_loaded=True,
+                restrictions=static_config['restrictions']
+            )
+            logger.info(f"⚡ [FAST PATH] Suna config from memory + Redis MCPs: {(time.time() - t_start)*1000:.1f}ms (zero DB calls)")
+        else:
+            # Fall back to normal loader (handles cache misses and custom agents)
+            t_loader = time.time()
+            agent_data = await loader.load_agent(agent_id, user_id, load_config=True)
+            logger.info(f"⏱️ [TIMING] Agent loader (DB path): {(time.time() - t_loader)*1000:.1f}ms | Total: {(time.time() - t_start)*1000:.1f}ms")
+            logger.debug(f"Using agent {agent_data.name} ({agent_id}) version {agent_data.version_name}")
     else:
         logger.debug(f"[AGENT LOAD] Loading default agent")
         

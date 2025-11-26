@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-25   | `611bd3dfd`     | `Merge pull request #2144 from kubet/feat/rework-desing-mobile` |
+| 2025-11-26   | `7dd0c958`      | `fix gigantic loop litellm errors` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -163,4 +163,17 @@ Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobresc
 - **Problema**: `Connection closed by server` em produção porque Upstash requer TLS.
 - **Solução**: Adicionamos `REDIS_SSL` env var e lógica de SSL em `redis.py` e `redis_worker.py`.
 - **Ação necessária**: Configurar `REDIS_SSL=true` no ambiente de produção (DigitalOcean).
+
+### 2025-11-26 — Latency Optimization + Gigantic Loop Fix (134d04ae, 7dd0c958)
+- **Problema**: Delay significativo (~2-5s) em cada request do agente devido a múltiplas queries ao banco de dados. Também havia um bug que causava loops infinitos de retry em erros 400 do LiteLLM.
+- **Solução**:
+  - **`runtime_cache.py` (novo)**: Sistema de cache em memória + Redis para configs do Suna, evitando queries repetidas ao banco.
+  - **`agent_loader.py`**: Atualizado para usar o cache, com "fast path" para agentes Suna (zero DB calls quando cache está quente).
+  - **`agent_runs.py`**: Adicionado fast path que usa `get_static_suna_config()` + `get_cached_user_mcps()` para evitar queries.
+  - **`run.py`**: Adicionado timing detalhado para diagnóstico de registro de tools.
+  - **`run_agent_background.py`**: Warmup do cache Suna no startup do worker via `warm_up_suna_config_cache()`.
+  - **`llm.py`**: Desabilitado retries internos do LiteLLM (`litellm.num_retries = 0`) para evitar loops infinitos.
+  - **`thread_manager.py`**: Adicionada detecção de erros non-retryable (400, BadRequestError, validation) para parar imediatamente em vez de retry.
+- **Lógica custom preservada**: LTRIM, TTL de 6h, `_build_proxy_url`, `normalize_filename`, `WEBHOOK_BASE_URL`, `max_xml_tool_calls`, `max_output_tokens`, SSL Redis.
+- **Testes**: Imports OK, sintaxe Python OK.
 
