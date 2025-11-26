@@ -20,7 +20,7 @@ def get_redis_config():
     """Get Redis configuration from environment variables.
     
     Returns:
-        dict: Dictionary with host, port, password, username, and url keys
+        dict: Dictionary with host, port, password, username, ssl, and url keys
     """
     load_dotenv()
     
@@ -28,12 +28,15 @@ def get_redis_config():
     redis_port = int(os.getenv("REDIS_PORT", 6379))
     redis_password = os.getenv("REDIS_PASSWORD", "")
     redis_username = os.getenv("REDIS_USERNAME", None)
+    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
+    redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
     
     # Build Redis URL for clients that support it (like Dramatiq)
+    protocol = "rediss" if redis_ssl else "redis"
     if redis_username and redis_password:
-        redis_url = f"redis://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
+        redis_url = f"{protocol}://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
     elif redis_password:
-        redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}"
+        redis_url = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}"
     else:
         redis_url = None
     
@@ -42,6 +45,7 @@ def get_redis_config():
         "port": redis_port,
         "password": redis_password,
         "username": redis_username,
+        "ssl": redis_ssl,
         "url": redis_url,
     }
 
@@ -59,6 +63,7 @@ def initialize():
     redis_port = config["port"]
     redis_password = config["password"]
     redis_username = config["username"]
+    redis_ssl = config["ssl"]
     
     # Connection pool configuration - optimized for API (light usage)
     # API typically has < 20 concurrent Redis operations
@@ -69,7 +74,8 @@ def initialize():
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
 
     auth_info = f"user={redis_username} " if redis_username else ""
-    logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}with max {max_connections} connections")
+    ssl_info = "ssl=True " if redis_ssl else ""
+    logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}{ssl_info}with max {max_connections} connections")
 
     # Create connection pool with production-optimized settings
     pool_kwargs = {
@@ -88,6 +94,11 @@ def initialize():
     # Add username if provided (required for Redis Cloud)
     if redis_username:
         pool_kwargs["username"] = redis_username
+    
+    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
+    if redis_ssl:
+        pool_kwargs["ssl"] = True
+        pool_kwargs["ssl_cert_reqs"] = None  # Don't require certificate verification for managed Redis
     
     pool = redis.ConnectionPool(**pool_kwargs)
 
