@@ -164,17 +164,20 @@ class SandboxFilesTool(SandboxToolsBase):
             
             message = f"File '{file_path}' created successfully."
             
-            # Check if index.html was created and add 8080 server info (only in root workspace)
-            if file_path.lower() == 'index.html':
+            # Check if any HTML file was created and add preview URL
+            if file_path.lower().endswith('.html'):
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
                     raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                     proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
-                    website_url = proxy_url or raw_url
-                    message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
-                    message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
+                    base_url = proxy_url or raw_url
+                    # Build full URL to the HTML file
+                    file_url = f"{base_url.rstrip('/')}/{file_path}"
+                    message += f"\n\n[HTML file preview available at: {file_url}]"
+                    if file_path.lower() == 'index.html':
+                        message += f"\n[Root server URL: {base_url}]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
             
             return self.success_response(message)
         except Exception as e:
@@ -288,17 +291,20 @@ class SandboxFilesTool(SandboxToolsBase):
             
             message = f"File '{file_path}' completely rewritten successfully."
             
-            # Check if index.html was rewritten and add 8080 server info (only in root workspace)
-            if file_path.lower() == 'index.html':
+            # Check if any HTML file was rewritten and add preview URL
+            if file_path.lower().endswith('.html'):
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
                     raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                     proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
-                    website_url = proxy_url or raw_url
-                    message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
-                    message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
+                    base_url = proxy_url or raw_url
+                    # Build full URL to the HTML file
+                    file_url = f"{base_url.rstrip('/')}/{file_path}"
+                    message += f"\n\n[HTML file preview available at: {file_url}]"
+                    if file_path.lower() == 'index.html':
+                        message += f"\n[Root server URL: {base_url}]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
             
             # Auto-validate presentation slides
             slide_pattern = r'^presentations/([^/]+)/slide_(\d+)\.html$'
