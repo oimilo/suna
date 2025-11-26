@@ -60,7 +60,8 @@ export function PresentationSlidePreview({
         const sanitizedName = sanitizeFilename(presentationName);
         const metadataUrl = constructHtmlPreviewUrl(
           project.sandbox.sandbox_url,
-          `presentations/${sanitizedName}/metadata.json`
+          `presentations/${sanitizedName}/metadata.json`,
+          project.sandbox.id
         );
 
         const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;

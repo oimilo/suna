@@ -35,7 +35,7 @@ export function PresentationSlideCard({
 
   const slidePreviewUrl = useMemo(() => {
     if (!project?.sandbox?.sandbox_url) return null;
-    const url = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path);
+    const url = constructHtmlPreviewUrl(project.sandbox.sandbox_url, slide.file_path, project.sandbox.id);
     return refreshTimestamp ? `${url}?t=${refreshTimestamp}` : url;
   }, [project?.sandbox?.sandbox_url, slide.file_path, refreshTimestamp]);
 

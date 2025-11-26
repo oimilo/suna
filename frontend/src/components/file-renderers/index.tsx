@@ -237,7 +237,7 @@ export function FileRenderer({
 
   const htmlPreviewUrl =
     isHtmlFile && project?.sandbox?.sandbox_url && (filePath || fileName)
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName)
+      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath || fileName, project.sandbox.id)
       : blobHtmlUrl;
 
   React.useEffect(() => {

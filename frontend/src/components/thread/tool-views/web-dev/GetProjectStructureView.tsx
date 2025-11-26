@@ -563,7 +563,8 @@ export function GetProjectStructureView({
     try {
       const fileUrl = constructHtmlPreviewUrl(
         project.sandbox.sandbox_url,
-        `${projectData.projectName}/${filePath}`
+        `${projectData.projectName}/${filePath}`,
+        project.sandbox.id
       );
 
       if (fileUrl) {
@@ -589,7 +590,8 @@ export function GetProjectStructureView({
   const previewUrl = isHtmlFile && project?.sandbox?.sandbox_url && projectData
     ? constructHtmlPreviewUrl(
         project.sandbox.sandbox_url,
-        `${projectData.projectName}/${selectedFile}`
+        `${projectData.projectName}/${selectedFile}`,
+        project.sandbox.id
       )
     : undefined;
 

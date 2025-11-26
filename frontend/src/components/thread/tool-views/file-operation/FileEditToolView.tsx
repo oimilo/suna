@@ -214,7 +214,7 @@ export function FileEditToolView({
 
   const htmlPreviewUrl =
     isHtml && project?.sandbox?.sandbox_url && processedFilePath
-      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath)
+      ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, processedFilePath, project.sandbox.id)
       : undefined;
 
   const FileIcon = getFileIcon(fileName);

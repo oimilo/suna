@@ -166,7 +166,8 @@ export function PresentationViewer({
       
       const metadataUrl = constructHtmlPreviewUrl(
         project.sandbox.sandbox_url, 
-        `presentations/${sanitizedPresentationName}/metadata.json`
+        `presentations/${sanitizedPresentationName}/metadata.json`,
+        project.sandbox.id
       );
       
       // Add cache-busting parameter to ensure fresh data
