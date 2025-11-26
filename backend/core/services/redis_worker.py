@@ -241,6 +241,14 @@ async def lrange(key: str, start: int, end: int) -> List[str]:
     return await _with_concurrency_limit(_op())
 
 
+async def ltrim(key: str, start: int, end: int):
+    """Trim a list to the specified range."""
+    async def _op():
+        redis_client = await get_client()
+        return await redis_client.ltrim(key, start, end)
+    return await _with_concurrency_limit(_op())
+
+
 async def keys(pattern: str) -> List[str]:
     """Get keys matching a pattern."""
     async def _op():
