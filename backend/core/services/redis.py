@@ -1,6 +1,5 @@
 import redis.asyncio as redis
 import os
-import ssl
 from dotenv import load_dotenv
 import asyncio
 from core.utils.logger import logger
@@ -65,46 +64,50 @@ def initialize():
     redis_password = config["password"]
     redis_username = config["username"]
     redis_ssl = config["ssl"]
+    redis_url = config["url"]
     
     # Connection pool configuration - optimized for API (light usage)
-    # API typically has < 20 concurrent Redis operations
-    # Default is generous - Redis will handle rejection if we exceed server limits
     max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "100"))
-    socket_timeout = 15.0            # 15 seconds socket timeout
-    connect_timeout = 10.0           # 10 seconds connection timeout
+    socket_timeout = 15.0
+    connect_timeout = 10.0
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
 
     auth_info = f"user={redis_username} " if redis_username else ""
     ssl_info = "ssl=True " if redis_ssl else ""
     logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}{ssl_info}with max {max_connections} connections")
 
-    # Create connection pool with production-optimized settings
-    pool_kwargs = {
-        "host": redis_host,
-        "port": redis_port,
-        "password": redis_password,
-        "decode_responses": True,
-        "socket_timeout": socket_timeout,
-        "socket_connect_timeout": connect_timeout,
-        "socket_keepalive": True,
-        "retry_on_timeout": retry_on_timeout,
-        "health_check_interval": 30,
-        "max_connections": max_connections,
-    }
-    
-    # Add username if provided (required for Redis Cloud)
-    if redis_username:
-        pool_kwargs["username"] = redis_username
-    
-    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
-    if redis_ssl:
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        pool_kwargs["connection_class"] = redis.connection.SSLConnection
-        pool_kwargs["ssl_context"] = ssl_context
-    
-    pool = redis.ConnectionPool(**pool_kwargs)
+    # Use from_url for SSL connections (simpler and more compatible)
+    if redis_ssl and redis_url:
+        pool = redis.ConnectionPool.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+        )
+    else:
+        # Create connection pool with production-optimized settings
+        pool_kwargs = {
+            "host": redis_host,
+            "port": redis_port,
+            "password": redis_password,
+            "decode_responses": True,
+            "socket_timeout": socket_timeout,
+            "socket_connect_timeout": connect_timeout,
+            "socket_keepalive": True,
+            "retry_on_timeout": retry_on_timeout,
+            "health_check_interval": 30,
+            "max_connections": max_connections,
+        }
+        
+        # Add username if provided (required for Redis Cloud)
+        if redis_username:
+            pool_kwargs["username"] = redis_username
+        
+        pool = redis.ConnectionPool(**pool_kwargs)
 
     # Create Redis client from connection pool
     client = redis.Redis(connection_pool=pool)
