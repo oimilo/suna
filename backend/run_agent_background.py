@@ -52,6 +52,10 @@ _initialized = False
 db = DBConnection()
 instance_id = ""
 
+# Limit for response list size to prevent memory bloat
+# Keeps only the last N responses in Redis (older ones are still saved to DB)
+REDIS_RESPONSE_LIST_MAX_SIZE = 500
+
 async def initialize():
     """Initialize async resources (Redis, DB) on first request.
 
@@ -269,6 +273,13 @@ async def run_agent_background(
                 asyncio.create_task(redis.publish(response_channel, "new"))
             )
             total_responses += 1
+            
+            # Trim list to prevent memory bloat (keep last N responses)
+            # Older responses are still saved to DB at the end of the run
+            if total_responses % 100 == 0:  # Trim every 100 responses to reduce Redis calls
+                pending_redis_operations.append(
+                    asyncio.create_task(redis.ltrim(response_list_key, -REDIS_RESPONSE_LIST_MAX_SIZE, -1))
+                )
 
             # Check for agent-signaled completion or error
             if response.get('type') == 'status':
@@ -295,11 +306,7 @@ async def run_agent_background(
              await redis.rpush(response_list_key, json.dumps(completion_message))
              await redis.publish(response_channel, "new") # Notify about the completion message
 
-        # Fetch final responses from Redis for DB update
-        all_responses_json = await redis.lrange(response_list_key, 0, -1)
-        all_responses = [json.loads(r) for r in all_responses_json]
-
-        # Update DB status
+        # Update DB status (responses are already saved to DB during execution by ResponseProcessor)
         await update_agent_run_status(client, agent_run_id, final_status, error=error_message)
 
         # Publish final control signal (END_STREAM or ERROR)
@@ -405,8 +412,9 @@ async def _cleanup_redis_run_lock(agent_run_id: str):
     except Exception as e:
         logger.warning(f"Failed to clean up Redis run lock key {run_lock_key}: {str(e)}")
 
-# TTL for Redis response lists (24 hours)
-REDIS_RESPONSE_LIST_TTL = 3600 * 24
+# TTL for Redis response lists (6 hours - reduced from 24h to save memory)
+# After agent completes, responses are in DB, Redis is just for active streaming
+REDIS_RESPONSE_LIST_TTL = 3600 * 6
 
 async def _cleanup_redis_response_list(agent_run_id: str):
     """Set TTL on the Redis response list."""
