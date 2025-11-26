@@ -8,12 +8,17 @@ import os
 USE_ANTHROPIC_DIRECT = os.getenv("USE_ANTHROPIC_DIRECT", "false").lower() == "true"
 SHOULD_USE_ANTHROPIC = (config.ENV_MODE == EnvMode.LOCAL or USE_ANTHROPIC_DIRECT) and bool(config.ANTHROPIC_API_KEY)
 
+# Get Bedrock profiles from config (can be overridden via env vars)
+BEDROCK_HAIKU = config.BEDROCK_PROFILE_HAIKU
+BEDROCK_SONNET_45 = config.BEDROCK_PROFILE_SONNET_45
+BEDROCK_SONNET_4 = config.BEDROCK_PROFILE_SONNET_4
+
 if SHOULD_USE_ANTHROPIC:
     FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
     PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5"
 else:  
-    FREE_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-    PREMIUM_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+    FREE_MODEL_ID = BEDROCK_HAIKU
+    PREMIUM_MODEL_ID = BEDROCK_HAIKU
 
 is_local = config.ENV_MODE == EnvMode.LOCAL
 is_prod = config.ENV_MODE == EnvMode.PRODUCTION
@@ -27,10 +32,10 @@ class ModelRegistry:
     
     def _initialize_models(self):
         self.register(Model(
-            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else BEDROCK_HAIKU,
             name="Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4-5", "Claude Haiku 4.5", "anthropic/claude-haiku-4-5-20251001", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
+            aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4-5", "Claude Haiku 4.5", "anthropic/claude-haiku-4-5-20251001", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", BEDROCK_HAIKU],
             context_window=200_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -56,10 +61,10 @@ class ModelRegistry:
         ))
         
         self.register(Model(
-            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else BEDROCK_SONNET_45,
             name="Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "anthropic/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
+            aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "anthropic/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", BEDROCK_SONNET_45],
             context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -86,10 +91,10 @@ class ModelRegistry:
         ))
         
         self.register(Model(
-            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else BEDROCK_SONNET_4,
             name="Sonnet 4",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"],
+            aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", BEDROCK_SONNET_4],
             context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,

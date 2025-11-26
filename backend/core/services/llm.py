@@ -105,26 +105,23 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     
+    # Get Bedrock profiles from config (configurable via env vars)
+    bedrock_haiku = config.BEDROCK_PROFILE_HAIKU
+    bedrock_sonnet_45 = config.BEDROCK_PROFILE_SONNET_45
+    bedrock_sonnet_4 = config.BEDROCK_PROFILE_SONNET_4
+    
     fallbacks = [
-        # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
+        # Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            ]
+            bedrock_haiku: [bedrock_sonnet_4, bedrock_sonnet_45]
         },
-        # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
+        # Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            ]
+            bedrock_sonnet_45: [bedrock_sonnet_4, bedrock_haiku]
         },
-        # MAP-tagged Sonnet 4 -> Haiku 4.5
+        # Sonnet 4 -> Haiku 4.5
         {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            ]
+            bedrock_sonnet_4: [bedrock_haiku]
         }
     ]
     
