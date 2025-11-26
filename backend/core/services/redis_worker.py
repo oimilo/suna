@@ -12,7 +12,6 @@ Key differences from redis.py:
 """
 import redis.asyncio as redis_lib
 import os
-import ssl
 from dotenv import load_dotenv
 import asyncio
 from core.utils.logger import logger
@@ -58,9 +57,7 @@ def initialize():
     config = get_redis_config()
     
     # Worker-optimized connection pool settings
-    # Pool size should match semaphore limit + overhead (pubsub, etc.)
     max_concurrent_ops = int(os.getenv("REDIS_WORKER_MAX_CONCURRENT_OPS", str(DEFAULT_MAX_CONCURRENT_OPS)))
-    # Calculate pool size: semaphore limit + overhead for pubsub connections
     default_pool_size = max_concurrent_ops + 20
     max_connections = int(os.getenv("REDIS_WORKER_MAX_CONNECTIONS", str(default_pool_size)))
     
@@ -76,32 +73,38 @@ def initialize():
         f"{max_concurrent_ops} concurrent operations"
     )
 
-    # Create connection pool optimized for high-throughput worker operations
-    pool_kwargs = {
-        "host": config["host"],
-        "port": config["port"],
-        "password": config["password"],
-        "decode_responses": True,
-        "socket_timeout": socket_timeout,
-        "socket_connect_timeout": connect_timeout,
-        "socket_keepalive": True,
-        "retry_on_timeout": retry_on_timeout,
-        "health_check_interval": 30,
-        "max_connections": max_connections,
-    }
+    # Use from_url for SSL connections (simpler and more compatible)
+    if config.get("ssl") and config.get("url"):
+        pool = redis_lib.ConnectionPool.from_url(
+            config["url"],
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+        )
+    else:
+        # Create connection pool optimized for high-throughput worker operations
+        pool_kwargs = {
+            "host": config["host"],
+            "port": config["port"],
+            "password": config["password"],
+            "decode_responses": True,
+            "socket_timeout": socket_timeout,
+            "socket_connect_timeout": connect_timeout,
+            "socket_keepalive": True,
+            "retry_on_timeout": retry_on_timeout,
+            "health_check_interval": 30,
+            "max_connections": max_connections,
+        }
+        
+        if config["username"]:
+            pool_kwargs["username"] = config["username"]
+        
+        pool = redis_lib.ConnectionPool(**pool_kwargs)
     
-    if config["username"]:
-        pool_kwargs["username"] = config["username"]
-    
-    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
-    if config.get("ssl"):
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        pool_kwargs["connection_class"] = redis_lib.connection.SSLConnection
-        pool_kwargs["ssl_context"] = ssl_context
-    
-    pool = redis_lib.ConnectionPool(**pool_kwargs)
     client = redis_lib.Redis(connection_pool=pool)
     
     # Initialize semaphore for concurrency limiting
