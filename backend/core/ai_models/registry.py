@@ -2,9 +2,11 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
-# SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
+# Use Anthropic API directly instead of AWS Bedrock
+# Set USE_ANTHROPIC_DIRECT=true to bypass Bedrock (useful for non-Kortix deployments)
+import os
+USE_ANTHROPIC_DIRECT = os.getenv("USE_ANTHROPIC_DIRECT", "false").lower() == "true"
+SHOULD_USE_ANTHROPIC = (config.ENV_MODE == EnvMode.LOCAL or USE_ANTHROPIC_DIRECT) and bool(config.ANTHROPIC_API_KEY)
 
 if SHOULD_USE_ANTHROPIC:
     FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
