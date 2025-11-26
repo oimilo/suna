@@ -49,13 +49,13 @@ class ModelRegistry:
                 cache_write_5m_cost_per_million_tokens=1.25,  # 5-minute cache writes
                 cache_write_1h_cost_per_million_tokens=2.00  # 1-hour cache writes
             ),
-            tier_availability=["paid"],
+            tier_availability=["free", "paid"],  # Available to all users as default model
             priority=102,
             recommended=True,
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "fine-grained-tool-streaming-2025-05-14" 
+                    "anthropic-beta": "fine-grained-tool-streaming-2025-05-14,token-efficient-tools-2025-02-19" 
                 },
             )
         ))
@@ -85,7 +85,7 @@ class ModelRegistry:
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14" 
+                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14,token-efficient-tools-2025-02-19" 
                 },
             )
         ))
@@ -115,7 +115,7 @@ class ModelRegistry:
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14" 
+                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14,token-efficient-tools-2025-02-19" 
                 },
             )
         ))

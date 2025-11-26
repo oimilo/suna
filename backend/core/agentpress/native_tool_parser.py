@@ -151,6 +151,9 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     """
     Convert buffered tool calls to complete native tool calls format.
     
+    Only includes tool calls with valid, complete JSON arguments.
+    Truncated/incomplete JSON (e.g., from hitting token limits) is skipped.
+    
     Args:
         tool_calls_buffer: Dictionary mapping index -> buffered tool call data
         
@@ -161,21 +164,26 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     
     for idx, tc_buf in tool_calls_buffer.items():
         if tc_buf.get('id') and tc_buf.get('function', {}).get('name') and tc_buf.get('function', {}).get('arguments'):
-            try:
-                # Validate that arguments are valid JSON
-                from core.utils.json_helpers import safe_json_parse
-                safe_json_parse(tc_buf['function']['arguments'])
-                # Keep arguments as JSON string for LiteLLM compatibility
-                complete_tool_calls.append({
-                    "id": tc_buf['id'],
-                    "type": "function",
-                    "function": {
-                        "name": tc_buf['function']['name'],
-                        "arguments": tc_buf['function']['arguments']
-                    }
-                })
-            except (json.JSONDecodeError, TypeError):
+            # Validate that arguments are valid JSON that parses to a dict
+            # safe_json_parse returns the original string if JSON is invalid/truncated
+            from core.utils.json_helpers import safe_json_parse
+            parsed = safe_json_parse(tc_buf['function']['arguments'])
+            
+            # Only include if parsed result is a dict (valid complete JSON)
+            # If it's still a string, the JSON was invalid/truncated
+            if not isinstance(parsed, dict):
+                logger.warning(f"Skipping tool call {tc_buf.get('id')} with incomplete/invalid JSON arguments")
                 continue
+                
+            # Keep arguments as JSON string for LiteLLM compatibility
+            complete_tool_calls.append({
+                "id": tc_buf['id'],
+                "type": "function",
+                "function": {
+                    "name": tc_buf['function']['name'],
+                    "arguments": tc_buf['function']['arguments']
+                }
+            })
     
     return complete_tool_calls
 
