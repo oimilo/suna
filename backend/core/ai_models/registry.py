@@ -3,9 +3,9 @@ from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, Mode
 from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 
-# SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
+# [PROPHET CUSTOM] Always use Anthropic API directly when key is available
+# Bedrock ARNs are Kortix-specific and won't work for Prophet
+SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)
 
 # Actual model IDs for LiteLLM
 _BASIC_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
