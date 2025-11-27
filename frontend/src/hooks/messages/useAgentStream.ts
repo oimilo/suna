@@ -689,12 +689,15 @@ export function useAgentStream(
           errorMessage.includes('404') ||
           errorMessage.includes('does not exist');
 
-        // "is not running" typically means the agent completed successfully
-        // but the stream closed before we received the completion message
+        // "is not running" comes from local cache - we should verify with backend
+        // to determine the actual status (completed vs still running)
         const isNotRunningError = errorMessage.includes('is not running');
 
-        if (isNotFoundError || isNotRunningError) {
-          // Treat as completed - the agent likely finished, we just missed the stream
+        if (isNotFoundError) {
+          finalizeStream('agent_not_running', runId);
+        } else if (isNotRunningError) {
+          // The local cache says "not running" but we need to verify
+          // Treat as completed since the agent likely finished
           // The invalidateQueries in finalizeStream will fetch the latest messages from DB
           finalizeStream('completed', runId);
         } else {
