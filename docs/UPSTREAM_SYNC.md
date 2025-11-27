@@ -141,6 +141,31 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - **Lógica custom preservada**: Branding Prophet (displayName)
 - **Testes**: `npm run lint` passou, sintaxe Python OK
 
+### Bloco aplicado — Novu production + atomic credit functions (f45ae15c7)
+- **Upstream commits absorvidos**:
+  - `fa61ca66d` - Novu enabled in production (`self.enabled = True`)
+  - `c1fd94708` - Inbox notifications on dashboard
+  - `411ee7e58` - Fix downgrade edge case + cleanup account state queries
+  - `b310b4e87` - Split migrations (atomic credit functions)
+- **Migrations aplicadas** (7 novas, 1 deletada, 1 renomeada):
+  - `20251127144738_add_daily_credits_column.sql`
+  - `20251127144746_atomic_daily_refresh_function.sql`
+  - `20251127144843_add_daily_refresh_type.sql` (renomeada)
+  - `20251127150827_atomic_use_credits_function.sql`
+  - `20251127150909_atomic_grant_renewal_credits_function.sql`
+  - `20251127151104_get_credit_breakdown_function.sql`
+  - `20251127151402_grant_permissions_all_functions.sql`
+- **Funções SQL atômicas**: Novo sistema de deduction de créditos (Daily → Monthly → Extra)
+- **Cache invalidation**: Adicionado `invalidate_account_state_cache` no `run_agent_background.py`
+- **Frontend updates**: `invalidateAccountState` helper, novo notification dropdown com fallback gracioso
+- **Lógica custom preservada**:
+  - CORS: `allowed_origins = ["https://www.prophet.build", "https://prophet.build"]`
+  - Redis LTRIM/TTL (500 items, 6h)
+  - Daytona proxy router
+  - URLs corrigidas para prophet.build em: `config.py`, `notification_service.py`, `email.py`, `subscription/page.tsx`
+- **⚠️ Problema encontrado**: CORS estava com `kortix.com`/`suna.so` após merge - corrigido manualmente
+- **Testes**: Frontend build OK, backend imports OK
+
 ### Próximo bloco
 - Garantir que as secrets citadas acima estão configuradas no repositório (`STAGING_PROJECT_DIR`, `STAGING_LEGACY_DIR`, `PROD_PROJECT_DIR`, `AWS_ECS_CLUSTER`, `AWS_ECS_API_FILTER`, `AWS_ECS_WORKER_FILTER`, `EXPO_TOKEN`, etc.) antes de habilitar os jobs na branch principal.
 - Rodar os lints/builds específicos do app mobile (Expo/EAS) para garantir que o bloco "mobile refinements" não trouxe regressões de build.
@@ -201,6 +226,37 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 - **Branding/UI**: alterações visuais da versão Prophet (logos, landing/hero, cores) e landing page custom (`frontend/src/...` + assets em `public/`).
 - **Landing Page estática**: `landing_page.html` precisa continuar servindo via nossas rotas (mantemos favicon personalizado e assets).
 - **Redis SSL/TLS**: suporte a `REDIS_SSL=true` para Upstash e outros provedores cloud (não presente no upstream).
+- **Redis LTRIM/TTL**: `REDIS_RESPONSE_LIST_MAX_SIZE = 500` e `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h) em `run_agent_background.py`.
+
+## ⚠️ Checklist OBRIGATÓRIO após cada sync
+
+> **IMPORTANTE**: O upstream usa `kortix.com`, `suna.so` e outros domínios. Após cada sync, SEMPRE verificar:
+
+### 1. CORS Origins (`backend/api.py`)
+```python
+# Deve conter APENAS prophet.build:
+allowed_origins = ["https://www.prophet.build", "https://prophet.build"]
+```
+
+### 2. URLs hardcoded (buscar e substituir)
+```bash
+grep -r "kortix\.com\|suna\.so" --include="*.py" --include="*.tsx" --include="*.ts" | grep -v "tmp/\|backups/\|node_modules/"
+```
+
+**Arquivos comuns que precisam de correção:**
+- `backend/api.py` - CORS
+- `backend/core/utils/config.py` - `frontend_url` property
+- `backend/core/notifications/notification_service.py` - task URLs
+- `backend/core/services/email.py` - welcome email template
+- `frontend/src/app/subscription/page.tsx` - support email
+
+### 3. Daytona Proxy Router
+Verificar se o router está incluído em `backend/api.py`:
+```python
+from core.routes import daytona_proxy
+daytona_proxy.initialize(db)
+api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
+```
 
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
 
