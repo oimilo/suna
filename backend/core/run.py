@@ -45,6 +45,7 @@ class AgentConfig:
     model_name: str = "openai/gpt-5-mini"
     agent_config: Optional[dict] = None
     trace: Optional[StatefulTraceClient] = None
+    account_id: Optional[str] = None  # If provided, skip thread query in setup()
 
 class ToolManager:
     def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None):
@@ -122,15 +123,11 @@ class ToolManager:
             if 'web_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('web_search_tool')
                 self.thread_manager.add_tool(SandboxWebSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered web_search_tool with methods: {enabled_methods}")
         
         if config.SERPER_API_KEY:
             if 'image_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('image_search_tool')
                 self.thread_manager.add_tool(SandboxImageSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered image_search_tool with methods: {enabled_methods}")
         
         # Register other sandbox tools from centralized registry
         from core.tools.tool_registry import SANDBOX_TOOLS, get_tool_class
@@ -156,43 +153,31 @@ class ToolManager:
             if tool_name not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool(tool_name)
                 self.thread_manager.add_tool(tool_class, function_names=enabled_methods, **kwargs)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered {tool_name} with methods: {enabled_methods}")
     
     def _register_utility_tools(self, disabled_tools: List[str]):
         """Register utility tools with API key checks."""
         if config.RAPID_API_KEY and 'data_providers_tool' not in disabled_tools:
             enabled_methods = self._get_enabled_methods_for_tool('data_providers_tool')
             self.thread_manager.add_tool(DataProvidersTool, function_names=enabled_methods)
-            if enabled_methods:
-                logger.debug(f"✅ Registered data_providers_tool with methods: {enabled_methods}")
         
         if config.SEMANTIC_SCHOLAR_API_KEY and 'paper_search_tool' not in disabled_tools:
             if 'paper_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('paper_search_tool')
                 self.thread_manager.add_tool(PaperSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered paper_search_tool with methods: {enabled_methods}")
         
         # Register search tools if EXA API key is available
         if config.EXA_API_KEY:
             if 'people_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('people_search_tool')
                 self.thread_manager.add_tool(PeopleSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered people_search_tool with methods: {enabled_methods}")
             
             if 'company_search_tool' not in disabled_tools:
                 enabled_methods = self._get_enabled_methods_for_tool('company_search_tool')
                 self.thread_manager.add_tool(CompanySearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
-                if enabled_methods:
-                    logger.debug(f"✅ Registered company_search_tool with methods: {enabled_methods}")
         
         if config.ENV_MODE != EnvMode.PRODUCTION and config.VAPI_PRIVATE_KEY and 'vapi_voice_tool' not in disabled_tools:
             enabled_methods = self._get_enabled_methods_for_tool('vapi_voice_tool')
             self.thread_manager.add_tool(VapiVoiceTool, function_names=enabled_methods, thread_manager=self.thread_manager)
-            if enabled_methods:
-                logger.debug(f"✅ Registered vapi_voice_tool with methods: {enabled_methods}")
             
     def _register_agent_builder_tools(self, agent_id: str, disabled_tools: List[str]):
         """Register agent builder tools with proper initialization."""
@@ -222,8 +207,6 @@ class ToolManager:
                         db_connection=db, 
                         agent_id=agent_id
                     )
-                    if enabled_methods:
-                        logger.debug(f"✅ Registered {tool_name} with methods: {enabled_methods}")
                 except Exception as e:
                     logger.warning(f"❌ Failed to register {tool_name}: {e}")
     
@@ -252,8 +235,6 @@ class ToolManager:
                     db_connection=db, 
                     account_id=self.account_id
                 )
-                if enabled_methods:
-                    logger.debug(f"✅ Registered agent_creation_tool with methods: {enabled_methods}")
             except (ImportError, AttributeError) as e:
                 logger.warning(f"❌ Failed to load agent_creation_tool: {e}")
     
@@ -270,8 +251,6 @@ class ToolManager:
                 thread_id=self.thread_id, 
                 thread_manager=self.thread_manager
             )
-            if enabled_methods:
-                logger.debug(f"✅ Registered browser_tool with methods: {enabled_methods}")
     
     def _get_migrated_tools_config(self) -> dict:
         """Migrate tool config once and cache it. This is expensive so we only do it once."""
@@ -398,19 +377,45 @@ class PromptManager:
                 builder_prompt = get_agent_builder_prompt()
                 system_content += f"\n\n{builder_prompt}"
         
-        # Add agent knowledge base context if available
+        # OPTIMIZED: Run KB and locale queries in parallel to reduce latency
+        kb_task = None
+        locale_task = None
+        
+        # Start KB query if needed
         if agent_config and client and 'agent_id' in agent_config:
+            async def fetch_kb():
+                try:
+                    logger.debug(f"Retrieving agent knowledge base context for agent {agent_config['agent_id']}")
+                    kb_result = await client.rpc('get_agent_knowledge_base_context', {
+                        'p_agent_id': agent_config['agent_id']
+                    }).execute()
+                    return kb_result
+                except Exception as e:
+                    logger.error(f"Error retrieving knowledge base context for agent {agent_config.get('agent_id', 'unknown')}: {e}")
+                    return None
+            
+            kb_task = asyncio.create_task(fetch_kb())
+        
+        # Start locale query if needed
+        if user_id and client:
+            async def fetch_locale():
+                try:
+                    from core.utils.user_locale import get_user_locale
+                    locale = await get_user_locale(user_id, client)
+                    return locale
+                except Exception as e:
+                    logger.warning(f"Failed to fetch locale for user {user_id}: {e}")
+                    return None
+            
+            locale_task = asyncio.create_task(fetch_locale())
+        
+        # Wait for KB query to complete
+        if kb_task:
             try:
-                logger.debug(f"Retrieving agent knowledge base context for agent {agent_config['agent_id']}")
+                kb_result = await kb_task
                 
-                # Use only agent-based knowledge base context
-                kb_result = await client.rpc('get_agent_knowledge_base_context', {
-                    'p_agent_id': agent_config['agent_id']
-                }).execute()
-                
-                if kb_result.data and kb_result.data.strip():
+                if kb_result and kb_result.data and kb_result.data.strip():
                     logger.debug(f"Found agent knowledge base context, adding to system prompt (length: {len(kb_result.data)} chars)")
-                    # logger.debug(f"Knowledge base data object: {kb_result.data[:500]}..." if len(kb_result.data) > 500 else f"Knowledge base data object: {kb_result.data}")
                     
                     # Construct a well-formatted knowledge base section
                     kb_section = f"""
@@ -427,10 +432,8 @@ class PromptManager:
                     system_content += kb_section
                 else:
                     logger.debug("No knowledge base context found for this agent")
-                    
             except Exception as e:
-                logger.error(f"Error retrieving knowledge base context for agent {agent_config.get('agent_id', 'unknown')}: {e}")
-                # Continue without knowledge base context rather than failing
+                logger.error(f"Error processing knowledge base context: {e}")
         
         if agent_config and (agent_config.get('configured_mcps') or agent_config.get('custom_mcps')) and mcp_wrapper_instance and mcp_wrapper_instance._initialized:
             mcp_info = "\n\n--- MCP Tools Available ---\n"
@@ -563,14 +566,15 @@ Example of correct tool call format (multiple invokes in one block):
         
         system_content += datetime_info
 
-        # Add user locale context if user_id is provided
-        if user_id and client:
+        # Process locale query result (already fetched in parallel above)
+        if locale_task:
             try:
-                from core.utils.user_locale import get_user_locale, get_locale_context_prompt
-                locale = await get_user_locale(user_id, client)
-                locale_prompt = get_locale_context_prompt(locale)
-                system_content += f"\n\n{locale_prompt}\n"
-                logger.debug(f"Added locale context ({locale}) to system prompt for user {user_id}")
+                locale = await locale_task
+                if locale:
+                    from core.utils.user_locale import get_locale_context_prompt
+                    locale_prompt = get_locale_context_prompt(locale)
+                    system_content += f"\n\n{locale_prompt}\n"
+                    logger.debug(f"Added locale context ({locale}) to system prompt for user {user_id}")
             except Exception as e:
                 logger.warning(f"Failed to add locale context to system prompt: {e}")
 
@@ -584,39 +588,87 @@ class AgentRunner:
         self.config = config
     
     async def setup(self):
+        import time
+        setup_start = time.time()
+        
         if not self.config.trace:
             self.config.trace = langfuse.trace(name="run_agent", session_id=self.config.thread_id, metadata={"project_id": self.config.project_id})
         
+        tm_start = time.time()
         self.thread_manager = ThreadManager(
             trace=self.config.trace, 
             agent_config=self.config.agent_config
         )
+        logger.debug(f"⏱️ [TIMING] ThreadManager init: {(time.time() - tm_start) * 1000:.1f}ms")
         
+        db_start = time.time()
         self.client = await self.thread_manager.db.client
+        logger.debug(f"⏱️ [TIMING] DB client acquire: {(time.time() - db_start) * 1000:.1f}ms")
         
-        # Run both Supabase queries concurrently (thread + project)
-        thread_response, project_response = await asyncio.gather(
-            self.client.table('threads').select('account_id').eq('thread_id', self.config.thread_id).execute(),
-            self.client.table('projects').select('*').eq('project_id', self.config.project_id).execute(),
-        )
-        
-        if not thread_response.data or len(thread_response.data) == 0:
-            raise ValueError(f"Thread {self.config.thread_id} not found")
-        
-        self.account_id = thread_response.data[0].get('account_id')
-        
-        if not self.account_id:
-            raise ValueError(f"Thread {self.config.thread_id} has no associated account")
+        # If account_id is already provided (from worker), skip thread query entirely
+        if self.config.account_id:
+            self.account_id = self.config.account_id
+            
+            # FAST PATH: Try project metadata cache first
+            q_start = time.time()
+            from core.runtime_cache import get_cached_project_metadata, set_cached_project_metadata
+            
+            cached_project = await get_cached_project_metadata(self.config.project_id)
+            if cached_project:
+                project_data = cached_project
+                logger.debug(f"⏱️ [TIMING] ⚡ Project from cache: {(time.time() - q_start) * 1000:.1f}ms")
+            else:
+                # Cache miss - query DB and cache result
+                project = await self.client.table('projects').select('project_id, sandbox').eq('project_id', self.config.project_id).execute()
+                
+                if not project.data or len(project.data) == 0:
+                    raise ValueError(f"Project {self.config.project_id} not found")
+                
+                project_data = project.data[0]
+                
+                # Cache for next request
+                await set_cached_project_metadata(self.config.project_id, project_data.get('sandbox', {}))
+                logger.debug(f"⏱️ [TIMING] Project query + cache set: {(time.time() - q_start) * 1000:.1f}ms")
+        else:
+            # Run both DB queries in parallel to cut latency in half
+            parallel_start = time.time()
+            
+            # Also import cache functions for this path
+            from core.runtime_cache import get_cached_project_metadata, set_cached_project_metadata
+            
+            thread_query = self.client.table('threads').select('account_id').eq('thread_id', self.config.thread_id).execute()
+            project_query = self.client.table('projects').select('project_id, sandbox').eq('project_id', self.config.project_id).execute()
+            
+            response, project = await asyncio.gather(thread_query, project_query)
+            logger.debug(f"⏱️ [TIMING] Parallel DB queries (thread + project): {(time.time() - parallel_start) * 1000:.1f}ms")
+            
+            if not response.data or len(response.data) == 0:
+                raise ValueError(f"Thread {self.config.thread_id} not found")
+            
+            self.account_id = response.data[0].get('account_id')
+            
+            if not self.account_id:
+                raise ValueError(f"Thread {self.config.thread_id} has no associated account")
+            
+            if not project.data or len(project.data) == 0:
+                raise ValueError(f"Project {self.config.project_id} not found")
 
-        if not project_response.data or len(project_response.data) == 0:
-            raise ValueError(f"Project {self.config.project_id} not found")
-
-        project_data = project_response.data[0]
+            project_data = project.data[0]
+            
+            # Cache project metadata for subsequent requests
+            await set_cached_project_metadata(self.config.project_id, project_data.get('sandbox', {}))
+        
         sandbox_info = project_data.get('sandbox', {})
         if not sandbox_info.get('id'):
             logger.debug(f"No sandbox found for project {self.config.project_id}; will create lazily when needed")
+        
+        logger.debug(f"⏱️ [TIMING] setup() total: {(time.time() - setup_start) * 1000:.1f}ms")
     
-    async def setup_tools(self):
+    def setup_tools(self):
+        """Synchronous tool setup (for backwards compatibility)."""
+        import time
+        start = time.time()
+        
         tool_manager = ToolManager(self.thread_manager, self.config.project_id, self.config.thread_id, self.config.agent_config)
         
         agent_id = None
@@ -626,18 +678,32 @@ class AgentRunner:
         disabled_tools = self._get_disabled_tools_from_config()
         
         # Cache migrated tools config once for use in AgentRun methods
+        migrate_start = time.time()
         self.migrated_tools = self._get_migrated_tools_config()
+        logger.debug(f"⏱️ [TIMING] Tool config migration: {(time.time() - migrate_start) * 1000:.1f}ms")
         
+        register_start = time.time()
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
+        logger.info(f"⏱️ [TIMING] register_all_tools(): {(time.time() - register_start) * 1000:.1f}ms")
         
         is_suna_agent = (self.config.agent_config and self.config.agent_config.get('is_suna_default', False)) or (self.config.agent_config is None)
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
         
         if is_suna_agent:
+            suna_start = time.time()
             logger.debug("Registering Suna-specific tools...")
             self._register_suna_specific_tools(disabled_tools)
+            logger.debug(f"⏱️ [TIMING] Suna-specific tools: {(time.time() - suna_start) * 1000:.1f}ms")
         else:
             logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
+        
+        logger.info(f"⏱️ [TIMING] setup_tools() total: {(time.time() - start) * 1000:.1f}ms")
+    
+    async def _setup_tools_async(self):
+        """Async wrapper for tool setup to enable parallel execution."""
+        # Run synchronous tool setup in executor to avoid blocking
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.setup_tools)
     
     def _get_migrated_tools_config(self) -> dict:
         """Migrate tool config once and cache it. This is expensive so we only do it once."""
@@ -675,11 +741,9 @@ class AgentRunner:
                 if enabled_methods is not None:
                     # Register only enabled methods
                     self.thread_manager.add_tool(AgentCreationTool, function_names=enabled_methods, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                    logger.debug(f"Registered agent_creation_tool for Suna with methods: {enabled_methods}")
                 else:
                     # Register all methods (backward compatibility)
                     self.thread_manager.add_tool(AgentCreationTool, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                    logger.debug("Registered agent_creation_tool for Suna (all methods)")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
     
@@ -734,10 +798,27 @@ class AgentRunner:
         return await mcp_manager.register_mcp_tools(self.config.agent_config)
     
     async def run(self, cancellation_event: Optional[asyncio.Event] = None) -> AsyncGenerator[Dict[str, Any], None]:
-        await self.setup()
-        await self.setup_tools()
-        mcp_wrapper_instance = await self.setup_mcp_tools()
+        import time
+        run_start = time.time()
         
+        # Run setup in parallel where possible for lower latency
+        setup_start = time.time()
+        await self.setup()  # Must run first (sets up client, account_id)
+        logger.info(f"⏱️ [TIMING] AgentRunner.setup() completed in {(time.time() - setup_start) * 1000:.1f}ms")
+        
+        # Run tool setup and MCP setup in parallel
+        parallel_start = time.time()
+        setup_tools_task = asyncio.create_task(self._setup_tools_async())
+        mcp_task = asyncio.create_task(self.setup_mcp_tools())
+        
+        await setup_tools_task
+        tools_elapsed = (time.time() - parallel_start) * 1000
+        
+        mcp_wrapper_instance = await mcp_task
+        parallel_elapsed = (time.time() - parallel_start) * 1000
+        logger.info(f"⏱️ [TIMING] Tool setup: {tools_elapsed:.1f}ms | MCP setup (parallel): {parallel_elapsed:.1f}ms total")
+        
+        prompt_start = time.time()
         system_message = await PromptManager.build_system_prompt(
             self.config.model_name, self.config.agent_config, 
             self.config.thread_id, 
@@ -746,12 +827,15 @@ class AgentRunner:
             xml_tool_calling=config.AGENT_XML_TOOL_CALLING,
             user_id=self.account_id
         )
-        logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
+        logger.info(f"⏱️ [TIMING] build_system_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
         logger.debug(f"model_name received: {self.config.model_name}")
         iteration_count = 0
         continue_execution = True
 
+        msg_start = time.time()
         latest_user_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).eq('type', 'user').order('created_at', desc=True).limit(1).execute()
+        logger.info(f"⏱️ [TIMING] Get latest user message in {(time.time() - msg_start) * 1000:.1f}ms")
+        
         latest_user_message_content = None
         if latest_user_message.data and len(latest_user_message.data) > 0:
             data = latest_user_message.data[0]['content']
@@ -761,6 +845,9 @@ class AgentRunner:
                 self.config.trace.update(input=data['content'])
             # Extract content for fast path optimization
             latest_user_message_content = data.get('content') if isinstance(data, dict) else str(data)
+        
+        total_setup = (time.time() - run_start) * 1000
+        logger.info(f"⏱️ [TIMING] 🚀 TOTAL AgentRunner setup: {total_setup:.1f}ms (ready for first LLM call)")
 
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1
@@ -950,7 +1037,8 @@ async def run_agent(
     model_name: str = "openai/gpt-5-mini",
     agent_config: Optional[dict] = None,    
     trace: Optional[StatefulTraceClient] = None,
-    cancellation_event: Optional[asyncio.Event] = None
+    cancellation_event: Optional[asyncio.Event] = None,
+    account_id: Optional[str] = None  # If provided, skips thread query in setup()
 ):
     effective_model = model_name
 
@@ -970,7 +1058,8 @@ async def run_agent(
         max_iterations=max_iterations,
         model_name=effective_model,
         agent_config=agent_config,
-        trace=trace
+        trace=trace,
+        account_id=account_id
     )
     
     runner = AgentRunner(config)
