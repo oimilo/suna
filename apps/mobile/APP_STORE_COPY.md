@@ -1,11 +1,11 @@
-# Prophet App Store Copy
+# Kortix App Store Copy
 
 Complete copy for Apple App Store submission.
 
 ---
 
 ## App Name
-**Prophet: Super AI Worker**
+**Kortix: Super AI Worker**
 
 ## Subtitle (30 characters max)
 **Your AI That Takes Action**
@@ -18,11 +18,11 @@ Alternative options:
 ---
 
 ## Promotional Text
-**Meet Prophet – Your Super AI Worker That Never Sleeps**
+**Meet Kortix – Your Super AI Worker That Never Sleeps**
 
-While other AI tools just chat, Prophet takes action. Research, analyze, create, automate – Prophet is your ultra-intelligent colleague that handles complex tasks while you focus on what matters.
+While other AI tools just chat, Kortix takes action. Research, analyze, create, automate – Kortix is your ultra-intelligent colleague that handles complex tasks while you focus on what matters.
 
-Plus, Prophet integrates with all your favorite apps (Gmail, Drive, Notion, Slack, and more) so it can perform actions directly in them. Your AI worker doesn't just create – it works in your actual apps.
+Plus, Kortix integrates with all your favorite apps (Gmail, Drive, Notion, Slack, and more) so it can perform actions directly in them. Your AI worker doesn't just create – it works in your actual apps.
 
 *New in v1.0: Multi-modal intelligence, voice interactions, app integrations, and powerful automation that delivers real results.*
 
@@ -30,17 +30,17 @@ Plus, Prophet integrates with all your favorite apps (Gmail, Drive, Notion, Slac
 
 ## Description (4000 characters max)
 
-Prophet: Your Super AI Worker That Delivers Real Results
+Kortix: Your Super AI Worker That Delivers Real Results
 
-Forget simple chatbots. Prophet is your ultra-intelligent AI worker that doesn't just respond – it executes, researches, analyzes, creates, and delivers. It's like having a genius colleague in your pocket that works 24/7, handling your toughest tasks while you focus on what truly matters.
+Forget simple chatbots. Kortix is your ultra-intelligent AI worker that doesn't just respond – it executes, researches, analyzes, creates, and delivers. It's like having a genius colleague in your pocket that works 24/7, handling your toughest tasks while you focus on what truly matters.
 
 WHY KORTIX IS DIFFERENT
 
-Most AI tools stop at conversation. Prophet takes action.
+Most AI tools stop at conversation. Kortix takes action.
 
-While other apps give you answers, Prophet gives you results. Need market research? Done. Complex data analysis? Handled. Multi-step automation? Consider it complete. 
+While other apps give you answers, Kortix gives you results. Need market research? Done. Complex data analysis? Handled. Multi-step automation? Consider it complete. 
 
-But here's what really sets Prophet apart: it doesn't just create content – it performs actions in your actual apps. Connect Prophet to Gmail, and it can send emails. Connect it to Notion, and it updates your databases. Connect it to Google Calendar, and it schedules meetings. Prophet is built for people who need AI that works in their real tools, not just talks.
+But here's what really sets Kortix apart: it doesn't just create content – it performs actions in your actual apps. Connect Kortix to Gmail, and it can send emails. Connect it to Notion, and it updates your databases. Connect it to Google Calendar, and it schedules meetings. Kortix is built for people who need AI that works in their real tools, not just talks.
 
 WHAT YOU CAN CREATE WITH KORTIX
 
@@ -81,8 +81,8 @@ People & Contact Finding
 • Gather professional backgrounds and insights
 
 App Integrations & Automation
-• Connect Prophet to all your favorite apps and tools
-• Prophet can perform actions directly in your connected apps
+• Connect Kortix to all your favorite apps and tools
+• Kortix can perform actions directly in your connected apps
 • Integrate with Gmail, Google Drive, Slack, Notion, Airtable, and more
 • Automate workflows across multiple platforms seamlessly
 • Sync data between applications automatically
@@ -105,9 +105,9 @@ Alternative keyword combinations:
 
 ## What's New (Version 1.0)
 
-**Welcome to Prophet – Your Super AI Worker**
+**Welcome to Kortix – Your Super AI Worker**
 
-We're excited to bring you the first release of Prophet for iOS!
+We're excited to bring you the first release of Kortix for iOS!
 
 **🎉 Launch Features:**
 
@@ -181,7 +181,7 @@ https://www.kortix.com/legal?tab=terms
 ---
 
 ## Copyright
-© 2025 Prophet Inc.
+© 2025 Kortix Inc.
 
 ---
 
@@ -225,7 +225,7 @@ https://www.kortix.com/legal?tab=terms
 - Some features are limited in the free tier
 - Background processing is limited by iOS system constraints
 
-Thank you for reviewing Prophet!
+Thank you for reviewing Kortix!
 
 ---
 
@@ -274,22 +274,22 @@ Suggested rating factors:
 ## App Store Localization (Optional)
 
 ### Spanish (es)
-**Name:** Prophet: Plataforma de Agentes IA
+**Name:** Kortix: Plataforma de Agentes IA
 **Subtitle:** Crea y Despliega Agentes IA
 **Description:** [Translate main description]
 
 ### German (de)
-**Name:** Prophet: KI-Agenten-Plattform
+**Name:** Kortix: KI-Agenten-Plattform
 **Subtitle:** KI-Agenten Erstellen
 **Description:** [Translate main description]
 
 ### French (fr)
-**Name:** Prophet: Plateforme d'Agents IA
+**Name:** Kortix: Plateforme d'Agents IA
 **Subtitle:** Créez des Agents IA
 **Description:** [Translate main description]
 
 ### Japanese (ja)
-**Name:** Prophet: AIエージェントプラットフォーム
+**Name:** Kortix: AIエージェントプラットフォーム
 **Subtitle:** AIエージェントを構築
 **Description:** [Translate main description]
 
@@ -312,14 +312,14 @@ Use these in promotional materials, social media, and ads:
 
 ## Press Kit One-Liner
 
-**Prophet is your super AI worker that creates real deliverables – AI slides, spreadsheets, documents, reports, and images – and performs actions in your favorite apps (Gmail, Drive, Notion, Slack, and more) – transforming how professionals work on-the-go.**
+**Kortix is your super AI worker that creates real deliverables – AI slides, spreadsheets, documents, reports, and images – and performs actions in your favorite apps (Gmail, Drive, Notion, Slack, and more) – transforming how professionals work on-the-go.**
 
 ---
 
 ## Social Media Copy
 
 ### Twitter/X Launch Post
-🚀 Introducing Prophet for iOS!
+🚀 Introducing Kortix for iOS!
 
 Your super AI worker that creates real deliverables:
 ✨ AI Slides & Presentations
@@ -336,11 +336,11 @@ Download now: [App Store Link]
 #AI #Productivity #AIWorker #Automation
 
 ### LinkedIn Launch Post
-We're thrilled to announce the launch of Prophet for iOS! 🎉
+We're thrilled to announce the launch of Kortix for iOS! 🎉
 
-Prophet is your super AI worker that creates real deliverables directly from your mobile device. Unlike traditional chatbots that just respond, Prophet creates actual work products you can use immediately.
+Kortix is your super AI worker that creates real deliverables directly from your mobile device. Unlike traditional chatbots that just respond, Kortix creates actual work products you can use immediately.
 
-What you can create with Prophet:
+What you can create with Kortix:
 ✅ AI Slides & Presentations
 ✅ AI Spreadsheets & Data Analysis
 ✅ AI Documents & Reports  
@@ -349,16 +349,16 @@ What you can create with Prophet:
 ✅ People & Contact Finding
 ✅ App Integrations – Actions in Gmail, Drive, Notion, Slack & more
 
-From ideation to finished deliverable in seconds. Whether you need a presentation for tomorrow's meeting, a research report, or data analysis, Prophet creates it while you focus on strategy.
+From ideation to finished deliverable in seconds. Whether you need a presentation for tomorrow's meeting, a research report, or data analysis, Kortix creates it while you focus on strategy.
 
-Download Prophet today and experience the future of AI-powered productivity.
+Download Kortix today and experience the future of AI-powered productivity.
 
 [App Store Link]
 
 ### Instagram Caption
 Your new AI worker just arrived. 💼✨
 
-Prophet creates real deliverables, not just conversations:
+Kortix creates real deliverables, not just conversations:
 
 📊 AI Slides in seconds
 📈 AI Spreadsheets with insights
@@ -366,45 +366,45 @@ Prophet creates real deliverables, not just conversations:
 🎨 AI Images & graphics
 🔍 Deep research reports
 
-Tell Prophet what you need, and it creates while you focus on what matters most.
+Tell Kortix what you need, and it creates while you focus on what matters most.
 
-Download Prophet today. Link in bio. 📲
+Download Kortix today. Link in bio. 📲
 
-#Prophet #AI #Productivity #AIWorker #AISlides #FutureOfWork #TechInnovation
+#Kortix #AI #Productivity #AIWorker #AISlides #FutureOfWork #TechInnovation
 
 ---
 
 ## Customer Support FAQs
 
-### What is Prophet?
-Prophet is your super AI worker that creates real deliverables like AI slides, spreadsheets, documents, reports, and images – transforming how you work.
+### What is Kortix?
+Kortix is your super AI worker that creates real deliverables like AI slides, spreadsheets, documents, reports, and images – transforming how you work.
 
-### What can I create with Prophet?
-You can create AI-powered presentations, spreadsheets, documents, images, research reports, and more. Prophet also integrates with your favorite apps (Gmail, Google Drive, Notion, Slack, and many others) so it can perform actions directly in them – not just create content, but actually work in your apps.
+### What can I create with Kortix?
+You can create AI-powered presentations, spreadsheets, documents, images, research reports, and more. Kortix also integrates with your favorite apps (Gmail, Google Drive, Notion, Slack, and many others) so it can perform actions directly in them – not just create content, but actually work in your apps.
 
-### How is Prophet different from ChatGPT or other AI chatbots?
-While most AI tools focus on conversation, Prophet creates real deliverables. Need a presentation? Prophet creates slides. Need data analysis? Prophet creates spreadsheets. Need research? Prophet creates reports. It's AI that delivers finished work products, not just responses.
+### How is Kortix different from ChatGPT or other AI chatbots?
+While most AI tools focus on conversation, Kortix creates real deliverables. Need a presentation? Kortix creates slides. Need data analysis? Kortix creates spreadsheets. Need research? Kortix creates reports. It's AI that delivers finished work products, not just responses.
 
 ### Is my data secure?
 Yes. All conversations are encrypted, we never sell your data, and we're compliant with GDPR and CCPA regulations. See our Privacy Policy for details.
 
-### What AI models does Prophet use?
-Prophet supports multiple AI models including Claude (Anthropic), GPT-4 (OpenAI), and others, giving you access to the most advanced AI capabilities available.
+### What AI models does Kortix use?
+Kortix supports multiple AI models including Claude (Anthropic), GPT-4 (OpenAI), and others, giving you access to the most advanced AI capabilities available.
 
-### Can I use Prophet for free?
-Yes! Prophet offers a free plan with basic features. Pro and Team plans unlock advanced capabilities, unlimited creations, and higher usage limits.
+### Can I use Kortix for free?
+Yes! Kortix offers a free plan with basic features. Pro and Team plans unlock advanced capabilities, unlimited creations, and higher usage limits.
 
-### What apps can Prophet integrate with?
-Prophet integrates with popular productivity apps including Gmail, Google Drive, Outlook, Notion, Airtable, Slack, Microsoft Teams, Salesforce, Trello, Asana, GitHub, and many more. Once connected, Prophet can perform actions directly in these apps – sending emails, creating documents, updating databases, scheduling meetings, and more.
+### What apps can Kortix integrate with?
+Kortix integrates with popular productivity apps including Gmail, Google Drive, Outlook, Notion, Airtable, Slack, Microsoft Teams, Salesforce, Trello, Asana, GitHub, and many more. Once connected, Kortix can perform actions directly in these apps – sending emails, creating documents, updating databases, scheduling meetings, and more.
 
-### What file formats can Prophet create?
-Prophet can export to PowerPoint, Word, Excel, PDF, Google Slides, Google Docs, Google Sheets, and various image formats – whatever you need for your workflow.
+### What file formats can Kortix create?
+Kortix can export to PowerPoint, Word, Excel, PDF, Google Slides, Google Docs, Google Sheets, and various image formats – whatever you need for your workflow.
 
-### Does Prophet work offline?
-You can view your created work offline, but creating new slides, documents, and reports requires an internet connection as Prophet uses advanced AI models in the cloud.
+### Does Kortix work offline?
+You can view your created work offline, but creating new slides, documents, and reports requires an internet connection as Kortix uses advanced AI models in the cloud.
 
-### Can I use Prophet on multiple devices?
-Yes! All your created work – slides, documents, spreadsheets, and reports – syncs seamlessly across all devices through your Prophet account.
+### Can I use Kortix on multiple devices?
+Yes! All your created work – slides, documents, spreadsheets, and reports – syncs seamlessly across all devices through your Kortix account.
 
 ### How can I get help?
 Visit support@kortix.com. We typically respond within 24 hours.
