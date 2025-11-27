@@ -32,7 +32,6 @@ litellm.num_retries = 0
 # import logging
 # litellm_logger = logging.getLogger("LiteLLM")
 # litellm_logger.setLevel(logging.DEBUG)
-
 provider_router = None
 
 
@@ -107,23 +106,26 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     
-    # Get Bedrock profiles from config (configurable via env vars)
-    bedrock_haiku = config.BEDROCK_PROFILE_HAIKU
-    bedrock_sonnet_45 = config.BEDROCK_PROFILE_SONNET_45
-    bedrock_sonnet_4 = config.BEDROCK_PROFILE_SONNET_4
-    
     fallbacks = [
-        # Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
+        # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
         {
-            bedrock_haiku: [bedrock_sonnet_4, bedrock_sonnet_45]
+            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+            ]
         },
-        # Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
+        # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
         {
-            bedrock_sonnet_45: [bedrock_sonnet_4, bedrock_haiku]
+            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
         },
-        # Sonnet 4 -> Haiku 4.5
+        # MAP-tagged Sonnet 4 -> Haiku 4.5
         {
-            bedrock_sonnet_4: [bedrock_haiku]
+            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
         }
     ]
     
@@ -212,15 +214,7 @@ async def make_llm_api_call(
     
     # Prepare parameters using centralized model configuration
     from core.ai_models import model_manager
-    resolved_model_name = model_manager.resolve_model_id(model_name)
-    
-    # Use model's max_output_tokens as default if max_tokens not specified
-    effective_max_tokens = max_tokens
-    if effective_max_tokens is None:
-        model = model_manager.get_model(resolved_model_name)
-        if model and model.max_output_tokens:
-            effective_max_tokens = model.max_output_tokens
-            logger.debug(f"Using model's max_output_tokens as default: {effective_max_tokens}")
+    resolved_model_name = model_manager.resolve_model_id(model_name) or model_name
     
     # Only pass headers/extra_headers if they are not None to avoid overriding model config
     override_params = {
@@ -231,8 +225,7 @@ async def make_llm_api_call(
         "stream": stream,
         "api_key": api_key,
         "api_base": api_base,
-        "stop": stop,
-        "max_tokens": effective_max_tokens,
+        "stop": stop
     }
     
     # Only add headers if they are provided (not None)

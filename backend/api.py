@@ -21,7 +21,6 @@ from pydantic import BaseModel
 import uuid
 
 from core import api as core_api
-from core.routes import daytona_proxy
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
@@ -33,6 +32,7 @@ from core.services import transcription as transcription_api
 import sys
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
+from core.notifications import api as notifications_api
 
 
 if sys.platform == "win32":
@@ -72,7 +72,6 @@ async def lifespan(app: FastAPI):
         
         
         sandbox_api.initialize(db)
-        daytona_proxy.initialize(db)
         
         # Initialize Redis connection
         from core.services import redis
@@ -165,12 +164,7 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = [
-    "https://www.kortix.com", "https://kortix.com", 
-    "https://www.suna.so", "https://suna.so",
-    "https://www.prophet.build", "https://prophet.build",
-    "https://prophet-milo-f3hr5.ondigitalocean.app"
-]
+allowed_origins = ["https://www.kortix.com", "https://kortix.com", "https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
 
 # Add staging-specific origins
@@ -230,6 +224,11 @@ api_router.include_router(knowledge_base_api.router)
 
 api_router.include_router(triggers_api.router)
 
+api_router.include_router(notifications_api.router)
+
+from core.notifications import presence_api
+api_router.include_router(presence_api.router)
+
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
 
@@ -238,6 +237,11 @@ api_router.include_router(google_slides_router)
 
 from core.google.google_docs_api import router as google_docs_router
 api_router.include_router(google_docs_router)
+
+# [PROPHET CUSTOM] Daytona preview proxy for sandbox URLs
+from core.routes import daytona_proxy
+daytona_proxy.initialize(db)
+api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
 
 @api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():
@@ -280,19 +284,6 @@ async def health_check_docker():
 
 
 app.include_router(api_router, prefix="/api")
-
-# Daytona preview proxy - mounted at /preview (or configured prefix)
-def _normalize_preview_prefix(prefix: str) -> str:
-    """Ensure prefix starts with / and doesn't end with /"""
-    if not prefix.startswith("/"):
-        prefix = "/" + prefix
-    return prefix.rstrip("/")
-
-app.include_router(
-    daytona_proxy.router,
-    prefix=_normalize_preview_prefix(config.DAYTONA_PREVIEW_PATH_PREFIX),
-    tags=["daytona-preview"],
-)
 
 
 if __name__ == "__main__":

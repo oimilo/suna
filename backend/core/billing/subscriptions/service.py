@@ -1,5 +1,5 @@
 from typing import Dict, Optional, List
-import stripe
+import stripe # type: ignore
 from core.utils.config import config
 from .handlers.customer import CustomerHandler
 from .handlers.retrieval import SubscriptionRetrievalHandler
@@ -67,6 +67,9 @@ class SubscriptionService:
     
     async def get_scheduled_changes(self, account_id: str) -> Dict:
         return await SchedulingHandler.get_scheduled_changes(account_id)
+    
+    async def cancel_scheduled_change(self, account_id: str) -> Dict:
+        return await SchedulingHandler.cancel_scheduled_change(account_id)
 
 
 subscription_service = SubscriptionService()

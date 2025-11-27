@@ -1,13 +1,15 @@
 // Sidebar (re-exports from threads for backward compatibility)
 export * from './sidebar/use-sidebar';
 
-// Threads
+// Threads (excluding message hooks to avoid conflicts with ./messages)
 export * from './threads/use-threads';
 export * from './threads/use-project';
-export * from './threads/use-messages';
 export * from './threads/use-agent-run';
 export * from './threads/use-thread-mutations';
-export * from './threads';
+export { useProjectRealtime } from './threads';
+
+// Messages and streaming - centralized location
+export * from './messages';
 
 // Files - export specific hooks first, then index to avoid conflicts
 export * from './files/use-file-queries';
@@ -16,8 +18,8 @@ export * from './files/use-sandbox-mutations';
 // Export file utilities separately to avoid conflicts
 export { useCachedFile, FileCache, getCachedFile, fetchFileContent, useVncPreloader } from './files';
 
-// Subscriptions - export specific hooks to avoid conflicts with billing
-export { useSubscription, useSubscriptionWithStreaming, useCreatePortalSession, useSubscriptionCommitment, isPlan } from './billing';
+// Account State - unified billing hook
+export { useAccountState, useAccountStateWithStreaming, useCreatePortalSession, accountStateSelectors } from './billing';
 
 // Dashboard
 export * from './dashboard/use-initiate-agent';

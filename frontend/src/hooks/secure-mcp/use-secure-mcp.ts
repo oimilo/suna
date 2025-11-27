@@ -492,16 +492,16 @@ export function useDeleteTemplate() {
 
 export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['secure-mcp', 'milo-templates-all'],
+    queryKey: ['secure-mcp', 'kortix-templates-all'],
     queryFn: async (): Promise<MarketplaceTemplatesResponse> => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error('You must be logged in to view Milo templates');
+        throw new Error('You must be logged in to view Kortix templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/milo-all`, {
+      const response = await fetch(`${API_URL}/templates/kortix-all`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -560,6 +560,12 @@ export function useInstallTemplate() {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace-templates'] });
       queryClient.invalidateQueries({ queryKey: ['templates'] });
+    },
+    onError: (error) => {
+      // Use centralized error handler for billing errors
+      import('@/lib/error-handler').then(({ handleApiError }) => {
+        handleApiError(error);
+      });
     },
   });
 } 

@@ -85,7 +85,7 @@
     "openEmailApp": "Open email app",
     "goToSignIn": "Go to sign in",
     "verifyEmailInstructions": "Click the link in the email to verify your account, then sign in.",
-    "welcomeTitle": "Hire Prophet for",
+    "welcomeTitle": "Hire Kortix for",
     "rotatingPhrases": {
       "presentations": "presentations",
       "writing": "writing",
@@ -110,13 +110,13 @@
       "passwordTooShort": "Password must be at least 8 characters"
     },
     "drawer": {
-      "defaultTitle": "Welcome to Prophet",
+      "defaultTitle": "Welcome to Kortix",
       "defaultMessage": "The AI Super Mega Giga app.",
-      "signInToChat": "Welcome to Prophet",
+      "signInToChat": "Welcome to Kortix",
       "signInToChatMessage": "The AI Super Mega Giga app.",
-      "signUpUnlock": "Welcome to Prophet",
+      "signUpUnlock": "Welcome to Kortix",
       "signUpUnlockMessage": "The AI Super Mega Giga app.",
-      "welcomeBack": "Welcome to Prophet",
+      "welcomeBack": "Welcome to Kortix",
       "welcomeBackMessage": "The AI Super Mega Giga app.",
       "signUpToContinue": "Sign up to continue",
       "signUpToContinueMessage": "Please sign up or sign in to create and select workers, connect apps and much more"
@@ -124,7 +124,7 @@
     "guest": {
       "label": "Guest",
       "title": "Browse Without\nan Account",
-      "description": "Try Prophet with limited features. No signup required!",
+      "description": "Try Kortix with limited features. No signup required!",
       "continue": "Continue as Guest",
       "signUp": "Sign Up Instead",
       "agreement": "By continuing, you agree to our",
@@ -213,8 +213,8 @@
   },
   "chat": {
     "newChat": "New Chat",
-    "placeholder": "Give Prophet a task...",
-    "inputPlaceholder": "Ask Prophet to do anything...",
+    "placeholder": "Give Kortix a task...",
+    "inputPlaceholder": "Ask Kortix to do anything...",
     "recording": "Recording...",
     "cancelRecording": "Cancel recording",
     "stopRecording": "Stop recording",
@@ -227,7 +227,7 @@
     "rateThisResult": "Rate this result",
     "feedbackHelpsImprove": "Your feedback helps us improve",
     "additionalFeedbackOptional": "Additional feedback (optional)",
-    "helpProphetImprove": "Help Prophet improve with my feedback",
+    "helpKortixImprove": "Help Kortix improve with my feedback",
     "submit": "Submit",
     "submitting": "Submitting...",
     "suggestedFollowUps": "Suggested follow-ups",
@@ -248,7 +248,7 @@
     "newWorker": "New Worker",
     "myWorkers": "My Workers",
     "searchAgents": "Search workers",
-    "defaultAgent": "Prophet",
+    "defaultAgent": "Kortix",
     "defaultDescription": "General purpose AI for all tasks",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -413,7 +413,7 @@
     "chooseModelFor": "Choose a model for {{agent}}"
   },
   "placeholders": {
-    "default": "Give Prophet a task...",
+    "default": "Give Kortix a task...",
     "search": "Search...",
     "searchConversations": "Search chats",
     "searchAgents": "Search workers",
@@ -757,5 +757,33 @@
     "saveChanges": "Save Changes",
     "nameUpdated": "Your name has been updated successfully",
     "failedToUpdate": "Failed to update name. Please try again."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Manage how you receive notifications",
+    "preferences": "Notification Preferences",
+    "channels": "Notification Channels",
+    "emailNotifications": "Email Notifications",
+    "emailDescription": "Receive notifications via email",
+    "pushNotifications": "Push Notifications",
+    "pushDescription": "Get notified about agent runs, task completions, and important updates",
+    "inAppNotifications": "In-App Notifications",
+    "inAppDescription": "See notifications within the app",
+    "deviceTokens": "Registered Devices",
+    "noDevices": "No devices registered",
+    "deviceRegistered": "This device is registered for push notifications",
+    "registerDevice": "Register This Device",
+    "unregisterDevice": "Unregister Device",
+    "settingsUpdated": "Notification preferences updated",
+    "settingsFailed": "Failed to update preferences",
+    "deviceRegisteredSuccess": "Device registered successfully",
+    "deviceRegistrationFailed": "Failed to register device",
+    "deviceUnregisteredSuccess": "Device unregistered successfully",
+    "deviceUnregistrationFailed": "Failed to unregister device",
+    "permissionRequired": "Enable Notifications",
+    "permissionMessage": "To receive notifications about your agent runs, task completions, and important updates, please enable notifications in your device settings.",
+    "openSettings": "Open Settings",
+    "enableAll": "Enable All",
+    "disableAll": "Disable All"
   }
 }
