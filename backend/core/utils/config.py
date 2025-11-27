@@ -82,16 +82,15 @@ class Configuration:
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
     
     # ===== AGENT TOOL CALLING CONFIGURATION =====
-    # Configure which tool calling format to use (XML or OpenAI Native).
-    # Only one mode should be enabled at a time.
-    AGENT_XML_TOOL_CALLING: bool = False       # Enable legacy XML <function_calls>
-    AGENT_NATIVE_TOOL_CALLING: bool = True     # Enable native/OpenAI-style function calling
-    AGENT_EXECUTE_ON_STREAM: bool = True       # Execute tools as soon as they stream in
+    # Configure which tool calling format to use (XML or Native/OpenAI)
+    # Only ONE should be enabled at a time
+    AGENT_XML_TOOL_CALLING: bool = False      # Enable XML-based tool calls (<function_calls>)
+    AGENT_NATIVE_TOOL_CALLING: bool = True  # Enable OpenAI-style native function calling
+    AGENT_EXECUTE_ON_STREAM: bool = True     # Execute tools as they stream (vs. at end)
     AGENT_TOOL_EXECUTION_STRATEGY: str = "parallel"  # "parallel" or "sequential"
     # ============================================
     
-    GUEST_MODE_ADMIN_USER_ID: Optional[str] = None
-
+    SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
 
     # Subscription tier IDs - Production
     STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
@@ -316,17 +315,14 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://prophet.build"
-    OR_APP_NAME: Optional[str] = "Milo AI"
+    OR_SITE_URL: Optional[str] = "https://kortix.ai"
+    OR_APP_NAME: Optional[str] = "Kortix AI"
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
     
-    # AWS Bedrock authentication / inference profiles
+    # AWS Bedrock authentication
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
-    BEDROCK_PROFILE_HAIKU: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-    BEDROCK_PROFILE_SONNET_45: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
-    BEDROCK_PROFILE_SONNET_4: Optional[str] = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"
     
     # Supabase configuration
     SUPABASE_URL: str
@@ -339,19 +335,14 @@ class Configuration:
     REDIS_PORT: Optional[int] = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_USERNAME: Optional[str] = None  # Required for Redis Cloud
+    REDIS_MAX_CONNECTIONS: Optional[int] = 10  # Max connections per process (default 10)
+    REDIS_DRAMATIQ_MAX_CONNECTIONS: Optional[int] = 5  # Max connections for Dramatiq broker per process (default 5)
     REDIS_SSL: Optional[bool] = True
-    REDIS_MAX_CONNECTIONS: Optional[int] = 10  # Max connections per process
-    REDIS_DRAMATIQ_MAX_CONNECTIONS: Optional[int] = 5  # Broker connections per process
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
-    DAYTONA_PROXY_ORIGIN: Optional[str] = None
-    DAYTONA_PREVIEW_PATH_PREFIX: str = "/preview"
-    DAYTONA_PREVIEW_SKIP_WARNING: bool = True
-    DAYTONA_PREVIEW_DISABLE_CORS: bool = False
-    DAYTONA_PREVIEW_TOKEN_TTL: int = 900
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
@@ -389,17 +380,19 @@ class Configuration:
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
     
     # Debug configuration
-    _DEBUG_SAVE_LLM_IO: Optional[bool] = False  # Persist raw LLM I/O chunks for debugging (non-production only)
+    # Set to True to save LLM API call inputs and stream outputs to debug_streams/ directory
+    # Always False in production, regardless of environment variable
+    _DEBUG_SAVE_LLM_IO: Optional[bool] = True
     
     @property
     def DEBUG_SAVE_LLM_IO(self) -> bool:
         """
-        Persist raw LLM I/O streams to disk for debugging.
-        Automatically disabled in production environments.
+        Debug flag to save LLM API call inputs and stream outputs.
+        Always returns False in production, regardless of environment variable.
         """
         if self.ENV_MODE == EnvMode.PRODUCTION:
             return False
-        return bool(self._DEBUG_SAVE_LLM_IO)
+        return self._DEBUG_SAVE_LLM_IO or False
 
     # LangFuse configuration
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
@@ -415,7 +408,6 @@ class Configuration:
     
     # MCP (Master Credential Provider) configuration
     MCP_CREDENTIAL_ENCRYPTION_KEY: Optional[str] = None
-    MANAGED_TOOLKIT_AUTH_ENABLED: bool = False
     
     # Composio integration
     COMPOSIO_API_KEY: Optional[str] = None
@@ -434,7 +426,7 @@ class Configuration:
     # Agent limits per billing tier
     # Note: These limits are bypassed in local mode (ENV_MODE=local) where unlimited agents are allowed
     AGENT_LIMITS = {
-        'free': 2,
+        'free': 0,
         'tier_2_20': 5,
         'tier_6_50': 20,
         'tier_12_100': 20,
@@ -512,35 +504,13 @@ class Configuration:
         return self.STRIPE_PRODUCT_ID_PROD
     
     @property
-    def DAYTONA_PREVIEW_BASE(self) -> Optional[str]:
-        """
-        Base URL (origin + path prefix) for the Daytona preview proxy.
-        Returns a default fallback when variables are not configured.
-        """
-        # Determine base origin
-        if not self.DAYTONA_PROXY_ORIGIN:
-            origin = {
-                EnvMode.PRODUCTION: "https://prophet-milo-f3hr5.ondigitalocean.app",
-            }.get(self.ENV_MODE, "http://localhost:8000")
-        else:
-            origin = self.DAYTONA_PROXY_ORIGIN
-
-        origin = origin.rstrip("/")
-
-        path_prefix = (self.DAYTONA_PREVIEW_PATH_PREFIX or "/preview").strip()
-        if not path_prefix.startswith("/"):
-            path_prefix = f"/{path_prefix}"
-
-        return f"{origin}{path_prefix.rstrip('/')}"
-    
-    @property
     def FRONTEND_URL(self) -> str:
         """
         Get the frontend URL based on environment.
         
         Returns:
-        - Production: 'https://prophet.build' (or FRONTEND_URL_ENV if set)
-        - Staging: 'https://staging.prophet.build' (or FRONTEND_URL_ENV if set)
+        - Production: 'https://kortix.com' (or FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.kortix.com' (or FRONTEND_URL_ENV if set)
         - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
         """
         # Check for environment variable override first
@@ -549,14 +519,15 @@ class Configuration:
         
         # Environment-based defaults
         if self.ENV_MODE == EnvMode.PRODUCTION:
-            return 'https://prophet.build'
+            return 'https://kortix.com'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'https://staging.prophet.build'
+            return 'http://localhost:3000'
+            # return 'https://staging.suna.so'
         else:
             return 'http://localhost:3000'
     
     def _generate_admin_api_key(self) -> str:
-        """Generate a secure admin API key for Prophet administrative functions."""
+        """Generate a secure admin API key for Kortix administrative functions."""
         # Generate 32 random bytes and encode as hex for a readable API key
         key_bytes = secrets.token_bytes(32)
         return key_bytes.hex()

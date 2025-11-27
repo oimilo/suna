@@ -182,6 +182,20 @@ export interface CancelSubscriptionRequest {
   feedback?: string;
 }
 
+export interface PurchaseCreditsRequest {
+  amount: number;
+  success_url: string;
+  cancel_url: string;
+  package_id?: string;
+}
+
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  model: string;
+  thread_id?: string;
+}
+
 // =============================================================================
 // API Helper
 // =============================================================================
@@ -282,6 +296,52 @@ export const billingApi = {
       body: JSON.stringify(request),
     });
   },
+
+  async purchaseCredits(request: PurchaseCreditsRequest): Promise<{ checkout_url: string }> {
+    return fetchApi('/billing/purchase-credits', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  async deductTokenUsage(usage: TokenUsage): Promise<{ success: boolean }> {
+    return fetchApi('/billing/deduct-token-usage', {
+      method: 'POST',
+      body: JSON.stringify(usage),
+    });
+  },
+
+  async syncSubscription(): Promise<{ success: boolean; message: string }> {
+    return fetchApi('/billing/sync-subscription', {
+      method: 'POST',
+    });
+  },
+
+  async getUsageHistory(days: number): Promise<any> {
+    return fetchApi(`/billing/usage-history?days=${days}`);
+  },
+
+  async getTransactions(limit: number, offset: number): Promise<any> {
+    return fetchApi(`/billing/transactions?limit=${limit}&offset=${offset}`);
+  },
+
+  async getTrialStatus(): Promise<any> {
+    return fetchApi('/billing/trial/status');
+  },
+
+  async startTrial(request: { success_url: string; cancel_url: string }): Promise<{ checkout_url: string; session_id: string }> {
+    return fetchApi('/billing/trial/start', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  async cancelTrial(): Promise<{ success: boolean; message: string }> {
+    return fetchApi('/billing/trial/cancel', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  },
 };
 
 // =============================================================================
@@ -307,3 +367,9 @@ export const accountStateSelectors = {
     state?.subscription.can_purchase_credits ?? false,
   dailyCreditsInfo: (state: AccountState | undefined) => state?.credits.daily_refresh,
 };
+
+// Re-export types for backward compatibility
+export type { SubscriptionInfo, CreditBalance, BillingStatus } from './hooks';
+
+// Re-export types for backward compatibility
+export type { SubscriptionInfo, CreditBalance, BillingStatus } from './hooks';

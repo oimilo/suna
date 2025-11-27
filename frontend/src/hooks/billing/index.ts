@@ -29,8 +29,9 @@ export {
   useCancelScheduledChange,
   useSyncSubscription,
   
-  // Usage (separate queries)
+  // Usage/transactions (separate queries)
   useUsageHistory,
+  useTransactions,
   
   // Trial
   useTrialStatus,
@@ -54,9 +55,6 @@ export { useBillingModal } from './use-billing-modal';
 // Credit & Thread Usage analytics
 export { useCreditUsage } from './use-credit-usage';
 export { useThreadUsage } from './use-thread-usage';
-
-// Transactions (from use-transactions.ts with full filter support)
-export { useTransactions, useTransactionsSummary } from './use-transactions';
 
 // =============================================================================
 // TIER CONFIGURATIONS - Static data, separate endpoint

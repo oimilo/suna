@@ -28,7 +28,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 export function TrialManagement() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const { user } = useAuth();
-  const { data: trialStatus, isLoading } = useTrialStatus(!!user);
+  const { data: trialStatus, isLoading } = useTrialStatus({ enabled: !!user });
   const cancelTrialMutation = useCancelTrial();
 
   if (isLoading || !trialStatus) {
@@ -113,7 +113,7 @@ export function TrialManagement() {
                 </li>
               </ul>
               <p className="text-muted-foreground text-sm pt-2">
-                To continue using Milo after cancelling, you'll need to purchase a subscription.
+                To continue using Kortix after cancelling, you'll need to purchase a subscription.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

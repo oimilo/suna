@@ -97,7 +97,7 @@ export const getProject = async (projectId: string): Promise<Project> => {
 export const deleteProject = async (projectId: string): Promise<void> => {
   // Projects are deleted via thread deletion
   // First, find a thread with this project_id
-  const threadsResponse = await getThreadsPaginated(undefined, 1, 50);
+  const threadsResponse = await getThreadsPaginated(undefined, 1, 20);
 
   if (!threadsResponse?.threads) {
     handleApiError(new Error('Failed to fetch threads'), { operation: 'delete project', resource: `project ${projectId}` });
@@ -133,7 +133,7 @@ export const updateProject = async (
   }
 
   // Find thread with this project_id
-  const threadsResponse = await getThreadsPaginated(undefined, 1, 50);
+  const threadsResponse = await getThreadsPaginated(undefined, 1, 20);
 
   if (!threadsResponse?.threads) {
     throw new Error('Failed to find thread for project');
@@ -221,7 +221,7 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
   }
 };
 
-export const getThreadsPaginated = async (projectId?: string, page: number = 1, limit: number = 50): Promise<ThreadsResponse> => {
+export const getThreadsPaginated = async (projectId?: string, page: number = 1, limit: number = 20): Promise<ThreadsResponse> => {
   try {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -242,7 +242,7 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
         threads: [],
         pagination: {
           page: 1,
-          limit: 50,
+          limit: 20,
           total: 0,
           pages: 0,
         }
@@ -404,6 +404,15 @@ export const addUserMessage = async (
 // Flag to toggle optimized messages endpoint (set to false for debugging, true for production)
 const USE_OPTIMIZED_MESSAGES = true;
 
+// Helper to check if debug mode is enabled via URL query param
+// Add ?debug_messages to URL to get unoptimized (full) messages for debugging
+const shouldUseOptimizedMessages = (): boolean => {
+  if (typeof window === 'undefined') return USE_OPTIMIZED_MESSAGES;
+  const urlParams = new URLSearchParams(window.location.search);
+  // If debug_messages param exists (with any value or no value), return false to disable optimization
+  return !urlParams.has('debug_messages');
+};
+
 export const getMessages = async (threadId: string): Promise<Message[]> => {
   try {
     const supabase = createClient();
@@ -420,12 +429,15 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
       headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
+    // Check if debug mode is enabled via URL query param
+    const useOptimized = shouldUseOptimizedMessages();
+
     // Use backend API endpoint with auth handling
     // Backend handles batching internally and returns all messages
     // optimized=false returns full messages (all types, all fields) for debugging
     // optimized=true returns optimized messages (filtered types, minimal fields) for production
     const response = await fetch(
-      `${API_URL}/threads/${threadId}/messages?order=asc&optimized=${USE_OPTIMIZED_MESSAGES}`,
+      `${API_URL}/threads/${threadId}/messages?order=asc&optimized=${useOptimized}`,
       {
       headers,
       cache: 'no-store',
