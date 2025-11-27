@@ -144,6 +144,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     messagesQuery,
     projectQuery,
     agentRunsQuery,
+    // Workspace readiness
+    workspaceStatus,
+    isWorkspaceReady,
+    isWorkspaceLoading,
+    workspaceError,
+    ensureWorkspaceActive,
   } = useThreadData(threadId, projectId, isShared);
 
   const {
@@ -970,6 +976,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
+        isWorkspaceLoading={isWorkspaceLoading}
+        workspaceError={workspaceError}
+        onRetryWorkspace={ensureWorkspaceActive}
       >
         <ThreadError error={error} />
       </ThreadLayout>
@@ -1012,6 +1021,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentName={agent && agent.name}
           disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
           compact={true}
+          isWorkspaceLoading={isWorkspaceLoading}
+          workspaceError={workspaceError}
+          onRetryWorkspace={ensureWorkspaceActive}
         >
           {/* Thread Content - Scrollable */}
           <div
@@ -1194,6 +1206,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         variant={isShared ? 'shared' : 'default'}
         chatInput={chatInputElement}
         leftSidebarState={leftSidebarState}
+        isWorkspaceLoading={isWorkspaceLoading}
+        workspaceError={workspaceError}
+        onRetryWorkspace={ensureWorkspaceActive}
       >
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : messages}

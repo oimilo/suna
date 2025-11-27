@@ -6,7 +6,7 @@ import React, { memo, useMemo, useCallback, useState, useEffect, useRef } from '
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Minimize2, Globe, Wrench } from 'lucide-react';
+import { CircleDashed, X, ChevronLeft, ChevronRight, Computer, Minimize2, Globe, Wrench, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +65,10 @@ interface ToolCallSidePanelProps {
   onFileClick?: (filePath: string) => void;
   disableInitialAnimation?: boolean;
   compact?: boolean;
+  // Workspace readiness state
+  isWorkspaceLoading?: boolean;
+  workspaceError?: string | null;
+  onRetryWorkspace?: () => void;
 }
 
 interface ToolCallSnapshot {
@@ -159,7 +163,7 @@ const PanelHeader = memo(function PanelHeader({
   showMinimize = false,
   layoutId,
 }: PanelHeaderProps) {
-  const title = agentName ? `${agentName}'s Computer` : "Prophet's Computer";
+  const title = agentName ? `${agentName}'s Workspace` : "Prophet's Workspace";
   
   if (variant === 'drawer') {
     return (
@@ -526,6 +530,9 @@ export function ToolCallSidePanel({
   onFileClick,
   disableInitialAnimation,
   compact = false,
+  isWorkspaceLoading = false,
+  workspaceError = null,
+  onRetryWorkspace,
 }: ToolCallSidePanelProps) {
   const t = useTranslations('thread');
   const [dots, setDots] = useState('');
@@ -1045,19 +1052,57 @@ export function ToolCallSidePanel({
               <BrowserHeader isConnected={false} viewToggle={<ViewToggle currentView={currentView} onViewChange={setCurrentView} />} />
               
               <div className="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-900/50">
-                <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-200 dark:border-zinc-700">
-                    <Globe className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+                {isWorkspaceLoading ? (
+                  <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse" />
+                      <div className="relative w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                        <Loader2 className="h-8 w-8 text-white animate-spin" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                        Loading workspace...
+                      </h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        This may take a few seconds
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                      Browser not available
-                    </h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      No active browser session available. The browser will appear here when a sandbox is created and Browser tools are used.
-                    </p>
+                ) : workspaceError ? (
+                  <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center border-2 border-red-200 dark:border-red-800">
+                      <Globe className="h-8 w-8 text-red-400 dark:text-red-500" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                        Failed to load workspace
+                      </h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        {workspaceError}
+                      </p>
+                    </div>
+                    {onRetryWorkspace && (
+                      <Button variant="outline" size="sm" onClick={onRetryWorkspace}>
+                        Try again
+                      </Button>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
+                    <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-200 dark:border-zinc-700">
+                      <Globe className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                        Browser not available
+                      </h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        No active browser session available. The browser will appear here when a workspace is created and Browser tools are used.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

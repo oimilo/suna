@@ -47,6 +47,10 @@ interface ThreadLayoutProps {
   variant?: 'default' | 'shared';
   chatInput?: React.ReactNode;
   leftSidebarState?: 'collapsed' | 'expanded';
+  // Workspace readiness state
+  isWorkspaceLoading?: boolean;
+  workspaceError?: string | null;
+  onRetryWorkspace?: () => void;
 }
 
 export function ThreadLayout({
@@ -82,6 +86,9 @@ export function ThreadLayout({
   variant = 'default',
   chatInput,
   leftSidebarState = 'collapsed',
+  isWorkspaceLoading = false,
+  workspaceError = null,
+  onRetryWorkspace,
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
   
@@ -140,6 +147,9 @@ export function ThreadLayout({
                 agentName={agentName}
                 disableInitialAnimation={disableInitialAnimation}
                 compact={true}
+                isWorkspaceLoading={isWorkspaceLoading}
+                workspaceError={workspaceError}
+                onRetryWorkspace={onRetryWorkspace}
               />
             </div>
           )}
@@ -205,6 +215,9 @@ export function ThreadLayout({
           onFileClick={onViewFiles}
           agentName={agentName}
           disableInitialAnimation={disableInitialAnimation}
+          isWorkspaceLoading={isWorkspaceLoading}
+          workspaceError={workspaceError}
+          onRetryWorkspace={onRetryWorkspace}
         />
 
         {sandboxId && (
@@ -296,6 +309,9 @@ export function ThreadLayout({
             onFileClick={onViewFiles}
             agentName={agentName}
             disableInitialAnimation={disableInitialAnimation}
+            isWorkspaceLoading={isWorkspaceLoading}
+            workspaceError={workspaceError}
+            onRetryWorkspace={onRetryWorkspace}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
