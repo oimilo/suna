@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-26   | `7dd0c958`      | `fix gigantic loop litellm errors` |
+| 2025-11-27   | `2158e8a11`     | `Merge pull request #2152 from KrishavRajSingh/main` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -91,10 +91,12 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - Os commits de mobile design (`611bd3dfd`, `5fd83e05c`, `628a87d87`) afetam principalmente `apps/mobile/**` que já foi sincronizado em blocos anteriores
 - Verificar se há diferenças pendentes no mobile app
 
+### Bloco aplicado — start sandbox in background (2158e8a11)
+- Sincronizamos `backend/core/threads.py` para iniciar o sandbox proativamente em background quando uma thread tem um sandbox existente. Isso reduz a latência percebida pelo usuário ao abrir uma thread com sandbox.
+- Ajustamos `backend/core/agentpress/thread_manager.py` para aceitar dicts sem a condição `content.get('content')`, tornando o parsing mais flexível.
+- **Testes locais:** `python3 -c "import ast; ast.parse(open('core/threads.py').read())"` e `python3 -c "import ast; ast.parse(open('core/agentpress/thread_manager.py').read())"` confirmaram sintaxe válida.
+
 ### Próximo bloco
-- Aplicar os commits de daily credits refresh (migrations + backend + frontend)
-- Sincronizar knowledge base improvements
-- Atualizar mobile design (já temos parte do mobile, verificar diff)
 - Garantir que as secrets citadas acima estão configuradas no repositório (`STAGING_PROJECT_DIR`, `STAGING_LEGACY_DIR`, `PROD_PROJECT_DIR`, `AWS_ECS_CLUSTER`, `AWS_ECS_API_FILTER`, `AWS_ECS_WORKER_FILTER`, `EXPO_TOKEN`, etc.) antes de habilitar os jobs na branch principal.
 - Rodar os lints/builds específicos do app mobile (Expo/EAS) para garantir que o bloco "mobile refinements" não trouxe regressões de build.
 - Se o ambiente permitir no futuro, remover ou arquivar os `.cursor/rules/*.md` extras para acompanhar o upstream; por ora estão protegidos pelo runtime.
@@ -176,4 +178,20 @@ Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobresc
   - **`thread_manager.py`**: Adicionada detecção de erros non-retryable (400, BadRequestError, validation) para parar imediatamente em vez de retry.
 - **Lógica custom preservada**: LTRIM, TTL de 6h, `_build_proxy_url`, `normalize_filename`, `WEBHOOK_BASE_URL`, `max_xml_tool_calls`, `max_output_tokens`, SSL Redis.
 - **Testes**: Imports OK, sintaxe Python OK.
+
+### 2025-11-26 — Full Upstream Sync (7dd0c958..6ffc72f86)
+- **Commits aplicados**: 19 commits desde `7dd0c958` até `6ffc72f86`
+- **Mudanças principais**:
+  - **`worker_health.py`**: Simplificado para verificar apenas conectividade Redis (não passa mais pelo Dramatiq queue)
+  - **`thread_manager.py`**: Filtro de mensagens de usuário vazias no contexto LLM + verificação de `content` em dicts
+  - **`threads.py`**: Query de count otimizada (`select thread_id` em vez de `select *`)
+  - **Mobile auth revamp**: Novo fluxo de magic link, `EmailAuthDrawer`, remoção de `AuthForms`, `GuestAuthGate`, `GuestModeContext`
+  - **Setting-up page**: Adicionado refs para prevenir múltiplas chamadas de inicialização
+  - **PresentationViewer**: Adicionado `ensureSandboxActive` para acordar sandbox em erros 400/502/503
+  - **Manual initialization revert**: Restaurado endpoint de inicialização manual de conta (webhook não é suficiente sozinho)
+  - **CORS**: Adicionados domínios `prophet.build` e `prophet-milo-f3hr5.ondigitalocean.app`
+- **Branding reaplicado**: URLs de legal/privacy, locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `pt`, `zh`), api/config.ts
+- **Proxy Daytona**: Router re-adicionado ao `api.py` (foi perdido no checkout do upstream)
+- **Landing page**: Mantida a versão Prophet (não sincronizada com upstream)
+- **Testes pendentes**: Build do frontend, testes locais do backend
 

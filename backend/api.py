@@ -15,6 +15,7 @@ import asyncio
 from core.utils.logger import logger, structlog
 import time
 from collections import OrderedDict
+import os
 
 from pydantic import BaseModel
 import uuid
@@ -24,13 +25,12 @@ from core.routes import daytona_proxy
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
-from core.billing.setup_api import router as setup_router
+from core.setup import router as setup_router, webhook_router
 from core.admin.admin_api import router as admin_router
 from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.master_password_api import router as master_password_router
 from core.services import transcription as transcription_api
 import sys
-from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 
@@ -56,6 +56,14 @@ async def lifespan(app: FastAPI):
     logger.debug(f"Starting up FastAPI application with instance ID: {instance_id} in {config.ENV_MODE.value} mode")
     try:
         await db.initialize()
+        
+        # Pre-load tool classes and schemas to avoid first-request delay
+        from core.utils.tool_discovery import warm_up_tools_cache
+        warm_up_tools_cache()
+        
+        # Pre-load static Suna config for fast path in API requests
+        from core.runtime_cache import load_static_suna_config
+        load_static_suna_config()
         
         core_api.initialize(
             db,
@@ -86,10 +94,6 @@ async def lifespan(app: FastAPI):
         from core import limits_api
         limits_api.initialize(db)
         
-        from core.guest_session import guest_session_service
-        guest_session_service.start_cleanup_task()
-        logger.debug("Guest session cleanup task started")
-        
         # Start CloudWatch queue metrics publisher (production only)
         global _queue_metrics_task
         if config.ENV_MODE == EnvMode.PRODUCTION:
@@ -100,9 +104,6 @@ async def lifespan(app: FastAPI):
         
         logger.debug("Cleaning up agent resources")
         await core_api.cleanup()
-        
-        logger.debug("Stopping guest session cleanup task")
-        await guest_session_service.stop_cleanup_task()
         
         # Stop CloudWatch queue metrics task
         if _queue_metrics_task is not None:
@@ -165,8 +166,10 @@ async def log_requests_middleware(request: Request, call_next):
 
 # Define allowed origins based on environment
 allowed_origins = [
-    "https://www.prophet.build",
-    "https://prophet.build",
+    "https://www.kortix.com", "https://kortix.com", 
+    "https://www.suna.so", "https://suna.so",
+    "https://www.prophet.build", "https://prophet.build",
+    "https://prophet-milo-f3hr5.ondigitalocean.app"
 ]
 allow_origin_regex = None
 
@@ -177,10 +180,10 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.prophet.build")
+    allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments for both legacy and new project names
-    allow_origin_regex = r"https://(prophet|kortixcom)-.*-prjcts\.vercel\.app"
+    allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
 
 # Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:
@@ -204,6 +207,7 @@ api_router.include_router(core_api.router)
 api_router.include_router(sandbox_api.router)
 api_router.include_router(billing_router)
 api_router.include_router(setup_router)
+api_router.include_router(webhook_router)  # Webhooks at /api/webhooks/*
 api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
 api_router.include_router(admin_router)
@@ -220,7 +224,6 @@ api_router.include_router(template_api.router, prefix="/templates")
 api_router.include_router(presentations_api.router, prefix="/presentation-templates")
 
 api_router.include_router(transcription_api.router)
-api_router.include_router(email_api.router)
 
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
@@ -240,17 +243,15 @@ api_router.include_router(google_docs_router)
 async def health_check():
     logger.debug("Health check endpoint called")
     return {
-        "status": "ok",
+        "status": "ok", 
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "instance_id": instance_id,
+        "instance_id": instance_id
     }
-
 
 @api_router.get("/metrics/queue", summary="Queue Metrics", operation_id="queue_metrics", tags=["system"])
 async def queue_metrics_endpoint():
     """Get Dramatiq queue depth for monitoring and auto-scaling."""
     from core.services import queue_metrics
-
     try:
         return await queue_metrics.get_queue_metrics()
     except Exception as e:
@@ -280,10 +281,12 @@ async def health_check_docker():
 
 app.include_router(api_router, prefix="/api")
 
+# Daytona preview proxy - mounted at /preview (or configured prefix)
 def _normalize_preview_prefix(prefix: str) -> str:
-    if not prefix:
-        return "/preview"
-    return prefix if prefix.startswith("/") else f"/{prefix}"
+    """Ensure prefix starts with / and doesn't end with /"""
+    if not prefix.startswith("/"):
+        prefix = "/" + prefix
+    return prefix.rstrip("/")
 
 app.include_router(
     daytona_proxy.router,

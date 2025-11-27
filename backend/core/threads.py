@@ -1,3 +1,4 @@
+import asyncio
 import json
 import traceback
 import uuid
@@ -40,7 +41,8 @@ async def get_user_threads(
     try:
         offset = (page - 1) * limit
         
-        count_result = await client.table('threads').select('*', count='exact').eq('account_id', user_id).execute()
+        # Optimized count query - only count, don't select columns
+        count_result = await client.table('threads').select('thread_id', count='exact').eq('account_id', user_id).execute()
         total_count = count_result.count or 0
         
         if total_count == 0:
@@ -240,6 +242,23 @@ async def get_thread(
                     "created_at": project['created_at'],
                     "updated_at": project['updated_at']
                 }
+                
+                # If thread has an existing sandbox, start it proactively in background
+                sandbox_info = project.get('sandbox', {})
+                if sandbox_info and sandbox_info.get('id'):
+                    sandbox_id = sandbox_info.get('id')
+                    logger.info(f"Thread {thread_id} has existing sandbox {sandbox_id}, starting it in background...")
+                    
+                    async def start_sandbox_background():
+                        try:
+                            from core.sandbox.sandbox import get_or_start_sandbox
+                            await get_or_start_sandbox(sandbox_id)
+                            logger.info(f"Successfully started sandbox {sandbox_id} for thread {thread_id}")
+                        except Exception as e:
+                            # Don't fail thread loading if sandbox start fails, just log it
+                            logger.warning(f"Failed to start sandbox {sandbox_id} for thread {thread_id}: {str(e)}")
+                    
+                    asyncio.create_task(start_sandbox_background())
         
         message_count_result = await client.table('messages').select('message_id', count='exact').eq('thread_id', thread_id).execute()
         message_count = message_count_result.count if message_count_result.count is not None else 0
