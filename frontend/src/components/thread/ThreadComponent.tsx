@@ -318,10 +318,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   // Always call unconditionally
   const sharedSubscription = useSharedSubscription();
-  const { data: subscriptionData } = isShared ? { data: undefined } : sharedSubscription;
+  const { data: subscriptionData, isLoading: subscriptionLoading } = isShared ? { data: undefined, isLoading: false } : sharedSubscription;
+  // Only consider 'no_subscription' if we have finished loading and the status is definitely not active
+  // Also check tier_key to avoid false positives during loading
   const subscriptionStatus: SubscriptionStatus =
     subscriptionData?.status === 'active' ||
-      subscriptionData?.status === 'trialing'
+      subscriptionData?.status === 'trialing' ||
+      (subscriptionData?.tier_key && !['none', 'free'].includes(subscriptionData.tier_key))
       ? 'active'
       : 'no_subscription';
 
@@ -832,18 +835,21 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     if (
       initialLoadCompleted &&
       subscriptionData &&
+      !subscriptionLoading && // Wait for subscription to finish loading
       !hasCheckedUpgradeDialog.current
     ) {
       hasCheckedUpgradeDialog.current = true;
       const hasSeenUpgradeDialog = localStorage.getItem(
         'suna_upgrade_dialog_displayed',
       );
-      const isFreeTier = subscriptionStatus === 'no_subscription';
+      // Only show upgrade dialog if truly on free/no subscription tier
+      const isFreeTier = subscriptionStatus === 'no_subscription' && 
+        (!subscriptionData.tier_key || ['none', 'free'].includes(subscriptionData.tier_key));
       if (!hasSeenUpgradeDialog && isFreeTier && !isLocalMode()) {
         openBillingModal(); // Open without error for free tier prompt
       }
     }
-  }, [subscriptionData, subscriptionStatus, initialLoadCompleted, openBillingModal]);
+  }, [subscriptionData, subscriptionStatus, subscriptionLoading, initialLoadCompleted, openBillingModal]);
 
 
   useEffect(() => {
