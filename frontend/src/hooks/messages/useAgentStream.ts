@@ -259,6 +259,12 @@ export function useAgentStream(
         queryKey: ['billing'],
       });
 
+      // CRITICAL: Invalidate messages query to fetch any messages that were
+      // saved to DB but not received via streaming (e.g., if stream disconnected)
+      queryClient.invalidateQueries({ 
+        queryKey: ['messages'],
+      });
+
       if (agentId) {
         // Core agent data
         queryClient.invalidateQueries({ queryKey: agentKeys.all });
@@ -683,8 +689,14 @@ export function useAgentStream(
           errorMessage.includes('404') ||
           errorMessage.includes('does not exist');
 
-        if (isNotFoundError) {
-          finalizeStream('agent_not_running', runId);
+        // "is not running" typically means the agent completed successfully
+        // but the stream closed before we received the completion message
+        const isNotRunningError = errorMessage.includes('is not running');
+
+        if (isNotFoundError || isNotRunningError) {
+          // Treat as completed - the agent likely finished, we just missed the stream
+          // The invalidateQueries in finalizeStream will fetch the latest messages from DB
+          finalizeStream('completed', runId);
         } else {
           finalizeStream('error', runId);
         }
