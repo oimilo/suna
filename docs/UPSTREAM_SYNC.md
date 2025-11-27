@@ -280,6 +280,14 @@ Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobresc
 - **Lógica custom preservada**: LTRIM, TTL de 6h, `_build_proxy_url`, `normalize_filename`, `WEBHOOK_BASE_URL`, `max_xml_tool_calls`, `max_output_tokens`, SSL Redis.
 - **Testes**: Imports OK, sintaxe Python OK.
 
+### 2025-11-27 — Agent System Prompt Rebranding
+- **Problema**: Os prompts de sistema dos agentes no banco de dados ainda continham "Suna.so" e "Kortix team" (resquícios das versões de agente criadas antes do fork).
+- **Solução**: Aplicadas 2 migrations para atualizar todos os `system_prompt` na coluna `config` (JSONB) da tabela `agent_versions`:
+  - `20251127195700_rebrand_agent_prompts_v2.sql` - Substitui "Suna.so → Prophet" e "Kortix team → Milo team"
+  - `20251127195802_rebrand_agent_prompts_v3_remaining_suna.sql` - Remove referências restantes de "Suna"
+- **Resultado**: 102 registros atualizados, 0 referências antigas restantes
+- **Nota**: A tabela `agents` não tem coluna `config` direta - os prompts ficam em `agent_versions.config->>'system_prompt'`
+
 ### 2025-11-26 — Full Upstream Sync (7dd0c958..6ffc72f86)
 - **Commits aplicados**: 19 commits desde `7dd0c958` até `6ffc72f86`
 - **Mudanças principais**:
