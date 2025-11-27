@@ -92,7 +92,7 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://www.suna.so/"
+homepage = "https://www.prophet.build/"
 repository = "https://github.com/kortix-ai/suna"
 
 [tool.uv]

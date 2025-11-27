@@ -93,20 +93,20 @@ class Configuration:
     SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
 
     # Subscription tier IDs - Production
-    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
-    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrhomjgDnO'
-    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIr5q0sybWn'
+    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1SYB91FNfWjTbEjstFJZ0Tcs'  # Prophet Free
+    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1SYAstFNfWjTbEjsPXCmccyN'  # Prophet Plus Monthly
+    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1SYAz8FNfWjTbEjsai1zZw8h'  # Prophet Pro Monthly
     STRIPE_TIER_12_100_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIr5Y20ZLHm'
-    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrGAD8rNjb'
+    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1SYB1YFNfWjTbEjs6dFN1izo'  # Prophet Ultra Monthly
     STRIPE_TIER_50_400_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIruNBUMTF1'
     STRIPE_TIER_125_800_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrbJA766tN'
     STRIPE_TIER_200_1000_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrmauYPOiN'
     
     # Yearly subscription tier IDs - Production (15% discount)
-    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1ReHB5G6l1KZGqIrD70I1xqM'
-    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1ReHAsG6l1KZGqIrlAog487C'
+    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1SYAuDFNfWjTbEjsNz5XdoQN'  # Prophet Plus Yearly
+    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1SYAziFNfWjTbEjs3bYncZ06'  # Prophet Pro Yearly
     STRIPE_TIER_12_100_YEARLY_ID_PROD: Optional[str] = 'price_1ReHAWG6l1KZGqIrBHer2PQc'
-    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9uG6l1KZGqIrsvMLHViC'
+    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1SYB2AFNfWjTbEjsFVWdfE2m'  # Prophet Ultra Yearly
     STRIPE_TIER_50_400_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9fG6l1KZGqIrsPtu5KIA'
     STRIPE_TIER_125_800_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9GG6l1KZGqIrfgqaJyat'
     STRIPE_TIER_200_1000_YEARLY_ID_PROD: Optional[str] = 'price_1ReH8qG6l1KZGqIrK1akY90q'
@@ -315,8 +315,8 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://kortix.ai"
-    OR_APP_NAME: Optional[str] = "Kortix AI"
+    OR_SITE_URL: Optional[str] = "https://prophet.build"
+    OR_APP_NAME: Optional[str] = "Prophet AI"
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
@@ -375,6 +375,7 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
+    # Note: Using upstream Kortix images as they're the official Docker images
     SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
