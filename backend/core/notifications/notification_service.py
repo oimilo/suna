@@ -116,7 +116,7 @@ class NotificationService:
             thread_result = await client.table('threads').select('project_id').eq('thread_id', thread_id).maybe_single().execute()
             project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
             
-            task_url = f"https://www.kortix.com/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.kortix.com/thread/{thread_id}"
+            task_url = f"https://www.prophet.build/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.prophet.build/thread/{thread_id}"
             
             payload = {
                 "first_name": first_name,
@@ -280,7 +280,7 @@ class NotificationService:
                 subscriber_id=account_id,
                 payload={
                     "user_name": account_name,
-                    "from_url": "https://www.kortix.com",
+                    "from_url": "https://www.prophet.build",
                     "discord_url": "https://discord.com/invite/RvFhXUdZ9H"
                 },
                 subscriber_email=account_email,

@@ -142,7 +142,7 @@ class EmailService:
 
     <p>Hi {user_name},</p>
 
-    <p><em><strong>Welcome to <a href="https://www.kortix.com/">Kortix.com</a> — we're excited to have you on board!</strong></em></p>
+    <p><em><strong>Welcome to <a href="https://www.prophet.build/">Prophet</a> — we're excited to have you on board!</strong></em></p>
 
     <p>To get started, we'd like to get to know you better: fill out this short <a href="https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform">form</a>!</p>
 
@@ -159,7 +159,7 @@ class EmailService:
     def _get_welcome_email_text(self, user_name: str) -> str:
         return f"""Hi {user_name},
 
-Welcome to https://www.kortix.com/ — we're excited to have you on board!
+Welcome to https://www.prophet.build/ — we're excited to have you on board!
 
 To get started, we'd like to get to know you better: fill out this short form!
 https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform
