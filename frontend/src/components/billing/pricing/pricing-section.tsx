@@ -882,29 +882,17 @@ export function PricingSection({
 
   const getCurrentBillingPeriod = (): 'monthly' | 'yearly' | 'yearly_commitment' | null => {
     if (!isAuthenticated || !currentSubscription) {
-      console.log(`[BILLING-PERIOD-DEBUG] No auth or subscription: auth=${isAuthenticated}, sub=${!!currentSubscription}`);
       return null;
     }
     
-    console.log(`[BILLING-PERIOD-DEBUG] Current subscription billing_period:`, currentSubscription.subscription.billing_period);
-    console.log(`[BILLING-PERIOD-DEBUG] Current subscription plan_type:`, (currentSubscription as any).plan_type);
-    
     // Check API billing_period field first
     if (currentSubscription.subscription.billing_period) {
-      console.log(`[BILLING-PERIOD-DEBUG] Using API billing_period: ${currentSubscription.subscription.billing_period}`);
       return currentSubscription.subscription.billing_period;
     }
-    
-    // Check plan_type field as backup
-    if ((currentSubscription as any).plan_type) {
-      const planType = (currentSubscription as any).plan_type;
-      console.log(`[BILLING-PERIOD-DEBUG] Using API plan_type: ${planType}`);
-      return planType;
-    }
 
+    // Check commitment info
     if (commitmentInfo?.has_commitment &&
       commitmentInfo?.commitment_type === 'yearly_commitment') {
-      console.log(`[BILLING-PERIOD-DEBUG] Using commitment from subscription: yearly_commitment`);
       return 'yearly_commitment';
     }
 
@@ -917,17 +905,13 @@ export function PricingSection({
       const now = Date.now();
       const daysInPeriod = Math.round((periodEnd - now) / (1000 * 60 * 60 * 24));
 
-      console.log(`[BILLING-PERIOD-DEBUG] Period length detection: ${daysInPeriod} days`);
-
       // If period is longer than 180 days, likely yearly; otherwise monthly
       if (daysInPeriod > 180) {
-        console.log(`[BILLING-PERIOD-DEBUG] Inferred yearly from period length`);
         return 'yearly';
       }
     }
 
     // Default to monthly if period is short or can't determine
-    console.log(`[BILLING-PERIOD-DEBUG] Defaulting to monthly`);
     return 'monthly';
   };
 
@@ -938,10 +922,8 @@ export function PricingSection({
       return 'yearly_commitment';
     }
     if (currentBillingPeriod) {
-      console.log(`[BILLING-PERIOD-DEBUG] Using detected billing period: ${currentBillingPeriod}`);
       return currentBillingPeriod;
     }
-    console.log(`[BILLING-PERIOD-DEBUG] No billing period detected, defaulting to yearly_commitment`);
     return 'yearly_commitment';
   }, [isAuthenticated, currentSubscription, currentBillingPeriod]);
 
