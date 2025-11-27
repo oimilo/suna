@@ -586,6 +586,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         }
 
         const agentResult = results[1].value;
+        console.log('[STREAM_DEBUG] Agent started, setting state:', {
+          agent_run_id: agentResult.agent_run_id,
+          setting_userInitiatedRun: true,
+        });
         setUserInitiatedRun(true);
         setAgentRunId(agentResult.agent_run_id);
       } catch (err) {
@@ -744,13 +748,25 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   ]);
 
   useEffect(() => {
+    // Debug logging for streaming issues
+    console.log('[STREAM_DEBUG] useEffect triggered:', {
+      agentRunId,
+      currentHookRunId,
+      userInitiatedRun,
+      agentStatus,
+      initialLoadCompleted,
+      lastStreamStarted: lastStreamStartedRef.current,
+    });
+
     // Prevent duplicate streaming calls for the same runId
     if (agentRunId && lastStreamStartedRef.current === agentRunId) {
+      console.log('[STREAM_DEBUG] Skipping - already started this runId');
       return;
     }
 
     // Start streaming if user initiated a run (don't wait for initialLoadCompleted for first-time users)
     if (agentRunId && agentRunId !== currentHookRunId && userInitiatedRun) {
+      console.log('[STREAM_DEBUG] Starting stream for user-initiated run:', agentRunId);
       startStreaming(agentRunId);
       lastStreamStartedRef.current = agentRunId; // Track that we started this runId
       setUserInitiatedRun(false); // Reset flag after starting
@@ -765,6 +781,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       !userInitiatedRun &&
       agentStatus === 'running'
     ) {
+      console.log('[STREAM_DEBUG] Starting stream for running agent on page load:', agentRunId);
       startStreaming(agentRunId);
       lastStreamStartedRef.current = agentRunId; // Track that we started this runId
     }
