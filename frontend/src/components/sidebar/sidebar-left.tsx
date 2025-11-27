@@ -61,6 +61,7 @@ import { getPlanIcon, getPlanName } from '@/components/billing/plan-utils';
 import { Kbd } from '../ui/kbd';
 import { useTranslations } from 'next-intl';
 import { KbdGroup } from '../ui/kbd';
+import { NotificationDropdown } from '../notifications/notification-dropdown';
 
 // Helper function to get user initials
 function getInitials(name: string) {
@@ -267,20 +268,23 @@ export function SidebarLeft({
             )}
 
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => {
-              if (isMobile) {
-                setOpenMobile(false);
-              } else {
-                setOpen(false);
-              }
-            }}
-          >
-            <PanelLeftClose className="!h-5 !w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationDropdown />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                if (isMobile) {
+                  setOpenMobile(false);
+                } else {
+                  setOpen(false);
+                }
+              }}
+            >
+              <PanelLeftClose className="!h-5 !w-5" />
+            </Button>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">

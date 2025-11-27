@@ -17,9 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Model } from '@/lib/api/billing';
 import { useMemo, useState } from 'react';
 import { useModelSelection } from '@/hooks/agents/use-model-selection';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ModelPricing = any;
 
 const exampleTasks = [
   {
@@ -149,7 +151,7 @@ export default function PricingPage() {
   // Filter to only show models that have pricing information available and sort by display name order
   const models = useMemo(() => {
     const filteredModels =
-      modelsResponse?.models?.filter((model: Model) => {
+      (modelsResponse?.models as ModelPricing[] | undefined)?.filter((model) => {
         return (
           model.input_cost_per_million_tokens !== null &&
           model.input_cost_per_million_tokens !== undefined &&
@@ -159,11 +161,11 @@ export default function PricingPage() {
       }) || [];
 
     return filteredModels
-      .map((v) => ({
+      .map((v: ModelPricing) => ({
         ...v,
-        display_name: allModels.find((m) => m.id === v.short_name)?.label,
-        priority: allModels.find((m) => m.id === v.short_name)?.priority,
-        requiresSubscription: allModels.find((m) => m.id === v.short_name)?.requiresSubscription,
+        display_name: allModels.find((m) => m.id === (v.short_name || v.id))?.label,
+        priority: allModels.find((m) => m.id === (v.short_name || v.id))?.priority,
+        requiresSubscription: allModels.find((m) => m.id === (v.short_name || v.id))?.requiresSubscription,
       }))
       .sort((a, b) => {
         // First by free/premium status (premium first)
@@ -188,7 +190,7 @@ export default function PricingPage() {
   const calculateCost = (
     inputTokens: number,
     outputTokens: number,
-    model: Model,
+    model: ModelPricing,
   ) => {
     if (
       !model.input_cost_per_million_tokens ||

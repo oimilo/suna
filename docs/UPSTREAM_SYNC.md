@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-27   | `2158e8a11`     | `Merge pull request #2152 from KrishavRajSingh/main` |
+| 2025-11-27   | `010b09541`     | `UX/UI improvements upgrade & free tier revamp` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -95,6 +95,51 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - Sincronizamos `backend/core/threads.py` para iniciar o sandbox proativamente em background quando uma thread tem um sandbox existente. Isso reduz a latência percebida pelo usuário ao abrir uma thread com sandbox.
 - Ajustamos `backend/core/agentpress/thread_manager.py` para aceitar dicts sem a condição `content.get('content')`, tornando o parsing mais flexível.
 - **Testes locais:** `python3 -c "import ast; ast.parse(open('core/threads.py').read())"` e `python3 -c "import ast; ast.parse(open('core/agentpress/thread_manager.py').read())"` confirmaram sintaxe válida.
+
+### Bloco aplicado — Notifications via Novu (f9d4b3d8a)
+- **20 commits** do upstream integrados (push notifications, email, in-app, presence)
+- Adicionado módulo completo de notificações (`backend/core/notifications/`):
+  - `notification_service.py` - orquestrador multi-canal
+  - `novu_service.py` - integração com Novu API
+  - `presence_service.py` - tracking de status online/offline
+  - `api.py` + `presence_api.py` - endpoints REST
+- Componentes frontend:
+  - `notification-dropdown.tsx` - dropdown no sidebar com centro de notificações
+  - `notification-settings.tsx` - configurações de preferências
+  - `presence-provider.tsx` - React context para presence tracking
+  - `use-presence.ts` - hook para verificar se usuário está online
+- **6 migrations de banco de dados** aplicadas via MCP Supabase:
+  - `notification_settings` - preferências por usuário
+  - `device_tokens` - tokens de push notification
+  - `user_presence_sessions` - tracking multi-sessão
+- **Lógica custom preservada**:
+  - `REDIS_RESPONSE_LIST_MAX_SIZE = 500` (LTRIM para limitar memória)
+  - `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h TTL em vez de 24h do upstream)
+  - Branding Prophet (displayName no dashboard)
+  - Daytona proxy router re-adicionado ao `api.py`
+- **Fallback de email**: Se Novu falhar, usa `email_service` (Mailtrap) diretamente
+- **Env vars necessárias** (para ativar Novu):
+  - `NOVU_SECRET_KEY` - API key do Novu
+  - `NOVU_BACKEND_URL` - URL da API (default: https://api.novu.co)
+  - Nota: Novu só ativo em `ENV_MODE=STAGING` por padrão
+- **Testes**: `npm run lint` passou, sintaxe Python OK
+
+### Bloco aplicado — UX/UI improvements & free tier revamp (010b09541)
+- **Billing refatorado**: Novo endpoint unificado `account_state.py` (403 linhas)
+  - Consolida subscription, credits, limits em uma única resposta
+  - Hooks: `useAccountState` substitui `useCreditBalance` e outros hooks separados
+- **Free tier revamp**:
+  - Daily credits tracking correto (deduction order: Daily → Monthly → Extra)
+  - 2 migrations: `proper_daily_credits_tracking`, `add_daily_refresh_type`
+- **Novos componentes UX**:
+  - `upgrade-celebration.tsx` - animação de celebração após upgrade
+  - `welcome-bonus-banner.tsx` - banner de boas vindas
+  - `usage-limits-popover.tsx` - popover de limites (substitui inline)
+  - `scheduled-downgrade-card.tsx` - melhorado
+- **Pricing redesenhado**: `pricing-section.tsx` refatorado (~700 linhas)
+- **Model selector melhorado**: Acesso a modelos baseado em tier
+- **Lógica custom preservada**: Branding Prophet (displayName)
+- **Testes**: `npm run lint` passou, sintaxe Python OK
 
 ### Próximo bloco
 - Garantir que as secrets citadas acima estão configuradas no repositório (`STAGING_PROJECT_DIR`, `STAGING_LEGACY_DIR`, `PROD_PROJECT_DIR`, `AWS_ECS_CLUSTER`, `AWS_ECS_API_FILTER`, `AWS_ECS_WORKER_FILTER`, `EXPO_TOKEN`, etc.) antes de habilitar os jobs na branch principal.

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckIcon } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
-import { useSubscription } from '@/hooks/billing/use-subscription';
+import { useAccountState } from '@/hooks/billing';
 import { billingApi, CreateCheckoutSessionResponse } from '@/lib/api/billing';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -178,7 +178,8 @@ export function PricingSection({
 }: PricingSectionProps = {}) {
   const { user } = useAuth();
   const router = useRouter();
-  const { data: subscriptionData } = useSubscription({ enabled: !!user });
+  const { data: accountState } = useAccountState({ enabled: !!user });
+  const subscriptionData = accountState?.subscription;
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [processingTier, setProcessingTier] = useState<string | null>(null);
 
