@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-27   | `010b09541`     | `UX/UI improvements upgrade & free tier revamp` |
+| 2025-11-27   | `f45ae15c7`     | `Merge PR #2162 - notifications inbox on dashboard` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
