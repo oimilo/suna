@@ -25,12 +25,12 @@ import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import Link from 'next/link';
 
-// Helper to render model labels with special styling for Kortix modes
+// Helper to render model labels with special styling for Prophet modes
 const ModelLabel = ({ label, className }: { label: string; className?: string }) => {
     if (label === 'Kortix POWER Mode') {
         return (
             <span className={cn("flex items-center gap-2", className)}>
-                <span className="font-medium">Kortix</span>
+                <span className="font-medium">Prophet</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 dark:bg-primary/15 rounded-full">
                     <KortixLogo size={12} variant="symbol" />
                     <span className="text-[11px] font-semibold tracking-wide uppercase text-primary">
@@ -43,7 +43,7 @@ const ModelLabel = ({ label, className }: { label: string; className?: string })
     if (label === 'Kortix Basic') {
         return (
             <span className={cn("flex items-center gap-2", className)}>
-                <span className="font-medium">Kortix</span>
+                <span className="font-medium">Prophet</span>
                 <span className="text-xs font-medium text-muted-foreground px-1.5 py-0.5 bg-muted/50 rounded-md">
                     Basic
                 </span>
@@ -213,7 +213,7 @@ export function AgentModelSelector({
       const isPowerModel = modelId === 'kortix/power';
       openPricingModal({
         isAlert: true,
-        alertTitle: isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model',
+        alertTitle: isPowerModel ? 'Upgrade to access Prophet Power mode' : 'Upgrade to access this model',
       });
     }
   };
@@ -388,7 +388,7 @@ export function AgentModelSelector({
           </TooltipTrigger>
           {!accessible && !isLocalMode() ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>{isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model'}</p>
+              <p>{isPowerModel ? 'Upgrade to access Prophet Power mode' : 'Upgrade to access this model'}</p>
             </TooltipContent>
           ) : isLowQuality ? (
             <TooltipContent side="left" className="text-xs max-w-xs">

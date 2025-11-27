@@ -757,7 +757,7 @@ function PricingTier({
               } else if (feature.includes('100+ integrations') || feature === '100+ integrations' || feature.includes('100+ App Integrations')) {
                 translatedFeature = t('features.integrations');
               } else if (feature.includes('Power mode') || feature.includes('POWER Mode')) {
-                translatedFeature = 'Kortix Power mode';
+                translatedFeature = 'Prophet Power mode';
               } else if (feature.includes('Priority Support') || feature === 'Priority Support') {
                 translatedFeature = t('features.prioritySupport');
               }

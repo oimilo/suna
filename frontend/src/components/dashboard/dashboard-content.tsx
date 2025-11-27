@@ -404,7 +404,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Kortix Super Worker
+                    Prophet Super Worker
                   </button>
                   <button
                     onClick={() => {
