@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-27   | `f45ae15c7`     | `Merge PR #2162 - notifications inbox on dashboard` |
+| 2025-11-27   | `7d7f5a6f2`     | `Merge PR #2168 - rework-design-mobile` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -221,12 +221,14 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 
 ## Customizações locais que devemos preservar
 
+- **🚨 Anthropic API (CRÍTICO)**: Em `backend/core/ai_models/registry.py`, usamos `SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)`. O upstream usa Bedrock ARNs do Kortix que não funcionam para Prophet.
 - **Proxy Daytona**: ajustes em `frontend/src/lib/utils/daytona.ts` e correlatos para reconstruir URLs de preview (inclui encoding segmentado e path derivado automaticamente).
 - **Parser XML**: fallback para `<function_calls>` incompletos em `backend/core/agentpress/xml_tool_parser.py`, garantindo que `create_file` não quebre quando o streaming corta `</invoke>`.
 - **Branding/UI**: alterações visuais da versão Prophet (logos, landing/hero, cores) e landing page custom (`frontend/src/...` + assets em `public/`).
 - **Landing Page estática**: `landing_page.html` precisa continuar servindo via nossas rotas (mantemos favicon personalizado e assets).
 - **Redis SSL/TLS**: suporte a `REDIS_SSL=true` para Upstash e outros provedores cloud (não presente no upstream).
 - **Redis LTRIM/TTL**: `REDIS_RESPONSE_LIST_MAX_SIZE = 500` e `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h) em `run_agent_background.py`.
+- **Stripe Price IDs**: IDs de produção em `backend/core/utils/config.py` são os do Prophet (não Kortix).
 
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
 
@@ -258,6 +260,23 @@ daytona_proxy.initialize(db)
 api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
 ```
 
+### 4. 🚨 Anthropic vs Bedrock (CRÍTICO)
+O upstream usa Bedrock ARNs do Kortix. Prophet usa Anthropic direto. Verificar `backend/core/ai_models/registry.py`:
+```python
+# DEVE ser assim (Prophet):
+SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)
+
+# NÃO DEVE ser assim (Upstream):
+# SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
+```
+
+### 5. notification_service.py URLs
+Verificar se URLs estão `prophet.build` e não `kortix.com`:
+```python
+task_url = f"https://www.prophet.build/projects/{project_id}/thread/{thread_id}"
+"from_url": "https://www.prophet.build"
+```
+
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
 
 ## Hotfixes aplicados (pós-sync)
@@ -287,6 +306,27 @@ Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobresc
   - `20251127195802_rebrand_agent_prompts_v3_remaining_suna.sql` - Remove referências restantes de "Suna"
 - **Resultado**: 102 registros atualizados, 0 referências antigas restantes
 - **Nota**: A tabela `agents` não tem coluna `config` direta - os prompts ficam em `agent_versions.config->>'system_prompt'`
+
+### 2025-11-27 — Hotfixes & Tool Registry Cache (e035249ce..7d7f5a6f2)
+- **Commits absorvidos**:
+  - `e035249ce` - Hotfix context window manager / prompt cache
+  - `535f05d3a` - Fix find model cost
+  - `642c484a9` - Fast check if usage
+  - `685c57cd9` - Welcome emails in init function
+  - `c6401bb87` - Fix welcome emails
+  - `363965900` - Add toolviews (mobile)
+  - `7d7f5a6f2` - Merge PR #2168 rework-design-mobile
+- **Mudanças backend**:
+  - `context_manager.py` - Novo gerenciador de contexto (~500 linhas)
+  - `prompt_caching.py` - Sistema de cache de prompts (~250 linhas)
+  - `tool_registry.py` - Cache de schemas para melhor performance
+  - `novu_service.py` - Logs melhorados com ❌ emoji
+- **Skipped (preservando Prophet)**:
+  - `notification_service.py` - Mantidas URLs `prophet.build`
+  - `xml_tool_parser.py` - Mantido fallback XML truncado
+  - `setup/api.py` - Bug no upstream (condição invertida)
+- **Mobile**: 84 arquivos de design refatorados (não usamos mobile app)
+- **Fix crítico**: `SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)` para usar Anthropic direto (Bedrock ARNs são do Kortix)
 
 ### 2025-11-26 — Full Upstream Sync (7dd0c958..6ffc72f86)
 - **Commits aplicados**: 19 commits desde `7dd0c958` até `6ffc72f86`
