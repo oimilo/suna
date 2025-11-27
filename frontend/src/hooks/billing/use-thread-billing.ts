@@ -7,7 +7,6 @@ interface UseThreadBillingReturn {
   checkBillingLimits: () => Promise<boolean>;
   canRun: boolean;
   isLoading: boolean;
-  billingStatusQuery: ReturnType<typeof useAccountState>;
 }
 
 export function useThreadBilling(
@@ -63,6 +62,5 @@ export function useThreadBilling(
     checkBillingLimits,
     canRun,
     isLoading: accountState.isLoading,
-    billingStatusQuery: accountState,
   };
 }

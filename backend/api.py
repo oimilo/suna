@@ -90,9 +90,6 @@ async def lifespan(app: FastAPI):
         template_api.initialize(db)
         composio_api.initialize(db)
         
-        from core import limits_api
-        limits_api.initialize(db)
-        
         # Start CloudWatch queue metrics publisher (production only)
         global _queue_metrics_task
         if config.ENV_MODE == EnvMode.PRODUCTION:
@@ -219,6 +216,11 @@ api_router.include_router(presentations_api.router, prefix="/presentation-templa
 
 api_router.include_router(transcription_api.router)
 
+# [PROPHET CUSTOM] Daytona preview proxy for sandbox URLs
+from core.routes import daytona_proxy
+daytona_proxy.initialize(db)
+api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
+
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
@@ -237,11 +239,6 @@ api_router.include_router(google_slides_router)
 
 from core.google.google_docs_api import router as google_docs_router
 api_router.include_router(google_docs_router)
-
-# [PROPHET CUSTOM] Daytona preview proxy for sandbox URLs
-from core.routes import daytona_proxy
-daytona_proxy.initialize(db)
-api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
 
 @api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():

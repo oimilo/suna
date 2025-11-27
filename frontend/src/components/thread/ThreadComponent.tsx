@@ -69,7 +69,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
-  // Check if user is authenticated
   const { user } = useAuth();
   const isAuthenticated = !!user;
 
@@ -144,12 +143,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     messagesQuery,
     projectQuery,
     agentRunsQuery,
-    // Workspace readiness
-    workspaceStatus,
-    isWorkspaceReady,
-    isWorkspaceLoading,
-    workspaceError,
-    ensureWorkspaceActive,
   } = useThreadData(threadId, projectId, isShared);
 
   const {
@@ -197,10 +190,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const {
     checkBillingLimits,
-    billingStatusQuery,
   } = isShared ? {
     checkBillingLimits: async () => false,
-    billingStatusQuery: { data: undefined, isLoading: false, error: null, refetch: async () => { } } as any,
   } : threadBilling;
 
   // Real-time project updates (for sandbox creation) - always call unconditionally
@@ -806,7 +797,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Prophet`;
+      document.title = `${projectName} | Kortix`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -814,13 +805,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Prophet`,
+          `${projectName} - Interactive agent conversation powered by Kortix`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Prophet`);
+        ogTitle.setAttribute('content', `${projectName} | Kortix`);
       }
 
       const ogDescription = document.querySelector(
@@ -976,9 +967,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
-        isWorkspaceLoading={isWorkspaceLoading}
-        workspaceError={workspaceError}
-        onRetryWorkspace={ensureWorkspaceActive}
       >
         <ThreadError error={error} />
       </ThreadLayout>
@@ -1021,9 +1009,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentName={agent && agent.name}
           disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
           compact={true}
-          isWorkspaceLoading={isWorkspaceLoading}
-          workspaceError={workspaceError}
-          onRetryWorkspace={ensureWorkspaceActive}
         >
           {/* Thread Content - Scrollable */}
           <div
@@ -1206,9 +1191,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         variant={isShared ? 'shared' : 'default'}
         chatInput={chatInputElement}
         leftSidebarState={leftSidebarState}
-        isWorkspaceLoading={isWorkspaceLoading}
-        workspaceError={workspaceError}
-        onRetryWorkspace={ensureWorkspaceActive}
       >
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : messages}

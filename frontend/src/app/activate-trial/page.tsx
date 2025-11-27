@@ -43,7 +43,7 @@ export default function ActivateTrialPage() {
   const { user } = useAuth();
   const { data: accountState, isLoading: isLoadingSubscription } = useAccountState({ enabled: !!user });
   const subscription = accountState?.subscription;
-  const { data: trialStatus, isLoading: isLoadingTrial } = useTrialStatus(!!user);
+  const { data: trialStatus, isLoading: isLoadingTrial } = useTrialStatus({ enabled: !!user });
   const startTrialMutation = useStartTrial();
   const { data: maintenanceNotice, isLoading: maintenanceLoading } = useMaintenanceNoticeQuery();
   const { data: adminRoleData, isLoading: isCheckingAdminRole } = useAdminRole();
@@ -126,7 +126,7 @@ export default function ActivateTrialPage() {
           <div>
             <CardTitle className="text-2xl font-medium flex items-center justify-center gap-2">
               <KortixLogo />
-              <span>Welcome to Suna</span>
+              <span>Welcome to Prophet</span>
             </CardTitle>
             <CardDescription className="mt-2">
               Start your journey with a 7-day free trial

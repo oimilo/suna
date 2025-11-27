@@ -17,6 +17,7 @@ import { composioKeys } from '@/hooks/composio/keys';
 import { knowledgeBaseKeys } from '@/hooks/knowledge-base/keys';
 import { fileQueryKeys } from '@/hooks/files/use-file-queries';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
+import { accountStateKeys } from '@/hooks/billing';
 
 // Define the structure returned by the hook
 export interface UseAgentStreamResult {
@@ -255,14 +256,9 @@ export function useAgentStream(
         queryKey: ['active-agent-runs'],
       });
 
+      // Invalidate account state after agent run completes (credits may have been deducted)
       queryClient.invalidateQueries({ 
-        queryKey: ['billing'],
-      });
-
-      // CRITICAL: Invalidate messages query to fetch any messages that were
-      // saved to DB but not received via streaming (e.g., if stream disconnected)
-      queryClient.invalidateQueries({ 
-        queryKey: ['messages'],
+        queryKey: accountStateKeys.all,
       });
 
       if (agentId) {
@@ -689,17 +685,8 @@ export function useAgentStream(
           errorMessage.includes('404') ||
           errorMessage.includes('does not exist');
 
-        // "is not running" comes from local cache - we should verify with backend
-        // to determine the actual status (completed vs still running)
-        const isNotRunningError = errorMessage.includes('is not running');
-
         if (isNotFoundError) {
           finalizeStream('agent_not_running', runId);
-        } else if (isNotRunningError) {
-          // The local cache says "not running" but we need to verify
-          // Treat as completed since the agent likely finished
-          // The invalidateQueries in finalizeStream will fetch the latest messages from DB
-          finalizeStream('completed', runId);
         } else {
           finalizeStream('error', runId);
         }

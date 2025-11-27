@@ -39,9 +39,9 @@ export const metadata: Metadata = {
   },
   description: siteMetadata.description,
   keywords: siteMetadata.keywords,
-  authors: [{ name: 'Kortix Team', url: 'https://kortix.com' }],
-  creator: 'Kortix Team',
-  publisher: 'Kortix Team',
+  authors: [{ name: 'Prophet Team', url: 'https://prophet.build' }],
+  creator: 'Prophet Team',
+  publisher: 'Prophet Team',
   applicationName: siteMetadata.name,
   robots: {
     index: true,
@@ -113,21 +113,21 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
         
         {/* Static SEO meta tags - rendered in initial HTML */}
-        <title>Kortix: Your Autonomous AI Worker</title>
+        <title>Prophet: Your Autonomous AI Worker</title>
         <meta name="description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
-        <meta name="keywords" content="Kortix, Autonomous AI Worker, AI Worker, Generalist AI, Open Source AI, Autonomous Agent, Complex Tasks, AI Assistant" />
-        <meta property="og:title" content="Kortix: Your Autonomous AI Worker" />
+        <meta name="keywords" content="Prophet, AI Worker, AI Worker, Generalist AI, Open Source AI, Autonomous Agent, Complex Tasks, AI Assistant" />
+        <meta property="og:title" content="Prophet: Your Autonomous AI Worker" />
         <meta property="og:description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
-        <meta property="og:image" content="https://kortix.com/banner.png" />
-        <meta property="og:url" content="https://kortix.com" />
+        <meta property="og:image" content="https://prophet.build/banner.png" />
+        <meta property="og:url" content="https://prophet.build" />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Kortix" />
+        <meta property="og:site_name" content="Prophet" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Kortix: Your Autonomous AI Worker" />
+        <meta name="twitter:title" content="Prophet: Your Autonomous AI Worker" />
         <meta name="twitter:description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
-        <meta name="twitter:image" content="https://kortix.com/banner.png" />
+        <meta name="twitter:image" content="https://prophet.build/banner.png" />
         <meta name="twitter:site" content="@kortix" />
-        <link rel="canonical" href="https://kortix.com" />
+        <link rel="canonical" href="https://prophet.build" />
 
         <Script id="facebook-pixel" strategy="lazyOnload">
           {`
@@ -161,7 +161,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: siteMetadata.name,
-              alternateName: ['Suna', 'Kortix AI', 'Kortix: Your Autonomous AI Worker'],
+              alternateName: ['Prophet', 'Prophet AI', 'Prophet: Your Autonomous AI Worker'],
               url: siteMetadata.url,
               logo: `${siteMetadata.url}/favicon.png`,
               description: siteMetadata.description,
@@ -187,7 +187,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
               name: siteMetadata.title,
-              alternateName: [siteMetadata.name, 'Suna'],
+              alternateName: [siteMetadata.name, 'Prophet AI'],
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, macOS, Windows, Linux',
               description: siteMetadata.description,

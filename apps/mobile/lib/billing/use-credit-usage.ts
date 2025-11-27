@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { backendApi } from '@/lib/api-client';
-import { accountStateKeys } from './use-account-state';
+import { API_URL, getAuthHeaders } from '@/api/config';
 
 interface UsageRecord {
   id: string;
@@ -33,7 +32,7 @@ export function useCreditUsage(
   days: number = 30
 ) {
   return useQuery<UsageResponse>({
-    queryKey: [...accountStateKeys.all, 'credit-usage', limit, offset, days],
+    queryKey: ['billing', 'credit-usage', limit, offset, days],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: limit.toString(),
@@ -41,14 +40,24 @@ export function useCreditUsage(
         days: days.toString(),
       });
       
-      const response = await backendApi.get(`/billing/credit-usage?${params.toString()}`);                                                                      
-      if (response.error) {
-        throw new Error(response.error.message);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/billing/credit-usage?${params.toString()}`, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(error.detail?.message || error.message || `HTTP ${response.status}`);
       }
-      return response.data;
+      
+      return response.json();
     },
     staleTime: 30000,
   });
 }
 
 export type { UsageRecord, UsageResponse };
+
