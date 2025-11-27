@@ -5,6 +5,7 @@ import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { useMessagesQuery } from '@/hooks/messages';
 import { useProjectQuery } from '@/hooks/threads/use-project';
 import { useAgentRunsQuery } from '@/hooks/threads/use-agent-run';
+import { useWorkspaceReady, WorkspaceStatus } from '@/hooks/use-workspace-ready';
 import { ApiMessageType, UnifiedMessage, AgentStatus } from '@/components/thread/types';
 
 interface UseThreadDataReturn {
@@ -24,6 +25,12 @@ interface UseThreadDataReturn {
   messagesQuery: ReturnType<typeof useMessagesQuery>;
   projectQuery: ReturnType<typeof useProjectQuery>;
   agentRunsQuery: ReturnType<typeof useAgentRunsQuery>;
+  // Workspace readiness
+  workspaceStatus: WorkspaceStatus;
+  isWorkspaceReady: boolean;
+  isWorkspaceLoading: boolean;
+  workspaceError: string | null;
+  ensureWorkspaceActive: () => Promise<boolean>;
 }
 
 export function useThreadData(threadId: string, projectId: string, isShared: boolean = false): UseThreadDataReturn {
@@ -56,6 +63,15 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   const project = projectQuery.data || null;
   const sandboxId = project?.sandbox?.id || (typeof project?.sandbox === 'string' ? project.sandbox : null);
   const projectName = project?.name || '';
+  
+  // Workspace readiness - auto-start when project has a sandbox
+  const {
+    status: workspaceStatus,
+    isReady: isWorkspaceReady,
+    isLoading: isWorkspaceLoading,
+    error: workspaceError,
+    ensureActive: ensureWorkspaceActive,
+  } = useWorkspaceReady(project, { autoStart: true });
   
   // (debug logs removed)
 
@@ -251,5 +267,11 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     messagesQuery,
     projectQuery,
     agentRunsQuery,
+    // Workspace readiness
+    workspaceStatus,
+    isWorkspaceReady,
+    isWorkspaceLoading,
+    workspaceError,
+    ensureWorkspaceActive,
   };
 } 
