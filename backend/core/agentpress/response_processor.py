@@ -70,7 +70,6 @@ class ProcessorConfig:
         execute_tools: Whether to automatically execute detected tool calls
         execute_on_stream: For streaming, execute tools as they appear vs. at the end
         tool_execution_strategy: How to execute multiple tools ("sequential" or "parallel")
-        max_xml_tool_calls: Maximum number of XML tool calls to process per response (0 = no limit)
         
     NOTE: Default values are loaded from core.utils.config (backend/core/utils/config.py)
     Change AGENT_XML_TOOL_CALLING, AGENT_NATIVE_TOOL_CALLING, etc. in config.py
@@ -83,7 +82,6 @@ class ProcessorConfig:
     execute_tools: bool = True
     execute_on_stream: bool = None  # Set in __post_init__ from global config
     tool_execution_strategy: ToolExecutionStrategy = None  # Set in __post_init__ from global config
-    max_xml_tool_calls: int = 3  # Maximum XML tool calls per response (0 = no limit)
     
     def __post_init__(self):
         """Load defaults from global config and validate configuration."""
@@ -494,17 +492,6 @@ class ResponseProcessor:
                                             "tool_index": tool_index, "context": context
                                         })
                                         tool_index += 1
-
-                                # Check if XML tool call limit reached
-                                if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls:
-                                    logger.debug(f"Reached XML tool call limit ({config.max_xml_tool_calls})")
-                                    finish_reason = "xml_tool_limit_reached"
-                                    break  # Stop processing more XML chunks in this delta
-
-                        # Break out of main stream loop if XML limit reached
-                        if finish_reason == "xml_tool_limit_reached":
-                            logger.debug("Stopping stream processing due to XML tool call limit")
-                            break
 
                     # --- Process Native Tool Call Chunks ---
                     if config.native_tool_calling and delta and hasattr(delta, 'tool_calls') and delta.tool_calls:
@@ -1920,19 +1907,18 @@ class ResponseProcessor:
                 logger.debug(f"Storing tool_call_id {tool_call_id} in tool result metadata for matching")
             # ---
             
-            # Check if this is a native function call vs XML tool call
-            # Use the "source" field which is set during tool call creation
-            # Native tool calls: source == "native" 
-            # XML tool calls: source == "xml"
-            # If source is missing, it's likely a legacy call - treat as native for safety
-            source = tool_call.get("source")
-            if source is None:
-                logger.warning(f"Tool call missing 'source' field - tool_call_id: {tool_call.get('id')}, function: {tool_call.get('function_name')}")
-                # Try to infer from structure - if it has the native OpenAI format, it's native
-                source = "native" if isinstance(tool_call.get("function"), dict) else "xml"
-                logger.warning(f"Inferred source as: {source}")
+            # Determine tool call format DETERMINISTICALLY from global config
+            # The config settings are the single source of truth - no inference needed
+            # AGENT_NATIVE_TOOL_CALLING=True means ALL tool calls are native format
+            # AGENT_XML_TOOL_CALLING=True means ALL tool calls are XML format
+            is_native = bool(global_config.AGENT_NATIVE_TOOL_CALLING)
             
-            is_native = (source == "native")
+            # Log for debugging - the tool_call's source field should match config
+            tool_call_source = tool_call.get("source")
+            if tool_call_source and tool_call_source != ("native" if is_native else "xml"):
+                logger.warning(f"Tool call source '{tool_call_source}' doesn't match config (native={is_native}). Using config setting.")
+            
+            logger.debug(f"🔍 _add_tool_result: Using {'native' if is_native else 'xml'} format based on config (AGENT_NATIVE_TOOL_CALLING={global_config.AGENT_NATIVE_TOOL_CALLING})")
             if is_native:
                 # Format as a proper tool message according to OpenAI spec
                 # Extract function_name from either format

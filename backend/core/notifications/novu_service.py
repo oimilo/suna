@@ -9,12 +9,15 @@ from .models import NotificationChannel, NotificationEvent, NotificationPayload
 
 class NovuService:
     def __init__(self):
-        self.enabled = True
+        self.enabled = config.ENV_MODE in [EnvMode.STAGING, EnvMode.PRODUCTION]
         self.api_key = os.getenv('NOVU_SECRET_KEY')
         self.backend_url = os.getenv('NOVU_BACKEND_URL', 'https://api.novu.co')
         
         if not self.enabled:
-            logger.info(f"Novu service disabled")
+            if self.api_key:
+                logger.warning(f"Novu service disabled (ENV_MODE: {config.ENV_MODE.value}) but NOVU_SECRET_KEY is present. Set ENV_MODE to 'staging' or 'production' to enable.")
+            else:
+                logger.info(f"Novu service disabled (ENV_MODE: {config.ENV_MODE.value})")
         elif not self.api_key:
             logger.warning("NOVU_SECRET_KEY not found in environment variables")
         else:
@@ -31,8 +34,8 @@ class NovuService:
         override_channels: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         if not self.enabled:
-            logger.debug(f"Notification skipped (not in staging mode): {event_name}")
-            return {"success": False, "error": "Notifications only enabled in staging mode"}
+            logger.warning(f"Notification skipped (Novu disabled in {config.ENV_MODE.value} mode): {event_name}")
+            return {"success": False, "error": "Novu notifications only enabled in staging and production modes"}
         
         if not self.api_key:
             logger.error("Cannot send notification: NOVU_SECRET_KEY not configured")
@@ -155,7 +158,7 @@ class NovuService:
         integration_identifier: Optional[str] = None
     ) -> bool:
         if not self.enabled:
-            logger.debug(f"Skipping credential update (not in staging mode)")
+            logger.debug(f"Skipping credential update (Novu disabled in {config.ENV_MODE.value} mode)")
             return True
         
         if not self.api_key:
@@ -261,7 +264,6 @@ class NovuService:
                 server_url=self.backend_url,
                 secret_key=self.api_key,
             ) as novu:
-                # Using retrieve instead of get
                 response = novu.subscribers.retrieve(subscriber_id=user_id)
             return response
             
@@ -276,8 +278,9 @@ class NovuService:
         payload: Dict[str, Any],
         subscriber_email: Optional[str] = None,
         subscriber_name: Optional[str] = None
-    ) -> bool:
+    ) -> Any:
         if not self.enabled:
+            logger.warning(f"Workflow skipped (Novu disabled in {config.ENV_MODE.value} mode): {workflow_id}")
             return False
         
         if not self.api_key:
@@ -319,7 +322,7 @@ class NovuService:
         integration_identifier: Optional[str] = None
     ) -> bool:
         if not self.enabled:
-            logger.debug(f"Skipping push token registration (not in staging mode)")
+            logger.debug(f"Skipping push token registration (Novu disabled in {config.ENV_MODE.value} mode)")
             return True
         
         if not self.api_key:
