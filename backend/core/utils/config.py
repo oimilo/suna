@@ -343,6 +343,9 @@ class Configuration:
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
+    # [PROPHET CUSTOM] Base URL for proxying Daytona preview URLs through our backend
+    # This allows preview URLs to go through /api/preview/{sandbox_id}/path instead of direct Daytona URLs
+    DAYTONA_PREVIEW_BASE: Optional[str] = None
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
