@@ -282,7 +282,7 @@ class NotificationService:
                 payload={
                     "user_name": account_name,
                     "from_url": "https://www.prophet.build",
-                    "discord_url": "https://discord.com/invite/RvFhXUdZ9H"
+                    "discord_url": "https://discord.gg/G9f5JASVZc"
                 },
                 subscriber_email=account_email,
                 subscriber_name=account_name
