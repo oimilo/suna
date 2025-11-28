@@ -68,7 +68,7 @@ export function PlanSelectionModal({
                     <div className="flex-1" />
                     
                     <div className="absolute -translate-y-1/2 top-1/2 left-1/2 -translate-x-1/2 pointer-events-none">
-                        <KortixLogo size={20} variant="logomark" />
+                        <KortixLogo size={28} variant="logomark" />
                     </div>
                     
                     <div className="flex-1 flex justify-end pointer-events-auto">

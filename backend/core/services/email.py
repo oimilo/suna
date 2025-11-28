@@ -149,7 +149,7 @@ class EmailService:
     <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month:</p>
     <p>🎁 Use code <strong>WELCOME15</strong> at checkout.</p>
 
-    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/RvFhXUdZ9H">Discord community</a>.</p>
+    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.gg/G9f5JASVZc">Discord community</a>.</p>
 
     <p>Thanks again, and welcome to the Kortix community!</p>
   </div>
@@ -167,7 +167,7 @@ https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMo
 To celebrate your arrival, here's a 15% discount for your first month:
 🎁 Use code WELCOME15 at checkout.
 
-Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/RvFhXUdZ9H
+Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.gg/G9f5JASVZc
 
 Thanks again, and welcome to the Kortix community!
 
