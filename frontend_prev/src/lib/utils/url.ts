@@ -26,7 +26,7 @@ const computePreviewProxyBase = (): string | undefined => {
     }
   }
 
-  return 'https://prophet-milo-f3hr5.ondigitalocean.app/api/preview';
+  return 'https://app.prophet.build/api/preview';
 };
 
 const previewProxyBase = computePreviewProxyBase();

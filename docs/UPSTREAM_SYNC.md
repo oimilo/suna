@@ -35,7 +35,7 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 
 ### Bloco aplicado — queue-depth auto scaling + limpeza de docs Redis (9253e3cf0)
 - Trouxemos `backend/core/services/queue_metrics.py`, conectamos o publisher no ciclo de vida do FastAPI/worker e expusemos `GET /api/metrics/queue` no `api_router`.
-- Atualizamos a documentação para o padrão upstream, mantendo o conteúdo porém com branding Prophet e os endpoints reais (`https://prophet-milo-f3hr5.ondigitalocean.app`). Os docs antigos de Redis tuning (`redis_connection_management.md`, etc.) foram removidos.
+- Atualizamos a documentação para o padrão upstream, mantendo o conteúdo porém com branding Prophet e os endpoints reais (`https://app.prophet.build`). Os docs antigos de Redis tuning (`redis_connection_management.md`, etc.) foram removidos.
 - Ajustamos o namespace CloudWatch para `Prophet` e documentamos a dependência do publisher no ambiente de produção.
 - **Testes locais:** rebuild `docker compose build backend worker`, `docker compose up -d backend worker redis`, `curl http://127.0.0.1:8000/api/health`, `curl http://127.0.0.1:8000/api/metrics/queue` (retornou profundidade zero), além de verificar os logs e readiness dos containers.
 
@@ -62,7 +62,7 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - As tentativas de remover `.cursor/rules/backend.mdc`/`frontend.mdc` foram bloqueadas pelo ambiente (arquivos marcados como protegidos). Continuaremos com eles versionados até termos outra orientação.
 - Revimos os workflows do GitHub:
   - `.github/workflows/docker-build.yml`: imagem agora publica `prophet-backend`; diretórios remotos/nomes de cluster passaram a aceitar secrets (`STAGING_PROJECT_DIR`, `STAGING_LEGACY_DIR`, `PROD_PROJECT_DIR`, `AWS_ECS_CLUSTER`, `AWS_ECS_API_FILTER`, `AWS_ECS_WORKER_FILTER`) com fallback para os caminhos antigos.
-  - `.github/workflows/mobile-eas-update.yml`: `EXPO_PUBLIC_BACKEND_URL` aponta para `https://prophet-milo-f3hr5.ondigitalocean.app/api`, mantendo o Supabase atual.
+  - `.github/workflows/mobile-eas-update.yml`: `EXPO_PUBLIC_BACKEND_URL` aponta para `https://app.prophet.build/api`, mantendo o Supabase atual.
   - `apps/mobile/eas.json`: espelha o mesmo backend URL nos perfis development/production/testflight, evitando divergência com o workflow.
 
 ### Bloco aplicado — Prophet proxy URL fix + XML tool limit (custom)
