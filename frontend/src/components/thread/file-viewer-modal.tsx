@@ -107,7 +107,8 @@ export function FileViewerModal({
     data: files = [],
     isLoading: isLoadingFiles,
     error: filesError,
-    refetch: refetchFiles
+    refetch: refetchFiles,
+    failureCount: dirRetryAttempt,
   } = useDirectoryQuery(sandboxId || '', currentPath, {
     enabled: open && !!sandboxId && sandboxId.trim() !== '' && !!currentPath,
     staleTime: 0, // Always refetch when path changes
@@ -142,6 +143,7 @@ export function FileViewerModal({
     data: cachedFileContent,
     isLoading: isCachedFileLoading,
     error: cachedFileError,
+    failureCount: fileRetryAttempt,
   } = useFileContentQuery(
     sandboxId,
     selectedFilePath || undefined,
@@ -454,12 +456,13 @@ export function FileViewerModal({
     }
   }, [isLoadingFiles, files.length, isInitialLoad]);
 
-  // Handle loading errors
+  // Handle loading errors - only after retries exhausted
   useEffect(() => {
-    if (filesError && open) {
-      toast.error('Failed to load files');
+    // Only show error after all retries exhausted (15 attempts)
+    if (filesError && open && !isLoadingFiles && dirRetryAttempt >= 15) {
+      toast.error('Failed to load files after multiple attempts');
     }
-  }, [filesError, open]);
+  }, [filesError, open, isLoadingFiles, dirRetryAttempt]);
 
   // Helper function to navigate to a folder
   const navigateToFolder = useCallback(
@@ -677,9 +680,13 @@ export function FileViewerModal({
   useEffect(() => {
     if (!selectedFilePath) return;
 
-    // Handle errors
-    if (cachedFileError) {
+    // Handle errors - but only if we've exhausted retries
+    // Don't show error while still retrying (failureCount < 15)
+    if (cachedFileError && !isCachedFileLoading && fileRetryAttempt >= 15) {
       setContentError(`Failed to load file: ${cachedFileError.message}`);
+      return;
+    } else if (cachedFileError && isCachedFileLoading) {
+      // Still retrying, don't set error
       return;
     }
 
@@ -729,7 +736,7 @@ export function FileViewerModal({
         setContentError('Unknown content type received.');
       }
     }
-  }, [selectedFilePath, cachedFileContent, isCachedFileLoading, cachedFileError]);
+  }, [selectedFilePath, cachedFileContent, isCachedFileLoading, cachedFileError, fileRetryAttempt]);
 
   // Modify the cleanup effect to respect active downloads
   useEffect(() => {
