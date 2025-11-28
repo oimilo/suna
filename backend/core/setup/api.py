@@ -86,11 +86,7 @@ async def initialize_user_account(account_id: str, email: Optional[str] = None, 
             
             logger.info(f"[SETUP] Sending welcome email to {email} with name {user_name}")
             try:
-                await notification_service.send_welcome_email(
-                    account_id=account_id,
-                    account_name=user_name,
-                    account_email=email
-                )
+                await notification_service.send_welcome_email(account_id=account_id)
             except Exception as ex:
                 logger.error(f"[SETUP] Error sending welcome notification: {ex}")
                 _send_welcome_email_async(email, user_name)

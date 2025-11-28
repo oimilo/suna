@@ -6,13 +6,29 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-28   | `4ad091025`     | `Merge pull request #2174 - retries for files` |
+| 2025-11-28   | `3592ca94a`     | `Merge PR #2176 - remove notifications settings from UI` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
 
 ## Progresso em 2025-11-28
+
+### Bloco aplicado — fix novu inbox + remove notification settings (PR #2175, #2176)
+- **Upstream commits absorvidos**: `63c11954e` (fix novu inbox), `aed0b6b83` (remove notifications settings from UI) + merges
+- **Mudanças backend**:
+  - `api.py`: Fix para `ENV_MODE` sendo None
+  - `notification_service.py`: Nova lógica de `send_welcome_email()` - busca dados do usuário via `client.auth.admin.get_user_by_id()`. Adiciona suporte para `phone` e `avatar`. **Mantivemos payload Prophet** com `user_name`, `from_url`, `discord_url`
+  - `novu_service.py`: Aceita `avatar` em `trigger_workflow()`, passa subscriber info no `to`
+  - `setup/api.py`: Atualizada chamada de `send_welcome_email()` (agora só recebe `account_id`)
+- **Mudanças frontend**:
+  - `notification-dropdown.tsx`: Retorna `null` se não tiver usuário ou `NOVU_APP_IDENTIFIER`. Fix de estilo `w-full`
+  - `user-settings-modal.tsx`: **Removida seção de configurações de notificação** (87 linhas!) - resolve erro 403 "Notifications only available in staging mode"
+- **Benefícios**:
+  - ✅ Resolve erro 403 ao abrir settings em produção
+  - ✅ Simplifica UI - menos código para manter
+  - ✅ Avatar do usuário aparece nas notificações do Novu
+- **Customizações preservadas**: URLs Prophet (`prophet.build`, `discord.gg/G9f5JASVZc`)
 
 ### Bloco aplicado — retries for files (1f1cd3f4f, PR #2174)
 - **Upstream commits absorvidos**: `1f1cd3f4f` (retries for files) + merge `4ad091025`
