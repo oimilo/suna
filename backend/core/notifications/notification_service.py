@@ -269,30 +269,61 @@ class NotificationService:
         )
     
     
-    async def send_welcome_email(self, account_id: str, account_name: Optional[str] = None, account_email: Optional[str] = None) -> Dict[str, Any]:
+    async def send_welcome_email(self, account_id: str) -> Dict[str, Any]:
         try:
-            if not account_email or not account_name:
-                account_info = await self._get_account_info(account_id)
-                account_email = account_email or account_info.get("email")
-                account_name = account_name or account_info.get("name")
+            logger.info(f"[WELCOME_EMAIL] ENV_MODE={config.ENV_MODE.value if config.ENV_MODE else 'None'}, Novu enabled={self.novu.enabled}, API key configured={bool(self.novu.api_key)}")
             
+            client = await self.db.client
+            
+            email = None
+            name = None
+            phone = None
+            avatar = None
+            user_metadata = {}
+            
+            try:
+                user = await client.auth.admin.get_user_by_id(account_id)
+                if user and user.user:
+                    email = user.user.email
+                    user_metadata = user.user.user_metadata or {}
+                    
+                    name = (
+                        user_metadata.get('full_name') or
+                        user_metadata.get('name') or
+                        user_metadata.get('display_name') or
+                        (email.split('@')[0] if email else None)
+                    )
+                    
+                    phone = user_metadata.get('phone') or user_metadata.get('phone_number')
+                    avatar = user_metadata.get('avatar_url') or user_metadata.get('picture')
+                    
+            except Exception as e:
+                logger.error(f"Error getting user {str(e)}")
+            
+            if not email:
+                logger.warning(f"[WELCOME_EMAIL] No email found for user {account_id}")
+                return {"success": False, "error": "No email found for user"}
+            
+            logger.info(f"[WELCOME_EMAIL] Triggering for {account_id}: email={email}, name={name}, phone={phone}, avatar={avatar}")
+
             result = await self.novu.trigger_workflow(
                 workflow_id="welcome-email",
                 subscriber_id=account_id,
                 payload={
-                    "user_name": account_name,
+                    "user_name": name,
                     "from_url": "https://www.prophet.build",
                     "discord_url": "https://discord.gg/G9f5JASVZc"
                 },
-                subscriber_email=account_email,
-                subscriber_name=account_name
+                subscriber_email=email,
+                subscriber_name=name,
+                avatar=avatar
             )
             
             if not result:
-                logger.error(f"Failed to trigger welcome email workflow for account {account_id}")
+                logger.error(f"Failed to trigger welcome email workflow for account {account_id} - Novu returned False (ENV_MODE={config.ENV_MODE.value if config.ENV_MODE else 'None'})")
                 return {"success": False, "error": "Failed to trigger workflow"}
             
-            logger.info(f"Welcome email workflow triggered for account {account_id} (ENV_MODE: {config.ENV_MODE.value})")
+            logger.info(f"Welcome email workflow triggered for account {account_id} (ENV_MODE: {config.ENV_MODE.value if config.ENV_MODE else 'None'})")
             return {"success": True, "result": result}
             
         except Exception as e:
@@ -467,17 +498,23 @@ class NotificationService:
                 user = user_response.user
                 email = user.email
                 metadata = user.user_metadata or {}
-                name = metadata.get('full_name') or metadata.get('name') or (email.split('@')[0] if email else None)
+                name = (
+                    metadata.get('full_name') or
+                    metadata.get('name') or
+                    metadata.get('display_name') or
+                    (email.split('@')[0] if email else None)
+                )
                 
                 return {
                     "email": email,
                     "name": name
                 }
             
+            logger.warning(f"No user found for account_id: {account_id}")
             return {}
             
         except Exception as e:
-            logger.error(f"Error getting account info: {str(e)}")
+            logger.error(f"Error getting account info for account_id: {account_id}: {str(e)}")
             return {}
     
 

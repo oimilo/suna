@@ -275,9 +275,10 @@ class NovuService:
         self,
         workflow_id: str,
         subscriber_id: str,
-        payload: Dict[str, Any],
+        payload: Optional[Dict[str, Any]] = None,
         subscriber_email: Optional[str] = None,
-        subscriber_name: Optional[str] = None
+        subscriber_name: Optional[str] = None,
+        avatar: Optional[str] = None
     ) -> Any:
         if not self.enabled:
             logger.error(f"❌ Workflow skipped (Novu disabled in {config.ENV_MODE.value} mode): {workflow_id} - Set ENV_MODE to 'staging' or 'production' to enable")
@@ -302,7 +303,12 @@ class NovuService:
                 response = novu.trigger(
                     trigger_event_request_dto=novu_py.TriggerEventRequestDto(
                         workflow_id=workflow_id,
-                        to=subscriber_id,
+                        to={
+                            "subscriber_id": subscriber_id,
+                            "email": subscriber_email,
+                            "name": subscriber_name,
+                            "avatar": avatar
+                        },
                         payload=payload
                     )
                 )

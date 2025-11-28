@@ -127,7 +127,7 @@ const NotificationItem = (notification: Notification) => {
      <div onClick={handleClick} className='p-2 flex items-center justify-center'>
          <div
          className={`
-             relative px-4 py-3 rounded-xl transition-all cursor-pointer group
+             relative px-4 py-3 rounded-xl w-full transition-all cursor-pointer group
              ${notification.isRead ? 'bg-card' : 'bg-muted/30'}
              hover:bg-accent/50
          `}
