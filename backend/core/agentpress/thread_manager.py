@@ -314,10 +314,7 @@ class ThreadManager:
         auto_continue_state = {
             'count': 0,
             'active': True,
-            'continuous_state': {'accumulated_content': '', 'thread_run_id': None},
-            # [PROPHET CUSTOM] Track consecutive 'length' finishes without tool execution
-            # to detect and break infinite loops from large file generation
-            'consecutive_length_no_tool': 0
+            'continuous_state': {'accumulated_content': '', 'thread_run_id': None}
         }
 
         # Single execution if auto-continue is disabled
@@ -803,24 +800,9 @@ class ThreadManager:
                         logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                         auto_continue_state['active'] = True
                         auto_continue_state['count'] += 1
-                        # [PROPHET CUSTOM] Reset consecutive length counter when tool executes
-                        auto_continue_state['consecutive_length_no_tool'] = 0
                         return True
                 elif finish_reason == 'length':
-                    # [PROPHET CUSTOM] Track consecutive 'length' finishes without tool execution
-                    # This detects infinite loops from large file generation (e.g., create_file with huge content)
-                    auto_continue_state['consecutive_length_no_tool'] = auto_continue_state.get('consecutive_length_no_tool', 0) + 1
-                    MAX_CONSECUTIVE_LENGTH = 3  # Stop after 3 consecutive 'length' without tool execution
-                    
-                    if auto_continue_state['consecutive_length_no_tool'] >= MAX_CONSECUTIVE_LENGTH:
-                        logger.warning(
-                            f"🛑 Stopping auto-continue: {MAX_CONSECUTIVE_LENGTH} consecutive 'length' finishes without tool execution. "
-                            f"This likely means the model is stuck generating a very large file."
-                        )
-                        auto_continue_state['active'] = False
-                        return False
-                    
-                    logger.debug(f"Auto-continuing for length limit ({auto_continue_state['count'] + 1}/{native_max_auto_continues}), consecutive_length={auto_continue_state['consecutive_length_no_tool']}")
+                    logger.debug(f"Auto-continuing for length limit ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                     auto_continue_state['active'] = True
                     auto_continue_state['count'] += 1
                     return True
