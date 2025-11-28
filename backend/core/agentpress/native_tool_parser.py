@@ -151,10 +151,6 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     """
     Convert buffered tool calls to complete native tool calls format.
     
-    [PROPHET CUSTOM] Now attempts to repair truncated JSON from token limits
-    instead of silently discarding tool calls. This prevents the agent from
-    "forgetting" what it was doing when it hits token limits mid-generation.
-    
     Args:
         tool_calls_buffer: Dictionary mapping index -> buffered tool call data
         
@@ -165,37 +161,23 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     
     for idx, tc_buf in tool_calls_buffer.items():
         if tc_buf.get('id') and tc_buf.get('function', {}).get('name') and tc_buf.get('function', {}).get('arguments'):
-            raw_args = tc_buf['function']['arguments']
-            
-            # [PROPHET CUSTOM] Try to repair truncated JSON instead of discarding
-            from core.utils.json_helpers import repair_truncated_json, safe_json_parse
-            
-            # First try normal parsing
-            parsed = safe_json_parse(raw_args)
-            was_repaired = False
-            
-            # If not a dict, try to repair truncated JSON
-            if not isinstance(parsed, dict):
-                parsed, was_repaired = repair_truncated_json(raw_args)
-                
-                if was_repaired and isinstance(parsed, dict):
-                    logger.info(f"🔧 Repaired truncated JSON for tool call {tc_buf.get('id')} ({tc_buf['function']['name']})")
-                elif not isinstance(parsed, dict):
-                    logger.warning(f"⚠️ Could not repair tool call {tc_buf.get('id')} ({tc_buf['function']['name']}) - JSON too corrupted")
-                    continue
-            
-            # Use repaired JSON string if repair was successful
-            final_args = json.dumps(parsed) if was_repaired else raw_args
-                
-            # Keep arguments as JSON string for LiteLLM compatibility
-            complete_tool_calls.append({
-                "id": tc_buf['id'],
-                "type": "function",
-                "function": {
-                    "name": tc_buf['function']['name'],
-                    "arguments": final_args
-                }
-            })
+            try:
+                # Validate that arguments are valid JSON
+                from core.utils.json_helpers import safe_json_parse
+                safe_json_parse(tc_buf['function']['arguments'])
+                # Keep arguments as JSON string for LiteLLM compatibility
+                complete_tool_calls.append({
+                    "id": tc_buf['id'],
+                    "type": "function",
+                    "function": {
+                        "name": tc_buf['function']['name'],
+                        "arguments": tc_buf['function']['arguments']
+                    }
+                })
+            except (json.JSONDecodeError, TypeError):
+                # Discard tool calls with invalid JSON - let auto-continue handle it
+                logger.warning(f"⚠️ Discarding tool call {tc_buf.get('id')} ({tc_buf['function'].get('name')}) - invalid JSON, will auto-continue")
+                continue
     
     return complete_tool_calls
 

@@ -229,12 +229,12 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 - **Redis SSL/TLS**: suporte a `REDIS_SSL=true` para Upstash e outros provedores cloud (não presente no upstream).
 - **Redis LTRIM/TTL**: `REDIS_RESPONSE_LIST_MAX_SIZE = 500` e `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h) em `run_agent_background.py`.
 - **Stripe Price IDs**: IDs de produção em `backend/core/utils/config.py` são os do Prophet (não Kortix).
-- **Truncated tool call recovery**: 
-  - `native_tool_parser.py`: Função `repair_truncated_json` para salvar JSON truncado de tool calls
-  - `xml_tool_parser.py`: Fallback para `</invoke>` e `</parameter>` faltando
-  - `json_helpers.py`: Nova função `repair_truncated_json` para fechar JSON incompleto
-  - Isso evita que o agente "esqueça" o que estava fazendo quando atinge limite de tokens
+- **max_output_tokens (CRÍTICO)**: Em `backend/core/ai_models/registry.py` e `ai_models.py`:
+  - Adicionamos `max_output_tokens=8192` nos modelos `kortix/basic` e `kortix/power`
+  - Modificamos `get_litellm_params()` para usar esse valor quando `max_tokens` não é especificado
+  - Sem isso, Anthropic usa o padrão de 4096 tokens, causando truncamento de arquivos grandes
 - **Auto-continue limits**: Removido limite custom de `consecutive_length_no_tool`. Agora usa valores padrão do upstream (25 auto-continues).
+- **JSON repair removido**: Removemos o `repair_truncated_json` do `native_tool_parser.py`. O repair estava causando execução de tools com argumentos truncados (ex: arquivo cortado no meio). Com 8192 tokens, o problema de truncamento é bem menor.
 
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
 

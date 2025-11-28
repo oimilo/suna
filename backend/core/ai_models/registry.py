@@ -35,6 +35,7 @@ class ModelRegistry:
             provider=ModelProvider.ANTHROPIC,
             aliases=["kortix-basic", "Kortix Basic"],
             context_window=1_000_000,
+            max_output_tokens=8192,  # [PROPHET] Aumentado de 4096 padrão para permitir arquivos maiores
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -65,6 +66,7 @@ class ModelRegistry:
             provider=ModelProvider.ANTHROPIC,
             aliases=["kortix-power", "Kortix POWER Mode", "Kortix Power"],
             context_window=1_000_000,
+            max_output_tokens=8192,  # [PROPHET] Aumentado de 4096 padrão para permitir arquivos maiores
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
