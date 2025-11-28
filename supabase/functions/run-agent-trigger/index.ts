@@ -21,7 +21,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 // Internal API URL - using the webhook base URL from production
-const INTERNAL_API_URL = 'https://prophet-milo-f3hr5.ondigitalocean.app'
+const INTERNAL_API_URL = 'https://app.prophet.build'
 
 serve(async (req: Request) => {
   // CORS headers
