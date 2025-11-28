@@ -45,8 +45,8 @@ db = DBConnection()
 instance_id = ""
 # Prophet custom: 6 hours TTL (upstream has 24h)
 REDIS_RESPONSE_LIST_TTL = 3600 * 6
-# Prophet custom: limit response list size
-REDIS_RESPONSE_LIST_MAX_SIZE = 500
+# NOTE: LTRIM removed - was causing race condition with SSE streaming
+# The TTL already handles cleanup, no need to trim during run
 
 
 def check_terminating_tool_call(response: Dict[str, Any]) -> Optional[str]:
@@ -355,12 +355,9 @@ async def process_agent_responses(
         total_responses += 1
         stop_signal_checker_state['total_responses'] = total_responses
 
-        # [PROPHET CUSTOM] Trim list to prevent memory bloat (keep last N responses)
-        # Older responses are still saved to DB at the end of the run
-        if total_responses % 100 == 0:  # Trim every 100 responses to reduce Redis calls
-            pending_redis_operations.append(
-                asyncio.create_task(redis.ltrim(redis_keys['response_list'], -REDIS_RESPONSE_LIST_MAX_SIZE, -1))
-            )
+        # NOTE: LTRIM removed - was causing race condition with SSE streaming
+        # The streaming uses absolute indices (last_processed_index) but LTRIM
+        # reindexes the list, causing messages to be skipped. TTL handles cleanup.
 
         terminating_tool = check_terminating_tool_call(response)
         if terminating_tool == 'complete':
