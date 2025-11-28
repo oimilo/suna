@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useVncPreloader } from '@/hooks/files';
+import { getProxyPreviewUrl } from '@/lib/utils/daytona';
 
 interface HealthCheckedVncIframeProps {
   sandbox: {
@@ -24,6 +25,17 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     initialDelay: 1000,
     timeoutMs: 5000
   });
+
+  // [PROPHET CUSTOM] Build VNC URL through proxy to avoid direct Daytona access
+  const vncUrl = useMemo(() => {
+    if (!sandbox?.vnc_preview || !sandbox?.pass) return null;
+    
+    const normalizedBase = sandbox.vnc_preview.replace(/\/$/, '');
+    const rawUrl = `${normalizedBase}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    
+    // Try to get proxy URL, fallback to raw URL if proxy not configured
+    return getProxyPreviewUrl({ originalUrl: rawUrl }) ?? rawUrl;
+  }, [sandbox?.vnc_preview, sandbox?.pass]);
 
 
 
@@ -75,14 +87,14 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     );
   }
 
-  if (isPreloaded) {
+  if (isPreloaded && vncUrl) {
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
           <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
             <iframe
               key={iframeKey}
-              src={`${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`}
+              src={vncUrl}
               title="Browser preview"
               className="absolute inset-0 w-full h-full border-0 md:w-[102%] md:h-[130%] md:-translate-y-[4.4rem] lg:-translate-y-[4.7rem] xl:-translate-y-[5.4rem] md:left-0 md:-translate-x-2"
             />

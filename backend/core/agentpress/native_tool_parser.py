@@ -151,8 +151,9 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     """
     Convert buffered tool calls to complete native tool calls format.
     
-    Only includes tool calls with valid, complete JSON arguments.
-    Truncated/incomplete JSON (e.g., from hitting token limits) is skipped.
+    [PROPHET CUSTOM] Now attempts to repair truncated JSON from token limits
+    instead of silently discarding tool calls. This prevents the agent from
+    "forgetting" what it was doing when it hits token limits mid-generation.
     
     Args:
         tool_calls_buffer: Dictionary mapping index -> buffered tool call data
@@ -164,16 +165,27 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
     
     for idx, tc_buf in tool_calls_buffer.items():
         if tc_buf.get('id') and tc_buf.get('function', {}).get('name') and tc_buf.get('function', {}).get('arguments'):
-            # Validate that arguments are valid JSON that parses to a dict
-            # safe_json_parse returns the original string if JSON is invalid/truncated
-            from core.utils.json_helpers import safe_json_parse
-            parsed = safe_json_parse(tc_buf['function']['arguments'])
+            raw_args = tc_buf['function']['arguments']
             
-            # Only include if parsed result is a dict (valid complete JSON)
-            # If it's still a string, the JSON was invalid/truncated
+            # [PROPHET CUSTOM] Try to repair truncated JSON instead of discarding
+            from core.utils.json_helpers import repair_truncated_json, safe_json_parse
+            
+            # First try normal parsing
+            parsed = safe_json_parse(raw_args)
+            was_repaired = False
+            
+            # If not a dict, try to repair truncated JSON
             if not isinstance(parsed, dict):
-                logger.warning(f"Skipping tool call {tc_buf.get('id')} with incomplete/invalid JSON arguments")
-                continue
+                parsed, was_repaired = repair_truncated_json(raw_args)
+                
+                if was_repaired and isinstance(parsed, dict):
+                    logger.info(f"🔧 Repaired truncated JSON for tool call {tc_buf.get('id')} ({tc_buf['function']['name']})")
+                elif not isinstance(parsed, dict):
+                    logger.warning(f"⚠️ Could not repair tool call {tc_buf.get('id')} ({tc_buf['function']['name']}) - JSON too corrupted")
+                    continue
+            
+            # Use repaired JSON string if repair was successful
+            final_args = json.dumps(parsed) if was_repaired else raw_args
                 
             # Keep arguments as JSON string for LiteLLM compatibility
             complete_tool_calls.append({
@@ -181,7 +193,7 @@ def convert_buffer_to_complete_tool_calls(tool_calls_buffer: Dict[int, Dict[str,
                 "type": "function",
                 "function": {
                     "name": tc_buf['function']['name'],
-                    "arguments": tc_buf['function']['arguments']
+                    "arguments": final_args
                 }
             })
     
