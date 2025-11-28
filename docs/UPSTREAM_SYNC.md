@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-28   | `8e1279b32`     | `Merge PR #2170 - fix (context manager & compression)` |
+| 2025-11-28   | `7ac77cbb3`     | `supabase linter recommendation migrations` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
