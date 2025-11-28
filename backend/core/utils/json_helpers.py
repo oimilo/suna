@@ -85,6 +85,103 @@ def ensure_list(value: Union[str, List[Any], None], default: List[Any] = None) -
     return default
 
 
+def repair_truncated_json(json_str: str) -> tuple[Any, bool]:
+    """
+    [PROPHET CUSTOM] Attempt to repair truncated JSON from LLM token limits.
+    
+    When the LLM hits token limits mid-generation, JSON arguments get truncated.
+    This function tries to close open brackets/braces to salvage the partial data.
+    
+    Args:
+        json_str: Potentially truncated JSON string
+        
+    Returns:
+        Tuple of (parsed_result, was_repaired)
+        - parsed_result: Parsed dict/list if successful, original string if not
+        - was_repaired: True if repair was attempted
+    """
+    if not json_str or not isinstance(json_str, str):
+        return json_str, False
+    
+    # First, try normal parsing
+    try:
+        return json.loads(json_str), False
+    except json.JSONDecodeError:
+        pass
+    
+    repaired = json_str.rstrip()
+    
+    # Handle trailing colon (incomplete key-value pair) - remove it
+    if repaired.endswith(':'):
+        # Find the key and remove the whole "key": part
+        last_quote = repaired.rfind('"', 0, len(repaired) - 1)
+        if last_quote > 0:
+            second_last_quote = repaired.rfind('"', 0, last_quote)
+            if second_last_quote >= 0:
+                # Check if there's a comma before the key
+                prefix = repaired[:second_last_quote].rstrip()
+                if prefix.endswith(','):
+                    repaired = prefix[:-1]  # Remove the comma too
+                else:
+                    repaired = prefix
+    
+    # Handle trailing comma
+    repaired = repaired.rstrip(',')
+    
+    # Count open brackets/braces (simple count, not accounting for strings)
+    open_braces = repaired.count('{') - repaired.count('}')
+    open_brackets = repaired.count('[') - repaired.count(']')
+    
+    # Check if we're inside a string by counting unescaped quotes
+    # Need to handle escaped backslashes (\\) properly
+    quote_count = 0
+    i = 0
+    while i < len(repaired):
+        if repaired[i] == '"':
+            # Count preceding backslashes
+            num_backslashes = 0
+            j = i - 1
+            while j >= 0 and repaired[j] == '\\':
+                num_backslashes += 1
+                j -= 1
+            # Quote is escaped only if preceded by odd number of backslashes
+            if num_backslashes % 2 == 0:
+                quote_count += 1
+        i += 1
+    in_string = quote_count % 2 == 1
+    
+    # If inside a string, close it
+    if in_string:
+        repaired += '"'
+    
+    # Close any open brackets/braces
+    repaired += ']' * max(0, open_brackets)
+    repaired += '}' * max(0, open_braces)
+    
+    # Try to parse the repaired JSON
+    try:
+        result = json.loads(repaired)
+        return result, True
+    except json.JSONDecodeError:
+        # Try more aggressive repair - remove last incomplete key-value
+        try:
+            # Find last complete value (ends with ", or number, or true/false/null, or ]/})
+            import re
+            # Remove incomplete trailing content after last comma
+            match = re.search(r',\s*"[^"]*"?\s*:?\s*[^,}\]]*$', repaired)
+            if match:
+                repaired = repaired[:match.start()]
+                repaired += ']' * max(0, repaired.count('[') - repaired.count(']'))
+                repaired += '}' * max(0, repaired.count('{') - repaired.count('}'))
+                result = json.loads(repaired)
+                return result, True
+        except (json.JSONDecodeError, Exception):
+            pass
+        
+        # If still failing, return original
+        return json_str, False
+
+
 def safe_json_parse(value: Union[str, Dict, List, Any], default: Any = None) -> Any:
     """
     Safely parse a value that might be JSON string or already parsed.

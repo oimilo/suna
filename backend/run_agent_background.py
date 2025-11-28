@@ -533,6 +533,12 @@ async def run_agent_background(
 
         agent_config = await load_agent_config(agent_id, account_id)
 
+        # [PROPHET CUSTOM] Limitar auto-continues para evitar loops infinitos
+        # Upstream usa 25, mas isso pode causar loops quando o agente
+        # tenta criar arquivos muito grandes e sempre atinge o limite de tokens
+        PROPHET_MAX_AUTO_CONTINUES = 10
+        PROPHET_MAX_ITERATIONS = 50
+        
         agent_gen = run_agent(
             thread_id=thread_id,
             project_id=project_id,
@@ -541,6 +547,8 @@ async def run_agent_background(
             trace=trace,
             cancellation_event=cancellation_event,
             account_id=account_id,
+            native_max_auto_continues=PROPHET_MAX_AUTO_CONTINUES,
+            max_iterations=PROPHET_MAX_ITERATIONS,
         )
         
         total_to_ready = (time.time() - worker_start) * 1000
