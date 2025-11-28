@@ -1245,10 +1245,24 @@ async def stream_agent_run(
 
             listener_task = asyncio.create_task(listen_messages())
 
+            # [PROPHET CUSTOM] Send periodic pings to keep SSE connection alive
+            # DigitalOcean App Platform has 60s timeout for HTTP connections
+            PING_INTERVAL = 30  # seconds
+            last_ping_time = asyncio.get_event_loop().time()
+
             # 4. Main loop to process messages from the queue
             while not terminate_stream:
                 try:
-                    queue_item = await message_queue.get()
+                    # Use timeout to allow periodic pings
+                    try:
+                        queue_item = await asyncio.wait_for(message_queue.get(), timeout=PING_INTERVAL)
+                    except asyncio.TimeoutError:
+                        # No message received, send ping to keep connection alive
+                        current_time = asyncio.get_event_loop().time()
+                        if current_time - last_ping_time >= PING_INTERVAL:
+                            yield f"data: {json.dumps({'type': 'ping'})}\n\n"
+                            last_ping_time = current_time
+                        continue
 
                     if queue_item["type"] == "new_response":
                         # Fetch new responses from Redis list starting after the last processed index
