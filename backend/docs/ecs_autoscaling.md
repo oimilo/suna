@@ -96,7 +96,7 @@ View metrics in CloudWatch:
 
 ```bash
 # Check current queue depth
-curl https://api.prophet.build/api/metrics/queue
+curl https://app.prophet.build/api/metrics/queue
 
 # List CloudWatch metrics
 aws cloudwatch list-metrics --namespace Prophet --region us-west-2

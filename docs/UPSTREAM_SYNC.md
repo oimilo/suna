@@ -6,11 +6,25 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-28   | `7ac77cbb3`     | `supabase linter recommendation migrations` |
+| 2025-11-28   | `4ad091025`     | `Merge pull request #2174 - retries for files` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-11-28
+
+### Bloco aplicado — retries for files (1f1cd3f4f, PR #2174)
+- **Upstream commits absorvidos**: `1f1cd3f4f` (retries for files) + merge `4ad091025`
+- **Mudanças frontend**:
+  - `use-file-queries.ts`: Retry aumentado de 3 → 15 tentativas com exponential backoff (1s → 30s max). Expõe `failureCount` e `failureReason` para feedback na UI
+  - `use-file-content.ts`: Expõe `failureCount` do hook subjacente
+  - `use-image-content.ts`: Expõe `failureCount` do hook subjacente
+  - `file-attachment.tsx`: Usa `failureCount` para mostrar "Retrying... (attempt X)" durante carregamento. Só mostra erro após esgotar 15 retries
+  - `file-viewer-modal.tsx`: Mesma lógica de retry - só mostra erro após esgotar tentativas
+- **UX melhorada**: Quando usuário abre thread antiga com sandbox desligado, o sistema tenta até 15x (~8-10 min) com backoff exponencial antes de mostrar erro. Feedback visual durante retries
+- **Console.logs de debug do upstream**: **Não aplicados** (eram para debug, não produção)
+- **Testes**: `npm run lint` passou, erros de lint verificados nos arquivos modificados
 
 ## Progresso em 2025-11-25
 
