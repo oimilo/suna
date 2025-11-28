@@ -132,6 +132,11 @@ class Model:
             "num_retries": 5,
         }
         
+        # [PROPHET] Use max_output_tokens from model if not overridden
+        # This prevents Anthropic from using the 4096 default when we have larger files
+        if self.max_output_tokens and "max_tokens" not in override_params:
+            params["max_tokens"] = self.max_output_tokens
+        
     
         # Apply model-specific configuration if available
         if self.config:
