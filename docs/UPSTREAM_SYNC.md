@@ -113,8 +113,8 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
   - `device_tokens` - tokens de push notification
   - `user_presence_sessions` - tracking multi-sessão
 - **Lógica custom preservada**:
-  - `REDIS_RESPONSE_LIST_MAX_SIZE = 500` (LTRIM para limitar memória)
   - `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h TTL em vez de 24h do upstream)
+  - ~~`REDIS_RESPONSE_LIST_MAX_SIZE = 500` (LTRIM)~~ **REMOVIDO** - causava race condition com SSE
   - Branding Prophet (displayName no dashboard)
   - Daytona proxy router re-adicionado ao `api.py`
 - **Fallback de email**: Se Novu falhar, usa `email_service` (Mailtrap) diretamente
