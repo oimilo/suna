@@ -229,13 +229,12 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 - **Redis SSL/TLS**: suporte a `REDIS_SSL=true` para Upstash e outros provedores cloud (não presente no upstream).
 - **Redis LTRIM/TTL**: `REDIS_RESPONSE_LIST_MAX_SIZE = 500` e `REDIS_RESPONSE_LIST_TTL = 3600 * 6` (6h) em `run_agent_background.py`.
 - **Stripe Price IDs**: IDs de produção em `backend/core/utils/config.py` são os do Prophet (não Kortix).
-- **Auto-continue limit**: `PROPHET_MAX_AUTO_CONTINUES = 10` e `PROPHET_MAX_ITERATIONS = 50` em `run_agent_background.py` (upstream usa 25/100). Evita loops infinitos quando o agente tenta criar arquivos muito grandes.
-- **Consecutive length detection**: Em `thread_manager.py`, adicionamos `consecutive_length_no_tool` para detectar quando o modelo fica preso gerando arquivos grandes sem executar tools. Após 3 `finish_reason='length'` consecutivos sem tool execution, o auto-continue é interrompido.
 - **Truncated tool call recovery**: 
   - `native_tool_parser.py`: Função `repair_truncated_json` para salvar JSON truncado de tool calls
   - `xml_tool_parser.py`: Fallback para `</invoke>` e `</parameter>` faltando
   - `json_helpers.py`: Nova função `repair_truncated_json` para fechar JSON incompleto
   - Isso evita que o agente "esqueça" o que estava fazendo quando atinge limite de tokens
+- **Auto-continue limits**: Removido limite custom de `consecutive_length_no_tool`. Agora usa valores padrão do upstream (25 auto-continues).
 
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
 
@@ -285,18 +284,7 @@ task_url = f"https://www.prophet.build/projects/{project_id}/thread/{thread_id}"
 ```
 
 ### 6. Auto-continue Limit (`run_agent_background.py`)
-Verificar se o limite de auto-continue está configurado (upstream usa 25/100):
-```python
-# DEVE estar assim (Prophet - evita loops infinitos):
-PROPHET_MAX_AUTO_CONTINUES = 10
-PROPHET_MAX_ITERATIONS = 50
-
-agent_gen = run_agent(
-    ...
-    native_max_auto_continues=PROPHET_MAX_AUTO_CONTINUES,
-    max_iterations=PROPHET_MAX_ITERATIONS,
-)
-```
+Estamos usando os valores padrão do upstream (25 auto-continues) para permitir que o agente complete tarefas longas.
 
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
 
