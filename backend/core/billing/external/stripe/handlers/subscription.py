@@ -67,6 +67,13 @@ class SubscriptionHandler:
         )
     
     async def _cleanup_duplicate_subscriptions(self, subscription: Dict, subscription_info: Dict, account_id: str):
+        # IMPORTANT: Do NOT cleanup/cancel old subscriptions if the new one is incomplete!
+        # The old subscription should only be cancelled after payment is confirmed.
+        # This is handled by checkout.session.completed webhook via 'cancel_after_checkout' metadata.
+        if subscription.get('status') == 'incomplete':
+            logger.info(f"[SUBSCRIPTION.CREATED] Skipping cleanup - new subscription {subscription_info['subscription_id']} is incomplete (payment pending)")
+            return
+        
         previous_subscription_id = subscription_info['metadata'].get('previous_subscription_id')
         
         await self.cleanup_service.cleanup_duplicate_subscriptions(
