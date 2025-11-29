@@ -6,11 +6,37 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-28   | `3592ca94a`     | `Merge PR #2176 - remove notifications settings from UI` |
+| 2025-11-29   | `5008a864b`     | `retries for seeimagetoolview` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
+**Commits não aplicados (propositalmente):**
+- `424f947dd` - cleanup scripts (não necessário)
+- `b60caacf2` - mobile wip + auth callback (poderia sobrescrever login sem GitHub)
+- `3dbefaaa9` - Redis TTLs reduzidos (temos TTLs customizados de 6h)
+- `8760de0a1` - mobile wip (não usamos app mobile)
+- RevenueCat fixes - mobile (não usamos)
+
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-11-29
+
+### Bloco aplicado — shared threads + image retries (b004d6099, e97dc0d8e, 5008a864b)
+- **Upstream commits absorvidos**: `b004d6099` (fix assistant streams for shared thread), `e97dc0d8e` (add preswrapper to share page), `5008a864b` (retries for seeimagetoolview)
+- **Mudanças frontend**:
+  - `PlaybackControls.tsx`: Usa `metadata.text_content` para streaming em vez de parsear `content` direto
+  - `usePlaybackController.tsx`: Mesma lógica de `metadata.text_content` com fallback para formato legado
+  - `SharePageWrapper.tsx`: Adiciona `PresentationViewerWrapper` com lazy loading para páginas de share
+  - `SeeImageToolView.tsx`: Refatorado para usar `useImageContent` hook com 15 retries e feedback visual
+- **Benefícios**:
+  - ✅ Streaming correto de mensagens assistant em threads compartilhadas
+  - ✅ Apresentações funcionam em páginas de share
+  - ✅ Imagens carregam com retries robustos (igual a outros componentes de arquivo)
+
+### Hotfix — max_output_tokens 8K→16K
+- **Problema**: Agente atingia limite de 8192 tokens ao gerar arquivos HTML grandes (ex: relatórios visuais)
+- **Solução**: Aumentado `max_output_tokens` de 8192 para 16384 em `registry.py`
+- **Sentry issue**: PYTHON-FASTAPI-4G
 
 ## Progresso em 2025-11-28
 
