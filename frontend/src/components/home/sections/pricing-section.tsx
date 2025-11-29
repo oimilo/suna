@@ -13,6 +13,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useAccountState } from '@/hooks/billing';
 import { billingApi, CreateCheckoutSessionResponse } from '@/lib/api/billing';
 import { toast } from 'sonner';
+import { detectCurrencyFromTimezone } from '@/lib/utils/geo-detection';
 import { useRouter } from 'next/navigation';
 import { config } from '@/lib/config';
 
@@ -239,6 +240,7 @@ export function PricingSection({
         success_url: successUrl,
         cancel_url: cancelUrl,
         commitment_type: billingPeriod === 'yearly' ? 'yearly' : 'monthly',
+        currency: detectCurrencyFromTimezone(),
       });
 
       if (response.url) {

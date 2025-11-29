@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { AccountState } from '@/lib/api/billing';
 import { createCheckoutSession, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse } from '@/lib/api/billing';
 import { toast } from 'sonner';
+import { detectCurrencyFromTimezone } from '@/lib/utils/geo-detection';
 import { isLocalMode } from '@/lib/config';
 import { useAccountState, useScheduleDowngrade, accountStateKeys, accountStateSelectors } from '@/hooks/billing';
 import { useAuth } from '@/components/AuthProvider';
@@ -188,6 +189,7 @@ function PricingTier({
           success_url: `${window.location.origin}/dashboard?subscription=success`,
           cancel_url: returnUrl,
           commitment_type: commitmentType,
+          currency: detectCurrencyFromTimezone(),
         } as CreateCheckoutSessionRequest);
 
       // Handle checkout URL - support both checkout_url and url fields
