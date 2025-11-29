@@ -92,21 +92,21 @@ class Configuration:
     
     SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
 
-    # Subscription tier IDs - Production
-    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1SYB91FNfWjTbEjstFJZ0Tcs'  # Prophet Free
-    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1SYAstFNfWjTbEjsPXCmccyN'  # Prophet Plus Monthly
-    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1SYAz8FNfWjTbEjsai1zZw8h'  # Prophet Pro Monthly
+    # Subscription tier IDs - Production (Multi-currency: USD + BRL)
+    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1SYbhjFNfWjTbEjsZoFTyJwc'  # Prophet Free (Multi-currency)
+    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1SYbYTFNfWjTbEjsW9DIaJmN'  # Prophet Plus Monthly (Multi-currency)
+    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1SYbcfFNfWjTbEjsKztgfUGy'  # Prophet Pro Monthly (Multi-currency)
     STRIPE_TIER_12_100_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIr5Y20ZLHm'
-    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1SYB1YFNfWjTbEjs6dFN1izo'  # Prophet Ultra Monthly
+    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1SYbcrFNfWjTbEjsBr7gj9Dy'  # Prophet Ultra Monthly (Multi-currency)
     STRIPE_TIER_50_400_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIruNBUMTF1'
     STRIPE_TIER_125_800_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrbJA766tN'
     STRIPE_TIER_200_1000_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrmauYPOiN'
     
-    # Yearly subscription tier IDs - Production (15% discount)
-    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1SYAuDFNfWjTbEjsNz5XdoQN'  # Prophet Plus Yearly
-    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1SYAziFNfWjTbEjs3bYncZ06'  # Prophet Pro Yearly
+    # Yearly subscription tier IDs - Production (Multi-currency: USD + BRL)
+    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1SYbcZFNfWjTbEjs8qRpLSlV'  # Prophet Plus Yearly (Multi-currency)
+    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1SYbclFNfWjTbEjshdpuZwRm'  # Prophet Pro Yearly (Multi-currency)
     STRIPE_TIER_12_100_YEARLY_ID_PROD: Optional[str] = 'price_1ReHAWG6l1KZGqIrBHer2PQc'
-    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1SYB2AFNfWjTbEjsFVWdfE2m'  # Prophet Ultra Yearly
+    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1SYbcyFNfWjTbEjstvMlUfl7'  # Prophet Ultra Yearly (Multi-currency)
     STRIPE_TIER_50_400_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9fG6l1KZGqIrsPtu5KIA'
     STRIPE_TIER_125_800_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9GG6l1KZGqIrfgqaJyat'
     STRIPE_TIER_200_1000_YEARLY_ID_PROD: Optional[str] = 'price_1ReH8qG6l1KZGqIrK1akY90q'
