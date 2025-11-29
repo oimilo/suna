@@ -28,15 +28,18 @@ class SubscriptionUpgradeService:
         plan_type = get_plan_type(price_id)
         
         if subscription.status == 'incomplete':
-            logger.info(f"[UPGRADE] User {account_id} upgrading from {current_tier} to {tier_info.name} (payment pending)")
+            # IMPORTANT: Do NOT update tier for incomplete subscriptions!
+            # Tier should only be updated after payment is confirmed (status = active)
+            # Just log and track the pending subscription ID for reference
+            logger.info(f"[UPGRADE] User {account_id} has pending upgrade from {current_tier} to {tier_info.name} (payment pending - tier NOT updated yet)")
             
+            # Only update the pending subscription ID, NOT the tier
+            # The tier will be updated when the subscription becomes active via handle_incomplete_to_active_upgrade
             await self.subscription_repo.update_subscription_metadata(account_id, {
-                'tier': tier_info.name,
-                'plan_type': plan_type,
-                'stripe_subscription_id': subscription['id'],
-                'billing_cycle_anchor': billing_dates['billing_anchor_iso'],
-                'next_credit_grant': billing_dates['next_grant_date_iso']
+                'pending_upgrade_subscription_id': subscription['id'],
+                'pending_upgrade_tier': tier_info.name
             })
+            return  # Exit early - don't update tier until payment is confirmed
             
         elif subscription.status == 'active':
             logger.info(f"[UPGRADE] User {account_id} upgrading from {current_tier} - metadata updated, credits handled by lifecycle/invoice")
