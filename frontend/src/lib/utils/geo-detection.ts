@@ -231,3 +231,44 @@ export function detectBestLocale(): Locale {
   return defaultLocale;
 }
 
+/**
+ * Detects the best currency based on timezone
+ * Currently supports: BRL for Brazil, USD for everything else
+ */
+export function detectCurrencyFromTimezone(): 'usd' | 'brl' {
+  if (typeof window === 'undefined') {
+    return 'usd';
+  }
+
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Brazil timezones -> BRL
+    const brazilTimezones = [
+      'America/Sao_Paulo',
+      'America/Rio_Branco', 
+      'America/Manaus',
+      'America/Cuiaba',
+      'America/Campo_Grande',
+      'America/Recife',
+      'America/Fortaleza',
+      'America/Belem',
+      'America/Araguaina',
+      'America/Maceio',
+      'America/Salvador',
+      'America/Bahia',
+      'America/Noronha',
+    ];
+    
+    if (brazilTimezones.includes(timezone) || timezone.includes('Brazil')) {
+      console.log('🌍 Detected Brazil timezone, using BRL');
+      return 'brl';
+    }
+    
+    return 'usd';
+  } catch (error) {
+    console.warn('Failed to detect currency from timezone:', error);
+    return 'usd';
+  }
+}
+

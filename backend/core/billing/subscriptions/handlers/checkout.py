@@ -23,11 +23,12 @@ class SubscriptionCheckoutHandler:
         price_id: str, 
         success_url: str, 
         cancel_url: str, 
-        commitment_type: Optional[str] = None
+        commitment_type: Optional[str] = None,
+        currency: Optional[str] = None
     ) -> Dict:
         handler = cls()
         return await handler._create_checkout_session(
-            account_id, price_id, success_url, cancel_url, commitment_type
+            account_id, price_id, success_url, cancel_url, commitment_type, currency
         )
     
     async def _create_checkout_session(
@@ -36,7 +37,8 @@ class SubscriptionCheckoutHandler:
         price_id: str, 
         success_url: str, 
         cancel_url: str, 
-        commitment_type: Optional[str] = None
+        commitment_type: Optional[str] = None,
+        currency: Optional[str] = None
     ) -> Dict:
         customer_id = await CustomerHandler.get_or_create_stripe_customer(account_id)
         subscription_status = await self.checkout_service.get_current_subscription_status(account_id)
@@ -49,17 +51,17 @@ class SubscriptionCheckoutHandler:
         if flow_type == 'trial_conversion':
             return await self._handle_trial_conversion(
                 customer_id, account_id, price_id, success_url, cancel_url,
-                subscription_status, commitment_type, idempotency_key
+                subscription_status, commitment_type, idempotency_key, currency
             )
         elif flow_type == 'upgrade_existing':
             return await self._handle_existing_subscription_upgrade(
                 customer_id, account_id, price_id, success_url, cancel_url,
-                subscription_status, commitment_type, idempotency_key
+                subscription_status, commitment_type, idempotency_key, currency
             )
         else:
             return await self._handle_new_subscription(
                 customer_id, account_id, price_id, success_url, cancel_url,
-                commitment_type, idempotency_key
+                commitment_type, idempotency_key, currency
             )
 
     async def _handle_trial_conversion(
@@ -71,7 +73,8 @@ class SubscriptionCheckoutHandler:
         cancel_url: str,
         subscription_status: Dict,
         commitment_type: Optional[str], 
-        idempotency_key: str
+        idempotency_key: str,
+        currency: Optional[str] = None
     ) -> Dict:
         new_tier_info = get_tier_by_price_id(price_id)
         tier_display_name = new_tier_info.display_name if new_tier_info else 'paid plan'
@@ -88,7 +91,7 @@ class SubscriptionCheckoutHandler:
         metadata['cancel_after_checkout'] = existing_subscription_id
 
         session = await self._create_stripe_checkout_session(
-            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url
+            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url, currency
         )
         
         return self.checkout_service.build_checkout_response(
@@ -112,23 +115,32 @@ class SubscriptionCheckoutHandler:
         success_url: str,
         metadata: Dict,
         idempotency_key: str,
-        cancel_url: str = None
+        cancel_url: str = None,
+        currency: str = None
     ):
         """
         Create a Stripe checkout session.
         By default uses hosted mode (Stripe's hosted checkout page).
+        If currency is specified (e.g., 'brl'), Stripe will use that currency from price's currency_options.
         """
-        return await StripeAPIWrapper.create_checkout_session(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{'price': price_id, 'quantity': 1}],
-            mode='subscription',
-            success_url=success_url,
-            cancel_url=cancel_url or success_url,
-            allow_promotion_codes=True,
-            subscription_data={'metadata': metadata},
-            idempotency_key=idempotency_key
-        )
+        params = {
+            'customer': customer_id,
+            'payment_method_types': ['card'],
+            'line_items': [{'price': price_id, 'quantity': 1}],
+            'mode': 'subscription',
+            'success_url': success_url,
+            'cancel_url': cancel_url or success_url,
+            'allow_promotion_codes': True,
+            'subscription_data': {'metadata': metadata},
+            'idempotency_key': idempotency_key
+        }
+        
+        # If currency specified, tell Stripe to use that currency from price's currency_options
+        if currency and currency.lower() != 'usd':
+            params['currency'] = currency.lower()
+            logger.info(f"[CHECKOUT] Using currency: {currency}")
+        
+        return await StripeAPIWrapper.create_checkout_session(**params)
 
     async def _handle_existing_subscription_upgrade(
         self,
@@ -139,7 +151,8 @@ class SubscriptionCheckoutHandler:
         cancel_url: str,
         subscription_status: Dict,
         commitment_type: Optional[str],
-        idempotency_key: str
+        idempotency_key: str,
+        currency: Optional[str] = None
     ) -> Dict:
         existing_subscription_id = subscription_status['subscription_id']
         subscription = await StripeAPIWrapper.retrieve_subscription(existing_subscription_id)
@@ -150,7 +163,7 @@ class SubscriptionCheckoutHandler:
         if current_amount == 0 or current_tier == 'free':
             return await self._handle_free_tier_upgrade(
                 customer_id, account_id, price_id, success_url, cancel_url,
-                subscription_status, commitment_type, idempotency_key
+                subscription_status, commitment_type, idempotency_key, currency
             )
         
         upgrade_type = self.upgrade_service.classify_upgrade_type(subscription, price_id)
@@ -188,7 +201,8 @@ class SubscriptionCheckoutHandler:
         cancel_url: str,
         subscription_status: Dict,
         commitment_type: Optional[str],
-        idempotency_key: str
+        idempotency_key: str,
+        currency: Optional[str] = None
     ) -> Dict:
         new_tier_info = get_tier_by_price_id(price_id)
         tier_display_name = new_tier_info.display_name if new_tier_info else 'paid plan'
@@ -205,7 +219,7 @@ class SubscriptionCheckoutHandler:
         metadata['cancel_after_checkout'] = existing_subscription_id
 
         session = await self._create_stripe_checkout_session(
-            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url
+            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url, currency
         )
         
         return self.checkout_service.build_checkout_response(
@@ -220,14 +234,15 @@ class SubscriptionCheckoutHandler:
         success_url: str,
         cancel_url: str,
         commitment_type: Optional[str],
-        idempotency_key: str
+        idempotency_key: str,
+        currency: Optional[str] = None
     ) -> Dict:
         metadata = self.checkout_service.build_subscription_metadata(
             account_id, commitment_type, 'new_subscription'
         )
 
         session = await self._create_stripe_checkout_session(
-            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url
+            customer_id, price_id, success_url, metadata, idempotency_key, cancel_url, currency
         )
         
         return self.checkout_service.build_checkout_response(session)
