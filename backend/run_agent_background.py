@@ -48,6 +48,37 @@ REDIS_RESPONSE_LIST_TTL = 3600 * 6
 # NOTE: LTRIM removed - was causing race condition with SSE streaming
 # The TTL already handles cleanup, no need to trim during run
 
+# Max Redis payload size (Upstash limit is 10MB, we use 5MB as safe margin)
+MAX_REDIS_PAYLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def truncate_large_response(response: Dict[str, Any], max_size: int = MAX_REDIS_PAYLOAD_SIZE) -> str:
+    """
+    Safely serialize response to JSON, truncating large content if needed.
+    This prevents Redis rpush failures when payload exceeds Upstash limits.
+    """
+    response_json = json.dumps(response)
+    
+    if len(response_json) <= max_size:
+        return response_json
+    
+    # Response is too large - truncate the content field if present
+    original_size_mb = len(response_json) / (1024 * 1024)
+    
+    if 'content' in response and response['content']:
+        # Create a copy to avoid modifying the original
+        truncated_response = response.copy()
+        truncated_response['content'] = f'[Content truncated: {original_size_mb:.1f}MB exceeded {max_size/(1024*1024):.0f}MB limit - view file in sandbox]'
+        truncated_response['_truncated'] = True
+        truncated_response['_original_size'] = len(response_json)
+        
+        logger.warning(f"⚠️ Truncated large response: {original_size_mb:.1f}MB -> safe size")
+        return json.dumps(truncated_response)
+    
+    # No content field to truncate - log and return as-is (will fail at Redis)
+    logger.error(f"❌ Response too large ({original_size_mb:.1f}MB) but no content field to truncate")
+    return response_json
+
 
 def check_terminating_tool_call(response: Dict[str, Any]) -> Optional[str]:
     if response.get('type') != 'status':
@@ -349,7 +380,7 @@ async def process_agent_responses(
             trace.span(name="agent_run_stopped").end(status_message=f"agent_run_stopped: {stop_reason}", level="WARNING")
             break
 
-        response_json = json.dumps(response)
+        response_json = truncate_large_response(response)
         pending_redis_operations.append(
             asyncio.create_task(redis.rpush(redis_keys['response_list'], response_json))
         )
