@@ -389,6 +389,14 @@ async def process_agent_responses(
         )
         total_responses += 1
         stop_signal_checker_state['total_responses'] = total_responses
+        
+        # Safety: Set TTL on response list every 50 responses (in case worker crashes before cleanup)
+        # This ensures data doesn't live forever if cleanup never runs
+        if total_responses % 50 == 0:
+            try:
+                await redis.expire(redis_keys['response_list'], REDIS_RESPONSE_LIST_TTL)
+            except Exception:
+                pass  # Best effort, don't fail the run
 
         # NOTE: LTRIM removed - was causing race condition with SSE streaming
         # The streaming uses absolute indices (last_processed_index) but LTRIM

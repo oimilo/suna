@@ -522,9 +522,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (!message.trim() || isShared || !addUserMessageMutation || !startAgentMutation) return;
       setIsSending(true);
 
-      // Clear the chat input value
-      setChatInputValue('');
-
       // Store the message to add optimistically when agent starts running
       pendingMessageRef.current = message;
 
@@ -585,11 +582,15 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           throw new Error(`Failed to start agent: ${error?.message || error}`);
         }
 
+        // Message sent successfully - now clear the input
+        setChatInputValue('');
+
         const agentResult = results[1].value;
         setUserInitiatedRun(true);
         setAgentRunId(agentResult.agent_run_id);
       } catch (err) {
         console.error('Error sending message or starting agent:', err);
+        // Keep the input value on error so user doesn't lose their message
         if (
           !(err instanceof BillingError) &&
           !(err instanceof AgentRunLimitError)
