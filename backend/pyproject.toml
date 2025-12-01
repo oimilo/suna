@@ -47,6 +47,7 @@ dependencies = [
   "boto3>=1.40.74",
   "openai>=1.99.5",
   "nest-asyncio==1.6.0",
+  "psutil>=5.9.0",
   "vncdotool==1.2.0",
   "tavily-python==0.5.4",
   "pytesseract==0.3.13",
