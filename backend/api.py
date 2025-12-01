@@ -49,9 +49,9 @@ instance_id = str(uuid.uuid4())[:8]
 ip_tracker = OrderedDict()
 MAX_CONCURRENT_IPS = 25
 
-# Background task handle for CloudWatch metrics
-_queue_metrics_task = None
-_memory_watchdog_task = None
+# Background task handles
+_queue_metrics_task = None  # CloudWatch metrics publisher
+_memory_watchdog_task = None  # Memory usage monitor
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
