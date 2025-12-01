@@ -6,18 +6,43 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-11-29   | `5008a864b`     | `retries for seeimagetoolview` |
+| 2025-12-01   | `d5641ea49`     | `fix (input preservation, i18n)` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
 **Commits não aplicados (propositalmente):**
 - `424f947dd` - cleanup scripts (não necessário)
 - `b60caacf2` - mobile wip + auth callback (poderia sobrescrever login sem GitHub)
-- `3dbefaaa9` - Redis TTLs reduzidos (temos TTLs customizados de 6h)
+- `3dbefaaa9` - Redis TTLs reduzidos (aplicado parcialmente - safety expiry sim, TTLs não)
 - `8760de0a1` - mobile wip (não usamos app mobile)
 - RevenueCat fixes - mobile (não usamos)
+- `e2022be97` - compression WIP (marcado como wip, muito invasivo)
+- `56cc0f02e` - PresentationViewer fix (código não presente no Prophet)
+- Referral system - não implementado
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-12-01
+
+### Bloco aplicado — hotfixes (a0486e4f6, d5641ea49, 3dbefaaa9 parcial)
+- **Upstream commits absorvidos**: `a0486e4f6` (orphaned tool calls), `d5641ea49` (input preservation), `3dbefaaa9` (parcial - safety expiry)
+- **Mudanças backend**:
+  - `response_processor.py`: Cleanup de tool_calls órfãos quando run é cancelado antes de executar ferramentas. Previne mensagens inconsistentes no banco.
+  - `run_agent_background.py`: Safety TTL refresh a cada 50 responses (previne dados eternos se worker crashar)
+- **Mudanças frontend**:
+  - `dashboard-content.tsx`: Não limpa input em caso de erro (usuário não perde mensagem)
+  - `chat-input.tsx`: Usa ref para detectar transição false→true de `isAgentRunning` (evita limpar em re-renders)
+  - `ThreadComponent.tsx`: Move `setChatInputValue('')` para após sucesso, não no início
+  - `i18n-provider.tsx`: Remove `key={locale}`, adiciona `timeZone="UTC"`
+- **Benefícios**:
+  - ✅ Usuário não perde mensagem se der erro ao enviar
+  - ✅ Input não limpa aleatoriamente em re-renders
+  - ✅ Menos tool_calls órfãos no banco (melhor consistência)
+  - ✅ Redis não acumula dados se worker crashar
+- **Não aplicados**:
+  - `e2022be97` - compression WIP (muito invasivo, marcado como wip)
+  - `56cc0f02e` - PresentationViewer fix (código não existe no Prophet)
+  - TTLs reduzidos do `3dbefaaa9` (Prophet usa 6h, não 1h)
 
 ## Progresso em 2025-11-29
 
