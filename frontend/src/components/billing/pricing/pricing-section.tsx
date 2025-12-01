@@ -24,6 +24,7 @@ import { useAccountState, useScheduleDowngrade, accountStateKeys, accountStateSe
 import { useAuth } from '@/components/AuthProvider';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScheduledDowngradeCard } from '@/components/billing/scheduled-downgrade-card';
+import { DowngradeConfirmationDialog } from '@/components/billing/downgrade-confirmation-dialog';
 import posthog from 'posthog-js';
 import { AnimatedBg } from '@/components/ui/animated-bg';
 import { TierBadge } from '@/components/billing/tier-badge';
@@ -147,6 +148,10 @@ function PricingTier({
   const displayPrice = getDisplayPrice();
 
   const scheduleDowngradeMutation = useScheduleDowngrade();
+  
+  // Downgrade confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingTierKey, setPendingTierKey] = useState<string | null>(null);
 
   const handleSubscribe = async (tierKey: string, isDowngrade = false) => {
     
@@ -167,23 +172,46 @@ function PricingTier({
       
 
       if (isDowngrade) {
-        scheduleDowngradeMutation.mutate({
-          target_tier_key: tierKey,
-          commitment_type: commitmentType,
-        }, {
-          onSuccess: () => {
-            posthog.capture('plan_downgrade_scheduled');
-            // Note: invalidateAccountState is already called by the mutation hook
-          },
-          onSettled: () => {
-            // Always clear loading state when mutation completes (success or error)
-            if (onSubscriptionUpdate) onSubscriptionUpdate();
-          }
-        });
+        // Open confirmation dialog instead of immediate downgrade
+        setPendingTierKey(tierKey);
+        setShowConfirmDialog(true);
         return;
       }
 
-      const response: CreateCheckoutSessionResponse =
+      await executeCheckout(tierKey, commitmentType);
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast.error(t('failedToCreateCheckout'));
+    }
+  };
+
+  // Handle confirmed downgrade after user submits feedback
+  const handleConfirmedDowngrade = () => {
+    if (!pendingTierKey) return;
+    
+    const commitmentType = effectiveBillingPeriod === 'yearly_commitment' ? 'yearly_commitment' :
+      effectiveBillingPeriod === 'yearly' ? 'yearly' :
+        'monthly';
+    
+    scheduleDowngradeMutation.mutate({
+      target_tier_key: pendingTierKey,
+      commitment_type: commitmentType,
+    }, {
+      onSuccess: () => {
+        posthog.capture('plan_downgrade_scheduled');
+        // Note: invalidateAccountState is already called by the mutation hook
+      },
+      onSettled: () => {
+        // Always clear loading state when mutation completes (success or error)
+        setPendingTierKey(null);
+        if (onSubscriptionUpdate) onSubscriptionUpdate();
+      }
+    });
+  };
+
+  // Extracted checkout logic
+  const executeCheckout = async (tierKey: string, commitmentType: 'monthly' | 'yearly' | 'yearly_commitment') => {
+    const response: CreateCheckoutSessionResponse =
         await createCheckoutSession({
           tier_key: tierKey,
           success_url: `${window.location.origin}/dashboard?subscription=success`,
@@ -269,14 +297,6 @@ function PricingTier({
           );
           toast.error('An unexpected error occurred. Please try again.');
       }
-    } catch (error: any) {
-      console.error('Error processing subscription:', error);
-      const errorMessage =
-        error?.response?.data?.detail ||
-        error?.message ||
-        'Failed to process subscription. Please try again.';
-      toast.error(errorMessage);
-    }
   };
 
   const currentTier = siteConfig.cloudPricingItems.find(
@@ -840,6 +860,20 @@ function PricingTier({
           />
         </>
       )}
+
+      {/* Downgrade Confirmation Dialog with Feedback */}
+      <DowngradeConfirmationDialog
+        open={showConfirmDialog}
+        onOpenChange={(open) => {
+          setShowConfirmDialog(open);
+          if (!open) {
+            setPendingTierKey(null);
+          }
+        }}
+        onConfirm={handleConfirmedDowngrade}
+        targetPlanName={tier.name}
+        isPending={scheduleDowngradeMutation.isPending}
+      />
     </div>
   );
 }

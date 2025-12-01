@@ -242,6 +242,9 @@ api_router.include_router(triggers_api.router)
 
 api_router.include_router(notifications_api.router)
 
+from core.feedback import router as feedback_router
+api_router.include_router(feedback_router)
+
 from core.notifications import presence_api
 api_router.include_router(presence_api.router)
 
