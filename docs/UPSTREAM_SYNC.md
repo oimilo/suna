@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-02   | `4e83ce252`     | `Merge PR #2203 - handle billing grace periods` |
+| 2025-12-02   | `3a8e03d78`     | `fix/show_loader if waiting for sandbox` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -21,6 +21,7 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - ~~Referral system - não implementado~~ ✅ Aplicado em 02/12/2025
 - `1465821b1` - ~~scale down pricing section~~ ✅ Aplicado em 02/12/2025
 - `2a7cdb276` - default plan to yearly (decisão de negócio - podemos aplicar depois)
+- `fe800927b` - mock image gen (não necessário - usamos API real)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
 
