@@ -8,7 +8,8 @@ from core.utils.logger import logger
 SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)
 
 # Actual model IDs for LiteLLM
-_BASIC_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
+# [PROPHET] Basic usa Haiku 3.5 (mais rápido e barato), Power usa Sonnet 4.5 (mais capaz)
+_BASIC_MODEL_ID = "anthropic/claude-3-5-haiku-20241022" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
 _POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
 
 # Default model IDs (these are aliases that resolve to actual IDs)
@@ -26,27 +27,28 @@ class ModelRegistry:
         self._aliases: Dict[str, str] = {}
         self._initialize_models()
     
-    # KORTIX BASIC & POWER – Same underlying model, different configs
+    # KORTIX BASIC & POWER – Different underlying models
+    # Basic = Haiku 3.5 (faster, cheaper), Power = Sonnet 4.5 (more capable)
     def _initialize_models(self):
-        # Kortix Basic
+        # Kortix Basic - Uses Claude 3.5 Haiku
         self.register(Model(
             id="kortix/basic",
             name="Kortix Basic",
             provider=ModelProvider.ANTHROPIC,
             aliases=["kortix-basic", "Kortix Basic"],
-            context_window=1_000_000,
-            max_output_tokens=16384,  # [PROPHET] Aumentado para 16K para permitir arquivos HTML grandes
+            context_window=200_000,  # Haiku 3.5 has 200K context
+            max_output_tokens=8192,  # Haiku 3.5 max output
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=5.00,
-                cached_read_cost_per_million_tokens=0.10,
-                cache_write_5m_cost_per_million_tokens=1.25,
-                cache_write_1h_cost_per_million_tokens=2.00
+                input_cost_per_million_tokens=0.80,   # Haiku 3.5 pricing
+                output_cost_per_million_tokens=4.00,  # Haiku 3.5 pricing
+                cached_read_cost_per_million_tokens=0.08,
+                cache_write_5m_cost_per_million_tokens=1.00,
+                cache_write_1h_cost_per_million_tokens=1.60
             ),
             tier_availability=["free", "paid"],
             priority=102,
@@ -54,7 +56,7 @@ class ModelRegistry:
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07,fine-grained-tool-streaming-2025-05-14,token-efficient-tools-2025-02-19" 
+                    "anthropic-beta": "fine-grained-tool-streaming-2025-05-14,token-efficient-tools-2025-02-19" 
                 },
             )
         ))
