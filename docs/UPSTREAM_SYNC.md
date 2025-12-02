@@ -27,16 +27,24 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 
 ## Progresso em 2025-12-02
 
-### Correção custom — HTML Preview Loading em Tool Panel (a0319301a)
-- **Problema**: Quando o usuário abria uma thread antiga com sandbox dormindo, o preview de HTML no painel de ferramentas mostrava erro "502" em vez de loading
-- **Causa**: O fix upstream `3a8e03d78` só cobre `sandboxId === null`, mas não o caso de sandbox existente e dormindo
-- **Solução**: Propagar `isWorkspaceReady` por toda a cadeia até o `ToolView`:
-  - `frontend/src/components/thread/tool-views/types.ts`: Adicionada prop `isWorkspaceReady`
-  - `frontend/src/components/thread/tool-views/CompleteToolView.tsx`: Passa `isWorkspaceReady` para `FileAttachment`
-  - `frontend/src/components/thread/tool-call-side-panel.tsx`: Recebe e passa `isWorkspaceReady` para `ToolView`
-  - `frontend/src/components/thread/layout/thread-layout.tsx`: Recebe e passa para todas as instâncias de `ToolCallSidePanel`
-  - `frontend/src/components/thread/ThreadComponent.tsx`: Passa `isWorkspaceReady` para `ThreadLayout`
-- **Resultado**: Preview mostra "Starting workspace..." enquanto sandbox acorda, em vez de erro 502
+### Correção custom — HTML Preview com Retry (a0319301a + 45c1150a7)
+- **Problema**: Quando o usuário abria uma thread antiga com sandbox dormindo, o preview de HTML mostrava erro "502" em vez de loading. O Daytona marca sandbox como "ready" antes dos serviços internos (HTTP/VNC) estarem prontos.
+- **Causa**: O fix upstream `3a8e03d78` só cobre `sandboxId === null`. Além disso, mesmo após acordar, o servidor HTTP interno do sandbox leva alguns segundos para iniciar.
+- **Solução em duas partes**:
+  1. **Propagar `isWorkspaceReady`** por toda a cadeia até o `ToolView`:
+     - `frontend/src/components/thread/tool-views/types.ts`: Adicionada prop `isWorkspaceReady`
+     - `frontend/src/components/thread/tool-views/CompleteToolView.tsx`: Passa `isWorkspaceReady` para `FileAttachment`
+     - `frontend/src/components/thread/tool-call-side-panel.tsx`: Recebe e passa `isWorkspaceReady` para `ToolView`
+     - `frontend/src/components/thread/layout/thread-layout.tsx`: Recebe e passa para todas as instâncias de `ToolCallSidePanel`
+     - `frontend/src/components/thread/ThreadComponent.tsx`: Passa `isWorkspaceReady` para `ThreadLayout`
+  2. **Retry automático no `HtmlRenderer`** (45c1150a7):
+     - `frontend/src/components/thread/preview-renderers/html-renderer.tsx`: 
+       - Verifica acessibilidade da URL antes de mostrar iframe (HEAD request)
+       - Retry automático com exponential backoff (1s → 10s, máx 15 tentativas)
+       - Mostra "Starting workspace... (attempt X/15)" durante retries
+       - Botão "Try again" manual após esgotar tentativas
+       - Lida com erros 502/503/504 graciosamente
+- **Resultado**: Preview de HTML funciona mesmo quando sandbox ainda está acordando, com feedback visual durante o processo
 
 ### Bloco aplicado — Referral System (5a2fe29f4)
 - **Upstream commits absorvidos**: `5a2fe29f4` (referral system)
@@ -388,11 +396,12 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
   - Sem isso, Anthropic usa o padrão de 4096 tokens, causando truncamento de arquivos grandes
 - **Auto-continue limits**: Removido limite custom de `consecutive_length_no_tool`. Agora usa valores padrão do upstream (25 auto-continues).
 - **JSON repair removido**: Removemos o `repair_truncated_json` do `native_tool_parser.py`. O repair estava causando execução de tools com argumentos truncados (ex: arquivo cortado no meio). Com 8192 tokens, o problema de truncamento é bem menor.
-- **🆕 HTML Preview com Workspace Ready Check (Prophet-only)**: O fix do upstream `3a8e03d78` só cobre o caso de `sandboxId === null` para imagens. Adicionamos verificação de `isWorkspaceReady` para HTML/MD previews, mostrando "Starting workspace..." enquanto o sandbox acorda. **Arquivos customizados**:
+- **🆕 HTML Preview com Retry (Prophet-only)**: O fix do upstream `3a8e03d78` só cobre o caso de `sandboxId === null` para imagens. Adicionamos verificação de `isWorkspaceReady` + retry automático no `HtmlRenderer` para garantir que previews funcionem mesmo com sandbox acordando. **Arquivos customizados**:
   - `frontend/src/components/thread/file-attachment.tsx` - Adiciona prop `isWorkspaceReady` e lógica de loading para HTML previews
   - `frontend/src/components/thread/attachment-group.tsx` - Passa `isWorkspaceReady` para `FileAttachment`
   - `frontend/src/components/thread/content/ThreadContent.tsx` - Aceita e passa `isWorkspaceReady` para `renderAttachments()`
   - `frontend/src/components/thread/ThreadComponent.tsx` - Obtém `isWorkspaceReady` do `useThreadData` e passa para `ThreadContent`
+  - `frontend/src/components/thread/preview-renderers/html-renderer.tsx` - **Retry automático** com exponential backoff (15 tentativas, 1s→10s) e feedback visual
   - **Sem isso**: Landing pages criadas pelo agente dão erro ao abrir thread antiga (sandbox dormindo), funcionando apenas após F5
 
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
