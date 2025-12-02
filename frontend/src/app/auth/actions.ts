@@ -39,6 +39,7 @@ export async function signUp(prevState: any, formData: FormData) {
   const password = formData.get('password') as string;
   const confirmPassword = formData.get('confirmPassword') as string;
   const returnUrl = formData.get('returnUrl') as string | undefined;
+  const referralCode = formData.get('referralCode') as string | undefined;
 
   if (!email || !email.includes('@')) {
     return { message: 'Please enter a valid email address' };
@@ -59,6 +60,9 @@ export async function signUp(prevState: any, formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`,
+      data: referralCode ? {
+        referral_code: referralCode.trim().toUpperCase(),
+      } : undefined,
     },
   });
 

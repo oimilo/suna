@@ -94,6 +94,49 @@ async def initialize_user_account(account_id: str, email: Optional[str] = None, 
         if not agent_id:
             logger.warning(f"[SETUP] Failed to install Suna agent for {account_id}, but continuing")
         
+        # Process referral code if present
+        if user_record:
+            raw_user_metadata = user_record.get('raw_user_meta_data', {})
+            referral_code = raw_user_metadata.get('referral_code')
+            
+            logger.info(f"[SETUP] User metadata: {raw_user_metadata}")
+            logger.info(f"[SETUP] Referral code from metadata: {referral_code}")
+            
+            if referral_code:
+                logger.info(f"[SETUP] Processing referral code for {account_id}: {referral_code}")
+                try:
+                    from core.referrals.service import ReferralService
+                    
+                    referral_service = ReferralService(db)
+                    referrer_id = await referral_service.validate_referral_code(referral_code)
+                    logger.info(f"[SETUP] Validated referral code {referral_code} -> referrer_id: {referrer_id}")
+                    
+                    if referrer_id and referrer_id != account_id:
+                        referral_result = await referral_service.process_referral(
+                            referrer_id=referrer_id,
+                            referred_account_id=account_id,
+                            referral_code=referral_code
+                        )
+                        
+                        logger.info(f"[SETUP] Referral processing result: {referral_result}")
+                        
+                        if referral_result.get('success'):
+                            logger.info(
+                                f"[SETUP] ✅ Referral processed: {referrer_id} referred {account_id}, "
+                                f"awarded {referral_result.get('credits_awarded')} credits"
+                            )
+                        else:
+                            logger.warning(
+                                f"[SETUP] Failed to process referral: {referral_result.get('message')}"
+                            )
+                    else:
+                        logger.warning(
+                            f"[SETUP] Invalid referral code or self-referral: {referral_code}, "
+                            f"referrer_id={referrer_id}, new_user_id={account_id}"
+                        )
+                except Exception as ref_error:
+                    logger.error(f"[SETUP] Error processing referral: {ref_error}", exc_info=True)
+        
         logger.info(f"[SETUP] ✅ Account initialization complete for {account_id}")
         
         return {

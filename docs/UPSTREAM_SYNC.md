@@ -18,13 +18,38 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - RevenueCat fixes - mobile (não usamos)
 - `e2022be97` - compression WIP (marcado como wip, muito invasivo)
 - `56cc0f02e` - PresentationViewer fix (código não presente no Prophet)
-- Referral system - não implementado
+- ~~Referral system - não implementado~~ ✅ Aplicado em 02/12/2025
 - `1465821b1` - ~~scale down pricing section~~ ✅ Aplicado em 02/12/2025
 - `2a7cdb276` - default plan to yearly (decisão de negócio - podemos aplicar depois)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
 
 ## Progresso em 2025-12-02
+
+### Bloco aplicado — Referral System (5a2fe29f4)
+- **Upstream commits absorvidos**: `5a2fe29f4` (referral system)
+- **Backend**:
+  - `backend/core/referrals/` (NOVO): Módulo completo de indicações com service, api e config
+  - `backend/core/setup/api.py`: Processa código de indicação durante inicialização de conta
+  - `backend/api.py`: Registra router de referrals
+  - Migrations: Tabelas `referral_codes`, `referrals`, `referral_stats` + funções SQL
+- **Frontend**:
+  - `frontend/src/components/referrals/` (NOVO): Componentes de UI para indicações
+  - `frontend/src/hooks/referrals/` (NOVO): Hook de dados de indicações
+  - `frontend/src/lib/api/referrals.ts` (NOVO): Cliente API
+  - `frontend/src/stores/referral-dialog.ts` (NOVO): Estado do dialog de indicação
+  - Auth flow modificado: `page.tsx`, `callback/route.ts`, `actions.ts`, `GoogleSignIn.tsx`, `GithubSignIn.tsx`
+  - Settings modal: Nova aba "Referrals"/"Indicações"
+  - Sidebar: Novo menu "Invite Friends"
+  - Traduções pt.json e en.json atualizadas
+- **Funcionalidades**:
+  - ✅ Código de indicação único por usuário (8 caracteres)
+  - ✅ Link de indicação compartilhável
+  - ✅ Créditos automáticos para indicador ($1 por indicação bem-sucedida)
+  - ✅ Limite máximo de $100 em créditos de indicação
+  - ✅ Suporte a OAuth (Google/GitHub) via cookie `pending-referral-code`
+  - ✅ Regeneração de código (expira o antigo e cria novo)
+  - ✅ Estatísticas de indicações no dashboard
 
 ### Bloco aplicado — billing grace periods + file streaming + cleanup fixes (4e83ce252)
 - **Upstream commits absorvidos**: `6a84b681c` (grace periods), `439b853bc` (file streaming view), `50b910898` (sandbox cleanup), `417a80c7a` (remove worker kill)

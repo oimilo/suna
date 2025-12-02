@@ -38,6 +38,7 @@
       "plan": "Plano",
       "billing": "Cobrança",
       "usage": "Uso",
+      "referrals": "Indicações",
       "knowledgeBase": "Base de Conhecimento",
       "integrations": "Integrações",
       "envManager": "Gerenciador de Ambiente"
@@ -99,6 +100,50 @@
       "creditsExhausted": "Você ficou sem créditos. Atualize agora.",
       "billingCheckFailed": "Verificação de cobrança falhou. Por favor, atualize para continuar.",
       "failedToStartAgent": "Falha ao iniciar o agente {agentName}: {message}"
+    },
+    "referrals": {
+      "title": "Programa de Indicação",
+      "description": "Compartilhe seu link de indicação com amigos. Quando eles se cadastrarem e criarem uma conta, você ganhará",
+      "creditsPerReferral": "100 créditos permanentes",
+      "youEarn": "Você ganha",
+      "friendGets": "Seu amigo ganha",
+      "maxEarnable": "Máximo que pode ganhar com indicações:",
+      "maxCredits": "$100 em créditos",
+      "yourReferralCode": "Seu Código de Indicação",
+      "referralLink": "Link de Indicação",
+      "shareYourLink": "Compartilhe seu link de indicação",
+      "yourStats": "Suas Estatísticas",
+      "enterCodeDescription": "Digite um código de indicação para ganhar créditos",
+      "enterCode": "Digite o código",
+      "refresh": "Atualizar",
+      "copyCode": "Copiar código",
+      "copyLink": "Copiar link",
+      "share": "Compartilhar",
+      "stats": {
+        "totalReferrals": "Total de Indicações",
+        "successful": "Com Sucesso",
+        "creditsEarned": "Créditos Ganhos"
+      },
+      "recentReferrals": "Indicações Recentes",
+      "signupComplete": "Cadastro Completo",
+      "pending": "Pendente",
+      "noReferrals": "Nenhuma indicação ainda. Compartilhe seu link para começar!",
+      "copied": "Copiado!",
+      "codeCopied": "Código de indicação copiado",
+      "linkCopied": "Link de indicação copiado",
+      "codeRefreshed": "Código de indicação atualizado com sucesso",
+      "refreshFailed": "Falha ao atualizar código de indicação",
+      "inviteByEmail": "Convidar por Email",
+      "inviteByEmailDescription": "Adicione até 3 emails (pressione Enter, Espaço ou Vírgula para adicionar)",
+      "emailAddress": "Endereço de email",
+      "emailPlaceholder": "Digite endereços de email (pressione Enter, Espaço ou Vírgula)",
+      "emailsAdded": "emails",
+      "sent": "enviado",
+      "send": "Enviar",
+      "sending": "Enviando...",
+      "sendAllInvites": "Enviar Todos os Convites",
+      "allSent": "Todos Enviados",
+      "emailSent": "Convite de indicação enviado com sucesso"
     },
     "usage": {
       "title": "Uso"
@@ -443,6 +488,9 @@
     }
   },
   "auth": {
+    "haveReferralCode": "Tem um código de indicação?",
+    "referralCode": "Código de Indicação",
+    "enterCode": "Digite o código",
     "logIntoAccount": "Entre na sua conta",
     "createAccount": "Criar conta",
     "continueWithGoogle": "Continuar com Google",

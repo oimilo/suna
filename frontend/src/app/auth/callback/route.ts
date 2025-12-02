@@ -56,8 +56,25 @@ export async function GET(request: NextRequest) {
 
       // Determine the final destination
       let finalDestination = next
+      let shouldClearReferralCookie = false
 
       if (data.user) {
+        // Process pending referral code from cookie
+        const pendingReferralCode = request.cookies.get('pending-referral-code')?.value
+        if (pendingReferralCode) {
+          try {
+            await supabase.auth.updateUser({
+              data: {
+                referral_code: pendingReferralCode
+              }
+            })
+            console.log('✅ Added referral code to OAuth user:', pendingReferralCode)
+            shouldClearReferralCookie = true
+          } catch (error) {
+            console.error('Failed to add referral code to OAuth user:', error)
+          }
+        }
+
         // Save terms acceptance date if not already saved
         if (termsAccepted) {
           const currentMetadata = data.user.user_metadata || {};
@@ -105,7 +122,14 @@ export async function GET(request: NextRequest) {
       }
 
       // Web redirect
-      return NextResponse.redirect(`${baseUrl}${finalDestination}`)
+      const response = NextResponse.redirect(`${baseUrl}${finalDestination}`)
+      
+      // Clear referral cookie if it was processed
+      if (shouldClearReferralCookie) {
+        response.cookies.set('pending-referral-code', '', { maxAge: 0, path: '/' })
+      }
+      
+      return response
     } catch (error) {
       console.error('❌ Unexpected error in auth callback:', error)
       return NextResponse.redirect(`${baseUrl}/auth?error=unexpected_error`)

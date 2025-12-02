@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Command,
   CreditCard,
+  Gift,
   Key,
   LogOut,
   Plus,
@@ -91,7 +92,7 @@ export function NavUserWithTeams({
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [showPlanModal, setShowPlanModal] = React.useState(false);
-  const [settingsTab, setSettingsTab] = React.useState<'general' | 'billing' | 'usage' | 'env-manager'>('general');
+  const [settingsTab, setSettingsTab] = React.useState<'general' | 'billing' | 'usage' | 'referrals' | 'env-manager'>('general');
   const { theme, setTheme } = useTheme();
 
   // Check if user is on free tier
@@ -353,6 +354,16 @@ export function NavUserWithTeams({
                     <Plug className="h-4 w-4" />
                     <span>Integrations</span>
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSettingsTab('referrals');
+                    setShowSettingsModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <Gift className="h-4 w-4" />
+                  <span>Invite Friends</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {

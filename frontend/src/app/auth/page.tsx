@@ -41,9 +41,12 @@ function LoginContent() {
   const mode = searchParams.get('mode');
   const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
   const message = searchParams.get('message');
+  const referralCodeParam = searchParams.get('ref') || '';
   const t = useTranslations('auth');
 
   const isSignUp = mode === 'signup';
+  const [referralCode, setReferralCode] = useState(referralCodeParam);
+  const [showReferralInput, setShowReferralInput] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mounted, setMounted] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -280,7 +283,7 @@ function LoginContent() {
               </h1>
             </div>
             <div className="space-y-3 mb-4">
-              <GoogleSignIn returnUrl={returnUrl || undefined} />
+              <GoogleSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
             </div>
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
