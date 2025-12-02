@@ -38,6 +38,7 @@
       "plan": "Plan",
       "billing": "Billing",
       "usage": "Usage",
+      "referrals": "Referrals",
       "knowledgeBase": "Knowledge Base",
       "integrations": "Integrations",
       "envManager": "Env Manager"
@@ -124,6 +125,50 @@
       "creditsExhausted": "You ran out of credits. Upgrade now.",
       "billingCheckFailed": "Billing check failed. Please upgrade to continue.",
       "failedToStartAgent": "Failed to start agent {agentName}: {message}"
+    },
+    "referrals": {
+      "title": "Referral Program",
+      "description": "Share your referral link with friends. When they sign up and create an account, you'll earn",
+      "creditsPerReferral": "100 non-expiring credits",
+      "youEarn": "You earn",
+      "friendGets": "Your friend gets",
+      "maxEarnable": "Maximum earnable through referrals:",
+      "maxCredits": "$100 in credits",
+      "yourReferralCode": "Your Referral Code",
+      "referralLink": "Referral Link",
+      "shareYourLink": "Share your referral link",
+      "yourStats": "Your Stats",
+      "enterCodeDescription": "Enter a referral code to earn credits",
+      "enterCode": "Enter code",
+      "refresh": "Refresh",
+      "copyCode": "Copy code",
+      "copyLink": "Copy link",
+      "share": "Share",
+      "stats": {
+        "totalReferrals": "Total Referrals",
+        "successful": "Successful",
+        "creditsEarned": "Credits Earned"
+      },
+      "recentReferrals": "Recent Referrals",
+      "signupComplete": "Signup Complete",
+      "pending": "Pending",
+      "noReferrals": "No referrals yet. Share your referral link to get started!",
+      "copied": "Copied!",
+      "codeCopied": "Referral code copied to clipboard",
+      "linkCopied": "Referral link copied to clipboard",
+      "codeRefreshed": "Referral code refreshed successfully",
+      "refreshFailed": "Failed to refresh referral code",
+      "inviteByEmail": "Invite by Email",
+      "inviteByEmailDescription": "Add up to 3 email addresses (press Enter, Space, or Comma to add)",
+      "emailAddress": "Email address",
+      "emailPlaceholder": "Enter email addresses (press Enter, Space, or Comma)",
+      "emailsAdded": "emails",
+      "sent": "sent",
+      "send": "Send",
+      "sending": "Sending...",
+      "sendAllInvites": "Send All Invites",
+      "allSent": "All Sent",
+      "emailSent": "Referral invitation sent successfully"
     },
     "usage": {
       "title": "Usage"
@@ -550,6 +595,9 @@
     }
   },
   "auth": {
+    "haveReferralCode": "Have a referral code?",
+    "referralCode": "Referral Code",
+    "enterCode": "Enter code",
     "logIntoAccount": "Log into your account",
     "createAccount": "Create account",
     "signInOrCreateAccount": "Sign in or create your Prophet account",

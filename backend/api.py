@@ -280,6 +280,9 @@ api_router.include_router(presence_api.router)
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
 
+from core.referrals import router as referrals_router
+api_router.include_router(referrals_router)
+
 from core.google.google_slides_api import router as google_slides_router
 api_router.include_router(google_slides_router)
 

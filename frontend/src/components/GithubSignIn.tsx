@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 
 interface GitHubSignInProps {
   returnUrl?: string;
+  referralCode?: string;
 }
 
 interface AuthMessage {
@@ -20,7 +21,7 @@ interface AuthMessage {
   returnUrl?: string;
 }
 
-export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
+export default function GitHubSignIn({ returnUrl, referralCode }: GitHubSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const t = useTranslations('auth');
@@ -99,6 +100,11 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
 
     try {
       setIsLoading(true);
+
+      // Save referral code to cookie before OAuth redirect
+      if (referralCode) {
+        document.cookie = `pending-referral-code=${referralCode.trim().toUpperCase()}; path=/; max-age=600; SameSite=Lax`;
+      }
 
       if (returnUrl) {
         sessionStorage.setItem('github-returnUrl', returnUrl || '/dashboard');

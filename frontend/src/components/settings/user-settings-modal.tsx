@@ -27,6 +27,7 @@ import {
     Mail,
     Smartphone,
     AppWindow,
+    Gift,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -83,8 +84,9 @@ import ThreadUsage from '@/components/billing/thread-usage';
 import { formatCredits } from '@/lib/utils/credit-formatter';
 import { LanguageSwitcher } from './language-switcher';
 import { useTranslations } from 'next-intl';
+import { ReferralsTab } from '@/components/referrals/referrals-tab';
 
-type TabId = 'general' | 'plan' | 'billing' | 'usage' | 'env-manager' | 'knowledge-base' | 'integrations';
+type TabId = 'general' | 'plan' | 'billing' | 'usage' | 'referrals' | 'env-manager' | 'knowledge-base' | 'integrations';
 
 interface Tab {
     id: TabId;
@@ -113,6 +115,7 @@ export function UserSettingsModal({
         { id: 'plan', label: 'Plan', icon: Zap },
         { id: 'billing', label: 'Billing', icon: CreditCard },
         { id: 'usage', label: 'Usage', icon: TrendingDown },
+        { id: 'referrals', label: 'Referrals', icon: Gift },
         { id: 'knowledge-base', label: 'Knowledge Base', icon: FileText },
         { id: 'integrations', label: 'Integrations', icon: Plug },
         ...(isLocal ? [{ id: 'env-manager' as TabId, label: 'Env Manager', icon: KeyRound }] : []),
@@ -214,6 +217,7 @@ export function UserSettingsModal({
                         {activeTab === 'general' && <GeneralTab onClose={() => onOpenChange(false)} />}
                         {activeTab === 'billing' && <BillingTab returnUrl={returnUrl} onOpenPlanModal={() => setShowPlanModal(true)} isActive={activeTab === 'billing'} />}
                         {activeTab === 'usage' && <UsageTab />}
+                        {activeTab === 'referrals' && <ReferralsTab />}
                         {activeTab === 'env-manager' && isLocal && <EnvManagerTab />}
                         {activeTab === 'knowledge-base' && <KnowledgeBaseTab />}
                         {activeTab === 'integrations' && <IntegrationsTab />}
