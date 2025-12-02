@@ -352,6 +352,16 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
 
 ## Customizações locais que devemos preservar
 
+- **🚨 Locale no Signup (CRÍTICO para billing)**: Salvamos o locale do usuário no metadata durante signup para detecção correta de moeda (BRL para pt, USD para outros). **Arquivos customizados**:
+  - `frontend/src/app/auth/actions.ts` - Adiciona `locale` ao `userData` no signup
+  - `frontend/src/app/auth/page.tsx` - Passa `locale` no formData e para componentes OAuth
+  - `frontend/src/components/GoogleSignIn.tsx` - Salva locale em cookie `pending-locale`
+  - `frontend/src/components/GithubSignIn.tsx` - Salva locale em cookie `pending-locale`
+  - `frontend/src/app/auth/callback/route.ts` - Processa cookie `pending-locale` e salva no metadata
+  - `backend/core/billing/subscriptions/free_tier_service.py` - Usa `get_user_locale()` para auto-detectar moeda
+  - `backend/core/utils/user_locale.py` - Função que busca locale do `raw_user_meta_data`
+  - **Sem isso**: Usuários BR recebem subscription em USD e não conseguem fazer upgrade em BRL (erro de conflito de moeda no Stripe)
+
 - **🚨 Anthropic API (CRÍTICO)**: Em `backend/core/ai_models/registry.py`, usamos `SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)`. O upstream usa Bedrock ARNs do Kortix que não funcionam para Prophet.
 - **Proxy Daytona**: ajustes em `frontend/src/lib/utils/daytona.ts` e correlatos para reconstruir URLs de preview (inclui encoding segmentado e path derivado automaticamente).
 - **Parser XML**: fallback para `<function_calls>` incompletos em `backend/core/agentpress/xml_tool_parser.py`, garantindo que `create_file` não quebre quando o streaming corta `</invoke>`.
