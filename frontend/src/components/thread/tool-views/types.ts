@@ -46,6 +46,7 @@ export interface ToolViewProps {
   onFileClick?: (filePath: string) => void;
   viewToggle?: React.ReactNode;
   streamingText?: string; // Live streaming content from assistant message
+  isWorkspaceReady?: boolean; // Whether the workspace/sandbox is ready for file operations
 }
 
 export interface BrowserToolViewProps extends ToolViewProps {

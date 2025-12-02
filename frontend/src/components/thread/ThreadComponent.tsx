@@ -975,6 +975,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
+        isWorkspaceReady={isWorkspaceReady}
       >
         <ThreadError error={error} />
       </ThreadLayout>
@@ -1017,6 +1018,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentName={agent && agent.name}
           disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
           compact={true}
+          isWorkspaceReady={isWorkspaceReady}
         >
           {/* Thread Content - Scrollable */}
           <div
@@ -1200,6 +1202,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         variant={isShared ? 'shared' : 'default'}
         chatInput={chatInputElement}
         leftSidebarState={leftSidebarState}
+        isWorkspaceReady={isWorkspaceReady}
       >
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : messages}
