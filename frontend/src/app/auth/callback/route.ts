@@ -57,21 +57,35 @@ export async function GET(request: NextRequest) {
       // Determine the final destination
       let finalDestination = next
       let shouldClearReferralCookie = false
+      let shouldClearLocaleCookie = false
 
       if (data.user) {
         // Process pending referral code from cookie
         const pendingReferralCode = request.cookies.get('pending-referral-code')?.value
+        const pendingLocale = request.cookies.get('pending-locale')?.value
+        
+        // Build metadata update object
+        const metadataUpdate: Record<string, string> = {}
+        
         if (pendingReferralCode) {
+          metadataUpdate.referral_code = pendingReferralCode
+          shouldClearReferralCookie = true
+        }
+        
+        if (pendingLocale) {
+          metadataUpdate.locale = pendingLocale
+          shouldClearLocaleCookie = true
+        }
+        
+        // Update user metadata if there's anything to update
+        if (Object.keys(metadataUpdate).length > 0) {
           try {
             await supabase.auth.updateUser({
-              data: {
-                referral_code: pendingReferralCode
-              }
+              data: metadataUpdate
             })
-            console.log('✅ Added referral code to OAuth user:', pendingReferralCode)
-            shouldClearReferralCookie = true
+            console.log('✅ Added metadata to OAuth user:', metadataUpdate)
           } catch (error) {
-            console.error('Failed to add referral code to OAuth user:', error)
+            console.error('Failed to add metadata to OAuth user:', error)
           }
         }
 
@@ -124,9 +138,12 @@ export async function GET(request: NextRequest) {
       // Web redirect
       const response = NextResponse.redirect(`${baseUrl}${finalDestination}`)
       
-      // Clear referral cookie if it was processed
+      // Clear cookies if they were processed
       if (shouldClearReferralCookie) {
         response.cookies.set('pending-referral-code', '', { maxAge: 0, path: '/' })
+      }
+      if (shouldClearLocaleCookie) {
+        response.cookies.set('pending-locale', '', { maxAge: 0, path: '/' })
       }
       
       return response

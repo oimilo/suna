@@ -40,6 +40,7 @@ export async function signUp(prevState: any, formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string;
   const returnUrl = formData.get('returnUrl') as string | undefined;
   const referralCode = formData.get('referralCode') as string | undefined;
+  const locale = formData.get('locale') as string | undefined;
 
   if (!email || !email.includes('@')) {
     return { message: 'Please enter a valid email address' };
@@ -55,14 +56,21 @@ export async function signUp(prevState: any, formData: FormData) {
 
   const supabase = await createClient();
 
+  // Build user metadata with locale and optional referral code
+  const userData: Record<string, string> = {};
+  if (locale) {
+    userData.locale = locale;
+  }
+  if (referralCode) {
+    userData.referral_code = referralCode.trim().toUpperCase();
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`,
-      data: referralCode ? {
-        referral_code: referralCode.trim().toUpperCase(),
-      } : undefined,
+      data: Object.keys(userData).length > 0 ? userData : undefined,
     },
   });
 

@@ -13,6 +13,7 @@ import { useTranslations } from 'next-intl';
 interface GitHubSignInProps {
   returnUrl?: string;
   referralCode?: string;
+  locale?: string;
 }
 
 interface AuthMessage {
@@ -21,7 +22,7 @@ interface AuthMessage {
   returnUrl?: string;
 }
 
-export default function GitHubSignIn({ returnUrl, referralCode }: GitHubSignInProps) {
+export default function GitHubSignIn({ returnUrl, referralCode, locale }: GitHubSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const t = useTranslations('auth');
@@ -104,6 +105,11 @@ export default function GitHubSignIn({ returnUrl, referralCode }: GitHubSignInPr
       // Save referral code to cookie before OAuth redirect
       if (referralCode) {
         document.cookie = `pending-referral-code=${referralCode.trim().toUpperCase()}; path=/; max-age=600; SameSite=Lax`;
+      }
+      
+      // Save locale to cookie before OAuth redirect (for currency detection)
+      if (locale) {
+        document.cookie = `pending-locale=${locale}; path=/; max-age=600; SameSite=Lax`;
       }
 
       if (returnUrl) {

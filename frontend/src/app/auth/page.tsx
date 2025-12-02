@@ -20,7 +20,7 @@ import { KortixLoader } from '@/components/ui/milo-loader';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { toast } from 'sonner';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 import {
   Dialog,
@@ -43,6 +43,7 @@ function LoginContent() {
   const message = searchParams.get('message');
   const referralCodeParam = searchParams.get('ref') || '';
   const t = useTranslations('auth');
+  const locale = useLocale();
 
   const isSignUp = mode === 'signup';
   const [referralCode, setReferralCode] = useState(referralCodeParam);
@@ -127,6 +128,9 @@ function LoginContent() {
 
     // Add origin for email redirects
     formData.append('origin', window.location.origin);
+    
+    // Add locale for currency detection in free tier
+    formData.append('locale', locale);
 
     const result = await signUp(prevState, formData);
 
@@ -283,7 +287,7 @@ function LoginContent() {
               </h1>
             </div>
             <div className="space-y-3 mb-4">
-              <GoogleSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
+              <GoogleSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} locale={locale} />
             </div>
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
