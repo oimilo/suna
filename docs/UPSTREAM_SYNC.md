@@ -27,6 +27,23 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 
 ## Progresso em 2025-12-02
 
+### Reversão para XML Tool Calling (Prophet-specific)
+- **Problema**: O upstream está em transição incompleta de XML → Native tool calling
+  - `AGENT_XML_TOOL_CALLING = False` e `AGENT_NATIVE_TOOL_CALLING = True` (defaults do upstream)
+  - MAS o `prompt.py` base ainda contém 48+ exemplos de XML tool calls (`<function_calls>`, `<invoke>`)
+  - Resultado: O modelo "aprende" XML dos exemplos mas o sistema espera native → ferramentas não executam
+- **Sintoma observado**: Thread com código XML vazado no chat (ex: `<function_calls><invoke name="load_image">...`)
+  - Tool calls parseadas corretamente no metadata
+  - MAS não executadas porque `finish_reason: stop` (não `tool_calls`)
+  - Modelo emite XML no texto em vez de usar native function calling
+- **Solução**: Reverter para XML tool calling até que upstream complete a migração
+  ```python
+  # backend/core/utils/config.py
+  AGENT_XML_TOOL_CALLING: bool = True       # Habilitado
+  AGENT_NATIVE_TOOL_CALLING: bool = False   # Desabilitado
+  ```
+- **Resultado**: Ferramentas executam corretamente usando o formato XML que o prompt ensina
+
 ### Correção custom — HTML Preview com Retry (a0319301a + 45c1150a7)
 - **Problema**: Quando o usuário abria uma thread antiga com sandbox dormindo, o preview de HTML mostrava erro "502" em vez de loading. O Daytona marca sandbox como "ready" antes dos serviços internos (HTTP/VNC) estarem prontos.
 - **Causa**: O fix upstream `3a8e03d78` só cobre `sandboxId === null`. Além disso, mesmo após acordar, o servidor HTTP interno do sandbox leva alguns segundos para iniciar.
