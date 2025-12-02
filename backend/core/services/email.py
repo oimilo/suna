@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self.api_token = os.getenv('MAILTRAP_API_TOKEN')
-        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'dom@kortix.ai')
-        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Dom from Kortix')
+        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'start@prophet.build')
+        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Prophet')
         
         if not self.api_token:
             logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
@@ -26,7 +26,7 @@ class EmailService:
         if not user_name:
             user_name = user_email.split('@')[0].title()
         
-        subject = "🎉 Welcome to Kortix — Let's Get Started "
+        subject = "🎉 Welcome to Prophet — Let's Get Started!"
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -71,7 +71,7 @@ class EmailService:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Kortix</title>
+  <title>Welcome to Prophet</title>
   <style>
     body {{
       font-family: Arial, sans-serif;
@@ -137,7 +137,7 @@ class EmailService:
 <body>
   <div class="container">
     <div class="logo-container">
-      <img src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/loaded_images/Profile%20Picture%20Black.png" alt="Kortix Logo" class="logo">
+      <img src="https://auth.prophet.build/storage/v1/object/public/image-uploads/2.png" alt="Prophet Logo" class="logo">
     </div>
 
     <p>Hi {user_name},</p>
@@ -151,7 +151,7 @@ class EmailService:
 
     <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.gg/G9f5JASVZc">Discord community</a>.</p>
 
-    <p>Thanks again, and welcome to the Kortix community!</p>
+    <p>Thanks again, and welcome to the Prophet community!</p>
   </div>
 </body>
 </html>"""
@@ -169,11 +169,11 @@ To celebrate your arrival, here's a 15% discount for your first month:
 
 Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.gg/G9f5JASVZc
 
-Thanks again, and welcome to the Kortix community!
+Thanks again, and welcome to the Prophet community!
 
 ---
-© 2025 Kortix. All rights reserved.
-You received this email because you signed up for a Kortix account."""
+© 2025 Prophet. All rights reserved.
+You received this email because you signed up for a Prophet account."""
 
     def send_referral_email(
         self, 
@@ -263,7 +263,7 @@ You received this email because you signed up for a Kortix account."""
     <tr>
       <td>
         <div style="text-align: center; margin-bottom: 40px;">
-          <img src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/loaded_images/Profile%20Picture%20Black.png" alt="Prophet" style="height: 40px; width: auto; display: inline-block;" />
+          <img src="https://auth.prophet.build/storage/v1/object/public/image-uploads/2.png" alt="Prophet" style="height: 40px; width: auto; display: inline-block;" />
         </div>
         <div style="background-color: #ffffff; border-radius: 16px; padding: 40px 32px;">
           {content}
