@@ -67,6 +67,7 @@ interface ToolCallSidePanelProps {
   compact?: boolean;
   // Workspace readiness state
   isWorkspaceLoading?: boolean;
+  isWorkspaceReady?: boolean;
   workspaceError?: string | null;
   onRetryWorkspace?: () => void;
   streamingText?: string; // Live streaming content from assistant message
@@ -532,6 +533,7 @@ export function ToolCallSidePanel({
   disableInitialAnimation,
   compact = false,
   isWorkspaceLoading = false,
+  isWorkspaceReady = true,
   workspaceError = null,
   onRetryWorkspace,
   streamingText,
@@ -1026,6 +1028,7 @@ export function ToolCallSidePanel({
         onFileClick={onFileClick}
         viewToggle={<ViewToggle currentView={currentView} onViewChange={setCurrentView} />}
         streamingText={isStreaming ? streamingText : undefined}
+        isWorkspaceReady={isWorkspaceReady}
       />
     );
 

@@ -49,6 +49,7 @@ interface ThreadLayoutProps {
   leftSidebarState?: 'collapsed' | 'expanded';
   // Workspace readiness state
   isWorkspaceLoading?: boolean;
+  isWorkspaceReady?: boolean;
   workspaceError?: string | null;
   onRetryWorkspace?: () => void;
   // Streaming support for file operations
@@ -90,6 +91,7 @@ export function ThreadLayout({
   chatInput,
   leftSidebarState = 'collapsed',
   isWorkspaceLoading = false,
+  isWorkspaceReady = true,
   workspaceError = null,
   onRetryWorkspace,
   streamingTextContent,
@@ -176,6 +178,7 @@ export function ThreadLayout({
                 disableInitialAnimation={disableInitialAnimation}
                 compact={true}
                 isWorkspaceLoading={isWorkspaceLoading}
+                isWorkspaceReady={isWorkspaceReady}
                 workspaceError={workspaceError}
                 onRetryWorkspace={onRetryWorkspace}
                 streamingText={streamingToolArgsJson}
@@ -245,6 +248,7 @@ export function ThreadLayout({
           agentName={agentName}
           disableInitialAnimation={disableInitialAnimation}
           isWorkspaceLoading={isWorkspaceLoading}
+          isWorkspaceReady={isWorkspaceReady}
           workspaceError={workspaceError}
           onRetryWorkspace={onRetryWorkspace}
           streamingText={streamingToolArgsJson}
@@ -340,6 +344,7 @@ export function ThreadLayout({
             agentName={agentName}
             disableInitialAnimation={disableInitialAnimation}
             isWorkspaceLoading={isWorkspaceLoading}
+            isWorkspaceReady={isWorkspaceReady}
             workspaceError={workspaceError}
             onRetryWorkspace={onRetryWorkspace}
             streamingText={streamingToolArgsJson}

@@ -40,6 +40,7 @@ export function CompleteToolView({
   project,
   currentIndex,
   totalCalls,
+  isWorkspaceReady = true,
 }: CompleteToolViewProps) {
   // All hooks must be called unconditionally at the top
   const [progress, setProgress] = useState(0);
@@ -266,6 +267,7 @@ export function CompleteToolView({
                             }
                             collapsed={false}
                             project={project}
+                            isWorkspaceReady={isWorkspaceReady}
                           />
                         </div>
                       );
