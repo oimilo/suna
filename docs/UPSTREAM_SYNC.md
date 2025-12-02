@@ -27,6 +27,17 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 
 ## Progresso em 2025-12-02
 
+### Correção custom — HTML Preview Loading em Tool Panel (a0319301a)
+- **Problema**: Quando o usuário abria uma thread antiga com sandbox dormindo, o preview de HTML no painel de ferramentas mostrava erro "502" em vez de loading
+- **Causa**: O fix upstream `3a8e03d78` só cobre `sandboxId === null`, mas não o caso de sandbox existente e dormindo
+- **Solução**: Propagar `isWorkspaceReady` por toda a cadeia até o `ToolView`:
+  - `frontend/src/components/thread/tool-views/types.ts`: Adicionada prop `isWorkspaceReady`
+  - `frontend/src/components/thread/tool-views/CompleteToolView.tsx`: Passa `isWorkspaceReady` para `FileAttachment`
+  - `frontend/src/components/thread/tool-call-side-panel.tsx`: Recebe e passa `isWorkspaceReady` para `ToolView`
+  - `frontend/src/components/thread/layout/thread-layout.tsx`: Recebe e passa para todas as instâncias de `ToolCallSidePanel`
+  - `frontend/src/components/thread/ThreadComponent.tsx`: Passa `isWorkspaceReady` para `ThreadLayout`
+- **Resultado**: Preview mostra "Starting workspace..." enquanto sandbox acorda, em vez de erro 502
+
 ### Bloco aplicado — Referral System (5a2fe29f4)
 - **Upstream commits absorvidos**: `5a2fe29f4` (referral system)
 - **Backend**:
