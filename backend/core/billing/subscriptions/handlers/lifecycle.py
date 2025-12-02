@@ -89,6 +89,14 @@ class SubscriptionLifecycleHandler:
         try:
             subscription = await StripeAPIWrapper.retrieve_subscription(subscription_id)
             
+            # Check if subscription is already canceled - cannot reactivate
+            if subscription.status == 'canceled':
+                logger.warning(f"[REACTIVATE] Subscription {subscription_id} is already canceled - cannot reactivate")
+                raise HTTPException(
+                    status_code=400, 
+                    detail="This subscription has been canceled and cannot be reactivated. Please subscribe to a new plan."
+                )
+            
             if scheduled_tier:
                 await self._cancel_scheduled_downgrade(account_id, subscription)
             
