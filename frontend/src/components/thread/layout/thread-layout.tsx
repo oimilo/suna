@@ -51,6 +51,9 @@ interface ThreadLayoutProps {
   isWorkspaceLoading?: boolean;
   workspaceError?: string | null;
   onRetryWorkspace?: () => void;
+  // Streaming support for file operations
+  streamingTextContent?: string; // Live streaming content from assistant (includes text + XML)
+  streamingToolCall?: any; // Live streaming tool call with arguments
 }
 
 export function ThreadLayout({
@@ -89,11 +92,36 @@ export function ThreadLayout({
   isWorkspaceLoading = false,
   workspaceError = null,
   onRetryWorkspace,
+  streamingTextContent,
+  streamingToolCall,
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
   
   // Track when panel should be visible
   const shouldShowPanel = isSidePanelOpen && initialLoadCompleted;
+
+  // Extract streaming tool arguments as JSON string (what FileOperationToolView expects)
+  const streamingToolArgsJson = React.useMemo(() => {
+    if (!streamingToolCall) return undefined;
+
+    try {
+      // metadata is a JSON string, parse it first
+      const metadata = typeof streamingToolCall.metadata === 'string'
+        ? JSON.parse(streamingToolCall.metadata)
+        : streamingToolCall.metadata;
+
+      // Get the arguments from metadata.tool_calls[0].arguments
+      const args = metadata?.tool_calls?.[0]?.arguments;
+
+      if (!args) return undefined;
+
+      // Arguments is already a JSON string (might be escaped, unescape if needed)
+      const argsStr = typeof args === 'string' ? args : JSON.stringify(args);
+      return argsStr;
+    } catch (e) {
+      return undefined;
+    }
+  }, [streamingToolCall]);
   
   // Refs for panel APIs to control sizes programmatically
   const mainPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
@@ -150,6 +178,7 @@ export function ThreadLayout({
                 isWorkspaceLoading={isWorkspaceLoading}
                 workspaceError={workspaceError}
                 onRetryWorkspace={onRetryWorkspace}
+                streamingText={streamingToolArgsJson}
               />
             </div>
           )}
@@ -218,6 +247,7 @@ export function ThreadLayout({
           isWorkspaceLoading={isWorkspaceLoading}
           workspaceError={workspaceError}
           onRetryWorkspace={onRetryWorkspace}
+          streamingText={streamingToolArgsJson}
         />
 
         {sandboxId && (
@@ -312,6 +342,7 @@ export function ThreadLayout({
             isWorkspaceLoading={isWorkspaceLoading}
             workspaceError={workspaceError}
             onRetryWorkspace={onRetryWorkspace}
+            streamingText={streamingToolArgsJson}
           />
         </ResizablePanel>
       </ResizablePanelGroup>

@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-01   | `d5641ea49`     | `fix (input preservation, i18n)` |
+| 2025-12-02   | `4e83ce252`     | `Merge PR #2203 - handle billing grace periods` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -19,8 +19,34 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - `e2022be97` - compression WIP (marcado como wip, muito invasivo)
 - `56cc0f02e` - PresentationViewer fix (código não presente no Prophet)
 - Referral system - não implementado
+- `1465821b1` - scale down pricing section (scale-90 cosmético, não necessário)
+- `2a7cdb276` - default plan to yearly (decisão de negócio - podemos aplicar depois)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-12-02
+
+### Bloco aplicado — billing grace periods + file streaming + cleanup fixes (4e83ce252)
+- **Upstream commits absorvidos**: `6a84b681c` (grace periods), `439b853bc` (file streaming view), `50b910898` (sandbox cleanup), `417a80c7a` (remove worker kill)
+- **Mudanças backend**:
+  - `subscription.py`: Adicionado tratamento de status `past_due` (grace period) e `unpaid` (fim do grace period revoga acesso)
+  - `lifecycle.py`: Status `past_due` só atualiza metadata, NÃO dá créditos (créditos só no invoice.payment_succeeded)
+  - `sb_shell_tool.py`: Não cria sandbox durante cleanup se não existir
+  - `agent_runs.py`, `core_utils.py`, `run_management.py`: Removida lógica de kill de workers no shutdown (simplificação)
+- **Mudanças frontend**:
+  - `FileOperationToolView.tsx`: Mostra conteúdo do arquivo DURANTE streaming (não só no final)
+  - `types.ts`: Adicionada prop `streamingText` para streaming content
+  - `thread-layout.tsx`: Extrai argumentos de tool call em streaming e passa para side panel
+  - `tool-call-side-panel.tsx`: Passa `streamingText` para tool views
+- **Benefícios**:
+  - ✅ Usuários em grace period mantêm acesso (Stripe retry automático)
+  - ✅ Créditos não são dados durante grace period (evita fraude)
+  - ✅ UX melhorada: arquivo aparece em tempo real durante criação
+  - ✅ Cleanup não cria sandbox desnecessariamente
+  - ✅ Shutdown do API mais rápido e limpo
+- **Não aplicados**:
+  - `1465821b1` - scale-90 no pricing (cosmético)
+  - `2a7cdb276` - default yearly (decisão de negócio)
 
 ## Progresso em 2025-12-01
 
