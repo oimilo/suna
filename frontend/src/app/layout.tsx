@@ -126,10 +126,12 @@ export default function RootLayout({
         <meta name="twitter:title" content="Prophet: Your Autonomous AI Worker" />
         <meta name="twitter:description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
         <meta name="twitter:image" content="https://prophet.build/banner.png" />
-        <meta name="twitter:site" content="@kortix" />
+        {/* TODO: Update to Prophet's Twitter handle */}
+        {/* <meta name="twitter:site" content="@kortix" /> */}
         <link rel="canonical" href="https://prophet.build" />
 
-        <Script id="facebook-pixel" strategy="lazyOnload">
+        {/* TODO: Update to Prophet's Meta Pixel ID */}
+        {/* <Script id="facebook-pixel" strategy="lazyOnload">
           {`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -140,7 +142,7 @@ export default function RootLayout({
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
 
-            fbq('init', '1385936776361131');
+            fbq('init', 'YOUR_PIXEL_ID_HERE');
             fbq('track', 'PageView');
           `}
         </Script>
@@ -149,9 +151,9 @@ export default function RootLayout({
             height="1"
             width="1"
             style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1385936776361131&ev=PageView&noscript=1"
+            src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID_HERE&ev=PageView&noscript=1"
           />
-        </noscript>
+        </noscript> */}
 
 
         <script
