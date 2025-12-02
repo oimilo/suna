@@ -37,7 +37,7 @@ const PROMPT_SAMPLES_CONFIG = {
 } as const;
 
 // Helper function to render attachments (keeping original implementation for now)
-export function renderAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project) {
+export function renderAttachments(attachments: string[], fileViewerHandler?: (filePath?: string, filePathList?: string[]) => void, sandboxId?: string, project?: Project, isWorkspaceReady?: boolean) {
     if (!attachments || attachments.length === 0) return null;
 
     // Filter out empty strings and check if we have any valid attachments
@@ -50,6 +50,7 @@ export function renderAttachments(attachments: string[], fileViewerHandler?: (fi
         showPreviews={true}
         sandboxId={sandboxId}
         project={project}
+        isWorkspaceReady={isWorkspaceReady}
     />;
 }
 
@@ -81,6 +82,7 @@ export interface ThreadContentProps {
     scrollContainerRef?: React.RefObject<HTMLDivElement>; // Add scroll container ref prop
     threadId?: string; // Add threadId prop
     onPromptFill?: (message: string) => void; // Handler for filling ChatInput with prompt text from samples
+    isWorkspaceReady?: boolean; // Whether the workspace/sandbox is ready to serve requests
 }
 
 export const ThreadContent: React.FC<ThreadContentProps> = ({
@@ -106,6 +108,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     scrollContainerRef,
     threadId,
     onPromptFill,
+    isWorkspaceReady = true,
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
@@ -468,7 +471,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                         )}
 
                                                         {/* Use the helper function to render user attachments */}
-                                                        {renderAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project)}
+                                                        {renderAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project, isWorkspaceReady)}
                                                     </div>
                                                 </div>
                                             </div>

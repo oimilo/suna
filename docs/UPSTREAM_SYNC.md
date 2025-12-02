@@ -377,6 +377,12 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
   - Sem isso, Anthropic usa o padrão de 4096 tokens, causando truncamento de arquivos grandes
 - **Auto-continue limits**: Removido limite custom de `consecutive_length_no_tool`. Agora usa valores padrão do upstream (25 auto-continues).
 - **JSON repair removido**: Removemos o `repair_truncated_json` do `native_tool_parser.py`. O repair estava causando execução de tools com argumentos truncados (ex: arquivo cortado no meio). Com 8192 tokens, o problema de truncamento é bem menor.
+- **🆕 HTML Preview com Workspace Ready Check (Prophet-only)**: O fix do upstream `3a8e03d78` só cobre o caso de `sandboxId === null` para imagens. Adicionamos verificação de `isWorkspaceReady` para HTML/MD previews, mostrando "Starting workspace..." enquanto o sandbox acorda. **Arquivos customizados**:
+  - `frontend/src/components/thread/file-attachment.tsx` - Adiciona prop `isWorkspaceReady` e lógica de loading para HTML previews
+  - `frontend/src/components/thread/attachment-group.tsx` - Passa `isWorkspaceReady` para `FileAttachment`
+  - `frontend/src/components/thread/content/ThreadContent.tsx` - Aceita e passa `isWorkspaceReady` para `renderAttachments()`
+  - `frontend/src/components/thread/ThreadComponent.tsx` - Obtém `isWorkspaceReady` do `useThreadData` e passa para `ThreadContent`
+  - **Sem isso**: Landing pages criadas pelo agente dão erro ao abrir thread antiga (sandbox dormindo), funcionando apenas após F5
 
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
 

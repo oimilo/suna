@@ -143,6 +143,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     messagesQuery,
     projectQuery,
     agentRunsQuery,
+    isWorkspaceReady,
   } = useThreadData(threadId, projectId, isShared);
 
   const {
@@ -1044,6 +1045,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 isPreviewMode={true}
                 onPromptFill={!isShared ? setChatInputValue : undefined}
                 threadId={threadId}
+                isWorkspaceReady={isWorkspaceReady}
               />
             </div>
           </div>
@@ -1219,6 +1221,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           scrollContainerRef={scrollContainerRef}
           threadId={threadId}
           onPromptFill={!isShared ? setChatInputValue : undefined}
+          isWorkspaceReady={isWorkspaceReady}
         />
 
         {isShared && (
