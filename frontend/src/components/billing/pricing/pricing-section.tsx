@@ -1035,7 +1035,7 @@ export function PricingSection({
   return (
     <section
       id="pricing"
-      className={cn("flex flex-col items-center justify-center w-full relative", noPadding ? "pb-0" : "pb-12")}
+      className={cn("scale-90 flex flex-col items-center justify-center w-full relative", noPadding ? "pb-0" : "pb-12")}
     >
       <div className="w-full mx-auto px-6 flex flex-col">
         {/* Header Row: Title on left, Plan Switcher on right */}
