@@ -69,6 +69,7 @@ interface ToolCallSidePanelProps {
   isWorkspaceLoading?: boolean;
   workspaceError?: string | null;
   onRetryWorkspace?: () => void;
+  streamingText?: string; // Live streaming content from assistant message
 }
 
 interface ToolCallSnapshot {
@@ -533,6 +534,7 @@ export function ToolCallSidePanel({
   isWorkspaceLoading = false,
   workspaceError = null,
   onRetryWorkspace,
+  streamingText,
 }: ToolCallSidePanelProps) {
   const t = useTranslations('thread');
   const [dots, setDots] = useState('');
@@ -1022,7 +1024,8 @@ export function ToolCallSidePanel({
         currentIndex={displayIndex}
         totalCalls={displayTotalCalls}
         onFileClick={onFileClick}
-        viewToggle={<ViewToggle currentView={currentView} onViewChange={setCurrentView} />}  
+        viewToggle={<ViewToggle currentView={currentView} onViewChange={setCurrentView} />}
+        streamingText={isStreaming ? streamingText : undefined}
       />
     );
 

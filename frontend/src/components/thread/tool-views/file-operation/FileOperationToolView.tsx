@@ -65,6 +65,8 @@ export function FileOperationToolView({
   isStreaming = false,
   project,
   onFileClick,
+  messages,
+  streamingText,
 }: ToolViewProps) {
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
@@ -112,32 +114,118 @@ export function FileOperationToolView({
   // Extract file path from arguments (from metadata)
   filePath = args.file_path || args.target_file || args.path || null;
 
-  // For create operations, prioritize content from arguments
-  if (operation === 'create' && args.file_contents) {
-    fileContent = args.file_contents;
+  // STREAMING: Extract content from live streaming JSON arguments
+  if (isStreaming && streamingText) {
+    try {
+      // Try parsing as complete JSON first
+      const parsed = JSON.parse(streamingText);
+
+      // Extract based on operation type
+      if (operation === 'create' || operation === 'rewrite') {
+        if (parsed.file_contents) {
+          fileContent = parsed.file_contents;
+        }
+      } else if (operation === 'edit') {
+        if (parsed.code_edit) {
+          fileContent = parsed.code_edit;
+        }
+      }
+
+      // Extract file_path if not already set
+      if (!filePath && parsed.file_path) {
+        filePath = parsed.file_path;
+      }
+    } catch (e) {
+      // JSON incomplete - extract partial content
+      if (operation === 'create' || operation === 'rewrite') {
+        // Find the start of file_contents value
+        const startMatch = streamingText.match(/"file_contents"\s*:\s*"/);
+        if (startMatch) {
+          const startIndex = startMatch.index! + startMatch[0].length;
+          // Extract everything after "file_contents": " until we hit the end or a closing quote
+          let rawContent = streamingText.substring(startIndex);
+
+          // Try to find the end quote (but it might not exist yet during streaming)
+          const endQuoteMatch = rawContent.match(/(?<!\\)"/);
+          if (endQuoteMatch) {
+            rawContent = rawContent.substring(0, endQuoteMatch.index);
+          }
+
+          // Unescape JSON sequences like \n, \t, \\, \"
+          try {
+            fileContent = JSON.parse('"' + rawContent + '"');
+          } catch {
+            // If unescaping fails, replace common escapes manually
+            fileContent = rawContent
+              .replace(/\\n/g, '\n')
+              .replace(/\\t/g, '\t')
+              .replace(/\\r/g, '\r')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\');
+          }
+        }
+      } else if (operation === 'edit') {
+        const startMatch = streamingText.match(/"code_edit"\s*:\s*"/);
+        if (startMatch) {
+          const startIndex = startMatch.index! + startMatch[0].length;
+          let rawContent = streamingText.substring(startIndex);
+
+          const endQuoteMatch = rawContent.match(/(?<!\\)"/);
+          if (endQuoteMatch) {
+            rawContent = rawContent.substring(0, endQuoteMatch.index);
+          }
+
+          try {
+            fileContent = JSON.parse('"' + rawContent + '"');
+          } catch {
+            fileContent = rawContent
+              .replace(/\\n/g, '\n')
+              .replace(/\\t/g, '\t')
+              .replace(/\\r/g, '\r')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\');
+          }
+        }
+      }
+
+      // Extract file_path from partial JSON
+      if (!filePath) {
+        const pathMatch = streamingText.match(/"file_path"\s*:\s*"([^"]+)"/);
+        if (pathMatch) {
+          filePath = pathMatch[1];
+        }
+      }
+    }
   }
 
-  // Extract file content from output (from metadata)
-  if (output && !fileContent) {
+  // Fallback: Extract content from args (for completed operations)
+  if (!fileContent) {
+    fileContent = args.file_contents || args.code_edit || args.updated_content || null;
+  }
+
+  // Override with output if available
+  if (output) {
     if (typeof output === 'object' && output !== null) {
-      // Handle structured output
-      fileContent = output.file_content || output.content || output.updated_content || null;
+      // Handle structured output (only use if not streaming or no streaming content)
+      if (!isStreaming || !fileContent) {
+        fileContent = output.file_content || output.content || output.updated_content || fileContent;
+      }
       // If file_path is in output, use it
       if (!filePath && output.file_path) {
         filePath = output.file_path;
-    }
+      }
     } else if (typeof output === 'string') {
       // For delete operations, output might be a message
       // For create operations, output is usually just a success message, not content
-      if (operation !== 'delete' && operation !== 'create') {
+      if (operation !== 'delete' && operation !== 'create' && !fileContent) {
         fileContent = output;
       }
     }
   }
 
-  // For edit operations, prefer updated_content
-  if (operation === 'edit' && output && typeof output === 'object') {
-    fileContent = output.updated_content || output.file_content || output.content || null;
+  // For edit operations, prefer updated_content from output if not streaming
+  if (operation === 'edit' && output && typeof output === 'object' && !isStreaming) {
+    fileContent = output.updated_content || output.file_content || output.content || fileContent;
   }
 
   const toolTitle = getToolTitle(name || `file-${operation}`);
