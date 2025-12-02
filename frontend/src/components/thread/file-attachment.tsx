@@ -194,6 +194,12 @@ interface FileAttachmentProps {
     isSingleItemGrid?: boolean; // New prop to detect single item in grid
     standalone?: boolean; // New prop for minimal standalone styling
     alignRight?: boolean; // New prop to control right alignment
+    /**
+     * Whether the workspace/sandbox is ready to serve requests.
+     * If false and the file requires sandbox (HTML preview via sandbox_url),
+     * a loading spinner will be shown instead of attempting to load.
+     */
+    isWorkspaceReady?: boolean;
 }
 
 // Cache fetched content between mounts to avoid duplicate fetches
@@ -213,7 +219,8 @@ export function FileAttachment({
     project,
     isSingleItemGrid = false,
     standalone = false,
-    alignRight = false
+    alignRight = false,
+    isWorkspaceReady = true
 }: FileAttachmentProps) {
     // Authentication 
     const { session } = useAuth();
@@ -639,6 +646,40 @@ export function FileAttachment({
     const hasContent = fileContent || pdfBlobUrl || xlsxBlobUrl;
     const isLoadingContent = fileContentLoading || pdfLoading || xlsxLoading;
     
+    // Check if we need to wait for workspace to be ready (HTML/MD files that use sandbox_url)
+    const needsSandboxUrl = isHtmlOrMd && !localPreviewUrl && project?.sandbox?.sandbox_url;
+    const waitingForWorkspace = needsSandboxUrl && !isWorkspaceReady;
+    
+    // Show loading state while waiting for workspace to be ready
+    if (shouldShowPreview && isGridLayout && waitingForWorkspace) {
+        return (
+            <div
+                className={cn(
+                    "group relative w-full",
+                    "rounded-xl border bg-card overflow-hidden pt-10",
+                    "!min-h-[200px] sm:min-h-0 sm:h-[400px] max-h-[600px] sm:!min-w-[300px]",
+                    className
+                )}
+                style={{
+                    gridColumn: "1 / -1",
+                    width: "100%",
+                    minWidth: 0,
+                    ...customStyle
+                }}
+            >
+                {/* Header */}
+                <div className="absolute top-0 left-0 right-0 bg-accent p-2 h-[40px] z-10 flex items-center">
+                    <div className="text-sm font-medium truncate">{filename}</div>
+                </div>
+                {/* Loading state */}
+                <div className="h-full w-full flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <div className="text-sm text-muted-foreground">Starting workspace...</div>
+                </div>
+            </div>
+        );
+    }
+    
     if (shouldShowPreview && isGridLayout && (hasContent || isLoadingContent || hasError || isSandboxDeleted)) {
         // Determine the renderer component
         const Renderer = rendererMap[extension as keyof typeof rendererMap];
@@ -931,6 +972,7 @@ interface FileAttachmentGridProps {
     project?: Project;
     standalone?: boolean;
     alignRight?: boolean;
+    isWorkspaceReady?: boolean;
 }
 
 export function FileAttachmentGrid({
@@ -942,7 +984,8 @@ export function FileAttachmentGrid({
     collapsed = false,
     project,
     standalone = false,
-    alignRight = false
+    alignRight = false,
+    isWorkspaceReady = true
 }: FileAttachmentGridProps) {
     if (!attachments || attachments.length === 0) return null;
 
@@ -975,6 +1018,7 @@ export function FileAttachmentGrid({
             project={project}
             standalone={standalone}
             alignRight={alignRight}
+            isWorkspaceReady={isWorkspaceReady}
         />
     );
 

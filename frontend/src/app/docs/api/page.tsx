@@ -3,16 +3,12 @@
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
-  AlertTriangle,
   Globe,
   MessageSquare,
   PlayCircle,
   RefreshCcw,
-  Terminal,
   Zap,
 } from 'lucide-react';
-
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,39 +72,6 @@ const httpSteps: Array<{
   },
 ];
 
-const sdkQuickStart = `import asyncio
-from kortix import kortix
-
-async def main():
-    mcp_tools = kortix.MCPTools(
-        "http://localhost:4000/mcp/",
-        "Kortix",
-    )
-    await mcp_tools.initialize()
-
-    client = kortix.Kortix(api_key="pk_xxx:sk_xxx")
-
-    agent = await client.Agent.create(
-        name="Meu Worker",
-        system_prompt="Você é um assistente útil.",
-        mcp_tools=[mcp_tools],
-        allowed_tools=["get_wind_direction"],
-    )
-
-    thread = await client.Thread.create()
-    run = await agent.run("Olá! Pode me ajudar?", thread)
-
-    stream = await run.get_stream()
-    async for chunk in stream:
-        print(chunk, end="")
-
-if __name__ == "__main__":
-    asyncio.run(main())`;
-
-const sdkInstallPip = `pip install "kortix @ git+https://github.com/kortix-ai/suna.git@main#subdirectory=sdk"`;
-const sdkInstallUv = `uv add "kortix @ git+https://github.com/kortix-ai/suna.git@main#subdirectory=sdk"`;
-const sdkExamples = `uv sync
-PYTHONPATH=$(pwd) uv run example/example.py`;
 
 export default function ApiDocsPage() {
   return (
@@ -120,12 +83,12 @@ export default function ApiDocsPage() {
         </Badge>
         <div className="space-y-4">
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            API & SDK do {BRANDING.name}
+            API do {BRANDING.name}
           </h1>
           <p className="text-lg text-muted-foreground">
             Conecte seus fluxos (n8n, Make, scripts próprios) diretamente ao{' '}
-            {BRANDING.name}. Abaixo você encontra o fluxo HTTP oficial e o SDK
-            Python utilizado internamente.
+            {BRANDING.name}. Abaixo você encontra o fluxo HTTP oficial para
+            automações.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -135,24 +98,8 @@ export default function ApiDocsPage() {
           <Button variant="outline" asChild>
             <Link href="#http-api">Ir para o fluxo HTTP</Link>
           </Button>
-          <Button variant="ghost" asChild>
-            <Link href="#sdk-python">Ver SDK Python</Link>
-          </Button>
         </div>
       </section>
-
-      <Alert variant="warning" className="border-amber-500/40">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>SDK em desenvolvimento</AlertTitle>
-        <AlertDescription>
-          O SDK Python ainda usa o pacote upstream (
-          <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs">
-            kortix
-          </code>
-          ) e pode sofrer mudanças sem aviso. O contrato HTTP já estável é o
-          recomendado para automações leves como n8n.
-        </AlertDescription>
-      </Alert>
 
       <Separator />
 
@@ -285,68 +232,6 @@ export default function ApiDocsPage() {
         </Card>
       </section>
 
-      <Separator />
-
-      <section id="sdk-python" className="space-y-8">
-        <div className="space-y-2">
-          <Badge variant="outline" className="gap-1">
-            <Terminal className="h-3.5 w-3.5" />
-            Python SDK
-          </Badge>
-          <h2 className="text-2xl font-semibold">
-            Ainda em beta, mas perfeito para scripts longos
-          </h2>
-          <p className="text-muted-foreground">
-            O SDK expõe as mesmas rotas do HTTP API com helpers async e streaming.
-            Enquanto não publicamos um pacote próprio, instalamos direto do
-            repositório open-source.
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Instalação rápida</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Pip</p>
-                <CodeBlockCode code={sdkInstallPip} language="bash" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">uv</p>
-                <CodeBlockCode code={sdkInstallUv} language="bash" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Executar exemplos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                O diretório <code>sdk/example</code> possui scripts prontos para
-                testar streaming, criação de threads e upload de arquivos.
-              </p>
-              <CodeBlockCode code={sdkExamples} language="bash" />
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick start</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              O exemplo abaixo é o mesmo do README original e mostra criação de
-              agente, thread, execução e streaming.
-            </p>
-            <CodeBlockCode code={sdkQuickStart} language="python" />
-          </CardContent>
-        </Card>
-      </section>
     </div>
   );
 }
