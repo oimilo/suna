@@ -19,7 +19,7 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - `e2022be97` - compression WIP (marcado como wip, muito invasivo)
 - `56cc0f02e` - PresentationViewer fix (código não presente no Prophet)
 - Referral system - não implementado
-- `1465821b1` - scale down pricing section (scale-90 cosmético, não necessário)
+- `1465821b1` - ~~scale down pricing section~~ ✅ Aplicado em 02/12/2025
 - `2a7cdb276` - default plan to yearly (decisão de negócio - podemos aplicar depois)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
@@ -45,7 +45,6 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
   - ✅ Cleanup não cria sandbox desnecessariamente
   - ✅ Shutdown do API mais rápido e limpo
 - **Não aplicados**:
-  - `1465821b1` - scale-90 no pricing (cosmético)
   - `2a7cdb276` - default yearly (decisão de negócio)
 
 ## Progresso em 2025-12-01
