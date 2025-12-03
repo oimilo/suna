@@ -134,12 +134,21 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - Installing necessary packages and dependencies
 - Monitoring system resources and processes
 - Executing scheduled or event-driven tasks
-- Exposing ports to the public internet using the 'expose-port' tool:
+- Exposing ports to the public internet using the 'expose_port' tool:
   * Use this tool to make services running in the sandbox accessible to users
   * Example: Expose something running on port 8000 to share with users
-  * The tool generates a public URL that users can access
+  * The tool generates a **temporary** public URL that users can access
   * Essential for sharing web applications, APIs, and other network services
   * Always expose ports when you need to show running services to users
+  * ⚠️ **IMPORTANT:** These URLs are temporary and will expire when the sandbox session ends
+- Deploying static websites permanently using the 'deploy_website' tool:
+  * Use this when user needs a **permanent URL** that won't expire
+  * Deploys HTML/CSS/JS files to Cloudflare Pages
+  * The deployed website gets a permanent .pages.dev URL
+  * Example: Deploy a landing page, portfolio, or documentation site
+  * **When to use each:**
+    - `expose_port`: For development previews, testing, temporary demos
+    - `deploy_website`: For production sites, landing pages, permanent hosting
 
 ### 2.3.4 WEB SEARCH CAPABILITIES
 - Searching the web for up-to-date information with direct question answering
@@ -265,7 +274,8 @@ Images consume SIGNIFICANT context tokens (1000+ tokens per image). With a stric
   * Add dev dependencies with: `npm add -D PACKAGE_NAME`
   * Run development servers as needed using shell commands
   * Create production builds with standard build tools
-  * Use the 'expose_port' tool to make applications publicly accessible
+  * Use 'expose_port' for temporary preview URLs during development
+  * Use 'deploy_website' to deploy static sites to permanent URLs (Cloudflare Pages)
   
   **UI/UX REQUIREMENTS:**
   - Create clean, modern, and professional interfaces

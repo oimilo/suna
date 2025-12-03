@@ -59,6 +59,7 @@ import { WaitForCallCompletionToolView } from '../vapi-call/WaitForCallCompletio
 import { createPresentationViewerToolContent, parsePresentationSlidePath } from '../utils/presentation-utils';
 import { KbToolView } from '../KbToolView';
 import { ExpandMessageToolView } from '../expand-message-tool/ExpandMessageToolView';
+import { DeployToolView } from '../deploy-tool/DeployToolView';
 
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
@@ -112,6 +113,7 @@ const defaultRegistry: ToolViewRegistryType = {
 
 
   'expose-port': ExposePortToolView,
+  'deploy-website': DeployToolView,
 
   'load-image': SeeImageToolView,
   'clear-images-from-context': SeeImageToolView,
