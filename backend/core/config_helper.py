@@ -203,6 +203,7 @@ def _get_default_agentpress_tools() -> Dict[str, bool]:
         "sb_shell_tool": True,
         "sb_files_tool": True,
         "sb_expose_tool": True,
+        "sb_deploy_tool": True,
         "web_search_tool": True,
         "image_search_tool": True,
         "sb_vision_tool": True,

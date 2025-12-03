@@ -811,7 +811,7 @@ class AgentRunner:
                 return True
         
         all_tools = [
-            'sb_shell_tool', 'sb_files_tool', 'sb_expose_tool',
+            'sb_shell_tool', 'sb_files_tool', 'sb_expose_tool', 'sb_deploy_tool',
             'web_search_tool', 'image_search_tool', 'sb_vision_tool', 'sb_presentation_tool', 'sb_image_edit_tool',
             'sb_kb_tool', 'sb_design_tool', 'sb_upload_file_tool',
             'sb_docs_tool',
