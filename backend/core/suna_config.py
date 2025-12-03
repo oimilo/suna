@@ -13,6 +13,7 @@ SUNA_CONFIG = {
         "sb_shell_tool": True,
         "sb_files_tool": True,
         "sb_expose_tool": True,
+        "sb_deploy_tool": True,
         "sb_upload_file_tool": True,
         
         # Search and research tools

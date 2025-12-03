@@ -5,6 +5,8 @@ Deploys static websites from sandbox to Cloudflare Pages for permanent hosting.
 Resurrected from commit 538389797 and adapted to new tool system.
 """
 
+import shlex
+
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
