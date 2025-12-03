@@ -59,7 +59,13 @@ class SandboxExposeTool(SandboxToolsBase):
                 try:
                     port_check = await self.sandbox.process.exec(f"netstat -tlnp | grep :{port}", timeout=5)
                     if port_check.exit_code != 0:
-                        return self.fail_response(f"No service is currently listening on port {port}. Please start a service on this port first.")
+                        return self.fail_response(
+                            f"No service is currently listening on port {port}. "
+                            f"You must start a server BEFORE exposing the port. "
+                            f"For static HTML files, run: python -m http.server {port} & "
+                            f"For Node.js apps, run: npm run dev (or start your server). "
+                            f"Then call expose_port again."
+                        )
                 except Exception:
                     # If we can't check, proceed anyway - the user might be starting a service
                     pass

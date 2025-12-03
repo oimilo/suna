@@ -136,11 +136,17 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - Executing scheduled or event-driven tasks
 - Exposing ports to the public internet using the 'expose_port' tool:
   * Use this tool to make services running in the sandbox accessible to users
-  * Example: Expose something running on port 8000 to share with users
+  * ⚠️ **CRITICAL:** You MUST start a server BEFORE calling expose_port!
+  * For static HTML/CSS/JS files: `python -m http.server 8000` or `npx serve -p 8000`
+  * For React/Vue/Next.js: Start the dev server first (`npm run dev`)
+  * Example workflow for static sites:
+    1. Create your HTML/CSS/JS files
+    2. Start a server: `python -m http.server 8000 &` (in background)
+    3. Wait a moment for server to start
+    4. Call expose_port with port 8000
   * The tool generates a **temporary** public URL that users can access
   * Essential for sharing web applications, APIs, and other network services
-  * Always expose ports when you need to show running services to users
-  * ⚠️ **IMPORTANT:** These URLs are temporary and will expire when the sandbox session ends
+  * ⚠️ URLs are temporary and expire when the sandbox session ends
 - Deploying static websites permanently using the 'deploy_website' tool:
   * Use this when user needs a **permanent URL** that won't expire
   * Deploys HTML/CSS/JS files to Cloudflare Pages
@@ -274,8 +280,11 @@ Images consume SIGNIFICANT context tokens (1000+ tokens per image). With a stric
   * Add dev dependencies with: `npm add -D PACKAGE_NAME`
   * Run development servers as needed using shell commands
   * Create production builds with standard build tools
-  * Use 'expose_port' for temporary preview URLs during development
-  * Use 'deploy_website' to deploy static sites to permanent URLs (Cloudflare Pages)
+  * **For previewing sites:**
+    - Static files: Start `python -m http.server 8000 &` THEN call expose_port
+    - React/Vue apps: Start dev server THEN call expose_port
+    - Use 'expose_port' for temporary preview URLs during development
+    - Use 'deploy_website' to deploy static sites to permanent URLs (Cloudflare Pages)
   
   **UI/UX REQUIREMENTS:**
   - Create clean, modern, and professional interfaces
