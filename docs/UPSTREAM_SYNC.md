@@ -6,11 +6,12 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-03   | `dc38a5d0b`     | `fix schedule trigger setup` |
+| 2025-12-03   | `eb3de5e9a`     | `add username in sys prompt` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
 **Commits não aplicados (propositalmente):**
+- `f738ea3c1` - mobile permission infos + agents-101 page (página de marketing do Kortix - pode ser adaptada depois)
 - `424f947dd` - cleanup scripts (não necessário)
 - `b60caacf2` - mobile wip + auth callback (poderia sobrescrever login sem GitHub)
 - `3dbefaaa9` - Redis TTLs reduzidos (aplicado parcialmente - safety expiry sim, TTLs não)
@@ -24,6 +25,24 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - `fe800927b` - mock image gen (não necessário - usamos API real)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-12-03
+
+### Fix: Remove dead code causing Upstash 10MB limit errors
+- **Problema identificado**: Thread `1381715f-7977-4c92-901b-13116905a940` (RiskLab News) falhou com erro "max request size exceeded: 68MB > 10MB"
+- **Causa raiz**: Código morto em `run_agent_background.py:623-624` que lia toda a lista de responses do Redis com `lrange(0, -1)` mas nunca usava o resultado
+- **Solução**: Removido código morto. A variável `all_responses` era criada mas nunca utilizada após ser lida
+- **Nota**: Este bug também existe no upstream - podemos contribuir um PR
+
+### Bloco aplicado — add username in sys prompt (eb3de5e9a)
+- **Upstream commits absorvidos**: `eb3de5e9a` (add username in sys prompt)
+- **Mudanças backend**:
+  - `core/run.py`: Adiciona busca do nome do usuário em paralelo com KB e locale
+  - Busca em `user_metadata.full_name`, `name`, `display_name` ou fallback para prefixo do email
+  - Adiciona seção "USER INFORMATION" ao system prompt com o nome do usuário
+- **Benefício**: O agente pode personalizar respostas e chamar o usuário pelo nome
+- **Não aplicados**:
+  - `f738ea3c1` - mobile permissions + `/agents-101` page (página de slides de marketing do Kortix - pode ser adaptada para Prophet depois se quisermos)
 
 ## Progresso em 2025-12-02
 
