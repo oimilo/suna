@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-02   | `3a8e03d78`     | `fix/show_loader if waiting for sandbox` |
+| 2025-12-03   | `dc38a5d0b`     | `fix schedule trigger setup` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -26,6 +26,16 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
 
 ## Progresso em 2025-12-02
+
+### Bloco aplicado — fix schedule trigger setup (dc38a5d0b)
+- **Upstream commits absorvidos**: `dc38a5d0b` (fix schedule trigger setup)
+- **Mudanças**:
+  - `execution_service.py`: Adiciona verificação de limites de projetos e threads ANTES de criar sessão de trigger
+    - Evita criar projetos/threads se usuário já atingiu limite do plano
+    - Retorna erro amigável explicando limite
+  - `provider_service.py`: Já estava correto (usava `config.WEBHOOK_BASE_URL`)
+  - `api.py`: Fix de `agent_run_id` → `id` não aplicado (função `get_trigger_executions` não existe no Prophet)
+- **Benefício**: Triggers respeitam limites do plano do usuário
 
 ### Reversão para XML Tool Calling (Prophet-specific)
 - **Problema**: O upstream está em transição incompleta de XML → Native tool calling

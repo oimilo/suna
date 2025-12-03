@@ -145,6 +145,31 @@ class AgentExecutor:
             if not agent_config:
                 raise ValueError(f"Agent {agent_id} not found")
             
+            # [UPSTREAM dc38a5d0b] Check project and thread limits before creating session
+            account_id = agent_config.get('account_id')
+            if config.ENV_MODE != EnvMode.LOCAL and account_id:
+                from core.utils.limits_checker import check_project_count_limit, check_thread_limit
+                
+                client = await self._db.client
+                
+                project_limit = await check_project_count_limit(client, account_id)
+                if not project_limit['can_create']:
+                    logger.warning(f"Trigger execution blocked: project limit reached for account {account_id} ({project_limit['current_count']}/{project_limit['limit']})")
+                    return {
+                        "success": False,
+                        "error": f"Project limit reached ({project_limit['current_count']}/{project_limit['limit']}). Upgrade your plan to run more triggers.",
+                        "message": "Failed to execute trigger - project limit exceeded"
+                    }
+                
+                thread_limit = await check_thread_limit(client, account_id)
+                if not thread_limit['can_create']:
+                    logger.warning(f"Trigger execution blocked: thread limit reached for account {account_id} ({thread_limit['current_count']}/{thread_limit['limit']})")
+                    return {
+                        "success": False,
+                        "error": f"Thread limit reached ({thread_limit['current_count']}/{thread_limit['limit']}). Upgrade your plan to run more triggers.",
+                        "message": "Failed to execute trigger - thread limit exceeded"
+                    }
+            
             thread_id, project_id = await self._session_manager.create_agent_session(
                 agent_id, agent_config, trigger_event
             )
