@@ -112,15 +112,21 @@ class SandboxDeployTool(SandboxToolsBase):
             # Deploy to Cloudflare Pages using wrangler
             # First try to deploy (creates project if it doesn't exist in newer wrangler versions)
             # If that fails, explicitly create the project first
-            deploy_cmd = f'''cd {self.workspace_path} && \\
-                export CLOUDFLARE_API_TOKEN="{cloudflare_token}" && \\
-                (npx wrangler@latest pages deploy "{full_path}" --project-name "{project_name}" 2>&1 || \\
-                (npx wrangler@latest pages project create "{project_name}" --production-branch production 2>&1 && \\
-                npx wrangler@latest pages deploy "{full_path}" --project-name "{project_name}" 2>&1))'''
+            # Use shlex.quote() to prevent shell injection attacks
+            safe_workspace = shlex.quote(self.workspace_path)
+            safe_token = shlex.quote(cloudflare_token)
+            safe_path = shlex.quote(full_path)
+            safe_project = shlex.quote(project_name)
+            
+            deploy_cmd = f'''cd {safe_workspace} && \\
+                export CLOUDFLARE_API_TOKEN={safe_token} && \\
+                (npx wrangler@latest pages deploy {safe_path} --project-name {safe_project} 2>&1 || \\
+                (npx wrangler@latest pages project create {safe_project} --production-branch production 2>&1 && \\
+                npx wrangler@latest pages deploy {safe_path} --project-name {safe_project} 2>&1))'''
 
             # Execute the deployment command with longer timeout
             response = await self.sandbox.process.exec(
-                f"/bin/sh -c '{deploy_cmd}'",
+                f"/bin/sh -c {shlex.quote(deploy_cmd)}",
                 timeout=300  # 5 minutes timeout for deployment
             )
             
@@ -203,4 +209,3 @@ class SandboxDeployTool(SandboxToolsBase):
                 sandbox_id=self.sandbox_id
             )
             return self.fail_response(f"Error deploying website: {str(e)}")
-
