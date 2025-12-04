@@ -75,7 +75,7 @@ class SandboxExposeTool(SandboxToolsBase):
             
             # Extract the actual URL from the preview link object
             raw_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-            proxy_url = self._build_proxy_url(raw_url)
+            proxy_url = self._build_proxy_url(raw_url, port)
             final_url = proxy_url or raw_url
 
             if proxy_url:
@@ -106,10 +106,13 @@ class SandboxExposeTool(SandboxToolsBase):
         except Exception as e:
             return self.fail_response(f"Error exposing port {port}: {str(e)}")
 
-    def _build_proxy_url(self, raw_url: str) -> Optional[str]:
+    def _build_proxy_url(self, raw_url: str, port: int) -> Optional[str]:
         """
         Convert a Daytona preview URL into the Prophet proxy URL when possible.
         Falls back to the original URL if configuration is missing.
+        
+        The port is passed as a query parameter so the proxy knows which
+        Daytona port to forward to (e.g., ?port=8000).
         """
         base = config.DAYTONA_PREVIEW_BASE
         if not base:
@@ -131,7 +134,15 @@ class SandboxExposeTool(SandboxToolsBase):
         proxy_url = f"{base}/{sandbox_id}"
         if path:
             proxy_url = f"{proxy_url}/{path}"
+        
+        # Build query string with port parameter
+        query_parts = []
+        if port != 8080:  # Only add port param if not default
+            query_parts.append(f"port={port}")
         if parsed.query:
-            proxy_url = f"{proxy_url}?{parsed.query}"
+            query_parts.append(parsed.query)
+        
+        if query_parts:
+            proxy_url = f"{proxy_url}?{'&'.join(query_parts)}"
 
         return proxy_url
