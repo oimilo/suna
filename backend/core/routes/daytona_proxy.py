@@ -264,6 +264,51 @@ def _rewrite_presentation_asset_path(path: str, request: Request, sandbox_id: st
     return rewritten
 
 
+def _rewrite_sandbox_url_with_port(sandbox_url: str, port: int) -> str:
+    """
+    Rewrite a Daytona sandbox URL to use a different port.
+    
+    Example:
+        Input:  https://8080-abc123.proxy.daytona.works
+        Port:   8000
+        Output: https://8000-abc123.proxy.daytona.works
+    """
+    import re
+    # Pattern matches: https://PORT-SANDBOX_ID.proxy.daytona.works
+    pattern = r"(https?://)(\d+)(-[^/]+)"
+    match = re.match(pattern, sandbox_url)
+    if match:
+        return f"{match.group(1)}{port}{match.group(3)}"
+    
+    # Fallback: if pattern doesn't match, log warning and return original
+    logger.warning(
+        "Could not rewrite sandbox URL with custom port: %s (port=%s)",
+        sandbox_url,
+        port,
+    )
+    return sandbox_url
+
+
+def _filter_query_params(query_string: str, exclude: list) -> str:
+    """
+    Filter out specific query parameters from a query string.
+    
+    Args:
+        query_string: The original query string (e.g., "port=8000&foo=bar")
+        exclude: List of parameter names to exclude
+        
+    Returns:
+        Filtered query string without excluded parameters
+    """
+    if not query_string:
+        return ""
+    
+    from urllib.parse import parse_qs, urlencode
+    params = parse_qs(query_string, keep_blank_values=True)
+    filtered = {k: v for k, v in params.items() if k not in exclude}
+    return urlencode(filtered, doseq=True)
+
+
 async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Response:
     path = _rewrite_presentation_asset_path(path, request, sandbox_id)
     metadata = await _get_project_sandbox_metadata(sandbox_id)
@@ -271,11 +316,27 @@ async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Respon
     base_url = metadata["sandbox_url"]
     if metadata.get("vnc_preview") and _is_vnc_request(path, request):
         base_url = metadata["vnc_preview"]
+    
+    # Check for custom port in query params (e.g., ?port=8000)
+    # This allows expose_port to work with any port, not just 8080
+    port_param = request.query_params.get("port")
+    if port_param and port_param.isdigit():
+        custom_port = int(port_param)
+        if custom_port != 8080:  # Only rewrite if not default port
+            base_url = _rewrite_sandbox_url_with_port(base_url, custom_port)
+            logger.debug(
+                "Using custom port %s for sandbox preview sandbox_id=%s",
+                custom_port,
+                sandbox_id,
+            )
+    
+    # Filter out 'port' param from query string before forwarding
+    query_string = _filter_query_params(request.url.query, exclude=["port"])
 
     upstream_url = _build_target_url(
         base_url,
         path,
-        request.url.query
+        query_string
     )
 
     headers = _prepare_forward_headers(request, metadata.get("preview_token"))
