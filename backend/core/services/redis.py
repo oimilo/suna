@@ -19,26 +19,55 @@ REDIS_KEY_TTL = 3600 * 24  # 24 hour TTL as safety mechanism
 def get_redis_config():
     """Get Redis configuration from environment variables.
     
+    Supports two modes:
+    1. REDIS_URL: Direct URL (e.g., rediss://user:pass@host:port) - simplest for cloud providers
+    2. Individual vars: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_USERNAME, REDIS_SSL
+    
     Returns:
         dict: Dictionary with host, port, password, username, ssl, and url keys
     """
     load_dotenv()
     
-    redis_host = os.getenv("REDIS_HOST", "redis")
-    redis_port = int(os.getenv("REDIS_PORT", 6379))
-    redis_password = os.getenv("REDIS_PASSWORD", "")
-    redis_username = os.getenv("REDIS_USERNAME", None)
-    # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
-    redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
+    # Check for direct URL first (simplest for cloud providers like DO Valkey)
+    redis_url = os.getenv("REDIS_URL")
     
-    # Build Redis URL for clients that support it (like Dramatiq)
-    protocol = "rediss" if redis_ssl else "redis"
-    if redis_username and redis_password:
-        redis_url = f"{protocol}://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
-    elif redis_password:
-        redis_url = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}"
+    if redis_url:
+        # Parse URL to extract components for clients that need them
+        # URL format: redis[s]://[user:pass@]host:port
+        redis_ssl = redis_url.startswith("rediss://")
+        
+        # Extract host/port from URL for logging
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(redis_url)
+            redis_host = parsed.hostname or "unknown"
+            redis_port = parsed.port or (6379 if not redis_ssl else 6380)
+            redis_password = parsed.password or ""
+            redis_username = parsed.username
+        except Exception:
+            redis_host = "from_url"
+            redis_port = 0
+            redis_password = ""
+            redis_username = None
+        
+        logger.info(f"Using REDIS_URL directly (ssl={redis_ssl})")
     else:
-        redis_url = None
+        # Fall back to individual vars
+        redis_host = os.getenv("REDIS_HOST", "redis")
+        redis_port = int(os.getenv("REDIS_PORT", 6379))
+        redis_password = os.getenv("REDIS_PASSWORD", "")
+        redis_username = os.getenv("REDIS_USERNAME", None)
+        # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
+        redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
+        
+        # Build Redis URL for clients that support it (like Dramatiq)
+        protocol = "rediss" if redis_ssl else "redis"
+        if redis_username and redis_password:
+            redis_url = f"{protocol}://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
+        elif redis_password:
+            redis_url = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}"
+        else:
+            redis_url = None
     
     return {
         "host": redis_host,
