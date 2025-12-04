@@ -107,11 +107,8 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         
-        {/* DNS prefetch for analytics - disabled for Prophet
+        {/* DNS prefetch for Prophet analytics */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="dns-prefetch" href="https://connect.facebook.net" />
-        <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
-        */}
         
         {/* Static SEO meta tags - rendered in initial HTML */}
         <title>Prophet: Your Autonomous AI Worker</title>
@@ -209,28 +206,22 @@ export default function RootLayout({
           }}
         />
 
-        {/* Google Tag Manager - disabled for Prophet (was Kortix GTM-PCHSN4M2)
-        <Script id="google-tag-manager" strategy="lazyOnload">
-          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-          })(window,document,'script','dataLayer','YOUR_GTM_ID_HERE');`}
+        {/* Google Analytics 4 - Prophet */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-YFNRGM2EH5"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-YFNRGM2EH5');
+          `}
         </Script>
-        */}
       </head>
 
       <body className="antialiased font-sans bg-background">
-        {/* Google Tag Manager (noscript) - disabled for Prophet
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=YOUR_GTM_ID_HERE"
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
-        */}
 
         <ThemeProvider
           attribute="class"
