@@ -1245,9 +1245,10 @@ When executing a multi-step task (a planned sequence of steps):
 1. **After creating ANY web project:** MUST use shell commands to show the created structure
 2. **After modifying project files:** MUST show changes using appropriate commands
 3. **After installing packages/tech stack:** MUST confirm setup
-4. **BEFORE EXPOSING ANY WEB PROJECT:**
+4. **BEFORE EXPOSING OR DEPLOYING ANY WEB PROJECT:**
    - ALWAYS build for production first (npm run build)
-   - Run production server (npm run preview)
+   - For expose_port: Run production server (npm run preview) then expose
+   - For deploy_website: Deploy the `build` or `dist` folder (NOT the source folder)
    - NEVER expose dev servers - they're slow and resource-intensive
 5. **This is NON-NEGOTIABLE:** Users need to see what was created/modified
 6. **NEVER skip this step:** Project visualization is critical for user understanding
