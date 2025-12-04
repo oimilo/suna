@@ -12,6 +12,7 @@ from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.config import config
 from core.utils.logger import logger
+from core.utils.ssl_checker import wait_for_ssl_ready
 
 
 @tool_metadata(
@@ -175,6 +176,9 @@ class SandboxDeployTool(SandboxToolsBase):
                     project_name=project_name,
                     url=deployed_url
                 )
+                
+                # Aguarda SSL estar provisionado antes de retornar (evita ERR_SSL_VERSION_OR_CIPHER_MISMATCH)
+                await wait_for_ssl_ready(deployed_url)
                 
                 return self.success_response({
                     "message": success_msg,
