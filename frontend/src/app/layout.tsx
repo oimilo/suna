@@ -107,10 +107,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         
-        {/* DNS prefetch for analytics (loaded later but resolve DNS early) */}
+        {/* DNS prefetch for analytics - disabled for Prophet
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
+        */}
         
         {/* Static SEO meta tags - rendered in initial HTML */}
         <title>Prophet: Your Autonomous AI Worker</title>
@@ -169,9 +170,10 @@ export default function RootLayout({
               description: siteMetadata.description,
               foundingDate: '2024',
               sameAs: [
-                'https://github.com/Kortix-ai/Suna',
-                'https://x.com/kortix',
-                'https://linkedin.com/company/kortix',
+                'https://github.com/oimilo/suna',
+                // TODO: Add Prophet social links when available
+                // 'https://x.com/prophet',
+                // 'https://linkedin.com/company/prophet',
               ],
               contactPoint: {
                 '@type': 'ContactPoint',
@@ -207,25 +209,28 @@ export default function RootLayout({
           }}
         />
 
+        {/* Google Tag Manager - disabled for Prophet (was Kortix GTM-PCHSN4M2)
         <Script id="google-tag-manager" strategy="lazyOnload">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-          })(window,document,'script','dataLayer','GTM-PCHSN4M2');`}
+          })(window,document,'script','dataLayer','YOUR_GTM_ID_HERE');`}
         </Script>
+        */}
       </head>
 
       <body className="antialiased font-sans bg-background">
+        {/* Google Tag Manager (noscript) - disabled for Prophet
         <noscript>
           <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-PCHSN4M2"
+            src="https://www.googletagmanager.com/ns.html?id=YOUR_GTM_ID_HERE"
             height="0"
             width="0"
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
-        {/* End Google Tag Manager (noscript) */}
+        */}
 
         <ThemeProvider
           attribute="class"
