@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-04   | `5e19caed6`     | `sandbox admin bypass` |
+| 2025-12-04   | `b50c22f9f`     | `fix model name for trigger runs` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -27,6 +27,20 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
 
 ## Progresso em 2025-12-04
+
+### Bloco aplicado — model selection for triggers (b50c22f9f)
+- **Upstream commits absorvidos**: `b50c22f9f` (fix model name for trigger runs)
+- **Mudanças backend**:
+  - `trigger_tool.py`: Novo parâmetro `model` para triggers scheduled e event
+  - `execution_service.py`: Passa `model` do trigger para execução do agent
+  - `provider_service.py`: Propaga `model` no `TriggerResult`
+  - `trigger_service.py`: Campo `model` no `TriggerResult` dataclass
+  - `composio_integration/api.py`: Campo `model` no request de criar trigger
+  - `suna_config.py`: `claude-haiku-4.5` → `kortix/basic` (ainda usa Haiku por trás)
+- **Mudanças frontend**:
+  - `schedule-config.tsx`: UI para selecionar modelo no trigger
+  - `event-config.tsx`: UI para selecionar modelo no trigger
+  - `middleware.ts` → `proxy.ts`: Renomeado (convenção Next.js 16)
 
 ### Bloco aplicado — sandbox admin bypass + Next.js 16 (5e19caed6)
 - **Upstream commits absorvidos**: `5e19caed6` (sandbox admin bypass)
