@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-03   | `eb3de5e9a`     | `add username in sys prompt` |
+| 2025-12-04   | `5e19caed6`     | `sandbox admin bypass` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -25,6 +25,27 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - `fe800927b` - mock image gen (não necessário - usamos API real)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-12-04
+
+### Bloco aplicado — sandbox admin bypass + Next.js 16 (5e19caed6)
+- **Upstream commits absorvidos**: `5e19caed6` (sandbox admin bypass)
+- **Mudanças backend**:
+  - `auth_utils.py`: Admins (`admin`, `super_admin`) agora podem acessar qualquer sandbox, não apenas os próprios
+  - `prompt.py`: Melhorias nas sugestões de follow-up - agora específicas em vez de genéricas ("Use PostgreSQL for queries" em vez de "Yes/No")
+  - `message_tool.py`: Descriptions melhoradas para `follow_up_answers` e `follow_up_prompts`
+- **Mudanças frontend**:
+  - **Next.js 15.3.1 → 16.0.7**: Corrige CVE-2025-55182 (vulnerabilidade crítica de RCE)
+  - Script `lint` atualizado: `next lint` → `eslint` (comando removido no Next 16)
+  - `tsconfig.json`: Ajustes automáticos do Next 16
+- **Breaking changes do Next.js 16**:
+  - ⚠️ `middleware.ts` deve ser renomeado para `proxy.ts` (warning por enquanto)
+  - Node.js mínimo: 20.9.0
+  - TypeScript mínimo: 5.1.0
+- **Não aplicados**:
+  - `74b8bbb96` - mobile text selectable (não usamos mobile)
+  - `483579c8f` - desabilita sb_docs_tool (avaliar depois)
+  - `b50c22f9f` - model name for trigger runs (aplicar separadamente)
 
 ## Progresso em 2025-12-03
 
