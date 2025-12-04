@@ -182,8 +182,11 @@ class AgentExecutor:
                 thread_id, trigger_result.agent_prompt, merged_variables
             )
             
+            # Pega model do trigger_result se especificado (upstream b50c22f9f)
+            trigger_model = trigger_result.model if hasattr(trigger_result, 'model') and trigger_result.model else None
+            
             agent_run_id = await self._start_agent_execution(
-                thread_id, project_id, agent_config, trigger_result.execution_variables
+                thread_id, project_id, agent_config, trigger_result.execution_variables, trigger_model
             )
             
             return {
@@ -339,15 +342,16 @@ class AgentExecutor:
         thread_id: str,
         project_id: str,
         agent_config: Dict[str, Any],
-        trigger_variables: Dict[str, Any]
+        trigger_variables: Dict[str, Any],
+        trigger_model: Optional[str] = None
     ) -> str:
         client = await self._db.client
         
         # Debug: Log the agent config to see what model is set
-        logger.debug(f"Agent config for trigger execution: model='{agent_config.get('model')}', keys={list(agent_config.keys())}")
+        logger.debug(f"Agent config for trigger execution: model='{agent_config.get('model')}', trigger_model='{trigger_model}'")
         
-        model_name = agent_config.get('model')
-        # logger.debug(f"Model from agent config: '{model_name}' (type: {type(model_name)})")
+        # Prioridade: trigger_model > agent_config.model > default do account
+        model_name = trigger_model or agent_config.get('model')
         
         if not model_name:
             account_id = agent_config.get('account_id')
