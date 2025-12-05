@@ -6,7 +6,7 @@ Guia rápido para manter o fork (`oimilo/suna`) alinhado com o repositório ofic
 
 | Data (UTC-3) | Commit upstream | Mensagem |
 |--------------|-----------------|----------|
-| 2025-12-04   | `b50c22f9f`     | `fix model name for trigger runs` |
+| 2025-12-05   | `b00b431c4`     | `fix: Support RFC5987 Content-Disposition for unicode filenames` |
 
 Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças restantes vêm de customizações locais (branding, parser, etc.), proxy custom e dos commits novos do upstream posteriores à data registrada.
 
@@ -25,6 +25,25 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
 - `fe800927b` - mock image gen (não necessário - usamos API real)
 
 > **Como atualizar esta tabela:** após concluir um sync, substitua a linha por `HEAD` do `upstream/main` que acabou de ser integrado.
+
+## Progresso em 2025-12-05
+
+### Bloco aplicado — unicode filenames + notifications fix (b00b431c4, ce756c103)
+- **Upstream commits absorvidos**: `b00b431c4` (RFC5987 Content-Disposition), `ce756c103` (notifications migration fix)
+- **Mudanças backend**:
+  - `google_docs_api.py`, `google_slides_api.py`: Parse de Content-Disposition com formato RFC5987
+  - `html_to_docx_router.py`, `html_to_pdf_router.py`, `html_to_pptx_router.py`: Gera header com RFC5987
+  - `presentations_api.py`: Gera header com RFC5987
+  - `sb_presentation_tool.py`: Parse de Content-Disposition com formato RFC5987
+  - `migrations/20251126075301_notifications.sql`: Fix `extensions.uuid_generate_v4()`
+- **Benefício**: Nomes de arquivos com caracteres especiais (acentos, unicode) funcionam corretamente na conversão HTML→DOCX/PPTX/PDF
+
+### Bloco aplicado — ProphetLoader CSS animation (custom)
+- **Mudanças frontend**:
+  - `prophet-loader.tsx`: Novo componente com animação CSS (line-drawing → fill → pulse → fade)
+  - `milo-loader.tsx`: Re-exporta ProphetLoader como KortixLoader
+  - Arquivos que usam loader atualizados para importar de `prophet-loader.tsx`
+- **Benefício**: Menor bundle (sem lottie-react), animação branded Prophet
 
 ## Progresso em 2025-12-04
 
