@@ -45,6 +45,20 @@ Tudo até o commit acima já foi incorporado no `origin/main`. As diferenças re
   - Arquivos que usam loader atualizados para importar de `prophet-loader.tsx`
 - **Benefício**: Menor bundle (sem lottie-react), animação branded Prophet
 
+### Bloco aplicado — useAgentStream performance (partial cherry-pick from 587da4d1f)
+- **Upstream commit**: `587da4d1f` (mega commit - só extraímos o fix de performance)
+- **Mudanças frontend**:
+  - `useAgentStream.ts`: Callbacks armazenados em ref para evitar re-criação de handlers
+  - Adicionado `callbacksRef` e `toolCallRef` para referências estáveis
+  - Removidas dependências de `callbacks` nos `useCallback` para funções estáveis
+  - `setToolCall` wrapped em `React.startTransition` para updates não-urgentes
+- **Benefício**: Menos re-renders durante streaming = UI mais fluida
+- **Não aplicado do 587da4d1f**:
+  - Kortix Computer (nova UI de file browser) - muito invasivo, aguardando estabilização
+  - PPTX viewer - depende da nova arquitetura
+  - Unified markdown - depende da nova arquitetura
+  - `alertSubtitle` no pricing modal - feature cosmética, não essencial
+
 ## Progresso em 2025-12-04
 
 ### Bloco aplicado — model selection for triggers (b50c22f9f)
