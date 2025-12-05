@@ -485,6 +485,15 @@ Manter este arquivo atualizado evita dúvidas sobre “até onde já sincronizam
   - `frontend/src/components/thread/preview-renderers/html-renderer.tsx` - **Retry automático** com exponential backoff (15 tentativas, 1s→10s) e feedback visual
   - **Sem isso**: Landing pages criadas pelo agente dão erro ao abrir thread antiga (sandbox dormindo), funcionando apenas após F5
 
+- **🆕 ProphetLoader - CSS Loading Animation (Prophet-only)**: Substituímos a animação Lottie do Kortix por uma animação CSS pura com o logo Prophet. **Arquivos customizados**:
+  - `frontend/src/components/ui/prophet-loader.tsx` - Novo componente com animação CSS (line-drawing → fill → pulse → fade)
+  - `frontend/src/components/ui/milo-loader.tsx` - Re-exporta `ProphetLoader` como `KortixLoader` (backwards compatibility)
+  - `frontend/src/components/thread/chat-input/chat-input.tsx` - Usa `ProphetLoader`
+  - `frontend/src/app/(dashboard)/model-pricing/page.tsx` - Usa `ProphetLoader`
+  - `frontend/src/app/setting-up/page.tsx` - Usa `ProphetLoader` (lazy loaded)
+  - **Arquivos preservados mas não usados**: `kortix-loader.tsx`, `loading-white.json`, `loading-black.json`
+  - **Benefícios**: Menor bundle (sem lib Lottie), animação branded com logo Prophet, CSS customizável
+
 ## ⚠️ Checklist OBRIGATÓRIO após cada sync
 
 > **IMPORTANTE**: O upstream usa `kortix.com`, `suna.so` e outros domínios. Após cada sync, SEMPRE verificar:
@@ -534,6 +543,17 @@ task_url = f"https://www.prophet.build/projects/{project_id}/thread/{thread_id}"
 
 ### 6. Auto-continue Limit (`run_agent_background.py`)
 Estamos usando os valores padrão do upstream (25 auto-continues) para permitir que o agente complete tarefas longas.
+
+### 7. ProphetLoader (NÃO usar kortix-loader)
+Verificar se imports apontam para `prophet-loader.tsx`:
+```typescript
+// Certo:
+import { ProphetLoader } from '@/components/ui/prophet-loader';
+import { KortixLoader } from '@/components/ui/milo-loader'; // re-export
+
+// Errado:
+import { KortixLoader } from '@/components/ui/kortix-loader';
+```
 
 Ao aplicar diffs do upstream, revise esses arquivos primeiro para evitar sobrescrever personalizações do produto Prophet.
 
