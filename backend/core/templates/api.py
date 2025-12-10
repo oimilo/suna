@@ -375,8 +375,8 @@ class MarketplaceTemplatesResponse(BaseModel):
     templates: List[TemplateResponse]
     pagination: MarketplacePaginationInfo
 
-@router.get("/kortix-all", response_model=MarketplaceTemplatesResponse)
-async def get_all_kortix_templates(
+@router.get("/prophet-all", response_model=MarketplaceTemplatesResponse)
+async def get_all_prophet_templates(
     request: Request = None
 ):
     try:

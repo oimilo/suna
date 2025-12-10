@@ -498,10 +498,10 @@ export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error('You must be logged in to view Kortix templates');
+        throw new Error('You must be logged in to view templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/kortix-all`, {
+      const response = await fetch(`${API_URL}/templates/prophet-all`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

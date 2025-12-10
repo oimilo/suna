@@ -548,12 +548,12 @@ export function RevenueCatPricingSection({
         </AnimatedPressable>
 
         <View className="flex-row justify-center mt-6 gap-6 mb-2">
-          <Pressable onPress={() => Linking.openURL('https://kortix.ai/privacy')}>
+          <Pressable onPress={() => Linking.openURL('https://prophet.build/legal?tab=privacy')}>
             <Text className="text-xs text-muted-foreground/70 font-roobert-medium underline">
               Privacy Policy
             </Text>
           </Pressable>
-          <Pressable onPress={() => Linking.openURL('https://kortix.ai/terms')}>
+          <Pressable onPress={() => Linking.openURL('https://prophet.build/legal?tab=terms')}>
             <Text className="text-xs text-muted-foreground/70 font-roobert-medium underline">
               Terms of Service
             </Text>
