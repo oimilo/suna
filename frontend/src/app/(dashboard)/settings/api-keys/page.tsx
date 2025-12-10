@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Key, Plus, Trash2, Copy, Shield, ExternalLink } from 'lucide-react';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo'; // [PROPHET CUSTOM] Keep component name but displays Prophet logo
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -211,7 +211,7 @@ export default function APIKeysPage() {
             <h1 className="text-2xl font-medium">API Keys</h1>
           </div>
           <p className="text-muted-foreground">
-            Manage your API keys for programmatic access to Kortix
+            Manage your API keys for programmatic access to Prophet
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export default function APIKeysPage() {
               <div className="flex-1 space-y-3">
                 <div>
                   <h3 className="text-base font-semibold text-blue-900 dark:text-blue-100 mb-1 flex items-center gap-2">
-                    Kortix API
+                    Prophet API
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
                       Beta
                     </Badge>
@@ -237,7 +237,7 @@ export default function APIKeysPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <a
-                    href="https://api.prophet.build/docs"
+                    href="https://app.prophet.build/v1/docs"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
@@ -389,7 +389,7 @@ export default function APIKeysPage() {
               <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No API keys yet</h3>
               <p className="text-muted-foreground mb-4">
-                Create your first API key pair to start using the Kortix API
+                Create your first API key pair to start using the Prophet API
                 programmatically. Each key includes a public identifier and
                 secret for secure authentication.
               </p>
