@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { isLocalMode } from '@/lib/config';
 import { toast } from 'sonner';
+import GitHubSignIn from '@/components/GithubSignIn';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { FloatingPills } from './floating-pills';
@@ -359,6 +360,7 @@ export function HeroSection() {
           {/* OAuth Sign In */}
           <div className="w-full">
             <GoogleSignIn returnUrl="/dashboard" />
+            <GitHubSignIn returnUrl="/dashboard" />
           </div>
 
           {/* Divider */}

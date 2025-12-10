@@ -2,7 +2,6 @@
 'use client';
 
 import { Icons } from '@/components/home/icons';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import {
   Reasoning,
   ReasoningContent,
@@ -85,7 +84,7 @@ export function FirstBentoAnimation() {
         </div>
         <div className="flex items-start gap-2">
           <div className="flex items-center bg-background rounded-full size-10 flex-shrink-0 justify-center shadow-[0_0_10px_rgba(0,0,0,0.05)] border border-border">
-            <KortixLogo size={16} />
+            <Icons.logo className="size-4" />
           </div>
 
           <div className="relative">
