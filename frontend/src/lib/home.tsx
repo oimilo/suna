@@ -20,10 +20,10 @@ export const siteConfig = {
   nav: {
     links: [
       { id: 1, name: 'Início', href: '#hero' },
-      { id: 2, name: 'Como Funciona', href: '#process' },
-      { id: 4, name: 'Open Source', href: '#open-source' },
+      { id: 2, name: 'Como Funciona', href: '#how-it-works' },
+      { id: 3, name: 'Integrações', href: '#integrations' },
+      { id: 4, name: 'Recursos', href: '#features' },
       { id: 5, name: 'Preços', href: '#pricing' },
-      { id: 6, name: 'Enterprise', href: '/enterprise' },
     ],
   },
   hero: {
@@ -168,13 +168,7 @@ export const siteConfig = {
     {
       title: 'Recursos',
       links: [
-        {
-          id: 5,
-          title: 'Documentação',
-          url: 'https://github.com/oimilo/prophet',
-        },
         { id: 7, title: 'Discord', url: 'https://discord.gg/Py6pCBUUPw' },
-        { id: 8, title: 'GitHub', url: 'https://github.com/oimilo/prophet' },
       ],
     },
     {
@@ -189,11 +183,6 @@ export const siteConfig = {
           id: 10,
           title: 'Termos de Serviço',
           url: 'https://prophet.build/legal?tab=terms',
-        },
-        {
-          id: 11,
-          title: 'Licença Apache 2.0',
-          url: 'https://github.com/oimilo/prophet/blob/main/LICENSE',
         },
       ],
     },
