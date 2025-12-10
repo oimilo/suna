@@ -45,29 +45,44 @@ def initialize():
     retry_on_timeout = os.getenv("REDIS_RETRY_ON_TIMEOUT", "false").lower() == "true"
 
     auth_info = f"user={config['username']} " if config['username'] else ""
+    ssl_info = " (SSL)" if config.get('ssl') else ""
     logger.info(
         f"Initializing WORKER Redis pool to {config['host']}:{config['port']} "
         f"{auth_info}with max {max_connections} connections, "
-        f"{max_concurrent_ops} concurrent operations"
+        f"{max_concurrent_ops} concurrent operations{ssl_info}"
     )
 
-    pool_kwargs = {
-        "host": config["host"],
-        "port": config["port"],
-        "password": config["password"],
-        "decode_responses": True,
-        "socket_timeout": socket_timeout,
-        "socket_connect_timeout": connect_timeout,
-        "socket_keepalive": True,
-        "retry_on_timeout": retry_on_timeout,
-        "health_check_interval": 30,
-        "max_connections": max_connections,
-    }
+    # [PROPHET CUSTOM] Use from_url for SSL connections (DigitalOcean Valkey)
+    if config.get('ssl') and config.get('url'):
+        pool = redis_lib.ConnectionPool.from_url(
+            config['url'],
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+        )
+    else:
+        pool_kwargs = {
+            "host": config["host"],
+            "port": config["port"],
+            "password": config["password"],
+            "decode_responses": True,
+            "socket_timeout": socket_timeout,
+            "socket_connect_timeout": connect_timeout,
+            "socket_keepalive": True,
+            "retry_on_timeout": retry_on_timeout,
+            "health_check_interval": 30,
+            "max_connections": max_connections,
+        }
+        
+        if config["username"]:
+            pool_kwargs["username"] = config["username"]
+        
+        pool = redis_lib.ConnectionPool(**pool_kwargs)
     
-    if config["username"]:
-        pool_kwargs["username"] = config["username"]
-    
-    pool = redis_lib.ConnectionPool(**pool_kwargs)
     client = redis_lib.Redis(connection_pool=pool)
     
     _operation_semaphore = asyncio.Semaphore(max_concurrent_ops)
