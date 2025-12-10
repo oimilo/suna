@@ -60,6 +60,7 @@ def initialize():
 
     # Get Redis configuration
     config = get_redis_config()
+    redis_url = config["url"]
     redis_host = config["host"]
     redis_port = config["port"]
     redis_password = config["password"]
@@ -78,30 +79,39 @@ def initialize():
     ssl_info = " (SSL)" if redis_ssl else ""
     logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}with max {max_connections} connections{ssl_info}")
 
-    # Create connection pool with production-optimized settings
-    pool_kwargs = {
-        "host": redis_host,
-        "port": redis_port,
-        "password": redis_password,
-        "decode_responses": True,
-        "socket_timeout": socket_timeout,
-        "socket_connect_timeout": connect_timeout,
-        "socket_keepalive": True,
-        "retry_on_timeout": retry_on_timeout,
-        "health_check_interval": 30,
-        "max_connections": max_connections,
-    }
-    
-    # Add username if provided (required for Redis Cloud)
-    if redis_username:
-        pool_kwargs["username"] = redis_username
-    
-    # [PROPHET CUSTOM] Add SSL for Upstash/Redis Cloud
-    if redis_ssl:
-        pool_kwargs["ssl"] = True
-        pool_kwargs["ssl_cert_reqs"] = None  # Don't require cert verification for cloud Redis
-    
-    pool = redis.ConnectionPool(**pool_kwargs)
+    # [PROPHET CUSTOM] Use from_url for SSL connections (Upstash/Redis Cloud)
+    # The rediss:// protocol in the URL handles SSL automatically
+    if redis_ssl and redis_url:
+        pool = redis.ConnectionPool.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=connect_timeout,
+            socket_keepalive=True,
+            retry_on_timeout=retry_on_timeout,
+            health_check_interval=30,
+            max_connections=max_connections,
+        )
+    else:
+        # Create connection pool with production-optimized settings (no SSL)
+        pool_kwargs = {
+            "host": redis_host,
+            "port": redis_port,
+            "password": redis_password,
+            "decode_responses": True,
+            "socket_timeout": socket_timeout,
+            "socket_connect_timeout": connect_timeout,
+            "socket_keepalive": True,
+            "retry_on_timeout": retry_on_timeout,
+            "health_check_interval": 30,
+            "max_connections": max_connections,
+        }
+        
+        # Add username if provided (required for Redis Cloud)
+        if redis_username:
+            pool_kwargs["username"] = redis_username
+        
+        pool = redis.ConnectionPool(**pool_kwargs)
 
     # Create Redis client from connection pool
     client = redis.Redis(connection_pool=pool)
