@@ -45,7 +45,7 @@
     },
     "general": {
       "title": "Configurações do Perfil",
-      "description": "Gerencia as informações da tua conta",
+      "description": "Gerencie as informações da sua conta",
       "profilePicture": {
         "title": "Foto de Perfil",
         "upload": "Enviar avatar",
@@ -56,47 +56,47 @@
       },
       "name": "Nome",
       "email": "Email",
-      "namePlaceholder": "Digite teu nome",
+      "namePlaceholder": "Digite seu nome",
       "emailCannotChange": "Email não pode ser alterado daqui",
       "saveChanges": "Salvar Mudanças",
       "profileUpdated": "Perfil atualizado com sucesso",
       "profileUpdateFailed": "Falha ao atualizar perfil",
       "language": {
         "title": "Idioma",
-        "description": "Escolhe teu idioma preferido",
+        "description": "Escolha seu idioma preferido",
         "current": "Idioma Atual",
         "select": "Selecionar Idioma"
       },
       "deleteAccount": {
         "title": "Excluir Conta",
-        "description": "Remove permanentemente tua conta e todos os dados associados",
+        "description": "Remove permanentemente sua conta e todos os dados associados",
         "button": "Excluir Conta",
         "scheduled": "Exclusão Agendada",
-        "scheduledDescription": "Tua conta será permanentemente excluída em {date}.",
-        "canCancel": "Podes cancelar este pedido a qualquer momento antes da data de exclusão.",
+        "scheduledDescription": "Sua conta será permanentemente excluída em {date}.",
+        "canCancel": "Você pode cancelar este pedido a qualquer momento antes da data de exclusão.",
         "cancelButton": "Cancelar Pedido de Exclusão",
         "dialogTitle": "Excluir Conta",
         "warning": "Esta ação não pode ser desfeita após 30 dias",
-        "whenDelete": "Quando excluis tua conta:",
-        "agentsDeleted": "Todos os teus agentes e versões de agentes serão excluídos",
-        "threadsDeleted": "Todas as tuas threads e conversas serão excluídas",
-        "credentialsRemoved": "Todas as tuas credenciais e integrações serão removidas",
-        "subscriptionCancelled": "Tua assinatura será cancelada",
+        "whenDelete": "Quando exclui sua conta:",
+        "agentsDeleted": "Todos os seus agentes e versões de agentes serão excluídos",
+        "threadsDeleted": "Todas as suas threads e conversas serão excluídas",
+        "credentialsRemoved": "Todas as suas credenciais e integrações serão removidas",
+        "subscriptionCancelled": "Sua assinatura será cancelada",
         "billingRemoved": "Todos os dados de cobrança serão removidos",
-        "scheduled30Days": "Tua conta será agendada para exclusão em 30 dias",
-        "gracePeriod": "Podes cancelar este pedido a qualquer momento durante o período de carência de 30 dias. Após 30 dias, todos os teus dados serão permanentemente excluídos e não poderão ser recuperados.",
-        "chooseDeletionType": "Escolhe o tipo de exclusão:",
+        "scheduled30Days": "Sua conta será agendada para exclusão em 30 dias",
+        "gracePeriod": "Você pode cancelar este pedido a qualquer momento durante o período de carência de 30 dias. Após 30 dias, todos os seus dados serão permanentemente excluídos e não poderão ser recuperados.",
+        "chooseDeletionType": "Escolha o tipo de exclusão:",
         "gracePeriodOption": "Período de Carência de 30 Dias",
-        "gracePeriodDescription": "Tua conta será agendada para exclusão em 30 dias. Podes cancelar este pedido a qualquer momento durante o período de carência.",
+        "gracePeriodDescription": "Sua conta será agendada para exclusão em 30 dias. Você pode cancelar este pedido a qualquer momento durante o período de carência.",
         "immediateOption": "Exclusão Imediata",
-        "immediateDescription": "Tua conta e todos os dados serão permanentemente excluídos imediatamente. Esta ação não pode ser desfeita.",
+        "immediateDescription": "Sua conta e todos os dados serão permanentemente excluídos imediatamente. Esta ação não pode ser desfeita.",
         "warningImmediate": "Esta ação não pode ser desfeita",
         "warningGracePeriod": "Esta ação não pode ser desfeita após 30 dias",
         "confirmText": "Digite excluir para confirmar",
         "confirmPlaceholder": "delete",
         "keepAccount": "Manter Conta",
         "cancelDeletionTitle": "Cancelar Exclusão de Conta",
-        "cancelDeletionDescription": "Tens certeza que queres cancelar a exclusão da tua conta? Tua conta e todos os dados serão preservados.",
+        "cancelDeletionDescription": "Você tem certeza que quer cancelar a exclusão da sua conta? Sua conta e todos os dados serão preservados.",
         "cancelDeletion": "Cancelar Exclusão"
       }
     },
@@ -191,8 +191,8 @@
     }
   },
   "triggers": {
-    "getStarted": "Começa adicionando um trigger",
-    "getStartedDescription": "Agenda um trigger para automatizar ações e receber lembretes quando completarem.",
+    "getStarted": "Comece adicionando um trigger",
+    "getStartedDescription": "Agende um trigger para automatizar ações e receber lembretes quando completarem.",
     "search": "Buscar",
     "scheduledTrigger": "Trigger Agendado",
     "eventBasedTrigger": "Trigger Baseado em Evento",
@@ -210,7 +210,7 @@
     "enable": "Ativar",
     "disable": "Desativar",
     "deleteTask": "Excluir Tarefa",
-    "deleteTaskDescription": "Tens certeza que queres excluir \"{name}\"? Esta ação não pode ser desfeita e vai parar todas as execuções automáticas desta tarefa.",
+    "deleteTaskDescription": "Você tem certeza que quer excluir \"{name}\"? Esta ação não pode ser desfeita e vai parar todas as execuções automáticas desta tarefa.",
     "taskEnabled": "Tarefa ativada",
     "taskDisabled": "Tarefa desativada",
     "toggleTaskFailed": "Falha ao alternar tarefa",
@@ -218,13 +218,13 @@
     "deleteTaskFailed": "Falha ao excluir tarefa",
     "taskUpdatedSuccess": "Tarefa atualizada com sucesso",
     "updateTaskFailed": "Falha ao atualizar tarefa",
-    "pleaseSelectAgent": "Por favor seleciona um Worker",
+    "pleaseSelectAgent": "Por favor selecione um Worker",
     "defaultScheduledTriggerName": "Trigger Agendado",
     "defaultScheduledTriggerDescription": "Trigger agendado automaticamente",
     "scheduleTriggerUpdated": "Trigger agendado atualizado com sucesso",
     "scheduleTriggerCreated": "Trigger agendado criado com sucesso",
-    "upgradeForMoreScheduledTriggers": "Melhora para criar mais triggers agendados",
-    "upgradeForMoreAppTriggers": "Melhora para criar mais triggers baseados em app",
+    "upgradeForMoreScheduledTriggers": "Melhore para criar mais triggers agendados",
+    "upgradeForMoreAppTriggers": "Melhore para criar mais triggers baseados em app",
     "updateScheduleTriggerFailed": "Falha ao atualizar trigger agendado",
     "createScheduleTriggerFailed": "Falha ao criar trigger agendado",
     "editScheduledTask": "Editar Tarefa Agendada",
@@ -232,7 +232,7 @@
     "editAppBasedTask": "Editar Tarefa Baseada em App",
     "createAppBasedTask": "Criar Tarefa Baseada em App",
     "updateAgentForTask": "Atualizar o Worker para esta tarefa",
-    "selectAgentForTask": "Primeiro, seleciona qual Worker deve lidar com esta tarefa",
+    "selectAgentForTask": "Primeiro, selecione qual Worker deve lidar com esta tarefa",
     "createNew": "Criar novo",
     "notConfigured": "Não configurado",
     "every15Minutes": "A cada 15 minutos",
@@ -306,16 +306,16 @@
   "dashboard": {
     "title": "Painel",
     "welcome": "Bem-vindo",
-    "whatWouldYouLike": "O que tu queres fazer?",
-    "describeWhatYouNeed": "Descreve com o que precisas de ajuda...",
+    "whatWouldYouLike": "O que você quer fazer?",
+    "describeWhatYouNeed": "Descreva com o que precisa de ajuda...",
     "usageLimits": "Limites de Uso",
     "threads": "Threads",
     "customWorkers": "Workers Personalizados",
     "scheduledTriggers": "Triggers Agendados",
     "appTriggers": "Triggers de App",
-    "limitsExceeded": "Atingiste teu limite de chats. Melhora teu plano para criar mais chats.",
+    "limitsExceeded": "Você atingiu seu limite de chats. Melhore seu plano para criar mais chats.",
     "agentInitiatedSuccessfully": "Worker iniciado com sucesso",
-    "aiAssistantReady": "Teu assistente de IA está pronto para ajudar",
+    "aiAssistantReady": "Seu assistente de IA está pronto para ajudar",
     "greetings": {
       "morning": [
         "Bom dia! O que temos para hoje?",
@@ -333,19 +333,19 @@
       ],
       "random": [
         "Olha quem voltou!",
-        "E aí! O que o Prophet pode fazer por ti?",
-        "O que queres realizar hoje?",
+        "E aí! O que o Prophet pode fazer por você?",
+        "O que quer realizar hoje?",
         "Vamos criar algo incrível",
-        "Pronto quando quiseres!",
+        "Pronto quando quiser!",
         "O que está rolando?",
         "Às ordens! Qual é a missão?",
         "Vamos fazer mágica",
         "Qual desafio vamos encarar?",
-        "Teus desejos são ordens",
+        "Seus desejos são ordens",
         "Qual é o plano?",
         "Aperta o cinto! Para onde vamos?",
         "Mais um dia, mais um projeto",
-        "O que tens em mente?",
+        "O que você tem em mente?",
         "Bora lá!"
       ]
     }
@@ -363,7 +363,7 @@
     "chatDescription": "Conversa simples de ida e volta",
     "sampleAnswers": "Respostas de exemplo",
     "samplePrompts": "Prompts de exemplo",
-    "waitingForUserResponse": "Prophet continuará trabalhando de forma autônoma após tua resposta.",
+    "waitingForUserResponse": "Prophet continuará trabalhando de forma autônoma após sua resposta.",
     "taskCompleted": "Tarefa concluída",
     "uploadingFiles": "Enviando {count} arquivo{plural}...",
     "uploadingFilesOne": "Enviando {count} arquivo...",
@@ -385,9 +385,9 @@
     "toolIsRunning": "Ferramenta está executando",
     "toolCurrentlyExecuting": "{toolName} está executando no momento. Resultados aparecerão aqui quando completo.",
     "rateThisResult": "Avaliar este resultado",
-    "feedbackHelpsImprove": "Teu feedback nos ajuda a melhorar",
+    "feedbackHelpsImprove": "Seu feedback nos ajuda a melhorar",
     "additionalFeedbackOptional": "Feedback adicional (opcional)",
-    "helpProphetImprove": "Ajuda Prophet a melhorar com teu feedback",
+    "helpProphetImprove": "Ajude o Prophet a melhorar com seu feedback",
     "submit": "Enviar",
     "submitting": "Enviando...",
     "feedbackSubmittedSuccess": "Feedback enviado com sucesso",
@@ -403,14 +403,14 @@
     "description": "Descrição",
     "model": "Modelo",
     "systemPrompt": "Prompt do Sistema",
-    "systemPromptPlaceholder": "Define como teu Worker deve se comportar...",
-    "customizeIcon": "Clica para personalizar ícone do Worker"
+    "systemPromptPlaceholder": "Define como seu Worker deve se comportar...",
+    "customizeIcon": "Clique para personalizar ícone do Worker"
   },
   "home": {
-    "heroPlaceholder": "Descreve a tarefa que queres que teu Worker complete..."
+    "heroPlaceholder": "Descreva a tarefa que quer que seu Worker complete..."
   },
   "showcase": {
-    "title": "Prophet: Teu Worker de IA Autônomo",
+    "title": "Prophet: Seu Worker de IA Autônomo",
     "subtitle": "Construído para tarefas complexas, projetado para tudo. O assistente de IA definitivo que lida com tudo—de solicitações simples a projetos mega-complexos.",
     "tryItOut": "Experimentar",
     "kortixComputer": "Prophet Computer",
@@ -418,7 +418,7 @@
     "workers": {
       "images": {
         "title": "Imagens",
-        "description": "Cria imagens sob demanda. De fotos de produtos a gráficos para redes sociais até ilustrações completas. Ajusta estilo, iluminação, cores e layout, ou refina visuais existentes com edições rápidas e retoques.",
+        "description": "Crie imagens sob demanda. De fotos de produtos a gráficos para redes sociais até ilustrações completas. Ajusta estilo, iluminação, cores e layout, ou refina visuais existentes com edições rápidas e retoques.",
         "capabilities": {
           "0": "Gerar fotos de produtos",
           "1": "Criar gráficos para redes sociais",
@@ -432,7 +432,7 @@
       },
       "slides": {
         "title": "Apresentações",
-        "description": "Cria apresentações impressionantes instantaneamente. De pitch decks a relatórios até materiais de treinamento. Ajusta temas, layouts, estrutura de conteúdo ou refina apresentações existentes com edições e atualizações rápidas.",
+        "description": "Crie apresentações impressionantes instantaneamente. De pitch decks a relatórios até materiais de treinamento. Ajusta temas, layouts, estrutura de conteúdo ou refina apresentações existentes com edições e atualizações rápidas.",
         "capabilities": {
           "0": "Pitch decks",
           "1": "Material de treinamento",
@@ -492,7 +492,7 @@
     "title": "Threads",
     "newThread": "Nova Thread",
     "sendMessage": "Enviar mensagem",
-    "placeholder": "Digite tua mensagem..."
+    "placeholder": "Digite sua mensagem..."
   },
   "billing": {
     "title": "Faturação & Assinatura",
@@ -510,32 +510,32 @@
     "scheduledBadge": "Agendado",
     "loading": "Carregando informações de cobrança...",
     "subscriptionChangeScheduled": "Mudança de assinatura agendada",
-    "planWillChangeOn": "Teu plano mudará em {date}.",
+    "planWillChangeOn": "Seu plano mudará em {date}.",
     "failedToInitiateSubscription": "Falha ao iniciar assinatura. Tenta de novo.",
     "subscriptionUpgraded": "Assinatura melhorada de {currentPrice} para {newPrice}",
     "subscriptionUpdated": "Assinatura atualizada com sucesso",
-    "cannotDowngradeDuringCommitment": "Não podes rebaixar durante o período de compromisso",
-    "alreadyOnThisPlan": "Já estás neste plano.",
+    "cannotDowngradeDuringCommitment": "Não pode fazer downgrade durante o período de compromisso",
+    "alreadyOnThisPlan": "Já está neste plano.",
     "localModeMessage": "Executando em modo de desenvolvimento local - recursos de cobrança desabilitados",
     "creditsExplainedPage": {
       "title": "Créditos Explicados",
-      "subtitle": "Tudo o que precisas saber sobre como os créditos funcionam no Prophet",
+      "subtitle": "Tudo o que precisa saber sobre como os créditos funcionam no Prophet",
       "understandingCredits": {
         "title": "Entendendo Créditos",
-        "description": "Os créditos servem como moeda universal do Prophet para operações da plataforma. Cada ação que teus agentes de IA executam—de analisar dados a gerar código—consome créditos com base na complexidade da tarefa e nos recursos necessários."
+        "description": "Os créditos servem como moeda universal do Prophet para operações da plataforma. Cada ação que seus agentes de IA executam—de analisar dados a gerar código—consome créditos com base na complexidade da tarefa e nos recursos necessários."
       },
       "howCreditsWork": {
         "title": "Como os Créditos Funcionam",
-        "description": "Os créditos são consumidos com base nos recursos que teus agentes de IA usam:",
+        "description": "Os créditos são consumidos com base nos recursos que seus agentes de IA usam:",
         "aiModelUsage": {
           "title": "Uso do Modelo de IA",
           "description": "O principal fator de consumo de créditos",
-          "content": "Diferentes modelos de IA têm custos diferentes com base em suas capacidades e uso de tokens. Os créditos são consumidos para tokens de entrada (teus prompts e contexto), tokens de saída (respostas do agente) e variam por nível do modelo (Claude, GPT, etc.)."
+          "content": "Diferentes modelos de IA têm custos diferentes com base em suas capacidades e uso de tokens. Os créditos são consumidos para tokens de entrada (seus prompts e contexto), tokens de saída (respostas do agente) e variam por nível do modelo (Claude, GPT, etc.)."
         },
         "pricingModel": {
           "title": "Modelo de Preços",
           "description": "Margem de 20% sobre os custos do modelo de IA",
-          "content": "Aplicamos uma margem de 20% em todos os custos de API e modelo para cobrir infraestrutura da plataforma, segurança e desenvolvimento contínuo. Este preço transparente garante que saibas exatamente pelo que estás pagando."
+          "content": "Aplicamos uma margem de 20% em todos os custos de API e modelo para cobrir infraestrutura da plataforma, segurança e desenvolvimento contínuo. Este preço transparente garante que saibas exatamente pelo que está pagando."
         }
       },
       "gettingMoreCredits": {
@@ -543,7 +543,7 @@
         "description": "Existem várias formas de obter créditos no Prophet:",
         "monthlySubscription": {
           "title": "Créditos de Assinatura Mensal",
-          "description": "Incluídos no teu plano pago e renovados automaticamente a cada mês. Estes são créditos com expiração."
+          "description": "Incluídos no seu plano pago e renovados automaticamente a cada mês. Estes são créditos com expiração."
         },
         "topUpCredits": {
           "title": "Créditos de Recarga",
@@ -560,20 +560,20 @@
       },
       "typesOfCredits": {
         "title": "Tipos de Créditos",
-        "description": "O Prophet usa dois tipos de créditos para te dar flexibilidade em como geres teu uso:",
+        "description": "O Prophet usa dois tipos de créditos para te dar flexibilidade em como gerencia seu uso:",
         "expiringCredits": {
           "title": "Créditos com Expiração",
           "description": "Créditos de assinatura mensal",
-          "content": "Estes créditos estão incluídos na tua assinatura paga e são renovados automaticamente a cada mês na data da tua assinatura. Eles expiram no final de cada ciclo de cobrança e são sempre consumidos primeiro antes de quaisquer créditos sem expiração."
+          "content": "Estes créditos estão incluídos na sua assinatura paga e são renovados automaticamente a cada mês na data da sua assinatura. Eles expiram no final de cada ciclo de cobrança e são sempre consumidos primeiro antes de quaisquer créditos sem expiração."
         },
         "nonExpiringCredits": {
           "title": "Créditos sem Expiração",
           "description": "Créditos permanentes que nunca expiram",
-          "content": "Estes créditos nunca expiram e são transferidos de mês para mês. Eles incluem compras de recarga, reembolsos e concessões promocionais. Os créditos sem expiração são usados apenas após os teus créditos com expiração serem esgotados."
+          "content": "Estes créditos nunca expiram e são transferidos de mês para mês. Eles incluem compras de recarga, reembolsos e concessões promocionais. Os créditos sem expiração são usados apenas após os seus créditos com expiração serem esgotados."
         },
         "creditPriority": {
           "title": "Prioridade de Créditos:",
-          "description": "Quando usas o Prophet, os créditos com expiração são consumidos primeiro. Apenas após os teus créditos com expiração se esgotarem, os créditos sem expiração serão usados."
+          "description": "Quando usa o Prophet, os créditos com expiração são consumidos primeiro. Apenas após os seus créditos com expiração se esgotarem, os créditos sem expiração serão usados."
         }
       }
     },
@@ -587,7 +587,7 @@
     "lastUsed": "Último Uso",
     "creditsUsed": "Créditos Usados",
     "creditTransactions": "Transações de Crédito",
-    "loadingTransactionHistory": "Carregando teu histórico de transações...",
+    "loadingTransactionHistory": "Carregando seu histórico de transações...",
     "monthly": "Mensal",
     "yearly": "Anual",
     "discount": "15% de desconto",
@@ -596,11 +596,11 @@
     "downgradePending": "Rebaixamento Pendente",
     "downgrade": "Rebaixar",
     "switchToLegacyYearly": "Mudar para Anual Legado",
-    "confirmDowngradeTitle": "Tens certeza que queres rebaixar?",
-    "confirmDowngradeDescription": "Estás prestes a rebaixar para {planName}. Esta mudança entrará em vigor no final do teu período de faturamento atual.",
+    "confirmDowngradeTitle": "Você tem certeza que quer rebaixar?",
+    "confirmDowngradeDescription": "Estás prestes a fazer downgrade para {planName}. Esta mudança entrará em vigor no final do seu período de faturamento atual.",
     "confirmDowngrade": "Sim, Rebaixar",
-    "pickPlan": "Escolhe o plano que funciona para ti.",
-    "reachedLimit": "Atingiste teus limites.",
+    "pickPlan": "Escolha o plano que funciona para ti.",
+    "reachedLimit": "Você atingiu seus limites.",
     "projectLimit": "Limite de Projeto ({current}/{limit})",
     "threadLimit": "Limite de Thread ({current}/{limit})",
     "workerLimit": "Limite de Worker ({current}/{limit})",
@@ -645,18 +645,18 @@
     }
   },
   "auth": {
-    "haveReferralCode": "Tens um código de indicação?",
+    "haveReferralCode": "Você tem um código de indicação?",
     "referralCode": "Código de Indicação",
     "enterCode": "Inserir código",
-    "logIntoAccount": "Entra na tua conta",
+    "logIntoAccount": "Entre na sua conta",
     "createAccount": "Criar conta",
-    "signInOrCreateAccount": "Entra ou cria a tua conta Prophet",
+    "signInOrCreateAccount": "Entre ou cria a sua conta Prophet",
     "continueWithGoogle": "Continuar com Google",
     "continueWithGitHub": "Continuar com GitHub",
     "orEmail": "ou email",
     "emailAddress": "Endereço de email",
     "password": "Senha",
-    "confirmPassword": "Confirma tua senha",
+    "confirmPassword": "Confirma sua senha",
     "signIn": "Entrar",
     "signUp": "Cadastrar",
     "signingIn": "Entrando...",
@@ -667,9 +667,9 @@
     "acceptPrivacyTerms": "Aceito a <privacyPolicy>Política de Privacidade</privacyPolicy> e os <termsOfService>Termos de Serviço</termsOfService>",
     "privacyPolicy": "Política de Privacidade",
     "termsOfService": "Termos de Serviço",
-    "checkYourEmail": "Confere teu email",
+    "checkYourEmail": "Confira seu email",
     "confirmationLinkSent": "Enviamos um link para",
-    "clickLinkToActivate": "Clica no link no email para ativar tua conta. Se não vires o email, confere a pasta de spam.",
+    "clickLinkToActivate": "Clique no link no email para ativar sua conta. Se não ver o email, confira a pasta de spam.",
     "returnToHome": "Voltar para home",
     "backToSignIn": "Voltar ao login",
     "resetPassword": "Redefinir senha",
@@ -677,22 +677,22 @@
     "sendResetLink": "Enviar link",
     "cancel": "Cancelar",
     "pleaseEnterValidEmail": "Por favor digite um endereço de email válido",
-    "signInFailed": "Falha ao entrar. Confere teus dados.",
+    "signInFailed": "Falha ao entrar. Confira seus dados.",
     "signUpFailed": "Cadastro falhou. Tenta de novo.",
     "sendMagicLink": "Enviar magic link",
     "sending": "Enviando...",
     "magicLinkSent": "Enviamos um magic link para",
-    "magicLinkDescription": "Clica no link no teu email para entrar. O link expirará em 1 hora.",
+    "magicLinkDescription": "Clique no link no seu email para entrar. O link expirará em 1 hora.",
     "magicLinkExplanation": "Vamos te enviar um link seguro para entrar. Não precisa de senha.",
     "magicLinkExpired": "Este link expirou",
-    "magicLinkExpiredDescription": "O magic link em que clicaste expirou. Os magic links expiram após 1 hora por razões de segurança.",
+    "magicLinkExpiredDescription": "O magic link em que clicou expirou. Os magic links expiram após 1 hora por razões de segurança.",
     "resendMagicLink": "Reenviar magic link",
     "resending": "A reenviar...",
-    "byContinuingYouAgree": "Ao continuar, concordas com a nossa <privacyPolicy>Política de Privacidade</privacyPolicy> e os nossos <termsOfService>Termos de Serviço</termsOfService>",
+    "byContinuingYouAgree": "Ao continuar, concorda com a nossa <privacyPolicy>Política de Privacidade</privacyPolicy> e os nossos <termsOfService>Termos de Serviço</termsOfService>",
     "openProvider": "Abrir {provider}",
-    "didntReceiveEmail": "Não recebeste o e-mail?",
+    "didntReceiveEmail": "Não recebeu o e-mail?",
     "resend": "Reenviar",
-    "alreadySignedIn": "Já tens sessão iniciada. Nenhuma ação necessária.",
+    "alreadySignedIn": "Já você tem sessão iniciada. Nenhuma ação necessária.",
     "goToDashboard": "Ir para o Painel"
   },
   "onboarding": {
@@ -793,26 +793,26 @@
   "agentRunLimit": {
     "gotIt": "Entendi",
     "parallelRunsLimitReached": "Limite de Execuções Paralelas Atingido",
-    "parallelRunsLimitDescription": "Atingiste o máximo de execuções paralelas de agentes permitidas.",
-    "needMoreParallelRuns": "Precisas de mais execuções paralelas?",
-    "upgradeDescription": "Melhora teu plano para executar múltiplos Workers simultaneamente e aumentar tua produtividade.",
+    "parallelRunsLimitDescription": "Você atingiu o máximo de execuções paralelas de agentes permitidas.",
+    "needMoreParallelRuns": "Você precisa de mais execuções paralelas?",
+    "upgradeDescription": "Melhore seu plano para executar múltiplos Workers simultaneamente e aumentar sua produtividade.",
     "upgradePlan": "Melhorar Plano",
     "currentlyRunningAgents": "Workers Atualmente Executando",
     "loadingThreads": "Carregando threads...",
     "foundRunningAgents": "Encontrados {count} Workers executando mas incapaz de carregar detalhes da thread.",
     "threadIds": "IDs de Thread: {ids}",
     "moreRunning": "+{count} executando",
-    "whatCanYouDo": "O que podes fazer?",
-    "stopAgentsHint": "Clica no botão parar para parar Workers executando",
+    "whatCanYouDo": "O que pode fazer?",
+    "stopAgentsHint": "Clique no botão parar para parar Workers executando",
     "waitForCompletion": "Espera um Worker completar automaticamente",
-    "upgradeYourPlan": "Melhora teu plano",
+    "upgradeYourPlan": "Melhore seu plano",
     "forMoreParallelRuns": "para mais execuções paralelas",
     "stopAgent": "Parar Worker",
     "stopThisAgent": "Parar este Worker",
     "openThread": "Abrir thread",
     "agentStoppedSuccessfully": "Worker parado com sucesso",
     "failedToStopAgent": "Falha ao parar Worker",
-    "upgradeToRunMore": "Melhora para executar mais Workers em paralelo"
+    "upgradeToRunMore": "Melhore para executar mais Workers em paralelo"
   },
   "errors": {
     "generic": "Ocorreu um erro",
@@ -832,13 +832,13 @@
   },
   "notifications": {
     "title": "Notificações",
-    "description": "Gerencia como recebes notificações",
+    "description": "Gerencie como recebes notificações",
     "preferences": "Preferências de Notificação",
     "channels": "Canais de Notificação",
     "emailNotifications": "Notificações por Email",
     "emailDescription": "Receber notificações por email",
     "pushNotifications": "Notificações Push",
-    "pushDescription": "Receber notificações push no teu dispositivo",
+    "pushDescription": "Receber notificações push no seu dispositivo",
     "inAppNotifications": "Notificações no App",
     "inAppDescription": "Ver notificações dentro do app",
     "deviceTokens": "Dispositivos Registrados",
@@ -851,12 +851,12 @@
   },
   "suna": {
     "samplePrompts": "Prompts de exemplo",
-    "chooseStyle": "Escolhe um estilo",
-    "chooseTemplate": "Escolhe um template",
-    "chooseOutputFormat": "Escolhe formato de saída",
+    "chooseStyle": "Escolha um estilo",
+    "chooseTemplate": "Escolha um template",
+    "chooseOutputFormat": "Escolha formato de saída",
     "preferredCharts": "Gráficos preferidos",
-    "whatWouldYouLike": "O que tu queres fazer?",
-    "describeTask": "Descreve a tarefa que queres que teu Worker complete...",
+    "whatWouldYouLike": "O que você quer fazer?",
+    "describeTask": "Descreva a tarefa que quer que seu Worker complete...",
     "modes": {
       "image": "Imagem",
       "slides": "Slides",
@@ -909,7 +909,7 @@
       },
       "portfolio": {
         "name": "Portfólio",
-        "description": "Mostra teu trabalho"
+        "description": "Mostra seu trabalho"
       },
       "textbook": {
         "name": "Livro Didático",
