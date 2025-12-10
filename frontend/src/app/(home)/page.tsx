@@ -8,9 +8,6 @@ import { HeroSection as NewHeroSection } from '@/components/home/hero-section';
 const ShowCaseSection = lazy(() => 
   import('@/components/home/showcase-section').then(mod => ({ default: mod.ShowCaseSection }))
 );
-const WordmarkFooter = lazy(() => 
-  import('@/components/home/wordmark-footer').then(mod => ({ default: mod.WordmarkFooter }))
-);
 
 // Skeleton placeholder for ShowCaseSection while loading
 function ShowCaseSkeleton() {
@@ -42,10 +39,6 @@ export default function Home() {
           {/* Below-the-fold content - lazy loaded with Suspense */}
           <Suspense fallback={<ShowCaseSkeleton />}>
             <ShowCaseSection />
-          </Suspense>
-          
-          <Suspense fallback={null}>
-            <WordmarkFooter />
           </Suspense>
         </main>
       </BackgroundAALChecker>

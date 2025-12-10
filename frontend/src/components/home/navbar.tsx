@@ -5,14 +5,13 @@ import { ThemeToggle } from '@/components/home/theme-toggle';
 import { LocaleSwitcher } from '@/components/home/locale-switcher';
 import { siteConfig } from '@/lib/site-config';
 import { cn } from '@/lib/utils';
-import { Menu, X, Github } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { AnimatePresence, motion, useScroll } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/components/AuthProvider';
-import { useGitHubStars } from '@/hooks/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { useTranslations } from 'next-intl';
@@ -69,7 +68,6 @@ export function Navbar({ tabs }: NavbarProps = {}) {
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const { formattedStars, loading: starsLoading } = useGitHubStars('kortix-ai', 'suna');
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations('common');
@@ -156,18 +154,6 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               <div className="flex flex-row items-center gap-2 md:gap-3 shrink-0">
                 <div className="flex items-center space-x-3">
                   <LocaleSwitcher variant="compact" />
-                  <Link
-                    href="https://github.com/kortix-ai/suna"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-full bg-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/30 transition-all duration-200"
-                    aria-label="GitHub Repository"
-                  >
-                    <Github className="size-3.5" />
-                    <span className={`text-xs font-medium transition-opacity duration-200 ${starsLoading ? 'opacity-50' : 'opacity-100'}`}>
-                      {formattedStars}
-                    </span>
-                  </Link>
                   {user ? (
                     <Button
                       asChild
@@ -308,23 +294,8 @@ export function Navbar({ tabs }: NavbarProps = {}) {
                     </Button>
                   )}
                   
-                  {/* GitHub Stars & Language Switcher Row */}
+                  {/* Language Switcher & Theme Toggle Row */}
                   <div className="flex items-center gap-2">
-                    {/* GitHub Stars Link */}
-                    <Link
-                      href="https://github.com/kortix-ai/suna"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 h-9 px-3 text-xs font-medium rounded-lg bg-accent/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200 flex-1 min-w-0"
-                      aria-label="GitHub Repository"
-                      onClick={() => setIsDrawerOpen(false)}
-                    >
-                      <Github className="size-4 shrink-0" />
-                      <span className={`text-xs font-medium transition-opacity duration-200 truncate ${starsLoading ? 'opacity-50' : 'opacity-100'}`}>
-                        {formattedStars}
-                      </span>
-                    </Link>
-                    
                     {/* Language Switcher */}
                     <div className="flex-1 min-w-0">
                       <LocaleSwitcher variant="full" />
