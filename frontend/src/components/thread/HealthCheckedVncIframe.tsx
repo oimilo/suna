@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useVncPreloader } from '@/hooks/files';
+import { constructVncPreviewUrl } from '@/lib/utils/url';
 
 interface HealthCheckedVncIframeProps {
   sandbox: {
@@ -18,6 +19,12 @@ interface HealthCheckedVncIframeProps {
 export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
   const [iframeKey, setIframeKey] = useState(0);
   const [isBrowserLoading, setIsBrowserLoading] = useState(true);
+
+  // [PROPHET CUSTOM] Build VNC URL through proxy to avoid Daytona warning
+  const vncUrl = useMemo(() => 
+    constructVncPreviewUrl(sandbox?.vnc_preview, sandbox?.pass),
+    [sandbox?.vnc_preview, sandbox?.pass]
+  );
   
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
@@ -99,7 +106,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
           <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
             <iframe
               key={iframeKey}
-              src={`${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`}
+              src={vncUrl}
               title="Browser preview"
               className="absolute inset-0 w-full h-full border-0 md:w-[102%] md:h-[130%] md:-translate-y-[4.4rem] lg:-translate-y-[4.7rem] xl:-translate-y-[5.4rem] md:left-0 md:-translate-x-2"
             />

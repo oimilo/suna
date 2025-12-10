@@ -7,7 +7,7 @@ const DAYTONA_SANDBOX_ID_REGEX = /^https?:\/\/\d+-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a
 /**
  * Extracts sandbox ID from a Daytona proxy URL or sandbox URL
  */
-function extractSandboxId(sandboxUrl: string | undefined): string | undefined {
+export function extractSandboxId(sandboxUrl: string | undefined): string | undefined {
   if (!sandboxUrl) return undefined;
   
   // Try to extract from Daytona proxy URL format
@@ -17,6 +17,27 @@ function extractSandboxId(sandboxUrl: string | undefined): string | undefined {
   // Fallback: try to extract UUID pattern from URL
   const uuidMatch = sandboxUrl.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   return uuidMatch?.[1];
+}
+
+/**
+ * [PROPHET CUSTOM] Constructs a VNC preview URL, routing through proxy if configured.
+ * This avoids the Daytona warning modal.
+ */
+export function constructVncPreviewUrl(
+  vncPreviewUrl: string | undefined,
+  password: string | undefined,
+): string | undefined {
+  if (!vncPreviewUrl || !password) return undefined;
+
+  const sandboxId = extractSandboxId(vncPreviewUrl);
+  
+  // Use proxy if configured
+  if (PREVIEW_PROXY_BASE && sandboxId) {
+    return `${PREVIEW_PROXY_BASE}/${sandboxId}/vnc_lite.html?password=${password}&autoconnect=true&scale=local`;
+  }
+
+  // Fallback to direct URL (will show Daytona warning)
+  return `${vncPreviewUrl}/vnc_lite.html?password=${password}&autoconnect=true&scale=local`;
 }
 
 /**

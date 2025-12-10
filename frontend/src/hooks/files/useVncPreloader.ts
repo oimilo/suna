@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Project } from '@/lib/api/threads';
+import { constructVncPreviewUrl } from '@/lib/utils/url';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -115,10 +116,13 @@ export function useVncPreloader(
 
   const retry = useCallback(() => {
     if (sandbox?.vnc_preview && sandbox?.pass) {
-      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
-      setRetryCount(0);
-      setStatus('idle');
-      startPreloading(vncUrl);
+      // [PROPHET CUSTOM] Use proxy URL to avoid Daytona warning
+      const vncUrl = constructVncPreviewUrl(sandbox.vnc_preview, sandbox.pass);
+      if (vncUrl) {
+        setRetryCount(0);
+        setStatus('idle');
+        startPreloading(vncUrl);
+      }
     }
   }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
 
@@ -135,7 +139,8 @@ export function useVncPreloader(
       return;
     }
 
-    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    // [PROPHET CUSTOM] Use proxy URL to avoid Daytona warning
+    const vncUrl = constructVncPreviewUrl(sandbox.vnc_preview, sandbox.pass);
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -143,7 +148,9 @@ export function useVncPreloader(
 
     // Start the preloading process with a small delay to let the sandbox initialize
     const initialDelayTimeout = setTimeout(() => {
-      startPreloading(vncUrl);
+      if (vncUrl) {
+        startPreloading(vncUrl);
+      }
     }, initialDelay);
 
     // Cleanup function
