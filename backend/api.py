@@ -233,7 +233,8 @@ allowed_origins = [
     "https://app.prophet.build",
     "https://auth.prophet.build",
 ]
-allow_origin_regex = None
+# Allow Vercel preview deployments in all environments
+allow_origin_regex = r"https://.*\.vercel\.app"
 
 # Add local development origins
 if config.ENV_MODE == EnvMode.LOCAL:
@@ -244,16 +245,14 @@ if config.ENV_MODE == EnvMode.LOCAL:
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.prophet.build")
     allowed_origins.append("http://localhost:3000")
-    # Allow Vercel preview deployments
-    allow_origin_regex = r"https://prophet-.*\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-API-Key"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=["*"],  # Allow all headers for flexibility with preview proxy
 )
 
 # Create a main API router
