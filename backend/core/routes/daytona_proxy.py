@@ -147,17 +147,30 @@ def _prepare_forward_headers(request: Request, preview_token: Optional[str]) -> 
     return forward_headers
 
 
-def _transform_response_headers(upstream_headers: httpx.Headers) -> Dict[str, str]:
+def _transform_response_headers(upstream_headers: httpx.Headers, origin: str = None) -> Dict[str, str]:
     excluded = {
         "content-length",
         "transfer-encoding",
         "connection",
     }
-    return {
+    headers = {
         key: value
         for key, value in upstream_headers.items()
         if key.lower() not in excluded
     }
+    
+    # [PROPHET CUSTOM] Add CORS headers to allow frontend to access preview proxy
+    # This is needed because www.prophet.build makes requests to app.prophet.build
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+    else:
+        headers["Access-Control-Allow-Origin"] = "*"
+    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
+    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    headers["Access-Control-Allow-Credentials"] = "true"
+    headers["Access-Control-Max-Age"] = "86400"  # Cache preflight for 24 hours
+    
+    return headers
 
 
 def _is_vnc_request(path: str, request: Request) -> bool:
@@ -310,6 +323,21 @@ def _filter_query_params(query_string: str, exclude: list) -> str:
 
 
 async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Response:
+    # [PROPHET CUSTOM] Handle CORS preflight requests quickly without forwarding to Daytona
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin", "*")
+        return Response(
+            content="",
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    
     path = _rewrite_presentation_asset_path(path, request, sandbox_id)
     metadata = await _get_project_sandbox_metadata(sandbox_id)
 
@@ -363,7 +391,10 @@ async def _proxy_request(sandbox_id: str, path: str, request: Request) -> Respon
             detail="Failed to reach sandbox preview",
         ) from exc
 
-    response_headers = _transform_response_headers(upstream_response.headers)
+    # Get origin for CORS
+    origin = request.headers.get("origin")
+    
+    response_headers = _transform_response_headers(upstream_response.headers, origin)
     logger.debug(
         "Proxied preview request sandbox_id=%s path=%s status=%s",
         sandbox_id,
