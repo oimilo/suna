@@ -3,10 +3,11 @@
 import { OnboardingStep } from '@/hooks/onboarding';
 import { CEOIntroStep } from './steps/ceo-intro-step';
 import { UserTypeStep } from './steps/user-type-step';
+import { SmartContextStep } from './steps/smart-context-step';
 import { WorkforceSelectionStep } from './steps/workforce-selection-step';
-import { CredentialsStep } from './steps/credentials-step';
+import { MultiAgentConfigurationStep } from './agent-config/multi-agent-configuration';
+import { TeamInvitationStep } from './steps/team-invitation-step';
 import { CompletionStep } from './steps/completion-step';
-import { userContext } from './shared/context';
 
 // Fixed onboarding steps - clean, organized flow
 export const onboardingSteps: OnboardingStep[] = [
@@ -32,16 +33,24 @@ export const onboardingSteps: OnboardingStep[] = [
     description: 'Select your AI workforce',
     content: <WorkforceSelectionStep />,
     canSkip: true,
-    actionLabel: 'Connect Accounts'
+    actionLabel: 'Configure Agents'
   },
   {
-    id: 'credentials',
-    title: 'Connect Accounts',
-    description: 'Link your external accounts',
-    content: <CredentialsStep />,
+    id: 'agent-configuration',
+    title: 'Configure Agents',
+    description: 'Customize your AI team',
+    content: <MultiAgentConfigurationStep />,
     canSkip: true,
-    actionLabel: 'Create Agents'
+    actionLabel: 'Continue Setup'
   },
+  // {
+  //   id: 'team-invitation',
+  //   title: 'Invite Team',
+  //   description: 'Add your teammates',
+  //   content: <TeamInvitationStep />,
+  //   canSkip: true,
+  //   actionLabel: 'Finish Setup'
+  // },
   {
     id: 'completion',
     title: 'Complete',
@@ -87,16 +96,6 @@ export const getProgressPercentage = (currentStep: number): number => {
   return Math.round(((currentStep + 1) / onboardingSteps.length) * 100);
 };
 
-// Check if credentials step should be shown
-// (only if selected templates have MCP requirements)
-export const shouldShowCredentialsStep = (): boolean => {
-  const selectedTemplates = userContext.selectedTemplates || [];
-  const hasRequirements = selectedTemplates.some(t => 
-    (t.mcp_requirements || []).length > 0
-  );
-  return hasRequirements;
-};
-
 // Step validation (can be extended for more complex validation)
 export const canProceedFromStep = (stepIndex: number, context?: any): boolean => {
   const step = getStepByIndex(stepIndex);
@@ -115,14 +114,11 @@ export const canProceedFromStep = (stepIndex: number, context?: any): boolean =>
       return false;
     
     case 'workforce-selection':
-      // Can always proceed (skip allowed), but ideally has templates selected
-      return true;
-    
-    case 'credentials':
-      // Can always proceed (skip allowed), credentials are optional
-      return true;
+      // Require at least one agent selected
+      return context?.selectedAgents && context.selectedAgents.length > 0;
     
     default:
       return true;
   }
 };
+

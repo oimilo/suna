@@ -11,33 +11,6 @@ import openai
 import asyncio
 import re
 from typing import Optional
-from urllib.parse import urlparse
-
-
-def _build_proxy_url(sandbox_id: str, raw_url: str) -> Optional[str]:
-    """
-    Convert a Daytona preview URL into the Prophet proxy URL when possible.
-    Falls back to None if configuration is missing.
-    """
-    base = config.DAYTONA_PREVIEW_BASE
-    if not base or not sandbox_id:
-        return None
-
-    try:
-        parsed = urlparse(raw_url)
-    except ValueError:
-        logger.warning("Failed to parse Daytona preview URL %s", raw_url)
-        return None
-
-    base = base.rstrip("/")
-    path = parsed.path.lstrip("/")
-    proxy_url = f"{base}/{sandbox_id}"
-    if path:
-        proxy_url = f"{proxy_url}/{path}"
-    if parsed.query:
-        proxy_url = f"{proxy_url}?{parsed.query}"
-
-    return proxy_url
 
 @tool_metadata(
     display_name="Files & Folders",
@@ -46,7 +19,43 @@ def _build_proxy_url(sandbox_id: str, raw_url: str) -> Optional[str]:
     color="bg-blue-100 dark:bg-blue-800/50",
     is_core=True,
     weight=10,
-    visible=True
+    visible=True,
+    usage_guide="""
+### FILE OPERATIONS
+
+**CORE CAPABILITIES:**
+- Creating, reading, modifying, and deleting files
+- Organizing files into directories/folders
+- Converting between file formats
+- Searching through file contents
+- Batch processing multiple files
+- AI-powered intelligent file editing with natural language instructions using `edit_file` tool exclusively
+
+**MANDATORY FILE EDITING TOOL:**
+- **MUST use `edit_file` for ALL file modifications**
+- This is a powerful AI tool that handles everything from simple replacements to complex refactoring
+- NEVER use `echo` or `sed` to modify files - always use `edit_file`
+- Provide clear natural language instructions and the code changes
+
+**FILE MANAGEMENT BEST PRACTICES:**
+- Use file tools for reading, writing, appending, and editing
+- Actively save intermediate results
+- Create organized file structures with clear naming conventions
+- Store different types of data in appropriate formats
+
+**ONE FILE PER REQUEST RULE:**
+- For a single user request, create ONE file and edit it throughout the process
+- Treat the file as a living document that you continuously update
+- Edit existing files rather than creating multiple new files
+- Build one comprehensive file that contains all related content
+
+**CSS & STYLE GUIDELINES:**
+- **PROPHET BRAND COLORS:** Always use Prophet on-brand black/white color scheme
+- **NO GRADIENTS WHATSOEVER:** Absolutely forbidden - use solid colors only (black, white, or shades of gray)
+- **NO PURPLE COLORS:** Purple is absolutely forbidden in any form - no purple backgrounds, no purple text, no purple accents, no purple anything
+- **NO GENERIC AI/TECH GRADIENTS:** Explicitly forbidden: purple-to-blue gradients, blue-to-purple gradients, any purple/blue/teal gradient combinations, or any other generic "AI tech" gradient schemes
+- **SOLID COLORS ONLY:** Use only solid black, white, or shades of gray - no gradients, no color transitions, no fancy effects, NO PURPLE
+"""
 )
 class SandboxFilesTool(SandboxToolsBase):
     """Tool for executing file system operations in a Daytona sandbox. All operations are performed relative to the /workspace directory."""
@@ -106,7 +115,6 @@ class SandboxFilesTool(SandboxToolsBase):
             print(f"Error getting workspace state: {str(e)}")
             return {}
 
-
     # def _get_preview_url(self, file_path: str) -> Optional[str]:
     #     """Get the preview URL for a file if it's an HTML file."""
     #     if file_path.lower().endswith('.html') and self._sandbox_url:
@@ -164,20 +172,15 @@ class SandboxFilesTool(SandboxToolsBase):
             
             message = f"File '{file_path}' created successfully."
             
-            # Check if any HTML file was created and add preview URL
-            if file_path.lower().endswith('.html'):
+            # Check if index.html was created and add 8080 server info (only in root workspace)
+            if file_path.lower() == 'index.html':
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
-                    raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
-                    proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
-                    base_url = proxy_url or raw_url
-                    # Build full URL to the HTML file
-                    file_url = f"{base_url.rstrip('/')}/{file_path}"
-                    message += f"\n\n[HTML file preview available at: {file_url}]"
-                    if file_path.lower() == 'index.html':
-                        message += f"\n[Root server URL: {base_url}]"
+                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
+                    message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
+                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
             
             return self.success_response(message)
         except Exception as e:
@@ -291,20 +294,15 @@ class SandboxFilesTool(SandboxToolsBase):
             
             message = f"File '{file_path}' completely rewritten successfully."
             
-            # Check if any HTML file was rewritten and add preview URL
-            if file_path.lower().endswith('.html'):
+            # Check if index.html was rewritten and add 8080 server info (only in root workspace)
+            if file_path.lower() == 'index.html':
                 try:
                     website_link = await self.sandbox.get_preview_link(8080)
-                    raw_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
-                    proxy_url = _build_proxy_url(self._sandbox_id, raw_url)
-                    base_url = proxy_url or raw_url
-                    # Build full URL to the HTML file
-                    file_url = f"{base_url.rstrip('/')}/{file_path}"
-                    message += f"\n\n[HTML file preview available at: {file_url}]"
-                    if file_path.lower() == 'index.html':
-                        message += f"\n[Root server URL: {base_url}]"
+                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
+                    message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
+                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
             
             # Auto-validate presentation slides
             slide_pattern = r'^presentations/([^/]+)/slide_(\d+)\.html$'
@@ -577,105 +575,4 @@ class SandboxFilesTool(SandboxToolsBase):
                 "original_content": original_content_on_error,
                 "updated_content": None
             }))
-
-    # @openapi_schema({
-    #     "type": "function",
-    #     "function": {
-    #         "name": "read_file",
-    #         "description": "Read and return the contents of a file. This tool is essential for verifying data, checking file contents, and analyzing information. Always use this tool to read file contents before processing or analyzing data. The file path must be relative to /workspace.",
-    #         "parameters": {
-    #             "type": "object",
-    #             "properties": {
-    #                 "file_path": {
-    #                     "type": "string",
-    #                     "description": "Path to the file to read, relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Must be a valid file path within the workspace."
-    #                 },
-    #                 "start_line": {
-    #                     "type": "integer",
-    #                     "description": "Optional starting line number (1-based). Use this to read specific sections of large files. If not specified, reads from the beginning of the file.",
-    #                     "default": 1
-    #                 },
-    #                 "end_line": {
-    #                     "type": "integer",
-    #                     "description": "Optional ending line number (inclusive). Use this to read specific sections of large files. If not specified, reads to the end of the file.",
-    #                     "default": None
-    #                 }
-    #             },
-    #             "required": ["file_path"]
-    #         }
-    #     }
-    # })
-    # @xml_schema(
-    #     tag_name="read-file",
-    #     mappings=[
-    #         {"param_name": "file_path", "node_type": "attribute", "path": "."},
-    #         {"param_name": "start_line", "node_type": "attribute", "path": ".", "required": False},
-    #         {"param_name": "end_line", "node_type": "attribute", "path": ".", "required": False}
-    #     ],
-    #     example='''
-    #     <!-- Example 1: Read entire file -->
-    #     <read-file file_path="src/main.py">
-    #     </read-file>
-
-    #     <!-- Example 2: Read specific lines (lines 10-20) -->
-    #     <read-file file_path="src/main.py" start_line="10" end_line="20">
-    #     </read-file>
-
-    #     <!-- Example 3: Read from line 5 to end -->
-    #     <read-file file_path="config.json" start_line="5">
-    #     </read-file>
-
-    #     <!-- Example 4: Read last 10 lines -->
-    #     <read-file file_path="logs/app.log" start_line="-10">
-    #     </read-file>
-    #     '''
-    # )
-    # async def read_file(self, file_path: str, start_line: int = 1, end_line: Optional[int] = None) -> ToolResult:
-    #     """Read file content with optional line range specification.
-        
-    #     Args:
-    #         file_path: Path to the file relative to /workspace
-    #         start_line: Starting line number (1-based), defaults to 1
-    #         end_line: Ending line number (inclusive), defaults to None (end of file)
             
-    #     Returns:
-    #         ToolResult containing:
-    #         - Success: File content and metadata
-    #         - Failure: Error message if file doesn't exist or is binary
-    #     """
-    #     try:
-    #         file_path = self.clean_path(file_path)
-    #         full_path = f"{self.workspace_path}/{file_path}"
-            
-    #         if not await self._file_exists(full_path):
-    #             return self.fail_response(f"File '{file_path}' does not exist")
-            
-    #         # Download and decode file content
-    #         content = await self.sandbox.fs.download_file(full_path).decode()
-            
-    #         # Split content into lines
-    #         lines = content.split('\n')
-    #         total_lines = len(lines)
-            
-    #         # Handle line range if specified
-    #         if start_line > 1 or end_line is not None:
-    #             # Convert to 0-based indices
-    #             start_idx = max(0, start_line - 1)
-    #             end_idx = end_line if end_line is not None else total_lines
-    #             end_idx = min(end_idx, total_lines)  # Ensure we don't exceed file length
-                
-    #             # Extract the requested lines
-    #             content = '\n'.join(lines[start_idx:end_idx])
-            
-    #         return self.success_response({
-    #             "content": content,
-    #             "file_path": file_path,
-    #             "start_line": start_line,
-    #             "end_line": end_line if end_line is not None else total_lines,
-    #             "total_lines": total_lines
-    #         })
-            
-    #     except UnicodeDecodeError:
-    #         return self.fail_response(f"File '{file_path}' appears to be binary and cannot be read as text")
-    #     except Exception as e:
-    #         return self.fail_response(f"Error reading file: {str(e)}")

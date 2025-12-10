@@ -13,7 +13,23 @@ from core.utils.tool_discovery import validate_tool_config
     icon="Settings",
     color="bg-gray-100 dark:bg-gray-800/50",
     weight=150,
-    visible=True
+    visible=True,
+    usage_guide="""
+### AGENT CONFIGURATION MANAGEMENT
+
+**CRITICAL:** ONLY use configure_profile_for_agent() to add integrations
+**DO NOT use update_agent() for adding integrations**
+
+**CAPABILITIES:**
+- Add credential profiles for service connections
+- Configure agent tool access
+- Manage integration settings
+
+**WORKFLOW:**
+- Use configure_profile_for_agent() for adding authenticated services
+- Respect existing agent configurations
+- Validate changes before applying
+"""
 )
 class AgentConfigTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
@@ -84,7 +100,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
             metadata = current_agent.get('metadata', {})
             is_suna_default = metadata.get('is_suna_default', False)
             
-            # Enforce Prophet restrictions (simplified)
+            # Enforce Suna restrictions (simplified)
             if is_suna_default:
                 restricted_fields = []
                 if name is not None:

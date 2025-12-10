@@ -228,9 +228,7 @@ class VapiWebhookHandler:
             
             if user_id and cost > 0:
                 try:
-                    from core.billing.credits.manager import CreditManager
-                    credit_manager = CreditManager()
-                    
+                    from core.billing.credits.manager import credit_manager
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
                     
                     deduct_result = await credit_manager.use_credits(
@@ -394,10 +392,11 @@ class VapiWebhookHandler:
             if user_id and cost > 0:
                 try:
                     from core.billing.credits.manager import CreditManager
-                    credit_manager = CreditManager()
+                    # credit_manager instance is already available from the import
                     
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
                     
+                    from core.billing.credits.manager import credit_manager
                     deduct_result = await credit_manager.use_credits(
                         account_id=user_id,
                         amount=cost_in_credits,

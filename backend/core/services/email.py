@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self.api_token = os.getenv('MAILTRAP_API_TOKEN')
-        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'start@prophet.build')
-        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Prophet')
+        self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'hey@prophet.build')
+        self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Prophet Team')
+        self.hello_email = 'hello@prophet.build'
         
         if not self.api_token:
             logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
@@ -26,7 +27,7 @@ class EmailService:
         if not user_name:
             user_name = user_email.split('@')[0].title()
         
-        subject = "🎉 Welcome to Prophet — Let's Get Started!"
+        subject = "🎉 Welcome to Prophet — Let's Get Started "
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -37,6 +38,54 @@ class EmailService:
             html_content=html_content,
             text_content=text_content
         )
+    
+    def send_referral_email(
+        self, 
+        recipient_email: str, 
+        recipient_name: str,
+        sender_name: str, 
+        referral_url: str
+    ) -> bool:
+        if not self.client:
+            logger.error("Cannot send email: MAILTRAP_API_TOKEN not configured")
+            return False
+        
+        subject = f"🎉 You're invited!"
+        html_content = self._get_referral_email_template(recipient_name, sender_name, referral_url)
+        text_content = self._get_referral_email_text(recipient_name, sender_name, referral_url)
+        
+        try:
+            sender_email_to_use = self.hello_email
+            
+            logger.info(f"Attempting to send referral email from {sender_email_to_use} to {recipient_email}")
+            
+            mail = mt.Mail(
+                sender=mt.Address(email=sender_email_to_use, name='Prophet'),
+                to=[mt.Address(email=recipient_email, name=recipient_name)],
+                subject=subject,
+                text=text_content,
+                html=html_content,
+                category="referral"
+            )
+            
+            response = self.client.send(mail)
+            
+            logger.info(f"Referral email sent to {recipient_email} from {sender_name}. Response: {response}")
+            return True
+                
+        except Exception as e:
+            error_type = type(e).__name__
+            error_details = str(e)
+            logger.error(f"Error sending referral email to {recipient_email}: {error_details}")
+            logger.error(f"Error type: {error_type}")
+            logger.error(f"Mailtrap API Token present: {bool(self.api_token)}, Token prefix: {self.api_token[:8] if self.api_token else 'None'}...")
+            logger.error(f"Sender email: {sender_email_to_use}")
+            
+            if hasattr(e, 'response'):
+                logger.error(f"Response status: {e.response.status_code if hasattr(e.response, 'status_code') else 'unknown'}")
+                logger.error(f"Response body: {e.response.text if hasattr(e.response, 'text') else 'unknown'}")
+            
+            return False
     
     def _send_email(
         self, 
@@ -149,7 +198,7 @@ class EmailService:
     <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month:</p>
     <p>🎁 Use code <strong>WELCOME15</strong> at checkout.</p>
 
-    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.gg/G9f5JASVZc">Discord community</a>.</p>
+    <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/RvFhXUdZ9H">Discord community</a>.</p>
 
     <p>Thanks again, and welcome to the Prophet community!</p>
   </div>
@@ -167,52 +216,13 @@ https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMo
 To celebrate your arrival, here's a 15% discount for your first month:
 🎁 Use code WELCOME15 at checkout.
 
-Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.gg/G9f5JASVZc
+Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/RvFhXUdZ9H
 
 Thanks again, and welcome to the Prophet community!
 
 ---
 © 2025 Prophet. All rights reserved.
 You received this email because you signed up for a Prophet account."""
-
-    def send_referral_email(
-        self, 
-        recipient_email: str, 
-        recipient_name: str,
-        sender_name: str, 
-        referral_url: str
-    ) -> bool:
-        if not self.client:
-            logger.error("Cannot send email: MAILTRAP_API_TOKEN not configured")
-            return False
-        
-        subject = f"🎉 You're invited to Prophet!"
-        html_content = self._get_referral_email_template(recipient_name, sender_name, referral_url)
-        text_content = self._get_referral_email_text(recipient_name, sender_name, referral_url)
-        
-        try:
-            logger.info(f"Attempting to send referral email from {self.sender_email} to {recipient_email}")
-            
-            mail = mt.Mail(
-                sender=mt.Address(email=self.sender_email, name='Prophet'),
-                to=[mt.Address(email=recipient_email, name=recipient_name)],
-                subject=subject,
-                text=text_content,
-                html=html_content,
-                category="referral"
-            )
-            
-            response = self.client.send(mail)
-            
-            logger.info(f"Referral email sent to {recipient_email} from {sender_name}. Response: {response}")
-            return True
-                
-        except Exception as e:
-            error_type = type(e).__name__
-            error_details = str(e)
-            logger.error(f"Error sending referral email to {recipient_email}: {error_details}")
-            logger.error(f"Error type: {error_type}")
-            return False
     
     def _get_referral_email_template(self, recipient_name: str, sender_name: str, referral_url: str) -> str:
         content = f"""<table cellpadding="0" cellspacing="0" border="0" style="padding:30px 15px; font-family:Inter, Arial, sans-serif; color:#000000;">
@@ -223,7 +233,7 @@ You received this email because you signed up for a Prophet account."""
       </p>
       <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6;">
         <strong>{sender_name}</strong> has invited you to join Prophet using a personal referral code.
-        When you sign up using this link, both you and {sender_name} will receive 100 non-expiring credits 🎁
+        When you sign up using this link, both you and {sender_name} will receive 100 in non-expiring credits 🎁
       </p>
       <p style="margin:0 0 10px 0; font-weight:600;">
         What You Both Get
@@ -263,14 +273,14 @@ You received this email because you signed up for a Prophet account."""
     <tr>
       <td>
         <div style="text-align: center; margin-bottom: 40px;">
-          <img src="https://auth.prophet.build/storage/v1/object/public/image-uploads/2.png" alt="Prophet" style="height: 40px; width: auto; display: inline-block;" />
+          <img src="https://prophet.build/Logomark.svg" alt="Prophet" style="height: 24px; width: auto; display: inline-block;" />
         </div>
         <div style="background-color: #ffffff; border-radius: 16px; padding: 40px 32px;">
           {content}
         </div>
         <div style="text-align: center; margin-top: 32px;">
           <p style="font-size: 12px; color: #999; margin: 0;">
-            &copy; Prophet. All rights reserved.
+            &copy; Prophet AI Corp. All rights reserved.
           </p>
         </div>
       </td>
@@ -284,7 +294,7 @@ You received this email because you signed up for a Prophet account."""
 
 {sender_name} has invited you to join Prophet using a personal referral code.
 
-When you sign up using this link, both you and {sender_name} will receive 100 non-expiring credits 🎁
+When you sign up using this link, both you and {sender_name} will receive 100 in non-expiring credits 🎁
 
 What You Both Get:
 • 100 non-expiring credits to be used in the platform
@@ -292,6 +302,6 @@ What You Both Get:
 Claim your invite: {referral_url}
 
 ---
-© Prophet. All rights reserved."""
+© Prophet AI Corp. All rights reserved."""
 
 email_service = EmailService() 

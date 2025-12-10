@@ -14,7 +14,47 @@ from core.agentpress.thread_manager import ThreadManager
     color="bg-gray-100 dark:bg-gray-800/50",
     is_core=True,
     weight=20,
-    visible=True
+    visible=True,
+    usage_guide="""
+### CLI OPERATIONS & TERMINAL COMMANDS
+
+**EXECUTION MODES:**
+1. **Synchronous Commands (blocking=true):**
+   - Use for quick operations under 60 seconds
+   - Commands run directly and wait for completion
+   - Example: `execute_command(command="ls -l", blocking=true)`
+
+2. **Asynchronous Commands (blocking=false or omit):**
+   - Use for ANY command that might take longer than 60 seconds
+   - Commands run in background and return immediately
+   - Common use cases: Build processes, long-running data processing, background services
+   - **NOTE:** DO NOT start web servers - port 8080 is already running and publicly accessible
+
+**SESSION MANAGEMENT:**
+- Each command must specify a session_name
+- Use consistent session names for related commands (e.g., "build" for build commands)
+- Different sessions are isolated from each other
+- Sessions maintain state between commands
+
+**COMMAND EXECUTION GUIDELINES:**
+- For long-running commands: ALWAYS use `blocking=false` (or omit)
+- Use proper session names for organization
+- Chain commands with && for sequential execution
+- Use | for piping output between commands
+- Redirect output to files for long-running processes
+
+**BEST PRACTICES:**
+- Avoid commands requiring confirmation; use -y or -f flags
+- Avoid commands with excessive output; save to files when necessary
+- Chain multiple commands with && to minimize interruptions
+- Use pipe operator to pass command outputs
+- Use non-interactive `bc` for simple calculations, Python for complex math
+
+**CLI TOOLS PREFERENCE:**
+- Always prefer CLI tools over Python scripts when possible
+- CLI tools are faster for: file operations, text processing, system operations, data transformation
+- Use Python only when: complex logic required, CLI tools insufficient, custom processing needed
+"""
 )
 class SandboxShellTool(SandboxToolsBase):
     """Tool for executing tasks in a Daytona sandbox with browser-use capabilities. 
@@ -50,7 +90,7 @@ class SandboxShellTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "execute_command",
-            "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations.",
+            "description": "Execute a shell command in the workspace directory. Commands can run in two modes: (1) BLOCKING (blocking=true): Command runs synchronously, waits for completion, returns full output, and automatically cleans up the session - NO need to call check_command_output afterwards. (2) NON-BLOCKING (blocking=false, default): Command runs in background tmux session - use check_command_output to monitor progress. Use blocking=true for quick commands (installs, file operations, builds). Use non-blocking for long-running processes (servers, watches).",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -64,11 +104,11 @@ class SandboxShellTool(SandboxToolsBase):
                     },
                     "session_name": {
                         "type": "string",
-                        "description": "Optional name of the tmux session to use. Use named sessions for related commands that need to maintain state. Defaults to a random session name.",
+                        "description": "Optional name of the tmux session to use. Only relevant for NON-BLOCKING commands where you need to check output later. Ignored for blocking commands.",
                     },
                     "blocking": {
                         "type": "boolean",
-                        "description": "Whether to wait for the command to complete. Defaults to false for non-blocking execution.",
+                        "description": "If true, waits for command completion and returns output directly (session auto-cleaned, do NOT call check_command_output). If false (default), runs in background tmux session (use check_command_output to monitor).",
                         "default": False
                     },
                     "timeout": {
@@ -152,9 +192,10 @@ class SandboxShellTool(SandboxToolsBase):
                 # Kill the session after capture
                 await self._execute_raw_command(f"tmux kill-session -t {session_name}")
                 
+                # For blocking commands, do NOT return session_name since it's already cleaned up
+                # This prevents the LLM from incorrectly trying to call check_command_output
                 return self.success_response({
                     "output": final_output,
-                    "session_name": session_name,
                     "cwd": cwd,
                     "completed": True
                 })
@@ -216,13 +257,13 @@ class SandboxShellTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "check_command_output",
-            "description": "Check the output of a previously executed command in a tmux session. Use this to monitor the progress or results of non-blocking commands.",
+            "description": "Check the output of a NON-BLOCKING command running in a tmux session. IMPORTANT: Only use this for commands that were executed with blocking=false. Do NOT use this for blocking commands - they return output directly and clean up their session automatically.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "session_name": {
                         "type": "string",
-                        "description": "The name of the tmux session to check."
+                        "description": "The name of the tmux session to check. This is returned by execute_command when blocking=false."
                     },
                     "kill_session": {
                         "type": "boolean",

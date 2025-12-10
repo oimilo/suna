@@ -1,9 +1,7 @@
 import os
-import re
 import uuid
 import mimetypes
 import structlog
-import unicodedata
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -14,34 +12,45 @@ from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
 from core.utils.config import config
 
-
-def normalize_filename(filename: str) -> str:
-    """
-    Normalize a filename by removing accents and special characters.
-    Converts characters like é→e, ê→e, ç→c, etc.
-    Only allows alphanumeric, hyphens, underscores, and dots.
-    """
-    # Normalize unicode characters (NFD decomposes accented chars)
-    normalized = unicodedata.normalize('NFD', filename)
-    # Remove combining diacritical marks (accents)
-    ascii_text = normalized.encode('ascii', 'ignore').decode('ascii')
-    # Replace spaces with hyphens
-    ascii_text = ascii_text.replace(' ', '-')
-    # Remove any remaining invalid characters (keep alphanumeric, hyphen, underscore, dot)
-    ascii_text = re.sub(r'[^a-zA-Z0-9\-_.]', '', ascii_text)
-    # Remove multiple consecutive hyphens/underscores
-    ascii_text = re.sub(r'[-_]+', '-', ascii_text)
-    # Remove leading/trailing hyphens
-    ascii_text = ascii_text.strip('-_')
-    return ascii_text or 'file'
-
 @tool_metadata(
     display_name="File Upload",
     description="Upload files to cloud storage and share them with secure links",
     icon="Upload",
     color="bg-teal-100 dark:bg-teal-800/50",
     weight=230,
-    visible=True
+    visible=True,
+    usage_guide="""
+### FILE UPLOAD & CLOUD STORAGE
+
+**PURPOSE:** Upload files from sandbox workspace to private cloud storage (Supabase S3) with secure signed URLs
+
+**WHEN TO USE:**
+- **ONLY when user explicitly requests file sharing** or asks for permanent URLs
+- **ONLY when user asks for files to be accessible externally** or beyond sandbox session
+- **ASK USER FIRST** in most cases: "Would you like me to upload this file to secure cloud storage for sharing?"
+- User specifically requests file sharing or external access
+- User asks for permanent or persistent file access
+- **DO NOT automatically upload** unless explicitly requested
+
+**UPLOAD PARAMETERS:**
+- `file_path`: Path relative to /workspace (e.g., "report.pdf", "data/results.csv")
+- `custom_filename`: Optional custom name for the uploaded file
+
+**STORAGE:**
+- Files stored in secure private storage with user isolation
+- Signed URL access with 24-hour expiration
+- Each user can only access their own files
+
+**UPLOAD WORKFLOW:**
+1. Ask before uploading: "Would you like me to upload this file to secure cloud storage for sharing?"
+2. If user says yes: Use `upload_file(file_path="path/to/file")`
+3. Share the secure URL (note: expires in 24 hours)
+
+**INTEGRATED WORKFLOW:**
+- Create file → Ask user if upload needed → Upload only if requested → Share secure URL
+- Generate image → Ask about cloud storage → Upload only if requested
+- Browser screenshots: Continue automatic upload (no changes)
+"""
 )
 class SandboxUploadFileTool(SandboxToolsBase):
     def __init__(self, project_id: str, thread_manager: ThreadManager):
@@ -61,11 +70,6 @@ class SandboxUploadFileTool(SandboxToolsBase):
                         "type": "string",
                         "description": "Path to the file in the sandbox, relative to /workspace (e.g., 'output.pdf', 'data/results.csv')"
                     },
-                    "bucket_name": {
-                        "type": "string",
-                        "description": "Target storage bucket. Options: 'file-uploads' (default - secure private storage), 'browser-screenshots' (browser automation only). Default: 'file-uploads'",
-                        "default": "file-uploads"
-                    },
                     "custom_filename": {
                         "type": "string",
                         "description": "Optional custom filename for the uploaded file. If not provided, uses original filename with timestamp"
@@ -78,7 +82,6 @@ class SandboxUploadFileTool(SandboxToolsBase):
     async def upload_file(
         self,
         file_path: str,
-        bucket_name: str = "file-uploads",
         custom_filename: Optional[str] = None
     ) -> ToolResult:
         try:
@@ -108,18 +111,15 @@ class SandboxUploadFileTool(SandboxToolsBase):
                 content_type = "application/octet-stream"
             
             if custom_filename:
-                storage_filename = normalize_filename(custom_filename)
+                storage_filename = custom_filename
             else:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 unique_id = str(uuid.uuid4())[:8]
-                name_base = normalize_filename(Path(original_filename).stem)
-                # Normalize extension too (remove any special chars)
-                safe_extension = normalize_filename(file_extension.lstrip('.'))
-                if safe_extension:
-                    safe_extension = f".{safe_extension}"
-                storage_filename = f"{name_base}_{timestamp}_{unique_id}{safe_extension}"
+                name_base = Path(original_filename).stem
+                storage_filename = f"{name_base}_{timestamp}_{unique_id}{file_extension}"
             
             storage_path = f"{account_id}/{storage_filename}"
+            bucket_name = "file-uploads"  # Always use file-uploads bucket
 
             try:
                 client = await self.db.client

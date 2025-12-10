@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import { useTheme } from 'next-themes';
 import { Check, Calendar } from 'lucide-react';
-import { KortixLogo } from './milo-logo';
+import { KortixLogo } from './kortix-logo';
 
 interface EnterpriseModalProps {
   children: React.ReactNode;
@@ -114,7 +114,7 @@ export function KortixEnterpriseModal({
             <div className="h-full overflow-auto">
               <Cal
                 namespace="enterprise-demo"
-                calLink="team/milo/enterprise-demo"
+                calLink="team/kortix/enterprise-demo"
                 style={{ width: '100%', height: '100%' }}
                 config={{
                   layout: 'month_view',

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen, Code, Star, Package, Sparkle, Sparkles, X, MessageCircle, PanelLeftOpen, Settings, LogOut, User, CreditCard, Key, Plug, Shield, DollarSign, KeyRound, Sun, Moon, Book, Database, PanelLeftClose } from 'lucide-react';
+import { Bot, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
@@ -11,28 +11,14 @@ import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
-import { siteConfig } from '@/lib/home';
+import { siteConfig } from '@/lib/site-config';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { ThreadSearchModal } from '@/components/sidebar/thread-search-modal';
 import { useEffect, useState } from 'react';
@@ -51,33 +37,21 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useAdminRole } from '@/hooks/admin';
 import posthog from 'posthog-js';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
-import { useSubscriptionData } from '@/stores/subscription-store';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Image from 'next/image';
 import { isLocalMode } from '@/lib/config';
-import { KortixProcessModal } from './kortix-enterprise-modal';
+import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 
-import { getPlanIcon, getPlanName } from '@/components/billing/plan-utils';
+import { getPlanIcon } from '@/components/billing/plan-utils';
 import { Kbd } from '../ui/kbd';
 import { useTranslations } from 'next-intl';
 import { KbdGroup } from '../ui/kbd';
 import { NotificationDropdown } from '../notifications/notification-dropdown';
 
-// Helper function to get user initials
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 function UserProfileSection({ user }: { user: any }) {
-  const { data: subscriptionData } = useSubscriptionData();
+  const { data: accountState } = useAccountState({ enabled: true });
   const { state } = useSidebar();
   const isLocal = isLocalMode();
-  const planName = getPlanName(subscriptionData, isLocal);
+  const planName = accountStateSelectors.planName(accountState);
 
   // Return the enhanced user object with plan info for NavUserWithTeams
   const enhancedUser = {
@@ -196,8 +170,18 @@ export function SidebarLeft({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isDocumentModalOpen) return;
 
-      // CMD+B to toggle sidebar
-      if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+      // Skip if user is in an editable element (editor, input, textarea)
+      const el = document.activeElement;
+      const isEditing = el && (
+        el.tagName.toLowerCase() === 'input' ||
+        el.tagName.toLowerCase() === 'textarea' ||
+        el.getAttribute('contenteditable') === 'true' ||
+        el.closest('.cm-editor') ||
+        el.closest('.ProseMirror')
+      );
+
+      // CMD+B to toggle sidebar (skip if editing)
+      if ((event.metaKey || event.ctrlKey) && event.key === 'b' && !isEditing) {
         event.preventDefault();
         setOpen(!state.startsWith('expanded'));
         window.dispatchEvent(
@@ -238,54 +222,56 @@ export function SidebarLeft({
       {...props}
     >
       <SidebarHeader className={cn("px-6 pt-7 overflow-hidden", state === 'collapsed' && "px-6")}>
-        <div className={cn("flex h-[32px] items-center justify-between min-w-[200px]")}>
-          <div className="">
-            {state === 'collapsed' ? (
-              <div className="pl-2 relative flex items-center justify-center w-fit group/logo">
-                <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
-                  <KortixLogo size={20} className="flex-shrink-0 opacity-100 group-hover/logo:opacity-0 transition-opacity" />
-                </Link>
-                <Tooltip delayDuration={2000}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 absolute opacity-0 group-hover/logo:opacity-100 transition-opacity"
-                      onClick={() => setOpen(true)}
-                    >
-                      <PanelLeftOpen className="!h-5 !w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Expand sidebar (CMD+B)</TooltipContent>
-                </Tooltip>
-              </div>
-            ) : (
-              <div className="pl-2 relative flex items-center justify-center w-fit">
-                <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
-                  <KortixLogo size={20} className="flex-shrink-0" />
-                </Link>
-              </div>
-            )}
-
+        {state === 'collapsed' ? (
+          <div className="flex h-[32px] items-center justify-center">
+            <div className="relative flex items-center justify-center w-fit group/logo">
+              <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
+                <KortixLogo size={20} className="flex-shrink-0 opacity-100 group-hover/logo:opacity-0 transition-opacity" />
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 p-0 cursor-pointer !bg-transparent hover:!bg-transparent border-0 hover:border-0 absolute opacity-0 group-hover/logo:opacity-100 transition-opacity [&_svg]:!size-5"
+                onClick={() => setOpen(true)}
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpen className="!h-5 !w-5" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <NotificationDropdown />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => {
-                if (isMobile) {
-                  setOpenMobile(false);
-                } else {
-                  setOpen(false);
-                }
-              }}
-            >
-              <PanelLeftClose className="!h-5 !w-5" />
-            </Button>
+        ) : (
+          <div className={cn("flex h-[32px] items-center justify-between min-w-[200px]")}>
+            <div className="pl-2 relative flex items-center justify-center w-fit">
+              <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
+                <KortixLogo size={20} className="flex-shrink-0 transition-transform duration-700 ease-in-out hover:rotate-180" />
+              </Link>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowSearchModal(true)}
+              >
+                <Search className="!h-5 !w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  if (isMobile) {
+                    setOpenMobile(false);
+                  } else {
+                    setOpen(false);
+                  }
+                }}
+              >
+                <PanelLeftClose className="!h-5 !w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </SidebarHeader>
       <SidebarContent className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <AnimatePresence mode="wait">
@@ -300,7 +286,7 @@ export function SidebarLeft({
               className="px-6 pt-4 space-y-3 flex flex-col items-center"
             >
               {/* + button */}
-              <div className="w-full flex justify-center">
+              <div className="w-full flex flex-col items-center space-y-3">
                 <Button
                   variant="outline"
                   size="icon"
@@ -318,8 +304,6 @@ export function SidebarLeft({
                   </Link>
                 </Button>
               </div>
-
-              {/* State buttons vertically */}
               <div className="w-full flex flex-col items-center space-y-3">
                 {[
                   { view: 'chats' as const, icon: MessageCircle },
@@ -360,7 +344,7 @@ export function SidebarLeft({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full shadow-none justify-between h-10 px-4"
+                    className="w-full shadow-none justify-between h-10 px-3 group/new-chat"
                     asChild
                   >
                     <Link
@@ -374,7 +358,7 @@ export function SidebarLeft({
                         <Plus className="h-4 w-4" />
                         {t('newChat')}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 opacity-0 group-hover/new-chat:opacity-100 transition-opacity">
                       <KbdGroup>
                         <Kbd>⌘</Kbd>
                         <Kbd>J</Kbd>

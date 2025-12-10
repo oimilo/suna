@@ -45,34 +45,6 @@ class SubscriptionRetrievalHandler:
             }
             
             stripe_subscription_id = credit_account.get('stripe_subscription_id')
-            provider = (credit_account.get('provider') or 'stripe').lower()
-            
-            if provider != 'stripe':
-                price_id = tier_obj.price_ids[0] if tier_obj and tier_obj.price_ids else config.STRIPE_FREE_TIER_ID
-                manual_subscription_id = stripe_subscription_id or f"manual_{account_id.replace('-', '')}"
-                subscription_data = {
-                    'id': manual_subscription_id,
-                    'status': credit_account.get('stripe_subscription_status') or 'active',
-                    'is_trial': False,
-                    'current_period_end': None,
-                    'cancel_at_period_end': False,
-                    'trial_end': None,
-                    'price_id': price_id,
-                    'created': None,
-                    'metadata': {
-                        'provider': provider,
-                        'manual_subscription': True,
-                    },
-                }
-                
-                return {
-                    'tier': tier_info,
-                    'price_id': price_id,
-                    'subscription': subscription_data,
-                    'credit_account': credit_account,
-                    'trial_status': trial_status,
-                    'trial_ends_at': trial_ends_at
-                }
             
             # Get actual price_id from Stripe subscription, not from tier config
             if stripe_subscription_id:

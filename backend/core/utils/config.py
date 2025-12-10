@@ -84,30 +84,40 @@ class Configuration:
     # ===== AGENT TOOL CALLING CONFIGURATION =====
     # Configure which tool calling format to use (XML or Native/OpenAI)
     # Only ONE should be enabled at a time
-    # [PROPHET] Revertido para XML - o prompt base usa exemplos XML e native causa bugs
-    AGENT_XML_TOOL_CALLING: bool = True       # Enable XML-based tool calls (<function_calls>)
-    AGENT_NATIVE_TOOL_CALLING: bool = False   # Enable OpenAI-style native function calling
+    AGENT_XML_TOOL_CALLING: bool = False      # Enable XML-based tool calls (<function_calls>)
+    AGENT_NATIVE_TOOL_CALLING: bool = True  # Enable OpenAI-style native function calling
     AGENT_EXECUTE_ON_STREAM: bool = True     # Execute tools as they stream (vs. at end)
     AGENT_TOOL_EXECUTION_STRATEGY: str = "parallel"  # "parallel" or "sequential"
     # ============================================
     
+
+    ENABLE_BOOTSTRAP_MODE: bool = True        # Use two-phase bootstrap+enrichment (faster startup)
+    ENABLE_MINIMAL_PROMPT: bool = True        # Use minimal prompt for first turn (no DB queries)
+    BOOTSTRAP_SLO_WARNING_MS: int = 750       # Emit warning if Phase A exceeds this threshold
+    BOOTSTRAP_SLO_CRITICAL_MS: int = 1500     # Hard timeout for Phase A (fail if exceeded)
+    # =========================================
+    
+    # ===== PRESENCE CONFIGURATION =====
+    DISABLE_PRESENCE: bool = False  # Disable presence tracking entirely
+    # ==================================
+    
     SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
 
-    # Subscription tier IDs - Production (Multi-currency: USD + BRL)
-    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1SYbhjFNfWjTbEjsZoFTyJwc'  # Prophet Free (Multi-currency)
-    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1SYbYTFNfWjTbEjsW9DIaJmN'  # Prophet Plus Monthly (Multi-currency)
-    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1SYbcfFNfWjTbEjsKztgfUGy'  # Prophet Pro Monthly (Multi-currency)
+    # Subscription tier IDs - Production
+    STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
+    STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrhomjgDnO'
+    STRIPE_TIER_6_50_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIr5q0sybWn'
     STRIPE_TIER_12_100_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIr5Y20ZLHm'
-    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1SYbcrFNfWjTbEjsBr7gj9Dy'  # Prophet Ultra Monthly (Multi-currency)
+    STRIPE_TIER_25_200_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrGAD8rNjb'
     STRIPE_TIER_50_400_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIruNBUMTF1'
     STRIPE_TIER_125_800_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrbJA766tN'
     STRIPE_TIER_200_1000_ID_PROD: Optional[str] = 'price_1RILb3G6l1KZGqIrmauYPOiN'
     
-    # Yearly subscription tier IDs - Production (Multi-currency: USD + BRL)
-    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1SYbcZFNfWjTbEjs8qRpLSlV'  # Prophet Plus Yearly (Multi-currency)
-    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1SYbclFNfWjTbEjshdpuZwRm'  # Prophet Pro Yearly (Multi-currency)
+    # Yearly subscription tier IDs - Production (15% discount)
+    STRIPE_TIER_2_20_YEARLY_ID_PROD: Optional[str] = 'price_1ReHB5G6l1KZGqIrD70I1xqM'
+    STRIPE_TIER_6_50_YEARLY_ID_PROD: Optional[str] = 'price_1ReHAsG6l1KZGqIrlAog487C'
     STRIPE_TIER_12_100_YEARLY_ID_PROD: Optional[str] = 'price_1ReHAWG6l1KZGqIrBHer2PQc'
-    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1SYbcyFNfWjTbEjstvMlUfl7'  # Prophet Ultra Yearly (Multi-currency)
+    STRIPE_TIER_25_200_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9uG6l1KZGqIrsvMLHViC'
     STRIPE_TIER_50_400_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9fG6l1KZGqIrsPtu5KIA'
     STRIPE_TIER_125_800_YEARLY_ID_PROD: Optional[str] = 'price_1ReH9GG6l1KZGqIrfgqaJyat'
     STRIPE_TIER_200_1000_YEARLY_ID_PROD: Optional[str] = 'price_1ReH8qG6l1KZGqIrK1akY90q'
@@ -316,7 +326,7 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://prophet.build"
+    OR_SITE_URL: Optional[str] = "https://www.prophet.build"
     OR_APP_NAME: Optional[str] = "Prophet AI"
     
     # Frontend URL configuration
@@ -344,10 +354,10 @@ class Configuration:
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
     DAYTONA_TARGET: Optional[str] = None
-    # [PROPHET CUSTOM] Base URL for proxying Daytona preview URLs through our backend
-    # This allows preview URLs to go through /api/preview/{sandbox_id}/path instead of direct Daytona URLs
+    
+    # [PROPHET CUSTOM] Daytona preview proxy settings (used by daytona_proxy.py)
+    # These allow preview URLs to go through our backend instead of direct Daytona URLs
     DAYTONA_PREVIEW_BASE: Optional[str] = None
-    # Daytona preview proxy settings (used by daytona_proxy.py)
     DAYTONA_PREVIEW_SKIP_WARNING: bool = False
     DAYTONA_PREVIEW_DISABLE_CORS: bool = False
     DAYTONA_PREVIEW_TOKEN_TTL: int = 900
@@ -383,7 +393,6 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    # Note: Using upstream Kortix images as they're the official Docker images
     SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
@@ -519,7 +528,7 @@ class Configuration:
         
         Returns:
         - Production: 'https://prophet.build' (or FRONTEND_URL_ENV if set)
-        - Staging: 'https://staging.prophet.build' (or FRONTEND_URL_ENV if set)
+        - Staging: 'https://staging.kortix.com' (or FRONTEND_URL_ENV if set)
         - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
         """
         # Check for environment variable override first
@@ -531,7 +540,6 @@ class Configuration:
             return 'https://prophet.build'
         elif self.ENV_MODE == EnvMode.STAGING:
             return 'http://localhost:3000'
-            # return 'https://staging.prophet.build'
         else:
             return 'http://localhost:3000'
     

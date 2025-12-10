@@ -54,11 +54,12 @@ export function useAgentStream(
     { content: string; sequence?: number }[]
   >([]);
   
-  // Throttled state updates for smoother streaming
-  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+  // Optimized streaming with requestAnimationFrame for smooth rendering
+  const rafRef = useRef<number | null>(null);
   const pendingContentRef = useRef<{ content: string; sequence?: number }[]>([]);
+  const lastFlushTimeRef = useRef<number>(0);
   
-  // Throttled content update function for smoother streaming
+  // Flush pending content using requestAnimationFrame for optimal rendering
   const flushPendingContent = useCallback(() => {
     if (pendingContentRef.current.length > 0) {
       // Sort chunks by sequence before adding to state
@@ -80,19 +81,27 @@ export function useAgentStream(
           });
         });
       });
+      lastFlushTimeRef.current = performance.now();
     }
+    rafRef.current = null;
   }, []);
   
   const addContentThrottled = useCallback((content: { content: string; sequence?: number }) => {
     pendingContentRef.current.push(content);
     
-    // Clear existing throttle
-    if (throttleRef.current) {
-      clearTimeout(throttleRef.current);
+    // Use requestAnimationFrame for optimal rendering timing
+    // This syncs updates with the browser's render cycle for smoothest display
+    if (!rafRef.current) {
+      // If we have many pending chunks or it's been a while, flush immediately
+      const timeSinceLastFlush = performance.now() - lastFlushTimeRef.current;
+      if (pendingContentRef.current.length > 10 || timeSinceLastFlush > 50) {
+        // Immediate flush for responsiveness
+        rafRef.current = requestAnimationFrame(flushPendingContent);
+      } else {
+        // Schedule on next animation frame for smooth batching
+        rafRef.current = requestAnimationFrame(flushPendingContent);
+      }
     }
-    
-    // Set new throttle for smooth updates (16ms ≈ 60fps)
-    throttleRef.current = setTimeout(flushPendingContent, 16);
   }, [flushPendingContent]);
   
   const [toolCall, setToolCall] = useState<UnifiedMessage | null>(null);
@@ -394,12 +403,19 @@ export function useAgentStream(
             const balance = balanceMatch ? balanceMatch[1] : null;
             
             const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits. Upgrade now.'
-              : 'Billing check failed. Please upgrade to continue.';
+              ? 'You ran out of credits'
+              : 'Billing check failed';
+            
+            const alertSubtitle = balance 
+              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
+              : isCreditsExhausted 
+                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
+                : 'Please upgrade to continue.';
             
             usePricingModalStore.getState().openPricingModal({ 
               isAlert: true, 
-              alertTitle
+              alertTitle,
+              alertSubtitle
             });
             return;
           }
@@ -444,12 +460,19 @@ export function useAgentStream(
             const balance = balanceMatch ? balanceMatch[1] : null;
             
             const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits. Upgrade now.'
-              : 'Billing check failed. Please upgrade to continue.';
+              ? 'You ran out of credits'
+              : 'Billing check failed';
+            
+            const alertSubtitle = balance 
+              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
+              : isCreditsExhausted 
+                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
+                : 'Please upgrade to continue.';
             
             usePricingModalStore.getState().openPricingModal({ 
               isAlert: true, 
-              alertTitle
+              alertTitle,
+              alertSubtitle
             });
             
             finalizeStream('stopped', currentRunIdRef.current);
@@ -675,12 +698,19 @@ export function useAgentStream(
             const balance = balanceMatch ? balanceMatch[1] : null;
             
             const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits. Upgrade now.'
-              : 'Billing check failed. Please upgrade to continue.';
+              ? 'You ran out of credits'
+              : 'Billing check failed';
+            
+            const alertSubtitle = balance 
+              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
+              : isCreditsExhausted 
+                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
+                : 'Please upgrade to continue.';
             
             usePricingModalStore.getState().openPricingModal({ 
               isAlert: true, 
-              alertTitle
+              alertTitle,
+              alertSubtitle
             });
           }
           
@@ -724,10 +754,10 @@ export function useAgentStream(
     return () => {
       isMountedRef.current = false;
 
-      // Clean up throttle timeout
-      if (throttleRef.current) {
-        clearTimeout(throttleRef.current);
-        throttleRef.current = null;
+      // Clean up requestAnimationFrame
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
       
       // Flush any remaining pending content
@@ -877,7 +907,7 @@ export function useAgentStream(
       console.error(
         `[useAgentStream] Error sending stop request for ${runIdToStop}: ${errorMessage}`,
       );
-      toast.error(`Failed to stop agent: ${errorMessage}`);
+      toast.error(`Failed to stop Worker: ${errorMessage}`);
     }
   }, [agentRunId, finalizeStream]);
 

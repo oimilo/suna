@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Markdown } from '../ui/markdown';
+import { UnifiedMarkdown } from '@/components/markdown';
 
 type ChannelType = 'in_app' | 'email' | 'sms' | 'push' | 'chat';
 
@@ -164,11 +164,10 @@ const NotificationItem = (notification: Notification) => {
                         {notification.subject}
                     </h4>
                 )}
-                <Markdown
+                <UnifiedMarkdown
+                    content={notification.body}
                     className={`text-xs text-muted-foreground line-clamp-2 ${notification.isRead ? 'text-muted-foreground font-normal' : 'text-foreground font-medium'}`}
-                >
-                    {notification.body}
-                </Markdown>
+                />
                 </div>
                 
                 {!notification.isRead && (
@@ -244,12 +243,11 @@ const NotificationItem = (notification: Notification) => {
 export function NotificationDropdown() {
   const { user } = useAuth();
   const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
-  
-  // Don't render if Novu is not configured
-  if (!applicationIdentifier || !user?.id) {
+
+  if (!user?.id || !applicationIdentifier) {
     return null;
   }
-  
+
   const appearance = {
     variables: {
       colorBackground: 'var(--card)',

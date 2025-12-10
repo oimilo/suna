@@ -23,7 +23,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "../home/theme-toggle"
-import { KortixLogo } from "../sidebar/milo-logo"
+import { KortixLogo } from "../sidebar/kortix-logo"
 
 const helpData = {
   navMain: [
@@ -41,7 +41,7 @@ const helpData = {
       items: [
         {
           title: "GitHub Repository",
-          url: "https://github.com/milo-ai/prophet",
+          url: "https://github.com/kortix-ai/suna",
           external: true,
         },
         {

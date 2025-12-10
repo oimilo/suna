@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { BRANDING } from '@/lib/branding';
 
 interface KortixLogoProps {
   size?: number;
@@ -10,6 +11,7 @@ interface KortixLogoProps {
   className?: string;
 }
 
+// Backwards compatible: exports KortixLogo but uses Prophet branding
 export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -19,30 +21,32 @@ export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixL
     setMounted(true);
   }, []);
 
-  const shouldInvert = mounted && (
+  const isDark = mounted && (
     theme === 'dark' || (theme === 'system' && systemTheme === 'dark')
   );
 
-  // For logomark variant, use logomark-white.svg which is already white
-  // and invert it for light mode instead
+  // For logomark variant, use the appropriate logo based on theme
   if (variant === 'logomark') {
     return (
       <img
-        src="/logomark-white.svg"
-        alt="Prophet"
-        className={cn(`${shouldInvert ? '' : 'invert'} flex-shrink-0`, className)}
+        src={isDark ? BRANDING.logo.dark : BRANDING.logo.light}
+        alt={BRANDING.name}
+        className={cn('flex-shrink-0', className)}
         style={{ height: `${size}px`, width: 'auto' }}
       />
     );
   }
 
-  // Default symbol variant behavior
+  // Default symbol variant - use favicon/symbol
   return (
     <img
-      src="/symbol.svg"
-      alt="Prophet"
-      className={cn(`${shouldInvert ? 'invert' : ''} flex-shrink-0`, className)}
+      src={BRANDING.logo.favicon}
+      alt={BRANDING.name}
+      className={cn('flex-shrink-0', className)}
       style={{ width: `${size}px`, height: `${size}px` }}
     />
   );
 }
+
+// Alias for backwards compatibility
+export { KortixLogo as ProphetLogo };

@@ -219,10 +219,6 @@ DECLARE
     v_account_id UUID;
     v_user_id UUID;
     v_job_name TEXT;
-    v_api_base_url TEXT := COALESCE(
-        current_setting('app.settings.api_base_url', TRUE),
-        'https://prophet-milo-f3hr5.ondigitalocean.app'
-    );
 BEGIN
     SELECT account_id, user_id 
     INTO v_account_id, v_user_id
@@ -241,10 +237,10 @@ BEGIN
     -- Delete Daytona sandboxes via HTTP endpoint before deleting account data
     BEGIN
         PERFORM net.http_post(
-            url := v_api_base_url || '/api/internal/delete-account-sandboxes',
+            url := 'https://staging-api.suna.so/v1/internal/delete-account-sandboxes',
             headers := json_build_object(
                 'Content-Type', 'application/json',
-                'X-Admin-Api-Key', current_setting('app.settings.daytona_admin_key', TRUE)
+                'X-Admin-Api-Key', 'thisnotvaliddonteventryhah_j6ocvq8qeM3g9IOelVmUFpqtVpIVAtjsHr6PuN9RhI4g1cudFV1qErVIZE4e35us'
             )::jsonb,
             body := json_build_object('account_id', v_account_id)::text::jsonb,
             timeout_milliseconds := 30000

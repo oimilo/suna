@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthProvider';
 import { listSandboxFiles, type FileInfo } from '@/lib/api/sandbox';
@@ -8,6 +8,12 @@ import { listSandboxFiles, type FileInfo } from '@/lib/api/sandbox';
  */
 function normalizePath(path: string): string {
   if (!path) return '/workspace';
+  
+  // Handle paths that start with "workspace" (without leading /)
+  // This prevents "/workspace/workspace" when someone passes "workspace" or "workspace/foo"
+  if (path === 'workspace' || path.startsWith('workspace/')) {
+    path = '/' + path;
+  }
   
   // Ensure path starts with /workspace
   if (!path.startsWith('/workspace')) {
@@ -270,6 +276,18 @@ export function useDirectoryQuery(
   
   const normalizedPath = directoryPath ? normalizePath(directoryPath) : null;
   
+  // Debug: log query key changes
+  useEffect(() => {
+    if (sandboxId && normalizedPath) {
+      console.log('[useDirectoryQuery] Query key:', {
+        sandboxId,
+        directoryPath,
+        normalizedPath,
+        queryKey: fileQueryKeys.directory(sandboxId, normalizedPath),
+      });
+    }
+  }, [sandboxId, directoryPath, normalizedPath]);
+  
   const queryResult = useQuery({
     queryKey: sandboxId && normalizedPath ? 
       fileQueryKeys.directory(sandboxId, normalizedPath) : [],
@@ -277,7 +295,11 @@ export function useDirectoryQuery(
       if (!sandboxId || !normalizedPath) {
         throw new Error('Missing required parameters');
       }
-      return await listSandboxFiles(sandboxId, normalizedPath);
+      // Ensure we're fetching the correct path
+      console.log('[useDirectoryQuery] Fetching files for path:', normalizedPath);
+      const result = await listSandboxFiles(sandboxId, normalizedPath);
+      console.log('[useDirectoryQuery] Fetched files:', result.length, 'files');
+      return result;
     },
     enabled: Boolean(sandboxId && normalizedPath && (options.enabled !== false)),
     staleTime: options.staleTime !== undefined ? options.staleTime : 0, // Always refetch when path changes
@@ -301,6 +323,7 @@ export function useDirectoryQuery(
     },
     refetchOnMount: true, // Always refetch when component mounts with new path
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    // Force refetch when query key changes (path changes)
     refetchOnReconnect: false,
   });
   

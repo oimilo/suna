@@ -48,7 +48,7 @@ class ToolMetadata:
     
     Attributes:
         display_name (str): Human-readable tool name
-        description (str): Tool description
+        description (str): Tool description (short, for minimal index)
         icon (Optional[str]): Icon identifier for UI
         color (Optional[str]): Color class for UI styling
         is_core (bool): Whether this is a core tool (always enabled)
@@ -228,18 +228,15 @@ def tool_metadata(
             icon="FolderOpen",
             color="bg-blue-100 dark:bg-blue-800/50",
             weight=20,
-            visible=True
+            visible=True,
+            usage_guide='''
+            ### FILE OPERATIONS GUIDE
+            - create_file(path, content): Create new files
+            - read_file(path): Read file contents
+            ...
+            '''
         )
         class SandboxFilesTool(Tool):
-            ...
-        
-        # Example: Hidden from UI (internal tool)
-        @tool_metadata(
-            display_name="Internal Feature",
-            description="Internal functionality not shown in UI",
-            visible=False
-        )
-        class InternalTool(Tool):
             ...
     """
     def decorator(cls):

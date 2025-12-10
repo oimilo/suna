@@ -19,7 +19,7 @@ import { useComposioToolkitDetails } from '@/hooks/composio/use-composio';
 import { toast } from 'sonner';
 import { cn, truncateString } from '@/lib/utils';
 import { ComposioConnector } from '@/components/agents/composio/composio-connector';
-import { Markdown } from '@/components/ui/markdown';
+import { UnifiedMarkdown } from '@/components/markdown';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
 
 interface EventBasedTriggerDialogProps {
@@ -317,7 +317,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
     const [name, setName] = useState('');
     const [prompt, setPrompt] = useState('');
     const [profileId, setProfileId] = useState('');
-    const [model, setModel] = useState('kortix/basic');
+    const [model, setModel] = useState('prophet/basic');
     const [executionType] = useState<'agent'>('agent');
     const [showComposioConnector, setShowComposioConnector] = useState(false);
 
@@ -364,7 +364,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
             setName('');
             setPrompt('');
             setProfileId('');
-            setModel('kortix/basic');
+            setModel('prophet/basic');
             setShowComposioConnector(false);
         }
     }, [open, isEditMode]);
@@ -394,7 +394,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
             setName(existingTrigger.name || '');
             setPrompt(triggerConfig.agent_prompt || '');
             setProfileId(triggerConfig.profile_id || '');
-            setModel(triggerConfig.model || 'kortix/basic');
+            setModel(triggerConfig.model || 'prophet/basic');
 
             const { agent_prompt, profile_id, provider_id, trigger_slug, qualified_name, model: _, ...triggerSpecificConfig } = triggerConfig;
             setConfig(triggerSpecificConfig);
@@ -716,9 +716,10 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                                             >
                                         <div className="max-w-2xl mx-auto space-y-6">
                                             {selectedTrigger.instructions && (
-                                                <Markdown className="text-sm w-full text-muted-foreground">
-                                                    {selectedTrigger.instructions}
-                                                </Markdown>
+                                                <UnifiedMarkdown 
+                                                    content={selectedTrigger.instructions} 
+                                                    className="text-sm w-full text-muted-foreground" 
+                                                />
                                             )}
 
                                             {(!loadingProfiles && (profiles || []).filter(p => p.is_connected).length === 0) ? (

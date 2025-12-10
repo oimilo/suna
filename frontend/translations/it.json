@@ -29,7 +29,7 @@
     "next": "Avanti",
     "upgrade": "Aggiorna",
     "basic": "Base",
-    "tryFree": "Inizia gratis"
+    "tryFree": "Inizia"
   },
   "settings": {
     "title": "Impostazioni",
@@ -38,6 +38,7 @@
       "plan": "Piano",
       "billing": "Fatturazione",
       "usage": "Utilizzo",
+      "referrals": "Referral",
       "knowledgeBase": "Base di conoscenza",
       "integrations": "Integrazioni",
       "envManager": "Gestore ambiente"
@@ -45,6 +46,14 @@
     "general": {
       "title": "Impostazioni profilo",
       "description": "Gestisci le informazioni del tuo account",
+      "profilePicture": {
+        "title": "Foto Profilo",
+        "upload": "Carica avatar",
+        "hint": "JPG, PNG o GIF. Max 5MB.",
+        "invalidType": "Seleziona un file immagine",
+        "tooLarge": "L'immagine deve essere inferiore a 5MB",
+        "uploadFailed": "Impossibile caricare la foto profilo"
+      },
       "name": "Nome",
       "email": "Email",
       "namePlaceholder": "Inserisci il tuo nome",
@@ -76,13 +85,64 @@
         "billingRemoved": "Tutti i dati di fatturazione saranno rimossi",
         "scheduled30Days": "Il tuo account sarà programmato per l'eliminazione tra 30 giorni",
         "gracePeriod": "Il tuo account sarà programmato per l'eliminazione tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento durante il periodo di grazia.",
-        "confirmText": "Digita {text} per confermare",
-        "confirmPlaceholder": "ELIMINA",
+        "chooseDeletionType": "Scegli il tipo di eliminazione:",
+        "gracePeriodOption": "Periodo di Grazia di 30 Giorni",
+        "gracePeriodDescription": "Il tuo account sarà programmato per l'eliminazione tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento durante il periodo di grazia.",
+        "immediateOption": "Eliminazione Immediata",
+        "immediateDescription": "Il tuo account e tutti i dati saranno eliminati permanentemente immediatamente. Questa azione non può essere annullata.",
+        "warningImmediate": "Questa azione non può essere annullata",
+        "warningGracePeriod": "Questa azione non può essere annullata dopo 30 giorni",
+        "confirmText": "Digita delete per confermare",
+        "confirmPlaceholder": "delete",
         "keepAccount": "Mantieni account",
         "cancelDeletionTitle": "Annulla Eliminazione Account",
         "cancelDeletionDescription": "Vuoi annullare l'eliminazione del tuo account? Il tuo account e tutti i dati saranno preservati.",
         "cancelDeletion": "Annulla Eliminazione"
       }
+    },
+    "referrals": {
+      "title": "Programma Referral",
+      "description": "Condividi il tuo link di referral con gli amici. Quando si registrano e creano un account, guadagnerai",
+      "creditsPerReferral": "100 crediti permanenti",
+      "youEarn": "Guadagni",
+      "friendGets": "Il tuo amico ottiene",
+      "maxEarnable": "Massimo guadagnabile tramite referral:",
+      "maxCredits": "$100 in crediti",
+      "yourReferralCode": "Il Tuo Codice Referral",
+      "referralLink": "Link di Referral",
+      "shareYourLink": "Condividi il tuo link di referral",
+      "yourStats": "Le tue statistiche",
+      "enterCodeDescription": "Inserisci un codice referral per guadagnare crediti",
+      "enterCode": "Inserisci codice",
+      "refresh": "Aggiorna",
+      "copyCode": "Copia codice",
+      "copyLink": "Copia link",
+      "share": "Condividi",
+      "stats": {
+        "totalReferrals": "Referral Totali",
+        "successful": "Riusciti",
+        "creditsEarned": "Crediti Guadagnati"
+      },
+      "recentReferrals": "Referral Recenti",
+      "signupComplete": "Registrazione Completata",
+      "pending": "In Attesa",
+      "noReferrals": "Nessun referral ancora. Condividi il tuo link di referral per iniziare!",
+      "copied": "Copiato!",
+      "codeCopied": "Codice referral copiato negli appunti",
+      "linkCopied": "Link di referral copiato negli appunti",
+      "codeRefreshed": "Codice referral aggiornato con successo",
+      "refreshFailed": "Aggiornamento del codice referral fallito",
+      "inviteByEmail": "Invita per Email",
+      "inviteByEmailDescription": "Aggiungi fino a 3 indirizzi email (premi Invio, Spazio o Virgola)",
+      "emailAddress": "Indirizzo email",
+      "emailPlaceholder": "Inserisci indirizzi email (premi Invio, Spazio o Virgola)",
+      "emailsAdded": "email",
+      "sent": "inviato",
+      "send": "Invia",
+      "sending": "Invio...",
+      "sendAllInvites": "Invia Tutti gli Inviti",
+      "allSent": "Tutto Inviato",
+      "emailSent": "Invito di referral inviato con successo"
     },
     "billing": {
       "title": "Fatturazione & Abbonamento",
@@ -136,12 +196,12 @@
     "search": "Cerca",
     "scheduledTrigger": "Trigger programmato",
     "eventBasedTrigger": "Trigger basato su eventi",
-    "chooseAgent": "Scegli un agente",
+    "chooseAgent": "Scegli un worker",
     "schedule": "Programma",
-    "agentInstructions": "Istruzioni agente",
-    "agentInstructionsDescription": "Prompt personalizzato per l'agente",
-    "assignedAgent": "Agente assegnato",
-    "unknownAgent": "Agente sconosciuto",
+    "agentInstructions": "Istruzioni worker",
+    "agentInstructionsDescription": "Prompt personalizzato per il worker",
+    "assignedAgent": "Worker assegnato",
+    "unknownAgent": "Worker sconosciuto",
     "technicalDetails": "Dettagli tecnici",
     "type": "Tipo",
     "provider": "Fornitore",
@@ -171,8 +231,8 @@
     "createScheduledTask": "Crea attività programmata",
     "editAppBasedTask": "Modifica attività basata su app",
     "createAppBasedTask": "Crea attività basata su app",
-    "updateAgentForTask": "Aggiorna l'agente per questa attività",
-    "selectAgentForTask": "Prima, seleziona quale agente dovrebbe gestire questa attività",
+    "updateAgentForTask": "Aggiorna il worker per questa attività",
+    "selectAgentForTask": "Prima, seleziona quale worker dovrebbe gestire questa attività",
     "createNew": "Crea nuovo",
     "notConfigured": "Non configurato",
     "every15Minutes": "Ogni 15 minuti",
@@ -184,12 +244,17 @@
     "monthlyOn1st": "Mensilmente il 1°"
   },
   "sidebar": {
+    "referAndEarn": "Invita e Guadagna",
+    "referralShareTitle": "Invita Amici",
+    "referralShareSubtitle": "Ottieni 400 crediti",
+    "new": "Nuovo",
+    "upgrade": "Aggiorna",
     "chats": "Chat",
-    "agents": "Agenti",
+    "agents": "Workers",
     "workers": "Worker",
     "triggers": "Trigger",
     "newChat": "Nuova chat",
-    "newAgent": "Nuovo agente",
+    "newAgent": "Nuovo worker",
     "settings": "Impostazioni",
     "logout": "Esci",
     "openMenu": "Apri menu",
@@ -249,9 +314,42 @@
     "customWorkers": "Worker personalizzati",
     "scheduledTriggers": "Trigger pianificati",
     "appTriggers": "Trigger app",
-    "limitsExceeded": "Hai raggiunto il limite delle chat ({current}/{limit}). Aggiorna il tuo piano per creare più chat.",
+    "limitsExceeded": "Hai raggiunto il limite delle chat. Aggiorna il tuo piano per creare più chat.",
     "agentInitiatedSuccessfully": "Agente avviato con successo",
-    "aiAssistantReady": "Il tuo assistente AI è pronto ad aiutare"
+    "aiAssistantReady": "Il tuo assistente AI è pronto ad aiutare",
+    "greetings": {
+      "morning": [
+        "Buongiorno! Cosa c'è in programma?",
+        "Sveglia! Cosa costruiamo oggi?",
+        "Buongiorno! Pronti a spaccare?"
+      ],
+      "afternoon": [
+        "Buon pomeriggio! Come posso aiutare?",
+        "Come va? Cosa c'è da fare?"
+      ],
+      "evening": [
+        "Buonasera! Lavoro notturno?",
+        "Ciao! Su cosa lavoriamo stasera?",
+        "Buonasera! Mettiamoci al lavoro."
+      ],
+      "random": [
+        "Indovina chi è tornato!",
+        "Ehi! Cosa può fare Kortix per te?",
+        "Cosa vuoi realizzare oggi?",
+        "Creiamo qualcosa di fantastico",
+        "Pronto quando vuoi!",
+        "Cosa bolle in pentola?",
+        "Ai tuoi ordini! Qual è la missione?",
+        "Facciamo un po' di magia",
+        "Quale sfida affrontiamo?",
+        "I tuoi desideri sono ordini",
+        "Qual è il piano?",
+        "Allaccia le cinture! Dove andiamo?",
+        "Un altro giorno, un altro progetto",
+        "A cosa stai pensando?",
+        "Partiamo!"
+      ]
+    }
   },
   "thread": {
     "integrations": "Integrazioni",
@@ -266,7 +364,7 @@
     "chatDescription": "Semplice conversazione",
     "sampleAnswers": "Risposte di esempio",
     "samplePrompts": "Prompt di esempio",
-    "waitingForUserResponse": "Prophet continuerà a lavorare in modo autonomo dopo la tua risposta.",
+    "waitingForUserResponse": "Kortix continuerà a lavorare in modo autonomo dopo la tua risposta.",
     "taskCompleted": "Attività completata",
     "uploadingFiles": "Caricamento di {count} file{plural}...",
     "uploadingFilesOne": "Caricamento di {count} file...",
@@ -290,29 +388,108 @@
     "rateThisResult": "Valuta questo risultato",
     "feedbackHelpsImprove": "Il tuo feedback ci aiuta a migliorare",
     "additionalFeedbackOptional": "Feedback aggiuntivo (opzionale)",
-    "helpProphetImprove": "Aiuta Prophet a migliorare con il tuo feedback",
+    "helpKortixImprove": "Aiuta Kortix a migliorare con il tuo feedback",
     "submit": "Invia",
     "submitting": "Invio in corso...",
     "feedbackSubmittedSuccess": "Feedback inviato con successo",
     "feedbackSubmitFailed": "Invio del feedback fallito"
   },
   "agents": {
-    "title": "Agenti",
-    "create": "Crea agente",
+    "title": "Workers",
+    "create": "Crea worker",
     "createNewWorker": "Crea nuovo worker",
-    "edit": "Modifica agente",
-    "delete": "Elimina agente",
+    "edit": "Modifica worker",
+    "delete": "Elimina worker",
     "name": "Nome",
     "description": "Descrizione",
     "model": "Modello",
     "systemPrompt": "Prompt di sistema",
-    "systemPromptPlaceholder": "Definisci come dovrebbe comportarsi il tuo agente...",
-    "customizeIcon": "Clicca per personalizzare l'icona dell'agente"
+    "systemPromptPlaceholder": "Definisci come dovrebbe comportarsi il tuo worker...",
+    "customizeIcon": "Clicca per personalizzare l'icona del worker"
   },
   "home": {
     "title": "Benvenuto",
     "subtitle": "Inizia",
     "heroPlaceholder": "Descrivi il compito che vuoi che il tuo Worker completi..."
+  },
+  "showcase": {
+    "title": "Kortix: Il Tuo Worker IA Autonomo",
+    "subtitle": "Costruito per compiti complessi, progettato per tutto. L'assistente IA definitivo che gestisce tutto—dalle richieste semplici ai progetti mega-complessi.",
+    "tryItOut": "Provalo",
+    "kortixComputer": "Kortix Computer",
+    "running": "In esecuzione",
+    "workers": {
+      "images": {
+        "title": "Immagini",
+        "description": "Crea immagini su richiesta. Dalle foto di prodotti ai grafici per social media fino alle illustrazioni complete. Regola stile, illuminazione, colori e layout, o perfeziona i visual esistenti con modifiche rapide e ritocchi.",
+        "capabilities": {
+          "0": "Generare foto di prodotti",
+          "1": "Creare grafici per social media",
+          "2": "Creare illustrazioni",
+          "3": "Variazioni di stile e illuminazione",
+          "4": "Creazione di logo / risorse",
+          "5": "+ Molto altro"
+        },
+        "imageAlt": "Esempio grafico La crescita non è lineare",
+        "fileType": "image"
+      },
+      "slides": {
+        "title": "Presentazioni",
+        "description": "Crea presentazioni straordinarie all'istante. Dalle pitch deck ai rapporti fino ai materiali di formazione. Regola temi, layout, struttura del contenuto o perfeziona le presentazioni esistenti con modifiche e aggiornamenti rapidi.",
+        "capabilities": {
+          "0": "Pitch deck",
+          "1": "Materiale di formazione",
+          "2": "Presentazioni di rapporti",
+          "3": "Variazioni di tema e layout",
+          "4": "Ristrutturazione del contenuto",
+          "5": "+ Molto altro"
+        },
+        "imageAlt": "Esempio di diapositiva Nexus Enterprise Automation Platform",
+        "fileType": "PPTX"
+      },
+      "data": {
+        "title": "Dati",
+        "description": "Trasforma i dati grezzi in insights. Dai fogli di calcolo alle dashboard alle visualizzazioni. Pulisce i dataset, crea grafici, genera rapporti o perfeziona le analisi esistenti con aggiornamenti rapidi.",
+        "capabilities": {
+          "0": "Dashboard",
+          "1": "Visualizzazioni",
+          "2": "Rapporti sui dati",
+          "3": "Pulire e organizzare i dati",
+          "4": "Generare insights",
+          "5": "+ Molto altro"
+        },
+        "imageAlt": "Esempio di dashboard modello finanziario",
+        "fileType": "Anteprima"
+      },
+      "docs": {
+        "title": "Documenti",
+        "description": "Scrive e modifica documenti senza sforzo. Dalle proposte alle guide ai contenuti. Regola tono, struttura, formattazione o perfeziona i documenti esistenti con riscritture rapide e rifiniture.",
+        "capabilities": {
+          "0": "Proposte",
+          "1": "Guide e manuali",
+          "2": "Contenuti",
+          "3": "Variazioni di tono e stile",
+          "4": "Formattare e ristrutturare",
+          "5": "+ Molto altro"
+        },
+        "imageAlt": "Esempio di rapporto esecutivo riepilogativo Q3 2025",
+        "fileType": "PDF"
+      },
+      "research": {
+        "title": "Ricerca",
+        "description": "Ricerca argomenti in modo completo. Dalle tendenze di mercato all'analisi competitiva fino agli approfondimenti. Raccoglie fonti, sintetizza i risultati o perfeziona le ricerche esistenti con aggiornamenti rapidi.",
+        "capabilities": {
+          "0": "Analizzare le tendenze di mercato",
+          "1": "Ricerca competitiva",
+          "2": "Approfondimenti su argomenti",
+          "3": "Raccogliere fonti",
+          "4": "Sintetizzare i risultati",
+          "5": "+ Molto altro"
+        },
+        "imageAlt": "Esempio di ricerca Profili dettagliati dei concorrenti",
+        "fileType": "PDF"
+      }
+    }
   },
   "threads": {
     "title": "Thread",
@@ -326,6 +503,7 @@
     "credits": "Crediti",
     "popular": "Popolare",
     "creditsExplained": "Crediti spiegati",
+    "creditsExhausted": "+200 Crediti tra {time}. Aggiorna per usare ora.",
     "creditsExhaustedRefreshIn": "Hai esaurito i tuoi crediti. Si rinnoveranno tra {time}",
     "trialActive": "Prova attiva",
     "trialBadge": "Prova di 7 giorni",
@@ -344,10 +522,10 @@
     "localModeMessage": "Esecuzione in modalità sviluppo locale - le funzionalità di fatturazione sono disabilitate",
     "creditsExplainedPage": {
       "title": "Crediti spiegati",
-      "subtitle": "Tutto ciò che devi sapere su come funzionano i crediti su Prophet",
+      "subtitle": "Tutto ciò che devi sapere su come funzionano i crediti su Kortix",
       "understandingCredits": {
         "title": "Comprendere i crediti",
-        "description": "I crediti servono come valuta universale di Prophet per le operazioni della piattaforma. Ogni azione che i tuoi agenti AI eseguono—dall'analisi dei dati alla generazione di codice—consuma crediti in base alla complessità del compito e alle risorse richieste."
+        "description": "I crediti servono come valuta universale di Kortix per le operazioni della piattaforma. Ogni azione che i tuoi agenti AI eseguono—dall'analisi dei dati alla generazione di codice—consuma crediti in base alla complessità del compito e alle risorse richieste."
       },
       "howCreditsWork": {
         "title": "Come funzionano i crediti",
@@ -365,7 +543,7 @@
       },
       "gettingMoreCredits": {
         "title": "Ottenere più crediti",
-        "description": "Ci sono diversi modi per ottenere crediti su Prophet:",
+        "description": "Ci sono diversi modi per ottenere crediti su Kortix:",
         "monthlySubscription": {
           "title": "Crediti abbonamento mensile",
           "description": "Inclusi nel tuo piano a pagamento e rinnovati automaticamente ogni mese. Questi sono crediti in scadenza."
@@ -385,7 +563,7 @@
       },
       "typesOfCredits": {
         "title": "Tipi di crediti",
-        "description": "Prophet utilizza due tipi di crediti per darti flessibilità nella gestione del tuo utilizzo:",
+        "description": "Kortix utilizza due tipi di crediti per darti flessibilità nella gestione del tuo utilizzo:",
         "expiringCredits": {
           "title": "Crediti in scadenza",
           "description": "Crediti abbonamento mensile",
@@ -398,7 +576,7 @@
         },
         "creditPriority": {
           "title": "Priorità crediti:",
-          "description": "Quando usi Prophet, i crediti in scadenza vengono consumati per primi. Solo dopo che i tuoi crediti in scadenza sono esauriti, verranno utilizzati i crediti non in scadenza."
+          "description": "Quando usi Kortix, i crediti in scadenza vengono consumati per primi. Solo dopo che i tuoi crediti in scadenza sono esauriti, verranno utilizzati i crediti non in scadenza."
         }
       }
     },
@@ -421,6 +599,9 @@
     "downgradePending": "Downgrade in sospeso",
     "downgrade": "Passa a un piano inferiore",
     "switchToLegacyYearly": "Passa al piano annuale legacy",
+    "confirmDowngradeTitle": "Sei sicuro di voler passare a un piano inferiore?",
+    "confirmDowngradeDescription": "Stai per passare al piano {planName}. Questa modifica avrà effetto alla fine del tuo attuale periodo di fatturazione.",
+    "confirmDowngrade": "Sì, Passa a un Piano Inferiore",
     "pickPlan": "Scegli il piano che fa per te.",
     "reachedLimit": "Hai raggiunto i tuoi limiti.",
     "projectLimit": "Limite progetti ({current}/{limit})",
@@ -441,11 +622,38 @@
       "integrations": "100+ integrazioni",
       "premiumAIModels": "Modelli AI Premium",
       "prioritySupport": "Supporto prioritario"
+    },
+    "downgradeDialog": {
+      "confirmTitle": "Conferma cambio piano",
+      "confirmSubtitle": "Ci dispiace vederti andare",
+      "confirmDescription": "Stai per passare al piano {planName}. Questa modifica avrà effetto alla fine del tuo attuale periodo di fatturazione. Manterrai i tuoi vantaggi attuali fino ad allora.",
+      "continue": "Continua",
+      "keepCurrentPlan": "Mantieni il mio piano attuale",
+      "feedbackTitle": "Aiutaci a migliorare",
+      "feedbackSubtitle": "Il tuo feedback plasma il futuro di Kortix",
+      "whatWouldMakeYouStay": "Cosa ti farebbe restare?",
+      "feedbackPlaceholder": "Se ci fosse una cosa che potremmo cambiare o aggiungere per rendere Kortix utile per te, quale sarebbe?",
+      "feedbackFooter": "Il nostro team legge ogni risposta. Le tue parole influenzano direttamente cosa costruiremo dopo.",
+      "confirmDowngrade": "Conferma downgrade",
+      "processing": "Elaborazione...",
+      "pleaseSelectReason": "Seleziona un motivo",
+      "reasons": {
+        "tooExpensive": "È troppo costoso per le mie esigenze",
+        "notUsingOften": "Non uso Kortix abbastanza",
+        "foundAlternative": "Ho trovato un'altra soluzione",
+        "technicalIssues": "Ho riscontrato problemi tecnici",
+        "resultsNotGood": "I risultati non hanno soddisfatto le mie aspettative",
+        "other": "Altro motivo"
+      }
     }
   },
   "auth": {
+    "haveReferralCode": "Hai un codice referral?",
+    "referralCode": "Codice Referral",
+    "enterCode": "Inserisci codice",
     "logIntoAccount": "Accedi al tuo account",
     "createAccount": "Crea account",
+    "signInOrCreateAccount": "Accedi o crea il tuo account Kortix",
     "continueWithGoogle": "Continua con Google",
     "continueWithGitHub": "Continua con GitHub",
     "orEmail": "o email",
@@ -459,7 +667,7 @@
     "forgotPassword": "Password dimenticata?",
     "dontHaveAccount": "Non hai un account?",
     "alreadyHaveAccount": "Hai già un account?",
-    "acceptPrivacyTerms": "Accetto l'<privacyPolicy>Informativa sulla Privacy</privacyPolicy> e i <termsOfService>Termini di Servizio</termsOfService>",
+    "acceptPrivacyTerms": "Accetto l' <privacyPolicy>Informativa sulla Privacy</privacyPolicy> e i <termsOfService>Termini di Servizio</termsOfService>",
     "privacyPolicy": "Informativa sulla Privacy",
     "termsOfService": "Termini di Servizio",
     "checkYourEmail": "Controlla la tua email",
@@ -473,7 +681,22 @@
     "cancel": "Annulla",
     "pleaseEnterValidEmail": "Inserisci un indirizzo email valido",
     "signInFailed": "Accesso fallito. Controlla le tue credenziali.",
-    "signUpFailed": "Registrazione fallita. Riprova."
+    "signUpFailed": "Registrazione fallita. Riprova.",
+    "sendMagicLink": "Invia magic link",
+    "sending": "Invio in corso...",
+    "magicLinkSent": "Ti abbiamo inviato un magic link a",
+    "magicLinkDescription": "Clicca sul link nella tua email per accedere. Il link scadrà tra 1 ora.",
+    "magicLinkExplanation": "Ti invieremo un link sicuro per accedere. Nessuna password necessaria.",
+    "magicLinkExpired": "Questo link è scaduto",
+    "magicLinkExpiredDescription": "Il magic link su cui hai cliccato è scaduto. I magic link scadono dopo 1 ora per motivi di sicurezza.",
+    "resendMagicLink": "Invia di nuovo il magic link",
+    "resending": "Invio in corso...",
+    "byContinuingYouAgree": "Continuando, accetti la nostra <privacyPolicy>Informativa sulla Privacy</privacyPolicy> e i nostri <termsOfService>Termini di Servizio</termsOfService>",
+    "openProvider": "Apri {provider}",
+    "didntReceiveEmail": "Non hai ricevuto l'email?",
+    "resend": "Reinvia",
+    "alreadySignedIn": "Sei già connesso. Nessuna azione richiesta.",
+    "goToDashboard": "Vai alla Dashboard"
   },
   "onboarding": {
     "welcome": "Benvenuto",
@@ -575,24 +798,24 @@
     "parallelRunsLimitReached": "Limite esecuzioni parallele raggiunto",
     "parallelRunsLimitDescription": "Hai raggiunto il numero massimo di esecuzioni parallele di agenti consentite.",
     "needMoreParallelRuns": "Hai bisogno di più esecuzioni parallele?",
-    "upgradeDescription": "Aggiorna il tuo piano per eseguire più agenti contemporaneamente e aumentare la tua produttività.",
+    "upgradeDescription": "Aggiorna il tuo piano per eseguire più workers contemporaneamente e aumentare la tua produttività.",
     "upgradePlan": "Aggiorna piano",
-    "currentlyRunningAgents": "Agenti attualmente in esecuzione",
+    "currentlyRunningAgents": "Workers attualmente in esecuzione",
     "loadingThreads": "Caricamento thread...",
-    "foundRunningAgents": "Trovati {count} agenti in esecuzione ma impossibile caricare i dettagli del thread.",
+    "foundRunningAgents": "Trovati {count} workers in esecuzione ma impossibile caricare i dettagli del thread.",
     "threadIds": "ID thread: {ids}",
     "moreRunning": "+{count} altri in esecuzione",
     "whatCanYouDo": "Cosa puoi fare?",
-    "stopAgentsHint": "Clicca il pulsante di stop per fermare gli agenti in esecuzione",
-    "waitForCompletion": "Attendi che un agente si completi automaticamente",
+    "stopAgentsHint": "Clicca il pulsante di stop per fermare i workers in esecuzione",
+    "waitForCompletion": "Attendi che un worker si completi automaticamente",
     "upgradeYourPlan": "Aggiorna il tuo piano",
     "forMoreParallelRuns": "per più esecuzioni parallele",
-    "stopAgent": "Ferma agente",
-    "stopThisAgent": "Ferma questo agente",
+    "stopAgent": "Ferma worker",
+    "stopThisAgent": "Ferma questo worker",
     "openThread": "Apri thread",
-    "agentStoppedSuccessfully": "Agente fermato con successo",
-    "failedToStopAgent": "Impossibile fermare l'agente",
-    "upgradeToRunMore": "Aggiorna per eseguire più agenti in parallelo"
+    "agentStoppedSuccessfully": "Worker fermato con successo",
+    "failedToStopAgent": "Impossibile fermare il worker",
+    "upgradeToRunMore": "Aggiorna per eseguire più workers in parallelo"
   },
   "errors": {
     "generic": "Si è verificato un errore",
@@ -603,7 +826,31 @@
   "languages": {
     "en": "English",
     "de": "Deutsch",
-    "it": "Italiano"
+    "it": "Italiano",
+    "zh": "中文",
+    "ja": "日本語",
+    "pt": "Português",
+    "fr": "Français",
+    "es": "Español"
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "description": "Gestisci come ricevi le notifiche",
+    "preferences": "Preferenze di Notifica",
+    "channels": "Canali di Notifica",
+    "emailNotifications": "Notifiche Email",
+    "emailDescription": "Ricevere notifiche via email",
+    "pushNotifications": "Notifiche Push",
+    "pushDescription": "Ricevere notifiche push sul tuo dispositivo",
+    "inAppNotifications": "Notifiche nell'App",
+    "inAppDescription": "Vedere le notifiche nell'app",
+    "deviceTokens": "Dispositivi Registrati",
+    "noDevices": "Nessun dispositivo registrato",
+    "settingsUpdated": "Preferenze di notifica aggiornate con successo",
+    "settingsFailed": "Impossibile aggiornare le preferenze di notifica",
+    "enableAll": "Abilita Tutte",
+    "disableAll": "Disabilita Tutte",
+    "saveChanges": "Salva modifiche"
   },
   "suna": {
     "samplePrompts": "Prompt di esempio",

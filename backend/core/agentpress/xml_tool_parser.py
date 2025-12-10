@@ -68,68 +68,16 @@ def _parse_parameter_value(value: str) -> Any:
     return value
 
 
-def _extract_truncated_parameter(invoke_content: str) -> List[tuple]:
-    """
-    [PROPHET CUSTOM] Extract parameters even when </parameter> is missing.
-    
-    Args:
-        invoke_content: Content inside an <invoke> block
-        
-    Returns:
-        List of tuples (param_name, param_value) for truncated parameters
-    """
-    truncated_params = []
-    
-    # Pattern to find <parameter name="..."> opening tags
-    param_open_pattern = re.compile(
-        r'<parameter\s+name=["\']([^"\']+)["\']>',
-        re.IGNORECASE
-    )
-    
-    for match in param_open_pattern.finditer(invoke_content):
-        param_name = match.group(1)
-        start_pos = match.end()
-        
-        # Check if there's a closing </parameter> for this
-        remaining = invoke_content[start_pos:]
-        close_match = re.search(r'</parameter>', remaining, re.IGNORECASE)
-        
-        if close_match:
-            # Complete parameter - skip
-            continue
-        
-        # No closing tag - truncated
-        # Check if there's another <parameter> after this (use content up to it)
-        next_param = param_open_pattern.search(remaining)
-        if next_param:
-            param_value = remaining[:next_param.start()].strip()
-        else:
-            param_value = remaining.strip()
-        
-        if param_value:
-            logger.debug(f"Found truncated <parameter> '{param_name}'")
-            truncated_params.append((param_name, param_value))
-    
-    return truncated_params
-
-
 def _parse_invoke_block(function_name: str, invoke_content: str, full_block: str) -> Optional[XMLToolCall]:
     """Parse a single invoke block into an XMLToolCall."""
     parameters = {}
     
-    # Extract all complete parameters
+    # Extract all parameters
     param_matches = _PARAMETER_PATTERN.findall(invoke_content)
     
     for param_name, param_value in param_matches:
         param_value = param_value.strip()
         parameters[param_name] = _parse_parameter_value(param_value)
-    
-    # [PROPHET CUSTOM] Try to extract truncated parameters if needed
-    truncated_params = _extract_truncated_parameter(invoke_content)
-    for param_name, param_value in truncated_params:
-        if param_name not in parameters:  # Don't overwrite complete params
-            parameters[param_name] = _parse_parameter_value(param_value)
-            logger.info(f"🔧 Salvaged truncated parameter '{param_name}' for {function_name}")
     
     # Extract the raw XML for this specific invoke
     invoke_pattern = re.compile(
@@ -146,96 +94,9 @@ def _parse_invoke_block(function_name: str, invoke_content: str, full_block: str
     )
 
 
-def _extract_function_call_blocks(content: str) -> List[str]:
-    """
-    Extract <function_calls> blocks, tolerating missing closing tags.
-    This preserves Prophet's fallback behavior for truncated XML streams.
-    """
-    matches = _FUNCTION_CALLS_PATTERN.findall(content)
-    if matches:
-        return matches
-
-    blocks: List[str] = []
-    lower_content = content.lower()
-    search_pos = 0
-
-    while True:
-        start_idx = lower_content.find("<function_calls", search_pos)
-        if start_idx == -1:
-            break
-
-        start_tag_end = content.find(">", start_idx)
-        if start_tag_end == -1:
-            break
-        start_tag_end += 1
-
-        end_idx = lower_content.find("</function_calls>", start_tag_end)
-        if end_idx == -1:
-            block = content[start_tag_end:]
-            if block.strip():
-                blocks.append(block)
-            break
-
-        block = content[start_tag_end:end_idx]
-        if block.strip():
-            blocks.append(block)
-
-        search_pos = end_idx + len("</function_calls>")
-
-    return blocks
-
-
-def _extract_truncated_invoke(fc_content: str) -> List[tuple]:
-    """
-    [PROPHET CUSTOM] Extract invoke blocks even when </invoke> is missing.
-    
-    When the LLM hits token limits mid-generation, the </invoke> tag may be missing.
-    This function tries to salvage partial tool calls by finding <invoke> tags
-    and extracting whatever content follows them.
-    
-    Args:
-        fc_content: Content inside a <function_calls> block
-        
-    Returns:
-        List of tuples (function_name, invoke_content) for truncated invokes
-    """
-    truncated_invokes = []
-    
-    # Pattern to find <invoke name="..."> opening tags
-    invoke_open_pattern = re.compile(
-        r'<invoke\s+name=["\']([^"\']+)["\']>',
-        re.IGNORECASE
-    )
-    
-    # Find all opening invoke tags
-    for match in invoke_open_pattern.finditer(fc_content):
-        function_name = match.group(1)
-        start_pos = match.end()
-        
-        # Check if there's a closing </invoke> for this
-        remaining = fc_content[start_pos:]
-        close_match = re.search(r'</invoke>', remaining, re.IGNORECASE)
-        
-        if close_match:
-            # Complete invoke - skip, will be handled by normal pattern
-            continue
-        
-        # No closing tag - this is truncated
-        # Take everything after the opening tag as the content
-        invoke_content = remaining.strip()
-        
-        if invoke_content:
-            logger.info(f"🔧 Found truncated <invoke> for '{function_name}' - attempting to salvage")
-            truncated_invokes.append((function_name, invoke_content))
-    
-    return truncated_invokes
-
-
 def parse_xml_tool_calls_to_objects(content: str) -> List[XMLToolCall]:
     """
     Parse XML tool calls from content, returning XMLToolCall objects.
-    
-    [PROPHET CUSTOM] Now includes fallback for truncated </invoke> tags.
     
     Format: <function_calls><invoke name="function_name"><parameter name="param">value</parameter></invoke></function_calls>
     
@@ -248,10 +109,10 @@ def parse_xml_tool_calls_to_objects(content: str) -> List[XMLToolCall]:
     tool_calls = []
     
     # Find function_calls blocks
-    function_calls_matches = _extract_function_call_blocks(content)
+    function_calls_matches = _FUNCTION_CALLS_PATTERN.findall(content)
     
     for fc_content in function_calls_matches:
-        # Find all complete invoke blocks within this function_calls block
+        # Find all invoke blocks within this function_calls block
         invoke_matches = _INVOKE_PATTERN.findall(fc_content)
         
         for function_name, invoke_content in invoke_matches:
@@ -261,18 +122,6 @@ def parse_xml_tool_calls_to_objects(content: str) -> List[XMLToolCall]:
                     tool_calls.append(tool_call)
             except Exception as e:
                 logger.error(f"Error parsing invoke block for {function_name}: {e}")
-        
-        # [PROPHET CUSTOM] Try to extract truncated invokes if no complete ones found
-        if not invoke_matches:
-            truncated_invokes = _extract_truncated_invoke(fc_content)
-            for function_name, invoke_content in truncated_invokes:
-                try:
-                    tool_call = _parse_invoke_block(function_name, invoke_content, fc_content)
-                    if tool_call:
-                        logger.info(f"✅ Salvaged truncated tool call: {function_name}")
-                        tool_calls.append(tool_call)
-                except Exception as e:
-                    logger.warning(f"Could not salvage truncated invoke for {function_name}: {e}")
     
     return tool_calls
 

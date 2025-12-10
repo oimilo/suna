@@ -71,7 +71,7 @@ export default function AgentsPage() {
   const [selectedItem, setSelectedItem] = useState<MarketplaceTemplate | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'milo' | 'community' | 'mine'>('all');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'kortix' | 'community' | 'mine'>('all');
   
   const [templatesPage, setTemplatesPage] = useState(1);
   const [templatesPageSize, setTemplatesPageSize] = useState(20);
@@ -137,7 +137,7 @@ export default function AgentsPage() {
       sort_order: "desc"
     };
     
-    if (marketplaceFilter === 'milo') {
+    if (marketplaceFilter === 'kortix') {
       params.is_kortix_team = true;
     } else if (marketplaceFilter === 'community') {
       params.is_kortix_team = false;
@@ -392,7 +392,7 @@ export default function AgentsPage() {
       console.log('Installation result:', result);
 
       if (result.status === 'installed') {
-        toast.success(`Agent "${instanceName}" installed successfully!`);
+        toast.success(`Worker "${instanceName}" installed successfully!`);
         setShowInstallDialog(false);
         handleTabChange('my-agents');
       } else if (result.status === 'configs_required') {
@@ -460,7 +460,7 @@ export default function AgentsPage() {
       } else if (error.message?.includes('Access denied')) {
         toast.error('You do not have permission to install this agent');
       } else {
-        toast.error(error.message || 'Failed to install agent. Please try again.');
+        toast.error(error.message || 'Failed to install Worker. Please try again.');
       }
     } finally {
       setInstallingItemId(null);

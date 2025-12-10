@@ -13,68 +13,35 @@ _initialized = False
 _init_lock = asyncio.Lock()
 
 # Constants
-REDIS_KEY_TTL = 3600 * 24  # 24 hour TTL as safety mechanism
+REDIS_KEY_TTL = 3600 * 2  # 2 hour TTL as safety mechanism (was 24h)
 
 
 def get_redis_config():
     """Get Redis configuration from environment variables.
     
-    Supports two modes:
-    1. REDIS_URL: Direct URL (e.g., rediss://user:pass@host:port) - simplest for cloud providers
-    2. Individual vars: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_USERNAME, REDIS_SSL
-    
     Returns:
-        dict: Dictionary with host, port, password, username, ssl, and url keys
+        dict: Dictionary with host, port, password, username, and url keys
     """
     load_dotenv()
     
-    # Check for direct URL first (simplest for cloud providers like DO Valkey)
-    redis_url = os.getenv("REDIS_URL")
+    redis_host = os.getenv("REDIS_HOST", "redis")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    redis_password = os.getenv("REDIS_PASSWORD", "")
+    redis_username = os.getenv("REDIS_USERNAME", None)
     
-    if redis_url:
-        # Parse URL to extract components for clients that need them
-        # URL format: redis[s]://[user:pass@]host:port
-        redis_ssl = redis_url.startswith("rediss://")
-        
-        # Extract host/port from URL for logging
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(redis_url)
-            redis_host = parsed.hostname or "unknown"
-            redis_port = parsed.port or (6379 if not redis_ssl else 6380)
-            redis_password = parsed.password or ""
-            redis_username = parsed.username
-        except Exception:
-            redis_host = "from_url"
-            redis_port = 0
-            redis_password = ""
-            redis_username = None
-        
-        logger.info(f"Using REDIS_URL directly (ssl={redis_ssl})")
+    # Build Redis URL for clients that support it (like Dramatiq)
+    if redis_username and redis_password:
+        redis_url = f"redis://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
+    elif redis_password:
+        redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}"
     else:
-        # Fall back to individual vars
-        redis_host = os.getenv("REDIS_HOST", "redis")
-        redis_port = int(os.getenv("REDIS_PORT", 6379))
-        redis_password = os.getenv("REDIS_PASSWORD", "")
-        redis_username = os.getenv("REDIS_USERNAME", None)
-        # Enable SSL/TLS for cloud Redis providers (Upstash, Redis Cloud, etc.)
-        redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
-        
-        # Build Redis URL for clients that support it (like Dramatiq)
-        protocol = "rediss" if redis_ssl else "redis"
-        if redis_username and redis_password:
-            redis_url = f"{protocol}://{redis_username}:{redis_password}@{redis_host}:{redis_port}"
-        elif redis_password:
-            redis_url = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}"
-        else:
-            redis_url = None
+        redis_url = None
     
     return {
         "host": redis_host,
         "port": redis_port,
         "password": redis_password,
         "username": redis_username,
-        "ssl": redis_ssl,
         "url": redis_url,
     }
 
@@ -92,51 +59,37 @@ def initialize():
     redis_port = config["port"]
     redis_password = config["password"]
     redis_username = config["username"]
-    redis_ssl = config["ssl"]
-    redis_url = config["url"]
     
     # Connection pool configuration - optimized for API (light usage)
+    # API typically has < 20 concurrent Redis operations
+    # Default is generous - Redis will handle rejection if we exceed server limits
     max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "100"))
-    socket_timeout = 15.0
-    connect_timeout = 10.0
+    socket_timeout = 15.0            # 15 seconds socket timeout
+    connect_timeout = 10.0           # 10 seconds connection timeout
     retry_on_timeout = not (os.getenv("REDIS_RETRY_ON_TIMEOUT", "True").lower() != "true")
 
     auth_info = f"user={redis_username} " if redis_username else ""
-    ssl_info = "ssl=True " if redis_ssl else ""
-    logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}{ssl_info}with max {max_connections} connections")
+    logger.info(f"Initializing Redis connection pool to {redis_host}:{redis_port} {auth_info}with max {max_connections} connections")
 
-    # Use from_url for SSL connections (simpler and more compatible)
-    if redis_ssl and redis_url:
-        pool = redis.ConnectionPool.from_url(
-            redis_url,
-            decode_responses=True,
-            socket_timeout=socket_timeout,
-            socket_connect_timeout=connect_timeout,
-            socket_keepalive=True,
-            retry_on_timeout=retry_on_timeout,
-            health_check_interval=30,
-            max_connections=max_connections,
-        )
-    else:
-        # Create connection pool with production-optimized settings
-        pool_kwargs = {
-            "host": redis_host,
-            "port": redis_port,
-            "password": redis_password,
-            "decode_responses": True,
-            "socket_timeout": socket_timeout,
-            "socket_connect_timeout": connect_timeout,
-            "socket_keepalive": True,
-            "retry_on_timeout": retry_on_timeout,
-            "health_check_interval": 30,
-            "max_connections": max_connections,
-        }
-        
-        # Add username if provided (required for Redis Cloud)
-        if redis_username:
-            pool_kwargs["username"] = redis_username
-        
-        pool = redis.ConnectionPool(**pool_kwargs)
+    # Create connection pool with production-optimized settings
+    pool_kwargs = {
+        "host": redis_host,
+        "port": redis_port,
+        "password": redis_password,
+        "decode_responses": True,
+        "socket_timeout": socket_timeout,
+        "socket_connect_timeout": connect_timeout,
+        "socket_keepalive": True,
+        "retry_on_timeout": retry_on_timeout,
+        "health_check_interval": 30,
+        "max_connections": max_connections,
+    }
+    
+    # Add username if provided (required for Redis Cloud)
+    if redis_username:
+        pool_kwargs["username"] = redis_username
+    
+    pool = redis.ConnectionPool(**pool_kwargs)
 
     # Create Redis client from connection pool
     client = redis.Redis(connection_pool=pool)
@@ -329,3 +282,86 @@ async def keys(pattern: str) -> List[str]:
 async def expire(key: str, seconds: int):
     redis_client = await get_client()
     return await redis_client.expire(key, seconds)
+
+
+async def incr(key: str):
+    """Increment the integer value of a key by one."""
+    redis_client = await get_client()
+    return await redis_client.incr(key)
+
+
+async def decr(key: str):
+    """Decrement the integer value of a key by one."""
+    redis_client = await get_client()
+    return await redis_client.decr(key)
+
+
+# ============================================================================
+# Redis Streams Operations - for efficient real-time streaming
+# ============================================================================
+
+async def xadd(stream_key: str, fields: dict, maxlen: int = None, approximate: bool = True) -> str:
+    """Add an entry to a Redis stream.
+    
+    Args:
+        stream_key: The stream key name
+        fields: Dictionary of field-value pairs to add
+        maxlen: Optional max length to cap the stream (with ~ for approximate)
+        approximate: If True, use ~ for approximate maxlen (more efficient)
+    
+    Returns:
+        The message ID of the added entry
+    """
+    redis_client = await get_client()
+    kwargs = {}
+    if maxlen is not None:
+        kwargs['maxlen'] = maxlen
+        kwargs['approximate'] = approximate
+    return await redis_client.xadd(stream_key, fields, **kwargs)
+
+
+async def xread(streams: dict, count: int = None, block: int = None) -> list:
+    """Read from one or more streams.
+    
+    Args:
+        streams: Dict of {stream_key: last_id} - use '0' for all, '$' for new only
+        count: Maximum number of entries to return per stream
+        block: Milliseconds to block waiting for data (0 = block forever)
+    
+    Returns:
+        List of [stream_key, [(message_id, fields), ...]] tuples
+    """
+    redis_client = await get_client()
+    return await redis_client.xread(streams, count=count, block=block)
+
+
+async def xrange(stream_key: str, start: str = '-', end: str = '+', count: int = None) -> list:
+    """Read a range of entries from a stream.
+    
+    Args:
+        stream_key: The stream key name
+        start: Start ID (use '-' for beginning)
+        end: End ID (use '+' for end)
+        count: Maximum number of entries to return
+    
+    Returns:
+        List of (message_id, fields) tuples
+    """
+    redis_client = await get_client()
+    return await redis_client.xrange(stream_key, start, end, count=count)
+
+
+async def xlen(stream_key: str) -> int:
+    """Get the number of entries in a stream."""
+    redis_client = await get_client()
+    return await redis_client.xlen(stream_key)
+
+
+async def xtrim(stream_key: str, maxlen: int, approximate: bool = True) -> int:
+    """Trim a stream to a maximum length.
+    
+    Returns:
+        Number of entries removed
+    """
+    redis_client = await get_client()
+    return await redis_client.xtrim(stream_key, maxlen=maxlen, approximate=approximate)

@@ -1,8 +1,8 @@
-from fastapi import HTTPException
+from fastapi import HTTPException # type: ignore
 from typing import Dict, Optional
 from datetime import datetime, timezone
 
-import stripe
+import stripe # type: ignore
 from core.utils.logger import logger
 from core.billing.shared.config import (
     get_tier_by_price_id, 
@@ -89,14 +89,6 @@ class SubscriptionLifecycleHandler:
         try:
             subscription = await StripeAPIWrapper.retrieve_subscription(subscription_id)
             
-            # Check if subscription is already canceled - cannot reactivate
-            if subscription.status == 'canceled':
-                logger.warning(f"[REACTIVATE] Subscription {subscription_id} is already canceled - cannot reactivate")
-                raise HTTPException(
-                    status_code=400, 
-                    detail="This subscription has been canceled and cannot be reactivated. Please subscribe to a new plan."
-                )
-            
             if scheduled_tier:
                 await self._cancel_scheduled_downgrade(account_id, subscription)
             
@@ -179,7 +171,6 @@ class SubscriptionLifecycleHandler:
         
         logger.debug(f"[SUBSCRIPTION] Account: {account_id}, Price: {price_id}, Billing anchor: {billing_anchor}")
         
-        # Handle grace period - update metadata only, NO CREDITS (credits only granted on invoice.payment_succeeded)
         if subscription.get('status') == 'past_due':
             logger.info(f"[GRACE PERIOD] Subscription {subscription.get('id')} is past_due - updating metadata only, NO CREDITS granted (credits only granted on invoice.payment_succeeded)")
             await self._update_subscription_metadata_only(account_id, subscription, price_id)

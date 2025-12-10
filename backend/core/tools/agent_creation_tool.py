@@ -13,7 +13,36 @@ from core.utils.config import config
     icon="Bot",
     color="bg-purple-100 dark:bg-purple-800/50",
     weight=190,
-    visible=True
+    visible=True,
+    usage_guide="""
+### AGENT CREATION & MANAGEMENT
+
+**CAPABILITIES:**
+- Create new AI agents with custom configurations
+- Set agent name, description, system prompts, icons
+- Configure tool access for each agent
+- Set up scheduled triggers for automation
+- Add integrations (GitHub, Slack, Gmail, etc.)
+
+**CRITICAL RULES:**
+- ALWAYS ask permission before creating agents
+- Clarify requirements with 3-5 questions first
+- Explain capabilities to users
+- Test configurations after setup
+
+**AGENT CUSTOMIZATION:**
+- Icons: 100+ options available
+- Tools: Configure specific toolsets
+- Prompts: Define expertise and personality
+- Triggers: Scheduled automation
+
+**INTEGRATION WORKFLOW:**
+1. Search for integration: search_mcp_servers_for_agent()
+2. Create profile: create_credential_profile_for_agent()
+3. User authenticates via link (MANDATORY!)
+4. Discover tools: discover_mcp_tools_for_agent()
+5. Configure: configure_agent_integration()
+"""
 )
 class AgentCreationTool(Tool):
     def __init__(self, thread_manager: ThreadManager, db_connection, account_id: str):
@@ -21,7 +50,6 @@ class AgentCreationTool(Tool):
         self.thread_manager = thread_manager
         self.db = db_connection
         self.account_id = account_id
-        self._profile_tool_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
     async def _get_current_account_id(self) -> str:
         """Get account_id (already provided in constructor)."""
@@ -433,39 +461,13 @@ class AgentCreationTool(Tool):
                     "profile_name": {
                         "type": "string",
                         "description": "The profile name from create_credential_profile_for_agent"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Maximum number of tools to return (default 10, max 25)",
-                        "default": 10
-                    },
-                    "search": {
-                        "type": "string",
-                        "description": "Optional keyword filter to narrow tools (e.g., 'card', 'webhook')"
-                    },
-                    "tool_slugs": {
-                        "type": "array",
-                        "description": "Specific tool slugs to retrieve (exact matches)",
-                        "items": {"type": "string"}
-                    },
-                    "scopes": {
-                        "type": "array",
-                        "description": "Filter by required OAuth scopes",
-                        "items": {"type": "string"}
                     }
                 },
                 "required": ["profile_name"]
             }
         }
     })
-    async def discover_mcp_tools_for_agent(
-        self,
-        profile_name: str,
-        limit: int = 10,
-        search: Optional[str] = None,
-        tool_slugs: Optional[List[str]] = None,
-        scopes: Optional[List[str]] = None
-    ) -> ToolResult:
+    async def discover_mcp_tools_for_agent(self, profile_name: str) -> ToolResult:
         try:
             account_id = self.account_id
             if not account_id:
@@ -497,20 +499,9 @@ class AgentCreationTool(Tool):
             if not profile.mcp_url:
                 return self.fail_response("Profile has no MCP URL configured")
             
-            safe_limit = max(1, min(limit, 25))
-            discover_config = {
-                "url": profile.mcp_url,
-                "options": {
-                    "limit": safe_limit,
-                    "search": search,
-                    "tools": tool_slugs,
-                    "scopes": scopes
-                }
-            }
-
             result = await mcp_service.discover_custom_tools(
                 request_type="http",
-                config=discover_config
+                config={"url": profile.mcp_url}
             )
             
             if not result.success:
@@ -521,124 +512,32 @@ class AgentCreationTool(Tool):
             if not available_tools:
                 return self.fail_response("No tools found for this profile")
             
-            def _summarize_text(value: str, max_chars: int = 220) -> str:
-                value = value.strip()
-                if len(value) <= max_chars:
-                    return value
-                return value[:max_chars - 3].rstrip() + "..."
-
-            summarized_tools = []
-            cache_bucket = self._profile_tool_cache.setdefault(profile.profile_id, {})
-            for tool in available_tools[:safe_limit]:
-                slug = tool.get("name") or tool.get("slug") or ""
-                cache_bucket[slug] = tool
-                summarized_tools.append({
-                    "slug": slug,
-                    "name": tool.get("display_name") or tool.get("name") or slug,
-                    "description": _summarize_text(tool.get("description", "")) if tool.get("description") else "",
-                    "scopes": tool.get("scopes", []),
-                    "has_schema": bool(tool.get("input_schema") or tool.get("output_schema"))
-                })
-            
             response_text = f"## Available Tools for {profile.toolkit_name}\n\n"
-            response_text += f"Showing **{len(summarized_tools)} tools** for profile **{profile.profile_name}**"
-            if search:
-                response_text += f" matching '{search}'"
-            response_text += ":\n\n"
+            response_text += f"Found **{len(available_tools)} tools** available for {profile.profile_name}:\n\n"
             
-            for i, tool in enumerate(summarized_tools, 1):
-                response_text += f"**{i}. {tool['name']}** (`{tool['slug']}`)\n"
-                if tool.get("description"):
+            for i, tool in enumerate(available_tools, 1):
+                response_text += f"**{i}. {tool['name']}**\n"
+                if tool.get('description'):
                     response_text += f"   - {tool['description']}\n"
-                if tool.get("scopes"):
-                    response_text += f"   - Scopes: {', '.join(tool['scopes'])}\n"
                 response_text += "\n"
             
             response_text += f"\n✅ **Profile is authenticated and ready!**\n"
-            response_text += (
-                "Use `configure_agent_integration` with this profile name and selected tool names to add to your agent.\n"
-                "Need full schema? Call `get_profile_tool_details` with the same profile name and tool slug."
-            )
-
-            payload = {
+            response_text += f"Use `configure_agent_integration` with this profile name and selected tool names to add to your agent."
+            
+            return self.success_response({
                 "message": response_text,
                 "profile_name": profile.profile_name,
                 "toolkit_name": profile.toolkit_name,
                 "toolkit_slug": profile.toolkit_slug,
-                "tools": summarized_tools,
-                "tool_names": [tool["slug"] for tool in summarized_tools],
-                "total_tools": result.total_tools if hasattr(result, "total_tools") else len(available_tools),
+                "tools": available_tools,
+                "tool_names": [tool['name'] for tool in available_tools],
+                "total_tools": len(available_tools),
                 "is_connected": True
-            }
-
-            if available_tools and len(available_tools) > safe_limit:
-                payload["note"] = (
-                    f"Showing first {safe_limit} tools. "
-                    "Provide 'search', 'tool_slugs' or increase 'limit' (<=25) for more."
-                )
-            
-            return self.success_response(payload)
+            })
             
         except Exception as e:
             logger.error(f"Failed to discover MCP tools: {e}")
             return self.fail_response("Failed to discover tools")
-
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "get_profile_tool_details",
-            "description": "Fetch the full schema/details for a tool discovered via discover_mcp_tools_for_agent.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "profile_name": {
-                        "type": "string",
-                        "description": "Profile originally used to discover the tool"
-                    },
-                    "tool_slug": {
-                        "type": "string",
-                        "description": "Exact slug returned by discover_mcp_tools_for_agent"
-                    }
-                },
-                "required": ["profile_name", "tool_slug"]
-            }
-        }
-    })
-    async def get_profile_tool_details(self, profile_name: str, tool_slug: str) -> ToolResult:
-        account_id = self.account_id
-        if not account_id:
-            return self.fail_response("Unable to determine current account ID")
-
-        from core.composio_integration.composio_profile_service import ComposioProfileService
-        profile_service = ComposioProfileService(self.db)
-        profiles = await profile_service.get_profiles(account_id)
-
-        profile = next((p for p in profiles if p.profile_name == profile_name), None)
-        if not profile:
-            return self.fail_response("Profile not found or access denied")
-
-        profile_cache = self._profile_tool_cache.get(profile.profile_id, {})
-        tool_data = profile_cache.get(tool_slug)
-        if not tool_data:
-            return self.fail_response(
-                "Tool not found in cache. Run discover_mcp_tools_for_agent first or verify the slug."
-            )
-
-        sanitized = {
-            "slug": tool_slug,
-            "name": tool_data.get("display_name") or tool_data.get("name"),
-            "description": tool_data.get("description"),
-            "scopes": tool_data.get("scopes"),
-            "inputs": tool_data.get("input_schema") or tool_data.get("input"),
-            "outputs": tool_data.get("output_schema") or tool_data.get("output"),
-            "raw": tool_data
-        }
-
-        return self.success_response({
-            "message": f"Full schema for tool '{tool_slug}'",
-            "profile_name": profile_name,
-            "tool": sanitized
-        })
 
     @openapi_schema({
         "type": "function",
@@ -785,7 +684,6 @@ class AgentCreationTool(Tool):
                 
                 mcp_wrapper_instance = MCPToolWrapper(mcp_configs=[mcp_config_for_wrapper])
                 await mcp_wrapper_instance.initialize_and_register_tools()
-                logger.debug(f"Successfully registered MCP tools dynamically for {profile.toolkit_name}")
                 
             except Exception as e:
                 logger.warning(f"Could not dynamically register MCP tools in current runtime: {str(e)}. Tools will be available on next agent run.")

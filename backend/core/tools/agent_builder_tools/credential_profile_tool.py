@@ -15,7 +15,28 @@ from core.utils.logger import logger
     icon="Key",
     color="bg-red-100 dark:bg-red-800/50",
     weight=180,
-    visible=True
+    visible=True,
+    usage_guide="""
+### CREDENTIAL PROFILE MANAGEMENT
+
+**CAPABILITIES:**
+- Create credential profiles for external services
+- Generate authentication links for users
+- List available credential profiles
+- Configure profiles for agents
+
+**CRITICAL AUTHENTICATION PROTOCOL:**
+1. create_credential_profile() - Generates auth link
+2. **SEND LINK TO USER IMMEDIATELY** - Authentication is MANDATORY
+3. **WAIT FOR USER CONFIRMATION** - "Have you completed authentication?"
+4. discover_mcp_tools() - Get actual available tools after auth
+5. configure_profile_for_agent() - Add to agent
+
+**AUTHENTICATION IS NON-NEGOTIABLE:**
+- Without authentication, integration is COMPLETELY INVALID
+- Always explain this to users
+- Never proceed without verified authentication
+"""
 )
 class CredentialProfileTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
@@ -143,9 +164,7 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
             return self.success_response(response_data)
             
         except Exception as e:
-            logger.error("Failed to create credential profile for %s: %s", toolkit_slug, e, exc_info=True)
-            error_message = str(e) or "Unknown error"
-            return self.fail_response(f"Error creating credential profile: {error_message}")
+            return self.fail_response("Error creating credential profile")
 
     @openapi_schema({
         "type": "function",
@@ -273,9 +292,6 @@ After connecting, you'll be able to use {result.toolkit.name} tools in your agen
                             "instance": mcp_wrapper_instance,
                             "schema": schema
                         }
-                        logger.debug(f"Dynamically registered MCP tool: {method_name}")
-                
-                logger.debug(f"Successfully registered {len(updated_schemas)} MCP tools dynamically for {profile.toolkit_name}")
                 
             except Exception as e:
                 logger.warning(f"Could not dynamically register MCP tools in current runtime: {str(e)}. Tools will be available on next agent run.")

@@ -13,7 +13,38 @@ from core.utils.logger import logger
     icon="Brain",
     color="bg-yellow-100 dark:bg-yellow-800/50",
     weight=200,
-    visible=True
+    visible=True,
+    usage_guide="""
+### KNOWLEDGE BASE SEMANTIC SEARCH
+
+**LOCAL KNOWLEDGE BASE (Sandbox Files):**
+- Use `init_kb` to initialize kb-fusion binary before searching (sync_global_knowledge_base=false by default)
+- Use `search_files` to perform intelligent content discovery with natural language queries
+- Provide FULL path to files/documents - NO filename only
+- ALWAYS use when you need to find specific information within large documents or datasets
+- Use `ls_kb` to list all indexed LOCAL files and their status
+- Use `cleanup_kb` for maintenance operations (default|remove_files|clear_embeddings|clear_all)
+
+**GLOBAL KNOWLEDGE BASE MANAGEMENT:**
+- Use `global_kb_sync` to download assigned knowledge base files to sandbox
+- Files synced to `root/knowledge-base-global/` with proper folder structure
+- Use when users ask vague questions without specific file uploads or references
+
+**CRUD OPERATIONS FOR GLOBAL KB:**
+- **CREATE:**
+  - `global_kb_create_folder` - Create new folders to organize files
+  - `global_kb_upload_file` - Upload files from sandbox to global KB (USE FULL PATH)
+- **READ:**
+  - `global_kb_list_contents` - View all folders and files with their IDs
+- **DELETE:**
+  - `global_kb_delete_item` - Remove files or folders using their ID
+- **ENABLE/DISABLE:**
+  - `global_kb_enable_item` - Enable or disable KB files for this agent (controls sync)
+
+**WORKFLOW:**
+Create folder → Upload files from sandbox → Organize and manage → Enable → Sync to access
+Structure is 1-level deep: folders contain files only (no nested folders)
+"""
 )
 class SandboxKbTool(SandboxToolsBase):
     """Tool for knowledge base operations using kb-fusion binary in a Daytona sandbox.
@@ -22,7 +53,7 @@ class SandboxKbTool(SandboxToolsBase):
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
         self.kb_version = "0.1.1"
-        self.kb_download_url = f"https://github.com/milo-ai/kb-fusion/releases/download/v{self.kb_version}/kb"
+        self.kb_download_url = f"https://github.com/kortix-ai/kb-fusion/releases/download/v{self.kb_version}/kb"
 
     async def _execute_kb_command(self, command: str) -> dict:
         await self._ensure_sandbox()

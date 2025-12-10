@@ -409,7 +409,7 @@ const OutputFormatIcon = ({ type, className }: { type: string; className?: strin
 
 // Slide template icon component
 const SlideTemplateIcon = ({ type, className }: { type: string; className?: string }) => {
-  const baseClasses = cn('w-full h-full', className);
+  const baseClasses = cn('w-full h-full text-foreground', className);
   
   switch (type) {
     case 'modern':
@@ -880,7 +880,7 @@ const DocsTemplateIcon = ({ type, className }: { type: string; className?: strin
 
 // Chart icon component
 const ChartIcon = ({ type, className }: { type: string; className?: string }) => {
-  const baseClasses = cn('w-full h-full', className);
+  const baseClasses = cn('w-full h-full text-foreground', className);
   
   switch (type) {
     case 'bar':
@@ -1107,7 +1107,7 @@ export function SunaModesPanel({
   selectedTemplate: controlledSelectedTemplate,
   onTemplateChange
 }: SunaModesPanelProps) {
-  const t = useTranslations('prophet');
+  const t = useTranslations('suna');
   const currentMode = selectedMode ? modes.find((m) => m.id === selectedMode) : null;
   const promptCount = isMobile ? 2 : 4;
   
@@ -1122,7 +1122,7 @@ export function SunaModesPanel({
         const key = `prompts.${modeId}.${index}`;
         const prompt = t(key);
         // Check if translation exists (next-intl returns the key if missing)
-        if (!prompt || prompt === `prophet.${key}` || prompt.startsWith('prophet.prompts.')) {
+        if (!prompt || prompt === `suna.${key}` || prompt.startsWith('suna.prompts.')) {
           break;
         }
         prompts.push(prompt);
@@ -1242,15 +1242,15 @@ export function SunaModesPanel({
     <div className="w-full space-y-4">
       {/* Mode Tabs - Only show when no mode is selected */}
       {!selectedMode && (
-        <div className="flex items-center justify-center animate-in fade-in-0 zoom-in-95 duration-300">
-          <div className="inline-flex gap-2">
+        <div className="flex items-center justify-center animate-in fade-in-0 zoom-in-95 duration-300 px-2 sm:px-0">
+          <div className="grid grid-cols-3 gap-2 sm:inline-flex sm:gap-2">
             {modes.map((mode) => (
               <Button
                 key={mode.id}
                 variant="outline"
                 size="sm"
                 onClick={() => onModeSelect(mode.id)}
-                className="flex items-center gap-2 shrink-0 transition-all duration-200 bg-background hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground border-border cursor-pointer"
+                className="h-10 flex items-center justify-center sm:justify-start gap-2 shrink-0 transition-all duration-200 bg-background hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground border-border cursor-pointer"
               >
                 {mode.icon}
                 <span>{mode.label}</span>

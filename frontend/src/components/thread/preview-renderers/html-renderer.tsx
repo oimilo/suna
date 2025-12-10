@@ -70,7 +70,7 @@ export function HtmlRenderer({
     // Construct HTML file preview URL using the full file path
     const htmlPreviewUrl = useMemo(() => {
         if (project?.sandbox?.sandbox_url && filePath) {
-            return constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath, project.sandbox.id);
+            return constructHtmlPreviewUrl(project.sandbox.sandbox_url, filePath);
         }
         return blobHtmlUrl || previewUrl;
     }, [project?.sandbox?.sandbox_url, filePath, blobHtmlUrl, previewUrl]);

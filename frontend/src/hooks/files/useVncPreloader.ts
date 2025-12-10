@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { getProxyPreviewUrl } from '@/lib/utils/daytona';
+import { Project } from '@/lib/api/threads';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -28,16 +28,6 @@ export function useVncPreloader(
   const preloadedIframeRef = useRef<HTMLIFrameElement | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRetryingRef = useRef(false);
-
-  const buildVncUrl = useCallback(() => {
-    if (!sandbox?.vnc_preview || !sandbox?.pass) {
-      return null;
-    }
-
-    const normalizedBase = sandbox.vnc_preview.replace(/\/$/, '');
-    const rawUrl = `${normalizedBase}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
-    return getProxyPreviewUrl({ originalUrl: rawUrl }) ?? rawUrl;
-  }, [sandbox?.vnc_preview, sandbox?.pass]);
 
   const startPreloading = useCallback((vncUrl: string) => {
     // Prevent multiple simultaneous preload attempts
@@ -124,13 +114,13 @@ export function useVncPreloader(
   }, [status, retryCount, maxRetries, timeoutMs]);
 
   const retry = useCallback(() => {
-    const vncUrl = buildVncUrl();
-    if (!vncUrl) return;
-
+    if (sandbox?.vnc_preview && sandbox?.pass) {
+      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
-  }, [buildVncUrl, startPreloading]);
+    }
+  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
 
   useEffect(() => {
     // Reset status when sandbox changes
@@ -145,12 +135,7 @@ export function useVncPreloader(
       return;
     }
 
-    const vncUrl = buildVncUrl();
-    if (!vncUrl) {
-      setStatus('idle');
-      setRetryCount(0);
-      return;
-    }
+    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -177,7 +162,7 @@ export function useVncPreloader(
       
       isRetryingRef.current = false;
     };
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status, buildVncUrl]);
+  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
 
   return {
     status,

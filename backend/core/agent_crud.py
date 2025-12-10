@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query, Request
 
-from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_optional_user_id_from_jwt
+from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
 from core.utils.pagination import PaginationParams
@@ -45,43 +45,43 @@ async def update_agent(
         restrictions = agent_metadata.get('restrictions', {})
         
         if is_suna_agent:
-            logger.warning(f"Update attempt on Prophet default agent {agent_id} by user {user_id}")
+            logger.warning(f"Update attempt on Suna default agent {agent_id} by user {user_id}")
             
             if (agent_data.name is not None and 
                 agent_data.name != existing_data.get('name') and 
                 restrictions.get('name_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted name of Prophet agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted name of Suna agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Prophet's name cannot be modified. This restriction is managed centrally."
+                    detail="Suna's name cannot be modified. This restriction is managed centrally."
                 )
             
             
             if (agent_data.system_prompt is not None and 
                 restrictions.get('system_prompt_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted system prompt of Prophet agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted system prompt of Suna agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Prophet's system prompt cannot be modified. This is managed centrally to ensure optimal performance."
+                    detail="Suna's system prompt cannot be modified. This is managed centrally to ensure optimal performance."
                 )
             
             if (agent_data.agentpress_tools is not None and 
                 restrictions.get('tools_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted tools of Prophet agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted tools of Suna agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Prophet's default tools cannot be modified. These tools are optimized for Prophet's capabilities."
+                    detail="Suna's default tools cannot be modified. These tools are optimized for Suna's capabilities."
                 )
             
             if ((agent_data.configured_mcps is not None or agent_data.custom_mcps is not None) and 
                 restrictions.get('mcps_editable') == False):
-                logger.error(f"User {user_id} attempted to modify restricted MCPs of Prophet agent {agent_id}")
+                logger.error(f"User {user_id} attempted to modify restricted MCPs of Suna agent {agent_id}")
                 raise HTTPException(
                     status_code=403, 
-                    detail="Prophet's integrations cannot be modified."
+                    detail="Suna's integrations cannot be modified."
                 )
             
-            logger.debug(f"Prophet agent update validation passed for agent {agent_id} by user {user_id}")
+            logger.debug(f"Suna agent update validation passed for agent {agent_id} by user {user_id}")
 
         current_version_data = None
         if existing_data.get('current_version_id'):
@@ -395,7 +395,7 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
             raise HTTPException(status_code=400, detail="Cannot delete default agent")
         
         if agent.get('metadata', {}).get('is_suna_default', False):
-            raise HTTPException(status_code=400, detail="Cannot delete Prophet default agent")
+            raise HTTPException(status_code=400, detail="Cannot delete Suna default agent")
         
         # Clean up triggers before deleting agent to ensure proper remote cleanup
         try:
@@ -445,7 +445,7 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
 @router.get("/agents", response_model=AgentsResponse, summary="List Agents", operation_id="list_agents")
 async def get_agents(
     request: Request,
-    user_id: Optional[str] = Depends(get_optional_user_id_from_jwt),
+    user_id: str = Depends(verify_and_get_user_id_from_jwt),
     page: Optional[int] = Query(1, ge=1, description="Page number (1-based)"),
     limit: Optional[int] = Query(20, ge=1, le=100, description="Number of items per page"),
     search: Optional[str] = Query(None, description="Search in name"),
@@ -459,19 +459,6 @@ async def get_agents(
 ):
     try:
         from .agent_service import AgentService, AgentFilters
-        from core.guest_session import guest_session_service
-        
-        if not user_id:
-            guest_session_id = request.headers.get('X-Guest-Session')
-            if guest_session_id:
-                if isinstance(guest_session_id, list):
-                    guest_session_id = guest_session_id[0]
-
-                session = await guest_session_service.get_or_create_session(request, guest_session_id)
-                user_id = session['session_id']
-                logger.info(f"Guest user fetching agents: {user_id}")
-            else:
-                raise HTTPException(status_code=401, detail="Authentication required")
         
         tools_list = []
         if tools:
@@ -521,8 +508,11 @@ async def get_agents(
             )
         )
         
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 401, 429) as-is without wrapping
+        raise
     except Exception as e:
-        logger.error(f"Error fetching agents for user {user_id}: {str(e)}", exc_info=True)
+        logger.error("Error fetching agents for user", user_id=user_id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to fetch agents: {str(e)}")
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse, summary="Get Agent", operation_id="get_agent")

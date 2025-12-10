@@ -43,11 +43,6 @@ def is_safe_url(url: str) -> tuple[bool, str]:
     """
     Validate URL to prevent SSRF attacks.
     
-    Blocks:
-    - Private/internal IP ranges
-    - Cloud metadata services
-    - Localhost variants
-    
     Returns:
         tuple: (is_safe: bool, error_message: str)
     """

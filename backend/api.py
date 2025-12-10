@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from core.services import redis
+from core.utils.openapi_config import configure_openapi
 import sentry
 from contextlib import asynccontextmanager
 from core.agentpress.thread_manager import ThreadManager
@@ -16,6 +17,7 @@ from core.utils.logger import logger, structlog
 import time
 from collections import OrderedDict
 import os
+import psutil
 
 from pydantic import BaseModel
 import uuid
@@ -34,7 +36,8 @@ from core.billing.api import router as billing_router
 from core.setup import router as setup_router, webhook_router
 from core.admin.admin_api import router as admin_router
 from core.admin.billing_admin_api import router as billing_admin_router
-from core.admin.master_password_api import router as master_password_router
+from core.admin.notification_admin_api import router as notification_admin_router
+from core.admin.analytics_admin_api import router as analytics_admin_router
 from core.services import transcription as transcription_api
 import sys
 from core.triggers import api as triggers_api
@@ -57,10 +60,11 @@ MAX_CONCURRENT_IPS = 25
 
 # Background task handle for CloudWatch metrics
 _queue_metrics_task = None
+_memory_watchdog_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _queue_metrics_task
+    global _queue_metrics_task, _memory_watchdog_task
     env_mode = config.ENV_MODE.value if config.ENV_MODE else "unknown"
     logger.debug(f"Starting up FastAPI application with instance ID: {instance_id} in {env_mode} mode")
     try:
@@ -104,6 +108,9 @@ async def lifespan(app: FastAPI):
             from core.services import queue_metrics
             _queue_metrics_task = asyncio.create_task(queue_metrics.start_cloudwatch_publisher())
         
+        # Start memory watchdog for observability
+        _memory_watchdog_task = asyncio.create_task(_memory_watchdog())
+        
         yield
         
         logger.debug("Cleaning up agent resources")
@@ -114,6 +121,14 @@ async def lifespan(app: FastAPI):
             _queue_metrics_task.cancel()
             try:
                 await _queue_metrics_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Stop memory watchdog task
+        if _memory_watchdog_task is not None:
+            _memory_watchdog_task.cancel()
+            try:
+                await _memory_watchdog_task
             except asyncio.CancelledError:
                 pass
         
@@ -130,7 +145,15 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error during application startup: {e}")
         raise
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True,  # Keep auth between page refreshes
+    },
+)
+
+# Configure OpenAPI docs with API Key and Bearer token auth
+configure_openapi(app)
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
@@ -138,7 +161,7 @@ async def rate_limit_middleware(request: Request, call_next):
     path = request.url.path
     
     # Skip rate limiting for health checks and OPTIONS requests
-    if path in ["/api/health", "/api/health-docker"] or request.method == "OPTIONS":
+    if path in ["/v1/health", "/v1/health-docker"] or request.method == "OPTIONS":
         return await call_next(request)
     
     # Get client identifier
@@ -147,11 +170,11 @@ async def rate_limit_middleware(request: Request, call_next):
     # Apply appropriate rate limiter based on path
     rate_limiter = None
     
-    if "/api/api-keys" in path:
+    if "/v1/api-keys" in path:
         rate_limiter = api_key_rate_limiter
-    elif "/api/admin" in path:
+    elif "/v1/admin" in path:
         rate_limiter = admin_rate_limiter
-    elif any(sensitive in path for sensitive in ["/api/setup/initialize", "/api/billing/webhook"]):
+    elif any(sensitive in path for sensitive in ["/v1/setup/initialize", "/v1/billing/webhook"]):
         rate_limiter = auth_rate_limiter
     
     if rate_limiter:
@@ -204,10 +227,15 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.prophet.build", "https://prophet.build"]
+allowed_origins = [
+    "https://www.prophet.build", 
+    "https://prophet.build",
+    "https://app.prophet.build",
+    "https://auth.prophet.build",
+]
 allow_origin_regex = None
 
-# Add staging-specific origins
+# Add local development origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
@@ -219,18 +247,13 @@ if config.ENV_MODE == EnvMode.STAGING:
     # Allow Vercel preview deployments
     allow_origin_regex = r"https://prophet-.*\.vercel\.app"
 
-# Add localhost for production mode local testing (for master password login)
-if config.ENV_MODE == EnvMode.PRODUCTION:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-Refresh-Token", "X-API-Key"],
+    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-API-Key"],
 )
 
 # Create a main API router
@@ -245,7 +268,8 @@ api_router.include_router(webhook_router)  # Webhooks at /api/webhooks/*
 api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
 api_router.include_router(admin_router)
-api_router.include_router(master_password_router)
+api_router.include_router(notification_admin_router)
+api_router.include_router(analytics_admin_router)
 
 from core.mcp_module import api as mcp_api
 from core.credentials import api as credentials_api
@@ -257,12 +281,12 @@ api_router.include_router(credentials_api.router, prefix="/secure-mcp")
 api_router.include_router(template_api.router, prefix="/templates")
 api_router.include_router(presentations_api.router, prefix="/presentation-templates")
 
-api_router.include_router(transcription_api.router)
-
-# [PROPHET CUSTOM] Daytona preview proxy for sandbox URLs
+# [PROPHET CUSTOM] Daytona preview proxy - routes preview URLs through our backend
 from core.routes import daytona_proxy
 daytona_proxy.initialize(db)
 api_router.include_router(daytona_proxy.router, prefix="/preview", tags=["preview"])
+
+api_router.include_router(transcription_api.router)
 
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
@@ -271,23 +295,20 @@ api_router.include_router(triggers_api.router)
 
 api_router.include_router(notifications_api.router)
 
-from core.feedback import router as feedback_router
-api_router.include_router(feedback_router)
-
 from core.notifications import presence_api
 api_router.include_router(presence_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
 
-from core.referrals import router as referrals_router
-api_router.include_router(referrals_router)
-
 from core.google.google_slides_api import router as google_slides_router
 api_router.include_router(google_slides_router)
 
 from core.google.google_docs_api import router as google_docs_router
 api_router.include_router(google_docs_router)
+
+from core.referrals import router as referrals_router
+api_router.include_router(referrals_router)
 
 @api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():
@@ -329,7 +350,33 @@ async def health_check_docker():
         raise HTTPException(status_code=500, detail="Health check failed")
 
 
-app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="/v1")
+
+
+async def _memory_watchdog():
+    """Monitor worker memory usage and log warnings when thresholds are exceeded."""
+    try:
+        while True:
+            try:
+                process = psutil.Process()
+                mem_info = process.memory_info()
+                mem_mb = mem_info.rss / 1024 / 1024  # Convert to MB
+                
+                # Log warning at 6GB (75% of 8GB hard limit)
+                if mem_mb > 6000:
+                    logger.warning(f"Worker memory high: {mem_mb:.0f}MB (instance: {instance_id})")
+                # Log info at 5GB (62.5% of 8GB hard limit) for visibility
+                elif mem_mb > 5000:
+                    logger.info(f"Worker memory: {mem_mb:.0f}MB (instance: {instance_id})")
+                
+            except Exception as e:
+                logger.debug(f"Memory watchdog error: {e}")
+            
+            await asyncio.sleep(60)  # Check every minute
+    except asyncio.CancelledError:
+        logger.debug("Memory watchdog cancelled")
+    except Exception as e:
+        logger.error(f"Memory watchdog failed: {e}")
 
 
 if __name__ == "__main__":
@@ -349,5 +396,6 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=8000,
         workers=workers,
-        loop="asyncio"
+        loop="asyncio",
+        reload=True if is_dev_env else False
     )

@@ -18,6 +18,7 @@ from core.run.config import AgentConfig
 from core.run.tool_manager import ToolManager
 from core.run.mcp_manager import MCPManager
 from core.run.prompt_manager import PromptManager
+from core.ai_models.manager import model_manager  # [PROPHET CUSTOM] Get max_output_tokens from registry
 
 load_dotenv()
 
@@ -517,8 +518,10 @@ class AgentRunner:
                         break
 
                 temporary_message = None
-                max_tokens = None
-                logger.debug(f"max_tokens: {max_tokens} (using provider defaults)")
+                # [PROPHET CUSTOM] Get max_output_tokens from model registry instead of using None
+                model_info = model_manager.get_model(self.config.model_name)
+                max_tokens = model_info.max_output_tokens if model_info and model_info.max_output_tokens else None
+                logger.debug(f"max_tokens: {max_tokens} (from model registry: {self.config.model_name})")
                 generation = self.config.trace.generation(name="thread_manager.run_thread") if self.config.trace else None
                 try:
                     logger.debug(f"Starting thread execution for {self.config.thread_id}")

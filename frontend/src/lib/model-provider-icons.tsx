@@ -18,7 +18,7 @@ export type ModelProvider =
  */
 export function isKortixMode(modelId: string): boolean {
   // New Kortix registry IDs
-  if (modelId === 'kortix/basic' || modelId === 'kortix/power' || 
+  if (modelId === 'prophet/basic' || modelId === 'prophet/power' || 
       modelId === 'kortix-basic' || modelId === 'kortix-power') {
     return true;
   }
@@ -94,7 +94,7 @@ export function ModelProviderIcon({
   const provider = getModelProvider(modelId);
 
   const iconMap: Record<ModelProvider, string> = {
-    kortix: '/kortix-symbol.svg', // Kortix modes use the Kortix symbol
+    kortix: '/symbol.svg', // Prophet modes use the Prophet symbol
     anthropic: '/images/models/Anthropic.svg',
     openai: '/images/models/OAI.svg',
     google: '/images/models/Gemini.svg',
@@ -160,7 +160,7 @@ export function getModelProviderName(modelId: string): string {
   const provider = getModelProvider(modelId);
 
   const nameMap: Record<ModelProvider, string> = {
-    kortix: 'Kortix',
+    kortix: 'Prophet',  // Display name changed from Kortix to Prophet
     anthropic: 'Anthropic',
     openai: 'OpenAI',
     google: 'Google',

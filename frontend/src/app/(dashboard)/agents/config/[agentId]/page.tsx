@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAgent } from '@/hooks/agents/use-agents';
 import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/milo-loader';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -43,7 +43,7 @@ export default function AgentConfigPage() {
   if (!agent) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Agent not found</p>
+        <p className="text-muted-foreground">Worker not found</p>
       </div>
     );
   }
@@ -64,10 +64,10 @@ export default function AgentConfigPage() {
       });
 
       queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
-      toast.success('Agent updated successfully!');
+      toast.success('Worker updated successfully!');
     } catch (error) {
       console.error('Failed to update agent:', error);
-      toast.error('Failed to update agent');
+      toast.error('Failed to update Worker');
     }
   };
 

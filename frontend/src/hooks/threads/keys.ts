@@ -8,7 +8,6 @@ export const threadKeys = {
   publicProjects: () => ['public-projects'] as const,
   agentRuns: (threadId: string) => ['thread', threadId, 'agent-runs'] as const,
   byProject: (projectId: string) => ['project', projectId, 'threads'] as const,
-  limit: () => ['threads', 'limit'] as const,
 } as const;
 
 // Project keys (consolidated from sidebar/keys.ts)

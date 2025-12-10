@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next';
-import { siteConfig } from '@/lib/site';
+import { siteConfig } from '@/lib/site-config';
 import { locales } from '@/i18n/config';
 
 // Marketing pages that support locale routing for SEO
 const MARKETING_ROUTES = [
   { path: '/', priority: 1, changeFrequency: 'daily' as const },
-  { path: '/prophet', priority: 0.9, changeFrequency: 'monthly' as const },
+  { path: '/suna', priority: 0.9, changeFrequency: 'monthly' as const },
   { path: '/enterprise', priority: 0.8, changeFrequency: 'monthly' as const },
   { path: '/legal', priority: 0.5, changeFrequency: 'monthly' as const },
   { path: '/support', priority: 0.7, changeFrequency: 'weekly' as const },

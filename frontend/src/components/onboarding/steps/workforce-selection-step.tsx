@@ -1,140 +1,98 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { StepWrapper } from '../shared/step-wrapper';
 import { UnifiedAgentCard, type BaseAgentData } from '@/components/ui/unified-agent-card';
+import { allAgents } from '../shared/data';
 import { userContext, updateUserContext } from '../shared/context';
-import { useMarketplaceTemplates } from '@/hooks/secure-mcp/use-secure-mcp';
-import type { MarketplaceTemplate } from '@/components/agents/installation/types';
+import { AIAgent } from '../shared/types';
 
 export const WorkforceSelectionStep = () => {
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
-
-  // Fetch Prophet Team templates from marketplace
-  const { 
-    data: marketplaceData, 
-    isLoading, 
-    error,
-    refetch 
-  } = useMarketplaceTemplates({
-    is_kortix_team: true, // Only show Prophet/Kortix verified templates
-    limit: 20,
-    sort_by: 'download_count',
-    sort_order: 'desc'
-  });
-
-  const templates = marketplaceData?.templates || [];
+  const [selectedAgents, setSelectedAgents] = useState<string[]>(userContext.selectedAgents || []);
 
   // Update global context when selection changes
   useEffect(() => {
-    const selectedTemplates = templates.filter(t => 
-      selectedTemplateIds.includes(t.template_id)
-    );
-    
-    // Map to MarketplaceTemplate format
-    const mappedTemplates: MarketplaceTemplate[] = selectedTemplates.map(t => ({
-      id: t.template_id,
-      template_id: t.template_id,
-      creator_id: t.creator_id,
-      name: t.name,
-      description: t.description || '',
-      system_prompt: t.system_prompt,
-      tags: t.tags || [],
-      download_count: t.download_count || 0,
-      creator_name: t.creator_name || '',
-      created_at: t.created_at,
-      marketplace_published_at: t.marketplace_published_at,
-      icon_name: t.icon_name,
-      icon_color: t.icon_color,
-      icon_background: t.icon_background,
-      is_kortix_team: t.is_kortix_team,
-      model: t.metadata?.model,
-      agentpress_tools: t.agentpress_tools,
-      mcp_requirements: t.mcp_requirements,
-      usage_examples: t.usage_examples,
-      config: t.config,
-    }));
+    updateUserContext({ selectedAgents });
+  }, [selectedAgents]);
 
-    updateUserContext({ 
-      selectedTemplates: mappedTemplates,
-      // Keep legacy field in sync
-      selectedAgents: selectedTemplateIds 
-    });
-  }, [selectedTemplateIds, templates]);
+  // Get recommended AI workers based on user context
+  const getRecommendedAgents = (): string[] => {
+    const role = userContext.role?.toLowerCase() || '';
+    const description = userContext.websiteUrl?.toLowerCase() || '';
+    const userType = userContext.userType;
 
-  const toggleTemplate = useCallback((templateId: string) => {
-    setSelectedTemplateIds(prev =>
-      prev.includes(templateId)
-        ? prev.filter(id => id !== templateId)
-        : [...prev, templateId]
-    );
+    const recommended = new Set<string>();
+
+    // Role-based recommendations
+    if (role.includes('ceo') || role.includes('founder') || role.includes('executive')) {
+      recommended.add('daily-recap');
+      recommended.add('weekly-recap');
+      recommended.add('meeting-researcher');
+    }
+
+    if (role.includes('sales') || role.includes('business development')) {
+      recommended.add('lead-generator');
+      recommended.add('meeting-researcher');
+      recommended.add('presentation-creator');
+    }
+
+    if (role.includes('marketing') || role.includes('content')) {
+      recommended.add('email-assistant');
+      recommended.add('presentation-creator');
+      recommended.add('weekly-recap');
+    }
+
+    // Description-based recommendations
+    if (description.includes('email') || description.includes('communication')) {
+      recommended.add('email-assistant');
+    }
+    if (description.includes('sales') || description.includes('lead')) {
+      recommended.add('lead-generator');
+    }
+    if (description.includes('meeting') || description.includes('client')) {
+      recommended.add('meeting-researcher');
+    }
+    if (description.includes('presentation') || description.includes('pitch')) {
+      recommended.add('presentation-creator');
+    }
+
+    // Universal recommendations - everyone can benefit from these
+    recommended.add('email-assistant'); // Everyone has email
+    recommended.add('daily-recap'); // Everyone needs daily updates
+
+    // Add lead generation for business-focused users
+    if (userType === 'company' || role.includes('business') || role.includes('sales')) {
+      recommended.add('lead-generator');
+    }
+
+    // Ensure we have at least 3 recommendations
+    if (recommended.size < 3) {
+      ['email-assistant', 'daily-recap', 'meeting-researcher'].forEach(id => recommended.add(id));
+    }
+
+    return Array.from(recommended);
+  };
+
+  // Auto-select recommended agents on first load
+  useEffect(() => {
+    if (selectedAgents.length === 0) {
+      const recommended = getRecommendedAgents();
+      setSelectedAgents(recommended.slice(0, 3)); // Select top 3
+    }
   }, []);
 
-  // Convert template to BaseAgentData for UnifiedAgentCard
-  const convertToBaseAgentData = (template: any): BaseAgentData => ({
-    id: template.template_id,
-    name: template.name,
-    description: template.description,
-    tags: template.tags || [],
-    created_at: template.created_at,
-    icon_name: template.icon_name,
-    icon_color: template.icon_color,
-    icon_background: template.icon_background,
-    creator_id: template.creator_id,
-    creator_name: template.creator_name,
-    is_kortix_team: template.is_kortix_team || false,
-    download_count: template.download_count || 0,
-    marketplace_published_at: template.marketplace_published_at,
-    mcp_requirements: template.mcp_requirements || [],
-    agentpress_tools: template.agentpress_tools || {},
-  });
+  const recommendedIds = getRecommendedAgents();
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <StepWrapper>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading available agents...</p>
-        </div>
-      </StepWrapper>
+  const toggleAgent = (agentId: string) => {
+    setSelectedAgents(prev =>
+      prev.includes(agentId)
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
     );
-  }
+  };
 
-  // Error state
-  if (error) {
-    return (
-      <StepWrapper>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <p className="text-destructive">Failed to load agents</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-        </div>
-      </StepWrapper>
-    );
-  }
-
-  // Empty state - no templates available yet
-  if (templates.length === 0) {
-    return (
-      <StepWrapper>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Sparkles className="h-12 w-12 text-muted-foreground" />
-          <h3 className="text-xl font-semibold">Specialized Agents Coming Soon</h3>
-          <p className="text-muted-foreground text-center max-w-md">
-            We&apos;re preparing amazing specialized agents for you. 
-            In the meantime, you can skip this step and create your own agents!
-          </p>
-        </div>
-      </StepWrapper>
-    );
-  }
 
   return (
     <StepWrapper>
@@ -149,37 +107,48 @@ export const WorkforceSelectionStep = () => {
           <h2 className="text-3xl font-medium">
             Choose Your AI Workers
           </h2>
-          <p className="text-muted-foreground mt-2">
-            Select the specialized agents you want to add to your workspace
-          </p>
         </motion.div>
 
-        {/* Templates Grid */}
+        {/* AI Workers */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
         >
-          {templates.map((template, index) => (
-            <UnifiedAgentCard
-              key={template.template_id}
-              variant="onboarding"
-              data={convertToBaseAgentData(template)}
-              actions={{
-                onToggle: toggleTemplate,
-              }}
-              state={{
-                isSelected: selectedTemplateIds.includes(template.template_id),
-                isRecommended: template.is_kortix_team || false,
-              }}
-              delay={index * 0.05}
-            />
-          ))}
+          {allAgents.map((agent, index) => {
+            // Convert AIAgent to BaseAgentData
+            const convertToBaseAgentData = (agent: AIAgent): BaseAgentData => ({
+              id: agent.id,
+              name: agent.name,
+              description: agent.description,
+              role: agent.role,
+              icon: agent.icon,
+              capabilities: agent.capabilities,
+              tags: agent.tags || [],
+              created_at: new Date().toISOString(),
+            });
+
+            return (
+              <UnifiedAgentCard
+                key={agent.id}
+                variant="onboarding"
+                data={convertToBaseAgentData(agent)}
+                actions={{
+                  onToggle: toggleAgent,
+                }}
+                state={{
+                  isSelected: selectedAgents.includes(agent.id),
+                  isRecommended: recommendedIds.includes(agent.id),
+                }}
+                delay={index * 0.1}
+              />
+            );
+          })}
         </motion.div>
 
-        {/* Selection summary */}
-        {selectedTemplateIds.length > 0 && (
+        {/* Simple selection summary */}
+        {selectedAgents.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -187,7 +156,7 @@ export const WorkforceSelectionStep = () => {
             className="text-center"
           >
             <Badge variant="outline" className="px-4 py-2">
-              {selectedTemplateIds.length} agent{selectedTemplateIds.length !== 1 ? 's' : ''} selected
+              {selectedAgents.length} worker{selectedAgents.length !== 1 ? 's' : ''} selected
             </Badge>
           </motion.div>
         )}
@@ -195,3 +164,4 @@ export const WorkforceSelectionStep = () => {
     </StepWrapper>
   );
 };
+

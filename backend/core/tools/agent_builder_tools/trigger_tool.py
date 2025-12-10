@@ -20,7 +20,31 @@ from core.composio_integration.composio_trigger_service import ComposioTriggerSe
     icon="Zap",
     color="bg-yellow-100 dark:bg-yellow-800/50",
     weight=160,
-    visible=True
+    visible=True,
+    usage_guide="""
+### TRIGGER & AUTOMATION MANAGEMENT
+
+**CAPABILITIES:**
+- create_agent_scheduled_trigger() - Set up cron-based automation
+- list_agent_scheduled_triggers() - View configured triggers
+- toggle_agent_scheduled_trigger() - Enable/disable triggers
+- delete_agent_scheduled_trigger() - Remove triggers
+
+**CRON SCHEDULE EXAMPLES:**
+- "0 9 * * *" - Daily at 9 AM
+- "0 */6 * * *" - Every 6 hours
+- "0 0 * * 1" - Weekly on Monday
+- "0 0 1 * *" - Monthly on 1st
+
+**TRIGGER TYPES:**
+- "agent" - Direct agent execution
+- Custom prompts for specific automation tasks
+
+**BEST PRACTICES:**
+- Use clear, descriptive trigger names
+- Test with appropriate schedules
+- Document what each trigger does
+"""
 )
 class TriggerTool(AgentBuilderBaseTool):
     def __init__(self, thread_manager: ThreadManager, db_connection, agent_id: str):
@@ -104,7 +128,7 @@ class TriggerTool(AgentBuilderBaseTool):
                     },
                     "model": {
                         "type": "string",
-                        "description": "Model to use for the scheduled execution. Options: 'kortix/basic' (default, free tier) or 'kortix/power' (requires paid subscription). If not specified, defaults to 'kortix/basic'."
+                        "description": "Model to use for the scheduled execution. Options: 'prophet/basic' (default, free tier) or 'prophet/power' (requires paid subscription). If not specified, defaults to 'prophet/basic'."
                     }
                 },
                 "required": ["name", "cron_expression", "agent_prompt"]
@@ -421,7 +445,7 @@ class TriggerTool(AgentBuilderBaseTool):
                     "name": {"type": "string", "description": "Optional friendly name for the trigger"},
                     "agent_prompt": {"type": "string", "description": "Prompt to pass to the agent when triggered. Can include variables like {{variable_name}} that will be replaced when users install the template. For example: 'New email received for {{company_name}}...'"},
                     "connected_account_id": {"type": "string", "description": "Connected account id; if omitted we try to derive from profile"},
-                    "model": {"type": "string", "description": "Model to use for the event execution. Options: 'kortix/basic' (default, free tier) or 'kortix/power' (requires paid subscription). If not specified, defaults to 'kortix/basic'."}
+                    "model": {"type": "string", "description": "Model to use for the event execution. Options: 'prophet/basic' (default, free tier) or 'prophet/power' (requires paid subscription). If not specified, defaults to 'prophet/basic'."}
                 },
                 "required": ["slug", "profile_id", "agent_prompt"]
             }
@@ -562,7 +586,7 @@ class TriggerTool(AgentBuilderBaseTool):
             if not composio_trigger_id:
                 return self.fail_response("Failed to get Composio trigger id from response")
             
-            # Build Prophet trigger config (same as API)
+            # Build Suna trigger config (same as API)
             suna_config: Dict[str, Any] = {
                 "provider_id": "composio",
                 "composio_trigger_id": composio_trigger_id,
@@ -577,7 +601,7 @@ class TriggerTool(AgentBuilderBaseTool):
                 suna_config["trigger_variables"] = variables
                 logger.debug(f"Found variables in event trigger prompt: {variables}")
             
-            # Create Prophet trigger
+            # Create Suna trigger
             trigger_svc = get_trigger_service(self.db)
             try:
                 trigger = await trigger_svc.create_trigger(
@@ -588,8 +612,8 @@ class TriggerTool(AgentBuilderBaseTool):
                     description=f"{slug}"
                 )
             except Exception as e:
-                logger.error(f"Failed to create Prophet trigger: {e}")
-                return self.fail_response(f"Failed to create Prophet trigger: {str(e)}")
+                logger.error(f"Failed to create Suna trigger: {e}")
+                return self.fail_response(f"Failed to create Suna trigger: {str(e)}")
 
             # Sync triggers to version config
             try:

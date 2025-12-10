@@ -13,7 +13,7 @@ export const siteConfig = {
   links: {
     email: 'suporte@prophet.build',
     twitter: 'https://x.com/prophetbuild',
-    github: 'https://github.com/Kortix-ai/Suna',
+    github: 'https://github.com/oimilo/prophet',
     instagram: 'https://instagram.com/prophetbuild',
     linkedin: 'https://linkedin.com/company/prophetbuild',
   },
@@ -54,7 +54,7 @@ export const siteConfig = {
       </svg>
     ),
     badge: '100% OPEN SOURCE',
-    githubUrl: 'https://github.com/Kortix-ai/Suna',
+    githubUrl: 'https://github.com/oimilo/prophet',
     title: 'Prophet – Seu Super Trabalhador de IA.',
     description:
       'Prophet – plataforma open-source para construir, gerenciar e treinar sua força de trabalho de IA.',
@@ -171,10 +171,10 @@ export const siteConfig = {
         {
           id: 5,
           title: 'Documentação',
-          url: 'https://github.com/Kortix-ai/Suna',
+          url: 'https://github.com/oimilo/prophet',
         },
         { id: 7, title: 'Discord', url: 'https://discord.gg/Py6pCBUUPw' },
-        { id: 8, title: 'GitHub', url: 'https://github.com/Kortix-ai/Suna' },
+        { id: 8, title: 'GitHub', url: 'https://github.com/oimilo/prophet' },
       ],
     },
     {
@@ -193,7 +193,7 @@ export const siteConfig = {
         {
           id: 11,
           title: 'Licença Apache 2.0',
-          url: 'https://github.com/Kortix-ai/Suna/blob/main/LICENSE',
+          url: 'https://github.com/oimilo/prophet/blob/main/LICENSE',
         },
       ],
     },

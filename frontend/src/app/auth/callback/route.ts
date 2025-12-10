@@ -3,10 +3,13 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * Auth Callback Route - Web Only
+ * Auth Callback Route - Web Handler
  * 
  * Handles authentication callbacks for web browsers.
- * Mobile apps use direct deep links (kortix://auth/callback) and bypass this route.
+ * 
+ * Flow:
+ * - If app is installed: Universal Links intercept HTTPS URLs and open app directly (bypasses this)
+ * - If app is NOT installed: Opens in browser → this route handles auth and redirects to dashboard
  */
 
 export async function GET(request: NextRequest) {
@@ -22,13 +25,41 @@ export async function GET(request: NextRequest) {
   const requestOrigin = request.nextUrl.origin
   const baseUrl = requestOrigin || process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
   const error = searchParams.get('error')
+  const errorCode = searchParams.get('error_code')
   const errorDescription = searchParams.get('error_description')
 
-  // Handle errors
+
+  // Handle errors FIRST - before any Supabase operations that might affect session
   if (error) {
-    console.error('❌ Auth callback error:', error, errorDescription)
+    console.error('❌ Auth callback error:', error, errorCode, errorDescription)
+    
+    // Check if the error is due to expired/invalid link
+    const isExpiredOrInvalid = 
+      errorCode === 'otp_expired' ||
+      errorCode === 'expired_token' ||
+      errorCode === 'token_expired' ||
+      error?.toLowerCase().includes('expired') ||
+      error?.toLowerCase().includes('invalid') ||
+      errorDescription?.toLowerCase().includes('expired') ||
+      errorDescription?.toLowerCase().includes('invalid')
+    
+    if (isExpiredOrInvalid) {
+      // Redirect to auth page with expired state to show resend form
+      const email = searchParams.get('email') || ''
+      const expiredUrl = new URL(`${baseUrl}/auth`)
+      expiredUrl.searchParams.set('expired', 'true')
+      if (email) expiredUrl.searchParams.set('email', email)
+      if (next) expiredUrl.searchParams.set('returnUrl', next)
+      
+      console.log('🔄 Redirecting to auth page with expired state')
+      return NextResponse.redirect(expiredUrl)
+    }
+    
+    // For other errors, redirect to auth page with error
     return NextResponse.redirect(`${baseUrl}/auth?error=${encodeURIComponent(error)}`)
   }
+
+  const supabase = await createClient()
 
   // Handle token-based verification (email confirmation, etc.)
   // Supabase sends these to the redirect URL for processing
@@ -44,52 +75,55 @@ export async function GET(request: NextRequest) {
 
   // Handle code exchange (OAuth, magic link)
   if (code) {
-    const supabase = await createClient()
-    
     try {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
       
       if (error) {
         console.error('❌ Error exchanging code for session:', error)
+        
+        // Check if the error is due to expired/invalid link
+        const isExpired = 
+          error.message?.toLowerCase().includes('expired') ||
+          error.message?.toLowerCase().includes('invalid') ||
+          error.status === 400 ||
+          error.code === 'expired_token' ||
+          error.code === 'token_expired' ||
+          error.code === 'otp_expired'
+        
+        if (isExpired) {
+          // Redirect to auth page with expired state to show resend form
+          const email = searchParams.get('email') || ''
+          const expiredUrl = new URL(`${baseUrl}/auth`)
+          expiredUrl.searchParams.set('expired', 'true')
+          if (email) expiredUrl.searchParams.set('email', email)
+          if (next) expiredUrl.searchParams.set('returnUrl', next)
+          
+          console.log('🔄 Redirecting to auth page with expired state')
+          return NextResponse.redirect(expiredUrl)
+        }
+        
         return NextResponse.redirect(`${baseUrl}/auth?error=${encodeURIComponent(error.message)}`)
       }
 
-      // Determine the final destination
       let finalDestination = next
       let shouldClearReferralCookie = false
-      let shouldClearLocaleCookie = false
 
       if (data.user) {
-        // Process pending referral code from cookie
         const pendingReferralCode = request.cookies.get('pending-referral-code')?.value
-        const pendingLocale = request.cookies.get('pending-locale')?.value
-        
-        // Build metadata update object
-        const metadataUpdate: Record<string, string> = {}
-        
         if (pendingReferralCode) {
-          metadataUpdate.referral_code = pendingReferralCode
-          shouldClearReferralCookie = true
-        }
-        
-        if (pendingLocale) {
-          metadataUpdate.locale = pendingLocale
-          shouldClearLocaleCookie = true
-        }
-        
-        // Update user metadata if there's anything to update
-        if (Object.keys(metadataUpdate).length > 0) {
           try {
             await supabase.auth.updateUser({
-              data: metadataUpdate
+              data: {
+                referral_code: pendingReferralCode
+              }
             })
-            console.log('✅ Added metadata to OAuth user:', metadataUpdate)
+            console.log('✅ Added referral code to OAuth user:', pendingReferralCode)
+            shouldClearReferralCookie = true
           } catch (error) {
-            console.error('Failed to add metadata to OAuth user:', error)
+            console.error('Failed to add referral code to OAuth user:', error)
           }
         }
 
-        // Save terms acceptance date if not already saved
         if (termsAccepted) {
           const currentMetadata = data.user.user_metadata || {};
           if (!currentMetadata.terms_accepted_at) {
@@ -107,9 +141,6 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Check if user needs to complete setup (fallback case)
-        // Account initialization now happens automatically via webhook on signup.
-        // Only redirect to setting-up if webhook failed or user signed up before this change.
         const { data: accountData } = await supabase
           .schema('basejump')
           .from('accounts')
@@ -138,12 +169,9 @@ export async function GET(request: NextRequest) {
       // Web redirect
       const response = NextResponse.redirect(`${baseUrl}${finalDestination}`)
       
-      // Clear cookies if they were processed
+      // Clear referral cookie if it was processed
       if (shouldClearReferralCookie) {
         response.cookies.set('pending-referral-code', '', { maxAge: 0, path: '/' })
-      }
-      if (shouldClearLocaleCookie) {
-        response.cookies.set('pending-locale', '', { maxAge: 0, path: '/' })
       }
       
       return response

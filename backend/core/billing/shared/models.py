@@ -7,7 +7,6 @@ class CreateCheckoutSessionRequest(BaseModel):
     success_url: str
     cancel_url: str
     commitment_type: Optional[str] = None
-    currency: Optional[str] = None  # 'usd' or 'brl' - auto-detected from client timezone
 
 class CreatePortalSessionRequest(BaseModel):
     return_url: str

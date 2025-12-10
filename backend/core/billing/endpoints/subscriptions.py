@@ -73,15 +73,14 @@ async def create_checkout_session(
             price_ids = [pid for pid in tier.price_ids if 'yearly' not in pid.lower()]
             price_id = price_ids[0] if price_ids else tier.price_ids[0]
         
-        logger.info(f"[BILLING-DEBUG] Creating checkout session: account_id={account_id}, tier={tier.name}, commitment_type={request.commitment_type}, selected_price_id={price_id}, currency={request.currency}")
+        logger.info(f"[BILLING-DEBUG] Creating checkout session: account_id={account_id}, tier={tier.name}, commitment_type={request.commitment_type}, selected_price_id={price_id}")
         
         result = await subscription_service.create_checkout_session(
             account_id=account_id,
             price_id=price_id,
             success_url=request.success_url,
             cancel_url=request.cancel_url or request.success_url,
-            commitment_type=request.commitment_type,
-            currency=request.currency
+            commitment_type=request.commitment_type
         )
         
         # Invalidate cache if subscription was created/updated

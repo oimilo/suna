@@ -231,44 +231,24 @@ export function detectBestLocale(): Locale {
   return defaultLocale;
 }
 
-/**
- * Detects the best currency based on timezone
- * Currently supports: BRL for Brazil, USD for everything else
- */
-export function detectCurrencyFromTimezone(): 'usd' | 'brl' {
-  if (typeof window === 'undefined') {
-    return 'usd';
-  }
+// Locale to currency mapping
+const LOCALE_TO_CURRENCY: Record<Locale, string> = {
+  'pt': 'BRL',
+  'en': 'USD',
+  'es': 'USD',
+  'de': 'EUR',
+  'fr': 'EUR',
+  'it': 'EUR',
+  'ja': 'JPY',
+  'zh': 'CNY',
+};
 
-  try {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Brazil timezones -> BRL
-    const brazilTimezones = [
-      'America/Sao_Paulo',
-      'America/Rio_Branco', 
-      'America/Manaus',
-      'America/Cuiaba',
-      'America/Campo_Grande',
-      'America/Recife',
-      'America/Fortaleza',
-      'America/Belem',
-      'America/Araguaina',
-      'America/Maceio',
-      'America/Salvador',
-      'America/Bahia',
-      'America/Noronha',
-    ];
-    
-    if (brazilTimezones.includes(timezone) || timezone.includes('Brazil')) {
-      console.log('🌍 Detected Brazil timezone, using BRL');
-      return 'brl';
-    }
-    
-    return 'usd';
-  } catch (error) {
-    console.warn('Failed to detect currency from timezone:', error);
-    return 'usd';
-  }
+/**
+ * Detects currency based on timezone/locale
+ * Returns currency code for Stripe
+ */
+export function detectCurrencyFromTimezone(): string {
+  const locale = detectBestLocale();
+  return LOCALE_TO_CURRENCY[locale] || 'USD';
 }
 

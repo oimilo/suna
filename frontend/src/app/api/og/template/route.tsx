@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const templateResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${shareId}`
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/v1'}/templates/public/${shareId}`
     );
 
     if (!templateResponse.ok) {
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
                 bottom: '40px',
               }}
             >
-              <span style={{ color: '#64748b', fontSize: '20px' }}>Milo</span>
+              <span style={{ color: '#64748b', fontSize: '20px' }}>Prophet</span>
               <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
                 color: '#94a3b8',
               }}
             >
-              Discover powerful AI agents on Milo
+              Discover powerful AI agents on Prophet
             </p>
           </div>
         </div>

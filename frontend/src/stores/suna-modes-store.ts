@@ -46,7 +46,7 @@ export const useSunaModesStore = create<SunaModesState>()(
       },
     }),
     {
-      name: 'prophet-modes-storage',
+      name: 'suna-modes-storage',
       partialize: (state) => ({
         selectedMode: state.selectedMode,
         selectedCharts: state.selectedCharts,

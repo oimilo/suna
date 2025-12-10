@@ -3,18 +3,17 @@ from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, Mode
 from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 
-# [PROPHET CUSTOM] Always use Anthropic API directly when key is available
-# Bedrock ARNs are Kortix-specific and won't work for Prophet
-SHOULD_USE_ANTHROPIC = bool(config.ANTHROPIC_API_KEY)
+# SHOULD_USE_ANTHROPIC = False
+# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
+SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
 # Actual model IDs for LiteLLM
-# [PROPHET] Basic usa Haiku 3.5 (mais rápido e barato), Power usa Sonnet 4.5 (mais capaz)
-_BASIC_MODEL_ID = "anthropic/claude-3-5-haiku-20241022" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+_BASIC_MODEL_ID = "anthropic/claude-haiku-4-5-20251001" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
 _POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
 
 # Default model IDs (these are aliases that resolve to actual IDs)
-FREE_MODEL_ID = "kortix/basic"
-PREMIUM_MODEL_ID = "kortix/power"
+FREE_MODEL_ID = "prophet/basic"
+PREMIUM_MODEL_ID = "prophet/power"
 
 
 is_local = config.ENV_MODE == EnvMode.LOCAL
@@ -27,28 +26,27 @@ class ModelRegistry:
         self._aliases: Dict[str, str] = {}
         self._initialize_models()
     
-    # KORTIX BASIC & POWER – Different underlying models
-    # Basic = Haiku 3.5 (faster, cheaper), Power = Sonnet 4.5 (more capable)
+    # KORTIX BASIC & POWER – Same underlying model, different configs
     def _initialize_models(self):
-        # Kortix Basic - Uses Claude 3.5 Haiku
+        # Prophet Basic - uses HAIKU 4.5 under the hood
         self.register(Model(
-            id="kortix/basic",
-            name="Kortix Basic",
+            id="prophet/basic",
+            name="Prophet Basic",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["kortix-basic", "Kortix Basic"],
-            context_window=200_000,  # Haiku 3.5 has 200K context
-            max_output_tokens=8192,  # Haiku 3.5 max output
+            aliases=["prophet-basic", "Prophet Basic", "kortix/basic", "kortix-basic", "Kortix Basic"],  # includes kortix aliases for backwards compatibility
+            context_window=200_000,
+            max_output_tokens=16384,  # Prevents truncation of large files/tool calls
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.80,   # Haiku 3.5 pricing
-                output_cost_per_million_tokens=4.00,  # Haiku 3.5 pricing
-                cached_read_cost_per_million_tokens=0.08,
-                cache_write_5m_cost_per_million_tokens=1.00,
-                cache_write_1h_cost_per_million_tokens=1.60
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00,
+                cached_read_cost_per_million_tokens=0.10,
+                cache_write_5m_cost_per_million_tokens=1.25,
+                cache_write_1h_cost_per_million_tokens=2.00
             ),
             tier_availability=["free", "paid"],
             priority=102,
@@ -61,14 +59,14 @@ class ModelRegistry:
             )
         ))
         
-        # Kortix Power - extended context & thinking
+        # Prophet Power - extended context & thinking
         self.register(Model(
-            id="kortix/power",
+            id="prophet/power",
             name="Kortix POWER Mode",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["kortix-power", "Kortix POWER Mode", "Kortix Power"],
+            aliases=["prophet-power", "Prophet Power", "Prophet POWER Mode", "kortix/power", "kortix-power", "Kortix POWER Mode", "Kortix Power"],  # includes kortix aliases for backwards compatibility
             context_window=1_000_000,
-            max_output_tokens=16384,  # [PROPHET] Aumentado para 16K para permitir arquivos HTML grandes
+            max_output_tokens=16384,  # Prevents truncation of large files/tool calls
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -397,18 +395,23 @@ class ModelRegistry:
     def get_litellm_model_id(self, model_id: str) -> str:
         """Get the actual model ID to pass to LiteLLM.
         
-        Resolves kortix/basic and kortix/power to actual provider model IDs.
+        Resolves prophet/basic and prophet/power to actual provider model IDs.
+        Also handles kortix/* aliases for backwards compatibility.
         """
-        # Map kortix model IDs to actual LiteLLM model IDs
-        if model_id in ("kortix/basic", "kortix/power"):
-            return _BASIC_MODEL_ID  # Both use the same underlying model
+        # Map model IDs to actual LiteLLM model IDs (includes kortix aliases for backwards compatibility)
+        if model_id in ("prophet/basic", "kortix/basic"):
+            return _BASIC_MODEL_ID  # Uses HAIKU 4.5
+        elif model_id in ("prophet/power", "kortix/power"):
+            return _POWER_MODEL_ID  # Uses Sonnet 4.5
         
         # For other models, check if it's an alias and resolve
         model = self.get(model_id)
         if model:
             # Check if this model's ID needs resolution
-            if model.id in ("kortix/basic", "kortix/power"):
+            if model.id in ("prophet/basic", "kortix/basic"):
                 return _BASIC_MODEL_ID
+            elif model.id in ("prophet/power", "kortix/power"):
+                return _POWER_MODEL_ID
             return model.id
         
         # Return as-is if not found (let LiteLLM handle it)
@@ -423,9 +426,15 @@ class ModelRegistry:
             litellm_model_id: The actual model ID used by LiteLLM (e.g. Bedrock ARN)
             
         Returns:
-            The registry model ID (e.g. 'kortix/basic') or the input if not found
+            The registry model ID (e.g. 'prophet/basic') or the input if not found
         """
-        # Check if this is the Bedrock ARN that maps to kortix models
+        # Check if this matches _BASIC_MODEL_ID (HAIKU) or _POWER_MODEL_ID (Sonnet)
+        if litellm_model_id == _BASIC_MODEL_ID:
+            return "prophet/basic"
+        if litellm_model_id == _POWER_MODEL_ID:
+            return "prophet/power"
+        
+        # Check if this is a Bedrock ARN that maps to kortix models
         # Strip common prefixes for comparison
         normalized_id = litellm_model_id
         for prefix in ['bedrock/converse/', 'bedrock/', 'converse/']:
@@ -433,20 +442,27 @@ class ModelRegistry:
                 normalized_id = normalized_id[len(prefix):]
                 break
         
-        # Check if this matches _BASIC_MODEL_ID (also normalize it)
+        # Normalize _BASIC_MODEL_ID for comparison
         basic_model_normalized = _BASIC_MODEL_ID
         for prefix in ['bedrock/converse/', 'bedrock/', 'converse/']:
             if basic_model_normalized.startswith(prefix):
                 basic_model_normalized = basic_model_normalized[len(prefix):]
                 break
         
-        # If the normalized ID matches the basic model ARN, return kortix/basic
-        if normalized_id == basic_model_normalized or litellm_model_id == _BASIC_MODEL_ID:
-            return "kortix/basic"
+        # Normalize _POWER_MODEL_ID for comparison
+        power_model_normalized = _POWER_MODEL_ID
+        for prefix in ['bedrock/converse/', 'bedrock/', 'converse/']:
+            if power_model_normalized.startswith(prefix):
+                power_model_normalized = power_model_normalized[len(prefix):]
+                break
         
-        # Also check if the full ID matches
-        if litellm_model_id == _BASIC_MODEL_ID:
-            return "kortix/basic"
+        # If the normalized ID matches the basic model ARN, return prophet/basic
+        if normalized_id == basic_model_normalized:
+            return "prophet/basic"
+        
+        # If the normalized ID matches the power model ARN, return prophet/power
+        if normalized_id == power_model_normalized:
+            return "prophet/power"
         
         # Check if this model exists directly in registry
         if self.get(litellm_model_id):
@@ -480,7 +496,7 @@ class ModelRegistry:
     def get_pricing(self, model_id: str) -> Optional[ModelPricing]:
         """Get pricing for a model, with reverse lookup for LiteLLM model IDs.
         
-        Handles both registry model IDs (kortix/basic) and LiteLLM model IDs (Bedrock ARNs).
+        Handles both registry model IDs (prophet/basic) and LiteLLM model IDs (Bedrock ARNs).
         """
         # First try direct lookup
         model = self.get(model_id)

@@ -151,7 +151,7 @@ export interface CreateCheckoutSessionRequest {
   cancel_url: string;
   referral_id?: string;
   commitment_type?: 'monthly' | 'yearly' | 'yearly_commitment';
-  currency?: 'usd' | 'brl';
+  currency?: string;
 }
 
 export interface CreateCheckoutSessionResponse {

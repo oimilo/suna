@@ -1,6 +1,4 @@
 // Shared types for onboarding
-import type { MarketplaceTemplate } from '@/components/agents/installation/types';
-
 export interface UserContext {
   name?: string;
   email?: string;
@@ -16,17 +14,8 @@ export interface UserContext {
     size?: string;
   };
   invitedTeammates?: string[];
-  selectedAgents?: string[]; // Legacy - kept for compatibility
-  
-  // New functional onboarding fields
-  selectedTemplates?: MarketplaceTemplate[];
-  profileMappings?: Record<string, string>; // qualifiedName -> profileId
-  customMcpConfigs?: Record<string, Record<string, any>>;
-  installedAgentIds?: string[]; // IDs of agents created during onboarding
+  selectedAgents?: string[];
 }
-
-// Re-export MarketplaceTemplate for convenience
-export type { MarketplaceTemplate } from '@/components/agents/installation/types';
 
 export interface OnboardingStep {
   id: string;

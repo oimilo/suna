@@ -29,7 +29,7 @@
     "next": "次へ",
     "upgrade": "アップグレード",
     "basic": "ベーシック",
-    "tryFree": "無料で始める"
+    "tryFree": "始める"
   },
   "settings": {
     "title": "設定",
@@ -38,6 +38,7 @@
       "plan": "プラン",
       "billing": "請求",
       "usage": "使用状況",
+      "referrals": "紹介",
       "knowledgeBase": "ナレッジベース",
       "integrations": "統合",
       "envManager": "環境マネージャー"
@@ -45,6 +46,14 @@
     "general": {
       "title": "プロフィール設定",
       "description": "アカウント情報を管理",
+      "profilePicture": {
+        "title": "プロフィール写真",
+        "upload": "アバターをアップロード",
+        "hint": "JPG、PNGまたはGIF。最大5MB。",
+        "invalidType": "画像ファイルを選択してください",
+        "tooLarge": "画像は5MB未満にしてください",
+        "uploadFailed": "プロフィール写真のアップロードに失敗しました"
+      },
       "name": "名前",
       "email": "メール",
       "namePlaceholder": "名前を入力",
@@ -69,13 +78,20 @@
         "dialogTitle": "アカウント削除",
         "warning": "この操作は30日後には元に戻せません",
         "whenDelete": "アカウントを削除すると：",
-        "agentsDeleted": "すべてのエージェントとエージェントバージョンが削除されます",
+        "agentsDeleted": "すべてのワーカーとワーカーバージョンが削除されます",
         "threadsDeleted": "すべてのスレッドと会話が削除されます",
         "credentialsRemoved": "すべての認証情報と統合が削除されます",
         "subscriptionCancelled": "サブスクリプションがキャンセルされます",
         "billingRemoved": "すべての請求データが削除されます",
         "scheduled30Days": "アカウントは30日後に削除予定となります",
         "gracePeriod": "30日の猶予期間中はいつでもこのリクエストをキャンセルできます。30日後、すべてのデータが永久に削除され、復元できません。",
+        "chooseDeletionType": "削除タイプを選択：",
+        "gracePeriodOption": "30日の猶予期間",
+        "gracePeriodDescription": "アカウントは30日後に削除予定となります。猶予期間中はいつでもこのリクエストをキャンセルできます。",
+        "immediateOption": "即座に削除",
+        "immediateDescription": "アカウントとすべてのデータが即座に永久に削除されます。この操作は元に戻せません。",
+        "warningImmediate": "この操作は元に戻せません",
+        "warningGracePeriod": "この操作は30日後には元に戻せません",
         "confirmText": "削除と入力して確認",
         "confirmPlaceholder": "delete",
         "keepAccount": "アカウントを保持",
@@ -84,9 +100,78 @@
         "cancelDeletion": "削除をキャンセル"
       }
     },
+    "referrals": {
+      "title": "紹介プログラム",
+      "description": "友達に紹介リンクを共有してください。サインアップしてアカウントを作成すると、獲得できます",
+      "creditsPerReferral": "100個の無期限クレジット",
+      "youEarn": "あなたが獲得",
+      "friendGets": "友達が獲得",
+      "maxEarnable": "紹介で獲得できる最大額:",
+      "maxCredits": "$100相当のクレジット",
+      "yourReferralCode": "あなたの紹介コード",
+      "referralLink": "紹介リンク",
+      "shareYourLink": "紹介リンクを共有",
+      "yourStats": "あなたの統計",
+      "enterCodeDescription": "紹介コードを入力してクレジットを獲得",
+      "enterCode": "コードを入力",
+      "refresh": "更新",
+      "copyCode": "コードをコピー",
+      "copyLink": "リンクをコピー",
+      "share": "共有",
+      "stats": {
+        "totalReferrals": "総紹介数",
+        "successful": "成功",
+        "creditsEarned": "獲得クレジット"
+      },
+      "recentReferrals": "最近の紹介",
+      "signupComplete": "サインアップ完了",
+      "pending": "保留中",
+      "noReferrals": "まだ紹介がありません。紹介リンクを共有して始めましょう！",
+      "copied": "コピーしました！",
+      "codeCopied": "紹介コードをクリップボードにコピーしました",
+      "linkCopied": "紹介リンクをクリップボードにコピーしました",
+      "codeRefreshed": "紹介コードを更新しました",
+      "refreshFailed": "紹介コードの更新に失敗しました",
+      "inviteByEmail": "メールで招待",
+      "inviteByEmailDescription": "最大3つのメールアドレスを追加（Enter、Space、またはCommaを押す）",
+      "emailAddress": "メールアドレス",
+      "emailPlaceholder": "メールアドレスを入力（Enter、Space、またはCommaを押す）",
+      "emailsAdded": "メール",
+      "sent": "送信済み",
+      "send": "送信",
+      "sending": "送信中...",
+      "sendAllInvites": "すべての招待を送信",
+      "allSent": "すべて送信済み",
+      "emailSent": "紹介招待を送信しました"
+    },
     "billing": {
       "title": "請求とサブスクリプション",
       "description": "クレジットとサブスクリプションを管理",
+      "totalCredits": "利用可能なクレジット合計",
+      "allCredits": "すべてのクレジット",
+      "monthlyCredits": "月額クレジット",
+      "renewalIn": "{days} {days, plural, one {日} other {日}}後に更新",
+      "noRenewal": "更新予定なし",
+      "extraCredits": "追加クレジット",
+      "nonExpiring": "期限なし",
+      "renews": "{date}に更新",
+      "manageSubscription": "サブスクリプションを管理",
+      "getAdditionalCredits": "追加クレジットを取得",
+      "changePlan": "プランを変更",
+      "annualCommitment": "年間コミットメント",
+      "activeUntil": "{date}まで有効",
+      "subscriptionCancelled": "サブスクリプションは {date} にキャンセルされます",
+      "reactivate": "再有効化",
+      "creditsExplained": "クレジットの説明",
+      "cancelPlan": "プランをキャンセル",
+      "reactivateSubscription": "サブスクリプションを再有効化",
+      "reactivating": "再有効化中...",
+      "cancelDialogTitle": "サブスクリプションをキャンセル",
+      "cancelDialogDescription": "サブスクリプションをキャンセルしてもよろしいですか？{date}までアクセスできます。",
+      "keepSubscription": "サブスクリプションを維持",
+      "cancelling": "キャンセル中...",
+      "localMode": "ローカルモード有効",
+      "localModeDescription": "この環境ではすべてのプレミアム機能が利用可能です",
       "insufficientCredits": "クレジット不足",
       "insufficientCreditsMessage": "請求チェックに失敗しました：クレジット不足。残高は {balance} です。続行するにはクレジットを追加してください。",
       "creditsExhausted": "クレジットがなくなりました。今すぐアップグレードしてください。",
@@ -100,7 +185,10 @@
       "opening": "ナレッジベースを開いています",
       "redirecting": "ナレッジベースページにリダイレクト中..."
     },
-    "integrations": "連携"
+    "integrations": {
+      "opening": "統合を開いています",
+      "redirecting": "統合ページにリダイレクト中..."
+    }
   },
   "triggers": {
     "getStarted": "トリガーを追加して始める",
@@ -108,12 +196,12 @@
     "search": "検索",
     "scheduledTrigger": "スケジュールトリガー",
     "eventBasedTrigger": "イベントベースのトリガー",
-    "chooseAgent": "エージェントを選択",
+    "chooseAgent": "ワーカーを選択",
     "schedule": "スケジュール",
-    "agentInstructions": "エージェントの指示",
-    "agentInstructionsDescription": "エージェント用のカスタムプロンプト",
-    "assignedAgent": "割り当てられたエージェント",
-    "unknownAgent": "不明なエージェント",
+    "agentInstructions": "ワーカーの指示",
+    "agentInstructionsDescription": "ワーカー用のカスタムプロンプト",
+    "assignedAgent": "割り当てられたワーカー",
+    "unknownAgent": "不明なワーカー",
     "technicalDetails": "技術詳細",
     "type": "タイプ",
     "provider": "プロバイダー",
@@ -130,7 +218,7 @@
     "deleteTaskFailed": "タスクの削除に失敗しました",
     "taskUpdatedSuccess": "タスクが正常に更新されました",
     "updateTaskFailed": "タスクの更新に失敗しました",
-    "pleaseSelectAgent": "エージェントを選択してください",
+    "pleaseSelectAgent": "ワーカーを選択してください",
     "defaultScheduledTriggerName": "スケジュールトリガー",
     "defaultScheduledTriggerDescription": "自動スケジュールトリガー",
     "scheduleTriggerUpdated": "スケジュールトリガーが正常に更新されました",
@@ -143,8 +231,8 @@
     "createScheduledTask": "スケジュールタスクを作成",
     "editAppBasedTask": "アプリベースのタスクを編集",
     "createAppBasedTask": "アプリベースのタスクを作成",
-    "updateAgentForTask": "このタスクのエージェントを更新",
-    "selectAgentForTask": "まず、このタスクを処理するエージェントを選択",
+    "updateAgentForTask": "このタスクのワーカーを更新",
+    "selectAgentForTask": "まず、このタスクを処理するワーカーを選択",
     "createNew": "新規作成",
     "notConfigured": "未設定",
     "every15Minutes": "15分ごと",
@@ -156,12 +244,17 @@
     "monthlyOn1st": "毎月1日"
   },
   "sidebar": {
+    "referAndEarn": "紹介して獲得",
+    "referralShareTitle": "友達を紹介",
+    "referralShareSubtitle": "400クレジット獲得",
+    "new": "新規",
+    "upgrade": "アップグレード",
     "chats": "チャット",
-    "agents": "エージェント",
+    "agents": "ワーカー",
     "workers": "ワーカー",
     "triggers": "トリガー",
     "newChat": "新しいチャット",
-    "newAgent": "新しいエージェント",
+    "newAgent": "新しいワーカー",
     "settings": "設定",
     "logout": "ログアウト",
     "openMenu": "メニューを開く",
@@ -220,9 +313,42 @@
     "customWorkers": "カスタム Workers",
     "scheduledTriggers": "スケジュールトリガー",
     "appTriggers": "アプリトリガー",
-    "limitsExceeded": "チャットの制限に達しました（{current}/{limit}）。プランをアップグレードしてもっとチャットを作成しよう。",
+    "limitsExceeded": "チャットの制限に達しました。プランをアップグレードしてもっとチャットを作成しよう。",
     "agentInitiatedSuccessfully": "エージェントが正常に開始されました",
-    "aiAssistantReady": "AIアシスタントがヘルプの準備ができています"
+    "aiAssistantReady": "AIアシスタントがヘルプの準備ができています",
+    "greetings": {
+      "morning": [
+        "おはようございます！今日の予定は？",
+        "おはよう！何を作る？",
+        "おはようございます！準備はOK？"
+      ],
+      "afternoon": [
+        "こんにちは！何かお手伝いしましょうか？",
+        "調子はどう？何をする？"
+      ],
+      "evening": [
+        "こんばんは！夜遅くまでお疲れ様！",
+        "こんばんは！今夜は何に取り組む？",
+        "こんばんは！さあ、始めよう。"
+      ],
+      "random": [
+        "お帰りなさい！",
+        "やあ！Kortixに何でも聞いてね",
+        "何を達成したい？",
+        "すごいものを作ろう",
+        "いつでも準備OK！",
+        "何かある？",
+        "お任せを！ミッションは？",
+        "魔法をかけよう",
+        "どんな挑戦に挑む？",
+        "何でも言って",
+        "今日の計画は？",
+        "シートベルト締めて！どこへ行く？",
+        "今日も一日頑張ろう",
+        "何を考えてる？",
+        "さあ、始めよう！"
+      ]
+    }
   },
   "thread": {
     "integrations": "統合",
@@ -237,7 +363,7 @@
     "chatDescription": "シンプルな往復会話",
     "sampleAnswers": "サンプル回答",
     "samplePrompts": "サンプルプロンプト",
-    "waitingForUserResponse": "あなたの回答後、Prophetは自律的に作業を続けます。",
+    "waitingForUserResponse": "あなたの回答後、Kortixは自律的に作業を続けます。",
     "taskCompleted": "タスク完了",
     "uploadingFiles": "{count} 個のファイルをアップロード中...",
     "uploadingFilesOne": "{count} 個のファイルをアップロード中...",
@@ -247,7 +373,7 @@
     "instructions": "指示",
     "knowledge": "知識",
     "triggers": "トリガー",
-    "agents": "エージェント",
+    "agents": "ワーカー",
     "superWorker": "Super Worker",
     "searchWorkers": "Workerを検索...",
     "myWorkers": "マイWorkers",
@@ -261,27 +387,106 @@
     "rateThisResult": "この結果を評価",
     "feedbackHelpsImprove": "フィードバックは改善に役立ちます",
     "additionalFeedbackOptional": "追加のフィードバック（任意）",
-    "helpProphetImprove": "フィードバックでProphetの改善にご協力ください",
+    "helpKortixImprove": "フィードバックでKortixの改善にご協力ください",
     "submit": "送信",
     "submitting": "送信中...",
     "feedbackSubmittedSuccess": "フィードバックが正常に送信されました",
     "feedbackSubmitFailed": "フィードバックの送信に失敗しました"
   },
   "agents": {
-    "title": "エージェント",
-    "create": "エージェントを作成",
+    "title": "ワーカー",
+    "create": "ワーカーを作成",
     "createNewWorker": "新しいWorkerを作成",
-    "edit": "エージェントを編集",
-    "delete": "エージェントを削除",
+    "edit": "ワーカーを編集",
+    "delete": "ワーカーを削除",
     "name": "名前",
     "description": "説明",
     "model": "モデル",
     "systemPrompt": "システムプロンプト",
-    "systemPromptPlaceholder": "エージェントの動作を定義...",
-    "customizeIcon": "エージェントアイコンをカスタマイズするにはクリック"
+    "systemPromptPlaceholder": "ワーカーの動作を定義...",
+    "customizeIcon": "ワーカーアイコンをカスタマイズするにはクリック"
   },
   "home": {
     "heroPlaceholder": "Workerに完了させたいタスクを説明..."
+  },
+  "showcase": {
+    "title": "Kortix: あなたの自律型AIワーカー",
+    "subtitle": "複雑なタスクのために構築され、すべてのために設計されました。シンプルなリクエストからメガ複雑なプロジェクトまで、すべてを処理する究極のAIアシスタント。",
+    "tryItOut": "試してみる",
+    "kortixComputer": "Kortix Computer",
+    "running": "実行中",
+    "workers": {
+      "images": {
+        "title": "画像",
+        "description": "オンデマンドで画像を作成。製品写真からソーシャルグラフィック、完全なイラストまで。スタイル、照明、色、レイアウトを調整したり、既存のビジュアルを迅速な編集とタッチアップで洗練させます。",
+        "capabilities": {
+          "0": "製品写真を生成",
+          "1": "ソーシャルグラフィックを作成",
+          "2": "イラストを作成",
+          "3": "スタイルと照明のバリエーション",
+          "4": "ロゴ/アセット作成",
+          "5": "+ その他多数"
+        },
+        "imageAlt": "成長は線形ではないグラフィック例",
+        "fileType": "image"
+      },
+      "slides": {
+        "title": "スライド",
+        "description": "即座に素晴らしいプレゼンテーションを作成。ピッチデッキからレポート、トレーニング資料まで。テーマ、レイアウト、コンテンツ構造を調整したり、既存のデッキを迅速な編集と更新で洗練させます。",
+        "capabilities": {
+          "0": "ピッチデッキ",
+          "1": "トレーニング資料",
+          "2": "レポートプレゼンテーション",
+          "3": "テーマとレイアウトのバリエーション",
+          "4": "コンテンツの再構築",
+          "5": "+ その他多数"
+        },
+        "imageAlt": "Nexus Enterprise Automation Platformスライド例",
+        "fileType": "PPTX"
+      },
+      "data": {
+        "title": "データ",
+        "description": "生データをインサイトに変換。スプレッドシートからダッシュボード、ビジュアライゼーションまで。データセットをクリーンアップし、チャートを作成し、レポートを構築したり、既存の分析を迅速な更新で洗練させます。",
+        "capabilities": {
+          "0": "ダッシュボード",
+          "1": "ビジュアライゼーション",
+          "2": "データレポート",
+          "3": "データのクリーンアップと整理",
+          "4": "インサイトを生成",
+          "5": "+ その他多数"
+        },
+        "imageAlt": "財務モデルダッシュボード例",
+        "fileType": "プレビュー"
+      },
+      "docs": {
+        "title": "ドキュメント",
+        "description": "ドキュメントを簡単に作成・編集。提案からガイド、コンテンツまで。トーン、構造、フォーマットを調整したり、既存のドキュメントを迅速な書き直しと磨きで洗練させます。",
+        "capabilities": {
+          "0": "提案",
+          "1": "ガイドとマニュアル",
+          "2": "コンテンツ",
+          "3": "トーンとスタイルのバリエーション",
+          "4": "フォーマットと再構築",
+          "5": "+ その他多数"
+        },
+        "imageAlt": "2025年第3四半期エグゼクティブサマリーレポート例",
+        "fileType": "PDF"
+      },
+      "research": {
+        "title": "リサーチ",
+        "description": "トピックを包括的に調査。市場トレンドから競合分析、深い調査まで。ソースを収集し、調査結果を統合したり、既存のリサーチを迅速な更新で洗練させます。",
+        "capabilities": {
+          "0": "市場トレンドを分析",
+          "1": "競合リサーチ",
+          "2": "トピックの深い調査",
+          "3": "ソースを収集",
+          "4": "調査結果を統合",
+          "5": "+ その他多数"
+        },
+        "imageAlt": "詳細な競合プロフィールリサーチ例",
+        "fileType": "PDF"
+      }
+    }
   },
   "threads": {
     "title": "スレッド",
@@ -295,6 +500,7 @@
     "credits": "クレジット",
     "popular": "人気",
     "creditsExplained": "クレジットの説明",
+    "creditsExhausted": "+200クレジットが{time}後に追加されます。今すぐアップグレードして使用してください。",
     "creditsExhaustedRefreshIn": "クレジットを使い果たしました。{time}後に更新されます",
     "trialActive": "トライアル有効",
     "trialBadge": "7日間トライアル",
@@ -313,10 +519,10 @@
     "localModeMessage": "ローカル開発モードで実行中 - 請求機能は無効です",
     "creditsExplainedPage": {
       "title": "クレジットの説明",
-      "subtitle": "Prophetでのクレジットの仕組みについて知っておくべきすべて",
+      "subtitle": "Kortixでのクレジットの仕組みについて知っておくべきすべて",
       "understandingCredits": {
         "title": "クレジットの理解",
-        "description": "クレジットは、Prophetのプラットフォーム操作における共通通貨として機能します。AIエージェントが実行するすべてのアクション（データ分析からコード生成まで）は、タスクの複雑さと必要なリソースに基づいてクレジットを消費します。"
+        "description": "クレジットは、Kortixのプラットフォーム操作における共通通貨として機能します。AIワーカーが実行するすべてのアクション（データ分析からコード生成まで）は、タスクの複雑さと必要なリソースに基づいてクレジットを消費します。"
       },
       "howCreditsWork": {
         "title": "クレジットの仕組み",
@@ -324,7 +530,7 @@
         "aiModelUsage": {
           "title": "AIモデルの使用",
           "description": "クレジット消費の主要な要因",
-          "content": "異なるAIモデルは、その機能とトークン使用量に基づいて異なるコストがあります。クレジットは入力トークン（プロンプトとコンテキスト）、出力トークン（エージェントの応答）に消費され、モデル階層（Claude、GPTなど）によって異なります。"
+          "content": "異なるAIモデルは、その機能とトークン使用量に基づいて異なるコストがあります。クレジットは入力トークン（プロンプトとコンテキスト）、出力トークン（ワーカーの応答）に消費され、モデル階層（Claude、GPTなど）によって異なります。"
         },
         "pricingModel": {
           "title": "価格モデル",
@@ -334,7 +540,7 @@
       },
       "gettingMoreCredits": {
         "title": "より多くのクレジットを取得",
-        "description": "Prophetでクレジットを取得する方法はいくつかあります：",
+        "description": "Kortixでクレジットを取得する方法はいくつかあります：",
         "monthlySubscription": {
           "title": "月額サブスクリプションクレジット",
           "description": "有料プランに含まれ、毎月自動的に更新されます。これらは期限付きクレジットです。"
@@ -354,7 +560,7 @@
       },
       "typesOfCredits": {
         "title": "クレジットの種類",
-        "description": "Prophetは2種類のクレジットを使用して、使用管理の柔軟性を提供します：",
+        "description": "Kortixは2種類のクレジットを使用して、使用管理の柔軟性を提供します：",
         "expiringCredits": {
           "title": "期限付きクレジット",
           "description": "月額サブスクリプションクレジット",
@@ -367,7 +573,7 @@
         },
         "creditPriority": {
           "title": "クレジット優先順位：",
-          "description": "Prophetを使用する場合、期限付きクレジットが最初に消費されます。期限付きクレジットが使い果たされた後にのみ、期限なしクレジットが使用されます。"
+          "description": "Kortixを使用する場合、期限付きクレジットが最初に消費されます。期限付きクレジットが使い果たされた後にのみ、期限なしクレジットが使用されます。"
         }
       }
     },
@@ -390,6 +596,9 @@
     "downgradePending": "ダウングレード保留中",
     "downgrade": "ダウングレード",
     "switchToLegacyYearly": "レガシー年額に切り替え",
+    "confirmDowngradeTitle": "ダウングレードしてもよろしいですか？",
+    "confirmDowngradeDescription": "{planName}プランに変更しようとしています。この変更は現在の請求期間の終了時に適用されます。",
+    "confirmDowngrade": "はい、ダウングレード",
     "pickPlan": "自分に合ったプランを選んで。",
     "reachedLimit": "制限に達しました。",
     "projectLimit": "プロジェクト制限 ({current}/{limit})",
@@ -410,11 +619,38 @@
       "integrations": "100+ 統合",
       "premiumAIModels": "プレミアムAIモデル",
       "prioritySupport": "優先サポート"
+    },
+    "downgradeDialog": {
+      "confirmTitle": "プラン変更の確認",
+      "confirmSubtitle": "ご利用いただきありがとうございました",
+      "confirmDescription": "{planName}プランに変更しようとしています。この変更は現在の請求期間の終了時に適用されます。それまで現在の特典をご利用いただけます。",
+      "continue": "続ける",
+      "keepCurrentPlan": "現在のプランを維持",
+      "feedbackTitle": "改善にご協力ください",
+      "feedbackSubtitle": "あなたのフィードバックがKortixの未来を形作ります",
+      "whatWouldMakeYouStay": "何があれば続けていただけますか？",
+      "feedbackPlaceholder": "Kortixをあなたにとって価値あるものにするために、私たちが変更または追加できることが1つあるとしたら、それは何ですか？",
+      "feedbackFooter": "私たちのチームはすべての回答を読んでいます。あなたの言葉が次に何を構築するかに直接影響します。",
+      "confirmDowngrade": "ダウングレードを確認",
+      "processing": "処理中...",
+      "pleaseSelectReason": "理由を選択してください",
+      "reasons": {
+        "tooExpensive": "私のニーズには高すぎる",
+        "notUsingOften": "Kortixを十分に使用していない",
+        "foundAlternative": "別のソリューションを見つけた",
+        "technicalIssues": "技術的な問題が発生した",
+        "resultsNotGood": "結果が期待に沿わなかった",
+        "other": "その他の理由"
+      }
     }
   },
   "auth": {
+    "haveReferralCode": "紹介コードをお持ちですか？",
+    "referralCode": "紹介コード",
+    "enterCode": "コードを入力",
     "logIntoAccount": "アカウントにログイン",
     "createAccount": "アカウントを作成",
+    "signInOrCreateAccount": "Kortixアカウントにログインまたは作成",
     "continueWithGoogle": "Googleで続ける",
     "continueWithGitHub": "GitHubで続ける",
     "orEmail": "またはメール",
@@ -442,7 +678,22 @@
     "cancel": "キャンセル",
     "pleaseEnterValidEmail": "有効なメールアドレスを入力してください",
     "signInFailed": "ログイン失敗。認証情報を確認してください。",
-    "signUpFailed": "登録に失敗しました。もう一度お試しください。"
+    "signUpFailed": "登録に失敗しました。もう一度お試しください。",
+    "sendMagicLink": "マジックリンクを送信",
+    "sending": "送信中...",
+    "magicLinkSent": "マジックリンクを送信しました",
+    "magicLinkDescription": "メール内のリンクをクリックしてログインしてください。リンクは1時間で期限切れになります。",
+    "magicLinkExplanation": "安全なリンクをメールでお送りします。パスワードは不要です。",
+    "magicLinkExpired": "このリンクは期限切れです",
+    "magicLinkExpiredDescription": "クリックしたマジックリンクは期限切れです。セキュリティ上の理由により、マジックリンクは1時間後に期限切れになります。",
+    "resendMagicLink": "マジックリンクを再送信",
+    "resending": "再送信中...",
+    "byContinuingYouAgree": "続行することで、<privacyPolicy>プライバシーポリシー</privacyPolicy>および<termsOfService>利用規約</termsOfService>に同意したものとみなされます",
+    "openProvider": "{provider}を開く",
+    "didntReceiveEmail": "メールが届きませんでしたか？",
+    "resend": "再送信",
+    "alreadySignedIn": "すでにログインしています。操作は不要です。",
+    "goToDashboard": "ダッシュボードへ"
   },
   "onboarding": {
     "welcome": "ようこそ",
@@ -492,8 +743,8 @@
     "analyzeSheet": "シート分析中",
     "visualizeSheet": "シート可視化中",
     "formatSheet": "シートフォーマット中",
-    "updateAgent": "エージェント更新中",
-    "getCurrentAgentConfig": "エージェント設定取得中",
+    "updateAgent": "ワーカー更新中",
+    "getCurrentAgentConfig": "ワーカー設定取得中",
     "searchMcpServers": "MCPサーバー検索中",
     "getMcpServerTools": "MCPサーバーツール取得中",
     "configureMcpServer": "MCPサーバー設定中",
@@ -519,8 +770,8 @@
     "discoverUserMcpServers": "ツール検出中",
     "createCredentialProfile": "プロファイル作成中",
     "getCredentialProfiles": "プロファイル取得中",
-    "configureProfileForAgent": "エージェントにツール追加中",
-    "createNewAgent": "新しいエージェント作成中",
+    "configureProfileForAgent": "ワーカーにツール追加中",
+    "createNewAgent": "新しいワーカー作成中",
     "searchMcpServersForAgent": "MCPサーバー検索中",
     "createCredentialProfileForAgent": "認証プロファイル作成中",
     "discoverMcpToolsForAgent": "MCPツール検出中",
@@ -544,24 +795,24 @@
     "parallelRunsLimitReached": "並列実行制限に達しました",
     "parallelRunsLimitDescription": "許可されている最大並列エージェント実行数に達しました。",
     "needMoreParallelRuns": "もっと並列実行が必要？",
-    "upgradeDescription": "プランをアップグレードして、複数のエージェントを同時に実行し、生産性を向上させよう。",
+    "upgradeDescription": "プランをアップグレードして、複数のワーカーを同時に実行し、生産性を向上させよう。",
     "upgradePlan": "プランをアップグレード",
-    "currentlyRunningAgents": "現在実行中のエージェント",
+    "currentlyRunningAgents": "現在実行中のワーカー",
     "loadingThreads": "スレッドを読み込み中...",
-    "foundRunningAgents": "{count} 個の実行中のエージェントが見つかりましたが、スレッドの詳細を読み込めませんでした。",
+    "foundRunningAgents": "{count} 個の実行中のワーカーが見つかりましたが、スレッドの詳細を読み込めませんでした。",
     "threadIds": "スレッドID: {ids}",
     "moreRunning": "+{count} 個が実行中",
     "whatCanYouDo": "何ができる？",
-    "stopAgentsHint": "停止ボタンをクリックして実行中のエージェントを停止",
-    "waitForCompletion": "エージェントが自動的に完了するのを待つ",
+    "stopAgentsHint": "停止ボタンをクリックして実行中のワーカーを停止",
+    "waitForCompletion": "ワーカーが自動的に完了するのを待つ",
     "upgradeYourPlan": "プランをアップグレード",
     "forMoreParallelRuns": "より多くの並列実行のために",
-    "stopAgent": "エージェントを停止",
-    "stopThisAgent": "このエージェントを停止",
+    "stopAgent": "ワーカーを停止",
+    "stopThisAgent": "このワーカーを停止",
     "openThread": "スレッドを開く",
-    "agentStoppedSuccessfully": "エージェントが正常に停止されました",
-    "failedToStopAgent": "エージェントの停止に失敗しました",
-    "upgradeToRunMore": "より多くのエージェントを並列実行するためにアップグレード"
+    "agentStoppedSuccessfully": "ワーカーが正常に停止されました",
+    "failedToStopAgent": "ワーカーの停止に失敗しました",
+    "upgradeToRunMore": "より多くのワーカーを並列実行するためにアップグレード"
   },
   "errors": {
     "generic": "エラーが発生しました",
@@ -578,6 +829,25 @@
     "pt": "Português",
     "fr": "Français",
     "es": "Español"
+  },
+  "notifications": {
+    "title": "通知",
+    "description": "通知の受信方法を管理",
+    "preferences": "通知設定",
+    "channels": "通知チャネル",
+    "emailNotifications": "メール通知",
+    "emailDescription": "メールで通知を受信",
+    "pushNotifications": "プッシュ通知",
+    "pushDescription": "デバイスでプッシュ通知を受信",
+    "inAppNotifications": "アプリ内通知",
+    "inAppDescription": "アプリ内で通知を表示",
+    "deviceTokens": "登録済みデバイス",
+    "noDevices": "登録されたデバイスがありません",
+    "settingsUpdated": "通知設定が正常に更新されました",
+    "settingsFailed": "通知設定の更新に失敗しました",
+    "enableAll": "すべて有効化",
+    "disableAll": "すべて無効化",
+    "saveChanges": "変更を保存"
   },
   "suna": {
     "samplePrompts": "サンプルプロンプト",

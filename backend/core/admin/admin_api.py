@@ -1,8 +1,3 @@
-"""
-Consolidated Admin API
-Handles all administrative operations for user management, system configuration, and agent installations.
-"""
-
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -16,8 +11,17 @@ from core.utils.suna_default_agent_service import SunaDefaultAgentService
 from core.utils.config import config, EnvMode
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 import os
+import re
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def escape_like_pattern(value: str) -> str:
+    if not value:
+        return value
+    # Escape backslashes first, then % and _
+    escaped = value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    return escaped
 
 # ============================================================================
 # MODELS
@@ -66,9 +70,11 @@ async def list_users(
         pagination_params = PaginationParams(page=page, page_size=page_size)
         
         if search_email:
+            # Escape special LIKE characters to prevent SQL injection
+            safe_email = escape_like_pattern(search_email)
             email_result = await client.schema('basejump').from_('billing_customers').select(
                 'account_id'
-            ).ilike('email', f'%{search_email}%').limit(1000).execute()
+            ).ilike('email', f'%{safe_email}%').limit(1000).execute()
             
             matching_account_ids = [item['account_id'] for item in email_result.data or []]
             
@@ -490,14 +496,14 @@ async def get_user_threads_by_email(
 # AGENT & SYSTEM MANAGEMENT
 # ============================================================================
 
-@router.post("/prophet-agents/install-user/{account_id}")
+@router.post("/suna-agents/install-user/{account_id}")
 async def admin_install_suna_for_user(
     account_id: str,
     replace_existing: bool = False,
     _: bool = Depends(verify_admin_api_key)
 ):
-    """Install Prophet agent for a specific user."""
-    logger.debug(f"Admin installing Prophet agent for user: {account_id}")
+    """Install Suna agent for a specific user."""
+    logger.debug(f"Admin installing Suna agent for user: {account_id}")
     
     service = SunaDefaultAgentService()
     agent_id = await service.install_suna_agent_for_user(account_id, replace_existing)
@@ -505,13 +511,13 @@ async def admin_install_suna_for_user(
     if agent_id:
         return {
             "success": True,
-            "message": f"Successfully installed Prophet agent for user {account_id}",
+            "message": f"Successfully installed Suna agent for user {account_id}",
             "agent_id": agent_id
         }
     else:
         raise HTTPException(
             status_code=500, 
-            detail=f"Failed to install Prophet agent for user {account_id}"
+            detail=f"Failed to install Suna agent for user {account_id}"
         )
 
 @router.get("/env-vars")

@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/milo-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 
@@ -185,7 +185,7 @@ const MarketplaceBadge: React.FC<{
     {isKortixTeam && (
       <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-950 dark:text-blue-300">
         <CheckCircle className="h-3 w-3 mr-1" />
-        Milo
+        Kortix
       </Badge>
     )}
     {isOwner && (

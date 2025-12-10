@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { KortixLoader } from '@/components/ui/milo-loader';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 
 interface AuthMessage {
   type: 'github-auth-success' | 'github-auth-error';

@@ -1,13 +1,8 @@
-import asyncio
-import time
-from typing import Optional
-from urllib.parse import urlparse
-
-from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
-from core.utils.config import config
-from core.utils.logger import logger
+from core.agentpress.thread_manager import ThreadManager
+import asyncio
+import time
 
 @tool_metadata(
     display_name="Port Exposure",
@@ -15,7 +10,25 @@ from core.utils.logger import logger
     icon="Share",
     color="bg-indigo-100 dark:bg-indigo-800/50",
     weight=120,
-    visible=True
+    visible=True,
+    usage_guide="""
+### PORT EXPOSURE & WEB DEVELOPMENT
+
+**CRITICAL: PORT 8080 IS ALREADY EXPOSED**
+- A web server is ALREADY running on port 8080 in the sandbox
+- DO NOT start additional web servers
+- DO NOT use this tool for port 8080
+- Simply place HTML/CSS/JS files in /workspace and they're served automatically
+
+**WHEN TO USE THIS TOOL:**
+- Exposing custom development servers on other ports
+- Getting preview URLs for applications running on non-8080 ports
+
+**URL FORMAT CRITICAL:**
+- When main file is index.html: MUST include /index.html in URL
+- Example: https://8080-xxx.proxy.daytona.works/index.html
+- DO NOT provide base URLs without file path - causes "File not found" errors
+"""
 )
 class SandboxExposeTool(SandboxToolsBase):
     """Tool for exposing and retrieving preview URLs for sandbox ports."""
@@ -59,13 +72,7 @@ class SandboxExposeTool(SandboxToolsBase):
                 try:
                     port_check = await self.sandbox.process.exec(f"netstat -tlnp | grep :{port}", timeout=5)
                     if port_check.exit_code != 0:
-                        return self.fail_response(
-                            f"No service is currently listening on port {port}. "
-                            f"You must start a server BEFORE exposing the port. "
-                            f"For static HTML files, run: python -m http.server {port} & "
-                            f"For Node.js apps, run: npm run dev (or start your server). "
-                            f"Then call expose_port again."
-                        )
+                        return self.fail_response(f"No service is currently listening on port {port}. Please start a service on this port first.")
                 except Exception:
                     # If we can't check, proceed anyway - the user might be starting a service
                     pass
@@ -74,75 +81,15 @@ class SandboxExposeTool(SandboxToolsBase):
             preview_link = await self.sandbox.get_preview_link(port)
             
             # Extract the actual URL from the preview link object
-            raw_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-            proxy_url = self._build_proxy_url(raw_url, port)
-            final_url = proxy_url or raw_url
-
-            if proxy_url:
-                logger.info(
-                    "Rewrote Daytona preview URL to Prophet proxy",
-                    sandbox_id=self.sandbox_id,
-                    port=port,
-                    raw_url=raw_url,
-                    proxy_url=proxy_url,
-                )
-
-            message_suffix = " (via Prophet proxy)" if proxy_url else ""
-            response_payload = {
-                "url": final_url,
+            url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            
+            return self.success_response({
+                "url": url,
                 "port": port,
-                "message": (
-                    f"Successfully exposed port {port} to the public. "
-                    f"Users can now access this service at: {final_url}{message_suffix}"
-                ),
-            }
-            if proxy_url:
-                response_payload["raw_url"] = raw_url
-
-            return self.success_response(response_payload)
+                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {url}"
+            })
                 
         except ValueError:
             return self.fail_response(f"Invalid port number: {port}. Must be a valid integer between 1 and 65535.")
         except Exception as e:
             return self.fail_response(f"Error exposing port {port}: {str(e)}")
-
-    def _build_proxy_url(self, raw_url: str, port: int) -> Optional[str]:
-        """
-        Convert a Daytona preview URL into the Prophet proxy URL when possible.
-        Falls back to the original URL if configuration is missing.
-        
-        The port is passed as a query parameter so the proxy knows which
-        Daytona port to forward to (e.g., ?port=8000).
-        """
-        base = config.DAYTONA_PREVIEW_BASE
-        if not base:
-            return None
-
-        try:
-            sandbox_id = self.sandbox_id
-        except RuntimeError:
-            return None
-
-        try:
-            parsed = urlparse(raw_url)
-        except ValueError:
-            logger.warning("Failed to parse Daytona preview URL %s", raw_url)
-            return None
-
-        base = base.rstrip("/")
-        path = parsed.path.lstrip("/")
-        proxy_url = f"{base}/{sandbox_id}"
-        if path:
-            proxy_url = f"{proxy_url}/{path}"
-        
-        # Build query string with port parameter
-        query_parts = []
-        if port != 8080:  # Only add port param if not default
-            query_parts.append(f"port={port}")
-        if parsed.query:
-            query_parts.append(parsed.query)
-        
-        if query_parts:
-            proxy_url = f"{proxy_url}?{'&'.join(query_parts)}"
-
-        return proxy_url

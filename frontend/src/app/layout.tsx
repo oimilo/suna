@@ -39,9 +39,9 @@ export const metadata: Metadata = {
   },
   description: siteMetadata.description,
   keywords: siteMetadata.keywords,
-  authors: [{ name: 'Prophet Team', url: 'https://prophet.build' }],
-  creator: 'Prophet Team',
-  publisher: 'Prophet Team',
+  authors: [{ name: 'Milo Team', url: 'https://prophet.build' }],
+  creator: 'Milo Team',
+  publisher: 'Milo Team',
   applicationName: siteMetadata.name,
   robots: {
     index: true,
@@ -74,8 +74,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteMetadata.title,
     description: siteMetadata.description,
-    creator: '@kortix',
-    site: '@kortix',
+    creator: '@oimilo',
+    site: '@oimilo',
     images: ['/banner.png'],
   },
   icons: {
@@ -107,13 +107,18 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         
-        {/* DNS prefetch for Prophet analytics */}
+        {/* DNS prefetch for analytics (loaded later but resolve DNS early) */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://connect.facebook.net" />
+        <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
+        
+        {/* React Scan removed - causing initialization errors */}
+        {/* rest of your scripts go under */}
         
         {/* Static SEO meta tags - rendered in initial HTML */}
         <title>Prophet: Your Autonomous AI Worker</title>
         <meta name="description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
-        <meta name="keywords" content="Prophet, AI Worker, AI Worker, Generalist AI, Open Source AI, Autonomous Agent, Complex Tasks, AI Assistant" />
+        <meta name="keywords" content="Prophet, AI Agent, Agentic AI, Autonomous AI Agent, AI Automation, AI Workflow Automation, AI Assistant, AI Worker, Task Automation" />
         <meta property="og:title" content="Prophet: Your Autonomous AI Worker" />
         <meta property="og:description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
         <meta property="og:image" content="https://prophet.build/banner.png" />
@@ -124,12 +129,10 @@ export default function RootLayout({
         <meta name="twitter:title" content="Prophet: Your Autonomous AI Worker" />
         <meta name="twitter:description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
         <meta name="twitter:image" content="https://prophet.build/banner.png" />
-        {/* TODO: Update to Prophet's Twitter handle */}
-        {/* <meta name="twitter:site" content="@kortix" /> */}
+        <meta name="twitter:site" content="@oimilo" />
         <link rel="canonical" href="https://prophet.build" />
 
-        {/* TODO: Update to Prophet's Meta Pixel ID */}
-        {/* <Script id="facebook-pixel" strategy="lazyOnload">
+        <Script id="facebook-pixel" strategy="lazyOnload">
           {`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -149,9 +152,9 @@ export default function RootLayout({
             height="1"
             width="1"
             style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID_HERE&ev=PageView&noscript=1"
+            src="https://www.facebook.com/tr?id=1385936776361131&ev=PageView&noscript=1"
           />
-        </noscript> */}
+        </noscript>
 
 
         <script
@@ -167,10 +170,9 @@ export default function RootLayout({
               description: siteMetadata.description,
               foundingDate: '2024',
               sameAs: [
-                'https://github.com/oimilo/suna',
-                // TODO: Add Prophet social links when available
-                // 'https://x.com/prophet',
-                // 'https://linkedin.com/company/prophet',
+                'https://github.com/oimilo/prophet',
+                'https://x.com/oimilo',
+                'https://linkedin.com/company/milo',
               ],
               contactPoint: {
                 '@type': 'ContactPoint',
@@ -188,7 +190,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
               name: siteMetadata.title,
-              alternateName: [siteMetadata.name, 'Prophet AI'],
+              alternateName: [siteMetadata.name, 'Prophet'],
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, macOS, Windows, Linux',
               description: siteMetadata.description,
@@ -206,22 +208,25 @@ export default function RootLayout({
           }}
         />
 
-        {/* Google Analytics 4 - Prophet */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-YFNRGM2EH5"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-YFNRGM2EH5');
-          `}
+        <Script id="google-tag-manager" strategy="lazyOnload">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-XXXXXXX');`}
         </Script>
       </head>
 
       <body className="antialiased font-sans bg-background">
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+          />
+        </noscript>
+        {/* End Google Tag Manager (noscript) */}
 
         <ThemeProvider
           attribute="class"
@@ -247,7 +252,7 @@ export default function RootLayout({
             <Analytics />
           </Suspense>
           <Suspense fallback={null}>
-            <GoogleAnalytics gaId="G-6ETJFB3PT3" />
+            <GoogleAnalytics gaId="G-YFNRGM2EH5" />
           </Suspense>
           <Suspense fallback={null}>
             <SpeedInsights />

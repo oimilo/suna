@@ -71,7 +71,7 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
                         value={systemPrompt}
                         onSave={handleSave}
                         disabled={!isEditable}
-                        placeholder="Define how your agent should behave..."
+                        placeholder="Define how your Worker should behave..."
                         className="h-full"
                     />
                 </div>

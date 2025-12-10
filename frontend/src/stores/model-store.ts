@@ -16,7 +16,7 @@ export const useModelStore = create<ModelStore>()(
       },
     }),
     {
-      name: 'prophet-model-selection-v3',
+      name: 'suna-model-selection-v3',
       partialize: (state) => ({
         selectedModel: state.selectedModel,
       }),

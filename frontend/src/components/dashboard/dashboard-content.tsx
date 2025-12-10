@@ -22,6 +22,7 @@ import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
 import { useInitiateAgentWithInvalidation } from '@/hooks/dashboard/use-initiate-agent';
+import { optimisticAgentStart } from '@/lib/api/agents';
 import { useAccountState, accountStateSelectors, invalidateAccountState } from '@/hooks/billing';
 import { getPlanName } from '@/components/billing/plan-utils';
 import { useAgents } from '@/hooks/agents/use-agents';
@@ -32,7 +33,7 @@ import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { toast } from 'sonner';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { Button } from '../ui/button';
-import { X } from 'lucide-react';
+import { X, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NotificationDropdown } from '../notifications/notification-dropdown';
 import { UsageLimitsPopover } from './usage-limits-popover';
@@ -68,6 +69,7 @@ export function DashboardContent() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const tBilling = useTranslations('billing');
+  const tAuth = useTranslations('auth');
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
@@ -75,7 +77,6 @@ export function DashboardContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [autoSubmit, setAutoSubmit] = useState(false);
   
-  // Use centralized Suna modes persistence hook
   const {
     selectedMode,
     selectedCharts,
@@ -102,6 +103,7 @@ export function DashboardContent() {
     runningThreadIds: string[];
   } | null>(null);
   const [showUpgradeCelebration, setShowUpgradeCelebration] = useState(false);
+  const [greeting, setGreeting] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -111,6 +113,9 @@ export function DashboardContent() {
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
   const pricingModalStore = usePricingModalStore();
+  
+  const prefetchedRouteRef = React.useRef<string | null>(null);
+  const prefetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const { data: agentsResponse, isLoading: isLoadingAgents } = useAgents({
     limit: 50, // Changed from 100 to 50 to match other components
@@ -125,9 +130,9 @@ export function DashboardContent() {
   const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
   const displayName = selectedAgent?.name || 'Prophet';
   const agentAvatar = undefined;
-  // Show Suna modes while loading (assume Suna is default) or when Suna agent is selected
+  // Show Kortix modes while loading (assume Kortix is default) or when Kortix agent is selected
   const isSunaAgent = isLoadingAgents 
-    ? true // Show Suna modes while loading
+    ? true // Show Kortix modes while loading
     : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
@@ -157,6 +162,66 @@ export function DashboardContent() {
     }
     return `${minutes}m`;
   };
+
+  // Generate randomized greeting on mount
+  React.useEffect(() => {
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      
+      // Get greeting arrays from translations
+      const morningGreetings = [
+        t('greetings.morning.0'),
+        t('greetings.morning.1'),
+        t('greetings.morning.2'),
+      ];
+      
+      const afternoonGreetings = [
+        t('greetings.afternoon.0'),
+        t('greetings.afternoon.1'),
+      ];
+      
+      const eveningGreetings = [
+        t('greetings.evening.0'),
+        t('greetings.evening.1'),
+        t('greetings.evening.2'),
+      ];
+      
+      const randomGreetings = [
+        t('greetings.random.0'),
+        t('greetings.random.1'),
+        t('greetings.random.2'),
+        t('greetings.random.3'),
+        t('greetings.random.4'),
+        t('greetings.random.5'),
+        t('greetings.random.6'),
+        t('greetings.random.7'),
+        t('greetings.random.8'),
+        t('greetings.random.9'),
+        t('greetings.random.10'),
+        t('greetings.random.11'),
+        t('greetings.random.12'),
+        t('greetings.random.13'),
+        t('greetings.random.14'),
+      ];
+      
+      // 40% chance of time-based greeting, 60% chance of random
+      const useTimeBased = Math.random() < 0.4;
+      
+      if (useTimeBased) {
+        if (hour >= 5 && hour < 12) {
+          return morningGreetings[Math.floor(Math.random() * morningGreetings.length)];
+        } else if (hour >= 12 && hour < 17) {
+          return afternoonGreetings[Math.floor(Math.random() * afternoonGreetings.length)];
+        } else {
+          return eveningGreetings[Math.floor(Math.random() * eveningGreetings.length)];
+        }
+      }
+      
+      return randomGreetings[Math.floor(Math.random() * randomGreetings.length)];
+    };
+    
+    setGreeting(getGreeting());
+  }, [t]);
 
   React.useEffect(() => {
     if (agents.length > 0) {
@@ -237,6 +302,22 @@ export function DashboardContent() {
     }
   }, [searchParams, queryClient, router, setSidebarOpen]);
 
+  // Handle expired link notification for logged-in users
+  React.useEffect(() => {
+    const linkExpired = searchParams.get('linkExpired');
+    if (linkExpired === 'true') {
+      toast.info(tAuth('magicLinkExpired'), {
+        description: tAuth('magicLinkExpiredDescription'),
+        duration: 5000,
+      });
+      
+      // Clean up URL param
+      const url = new URL(window.location.href);
+      url.searchParams.delete('linkExpired');
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [searchParams, router, tAuth]);
+
   const handleSubmit = async (
     message: string,
     options?: {
@@ -264,7 +345,7 @@ export function DashboardContent() {
       const trimmedMessage = message.trim();
       if (!trimmedMessage && files.length === 0) {
         setIsSubmitting(false);
-        throw new Error('Prompt is required when starting a new agent');
+        throw new Error('Prompt is required when starting a new Worker');
       }
       // Always append prompt (even if empty, backend will validate)
       formData.append('prompt', trimmedMessage || message);
@@ -294,14 +375,90 @@ export function DashboardContent() {
         filesCount: files.length,
       });
 
-      const result = await initiateAgentMutation.mutateAsync(formData);
-
-      if (result.thread_id) {
-        setInitiatedThreadId(result.thread_id);
-      } else {
-        throw new Error('Agent initiation did not return a thread_id.');
-      }
+      const threadId = crypto.randomUUID();
+      const projectId = crypto.randomUUID();
+      
       chatInputRef.current?.clearPendingFiles();
+      setIsRedirecting(true);
+      
+      sessionStorage.setItem('optimistic_prompt', trimmedMessage || message);
+      sessionStorage.setItem('optimistic_thread', threadId);
+      
+      router.push(`/projects/${projectId}/thread/${threadId}?new=true`);
+      
+      optimisticAgentStart({
+        thread_id: threadId,
+        project_id: projectId,
+        prompt: trimmedMessage || message,
+        files: files,
+        model_name: options?.model_name,
+        agent_id: selectedAgentId || undefined,
+      }).catch((error) => {
+        console.error('Background agent start failed:', error);
+        
+        if (error instanceof BillingError || error?.status === 402) {
+          const message = error.detail?.message?.toLowerCase() || error.message?.toLowerCase() || '';
+          const originalMessage = error.detail?.message || error.message || '';
+          const isCreditsExhausted = 
+            message.includes('credit') ||
+            message.includes('balance') ||
+            message.includes('insufficient') ||
+            message.includes('out of credits') ||
+            message.includes('no credits');
+          
+          const balanceMatch = originalMessage.match(/balance is (-?\d+)\s*credits/i);
+          const balance = balanceMatch ? balanceMatch[1] : null;
+          
+          const alertTitle = isCreditsExhausted 
+            ? 'You ran out of credits'
+            : 'Pick the plan that works for you';
+          
+          const alertSubtitle = balance 
+            ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
+            : isCreditsExhausted 
+              ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
+              : undefined;
+          
+          router.replace('/dashboard');
+          pricingModalStore.openPricingModal({ 
+            isAlert: true,
+            alertTitle,
+            alertSubtitle
+          });
+          return;
+        }
+        
+        if (error instanceof AgentRunLimitError) {
+          const { running_thread_ids, running_count } = error.detail;
+          router.replace('/dashboard');
+          setAgentLimitData({
+            runningCount: running_count,
+            runningThreadIds: running_thread_ids,
+          });
+          setShowAgentLimitDialog(true);
+          return;
+        }
+        
+        if (error instanceof ProjectLimitError) {
+          router.replace('/dashboard');
+          pricingModalStore.openPricingModal({ 
+            isAlert: true,
+            alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+          });
+          return;
+        }
+        
+        if (error instanceof ThreadLimitError) {
+          router.replace('/dashboard');
+          pricingModalStore.openPricingModal({ 
+            isAlert: true,
+            alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+          });
+          return;
+        }
+        
+        toast.error('Failed to start conversation');
+      });
     } catch (error: any) {
       console.error('Error during submission process:', error);
       if (error instanceof ProjectLimitError) {
@@ -316,6 +473,7 @@ export function DashboardContent() {
         });
       } else if (error instanceof BillingError) {
         const message = error.detail?.message?.toLowerCase() || '';
+        const originalMessage = error.detail?.message || '';
         const isCreditsExhausted = 
           message.includes('credit') ||
           message.includes('balance') ||
@@ -323,9 +481,24 @@ export function DashboardContent() {
           message.includes('out of credits') ||
           message.includes('no credits');
         
+        // Extract balance from message if present
+        const balanceMatch = originalMessage.match(/balance is (-?\d+)\s*credits/i);
+        const balance = balanceMatch ? balanceMatch[1] : null;
+        
+        const alertTitle = isCreditsExhausted 
+          ? 'You ran out of credits'
+          : 'Pick the plan that works for you';
+        
+        const alertSubtitle = balance 
+          ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
+          : isCreditsExhausted 
+            ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
+            : undefined;
+        
         pricingModalStore.openPricingModal({ 
           isAlert: true,
-          alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : 'Pick the plan that works for you.'
+          alertTitle,
+          alertSubtitle
         });
       } else if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
@@ -359,6 +532,14 @@ export function DashboardContent() {
   }, []);
 
   React.useEffect(() => {
+    const dummyProjectId = 'prefetch-project';
+    const dummyThreadId = 'prefetch-thread';
+    const routeToPrefetch = `/projects/${dummyProjectId}/thread/${dummyThreadId}`;
+    router.prefetch(routeToPrefetch);
+    prefetchedRouteRef.current = routeToPrefetch;
+  }, [router]);
+
+  React.useEffect(() => {
     if (autoSubmit && inputValue && !isSubmitting && !isRedirecting) {
       const timer = setTimeout(() => {
         handleSubmit(inputValue);
@@ -369,6 +550,31 @@ export function DashboardContent() {
     }
     return undefined;
   }, [autoSubmit, inputValue, isSubmitting, isRedirecting, handleSubmit]);
+
+  React.useEffect(() => {
+    if (inputValue.trim() && !isSubmitting && !isRedirecting) {
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+      }
+
+      prefetchTimeoutRef.current = setTimeout(() => {
+        const dummyProjectId = 'prefetch-project';
+        const dummyThreadId = 'prefetch-thread';
+        const routeToPrefetch = `/projects/${dummyProjectId}/thread/${dummyThreadId}`;
+        
+        if (prefetchedRouteRef.current !== routeToPrefetch) {
+          router.prefetch(routeToPrefetch);
+          prefetchedRouteRef.current = routeToPrefetch;
+        }
+      }, 300);
+    }
+
+    return () => {
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current);
+      }
+    };
+  }, [inputValue, isSubmitting, isRedirecting, router]);
 
   return (
     <>
@@ -404,7 +610,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Prophet Super Worker
+                    Prophet
                   </button>
                   <button
                     onClick={() => {
@@ -426,16 +632,16 @@ export function DashboardContent() {
             )} */}
             
 
-            <div className="flex-1 flex items-start justify-center pt-[30vh]">
+            <div className="flex-1 flex items-start justify-center pt-[25vh] sm:pt-[30vh]">
               {viewMode === 'super-worker' && (
                 <div className="w-full animate-in fade-in-0 duration-300">
-                  <div className="px-4 py-8">
-                    <div className="w-full max-w-3xl mx-auto flex flex-col items-center space-y-6 md:space-y-8">
+                  <div className="px-4 py-6 sm:py-8">
+                    <div className="w-full max-w-3xl mx-auto flex flex-col items-center space-y-5 sm:space-y-6 md:space-y-8">
                       <div className="flex flex-col items-center text-center w-full">
                         <p
-                          className="tracking-tight text-2xl md:text-3xl font-normal text-foreground/90"
+                          className="tracking-tight text-2xl sm:text-2xl md:text-3xl font-normal text-foreground/90"
                         >
-                          {t('whatWouldYouLike')}
+                          {greeting || t('whatWouldYouLike')}
                         </p>
                       </div>
 
@@ -488,27 +694,17 @@ export function DashboardContent() {
 
                         {alertType === 'thread_limit' && (
                           <div 
-                            className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-between overflow-hidden'
+                            className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-center overflow-hidden cursor-pointer hover:bg-amber-500/15 transition-colors'
                             style={{
                               marginTop: '-40px',
                               transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
                             }}
+                            onClick={() => pricingModalStore.openPricingModal()}
                           >
-                            <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm'>
-                              {t('limitsExceeded', { 
-                                current: accountState?.limits?.threads?.current ?? 0, 
-                                limit: accountState?.limits?.threads?.max ?? 0 
-                              })}
+                            <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm flex items-center gap-1'>
+                              {t('limitsExceeded')}
+                              <ChevronRight className='h-4 w-4' />
                             </span>
-                            <div className='flex items-center -mb-3.5'>
-                              <Button 
-                                size='sm' 
-                                className='h-6 text-xs'
-                                onClick={() => pricingModalStore.openPricingModal()}
-                              >
-                                {tCommon('upgrade')}
-                              </Button>
-                            </div>
                           </div>
                         )}
                       </div>
@@ -517,7 +713,7 @@ export function DashboardContent() {
 
                   {/* Modes Panel - Below chat input, doesn't affect its position */}
                   {isSunaAgent && (
-                    <div className="px-4 pb-8">
+                    <div className="px-4 pb-6 sm:pb-8">
                       <div className="max-w-3xl mx-auto">
                         <Suspense fallback={<div className="h-24 bg-muted/10 rounded-lg animate-pulse" />}>
                           <SunaModesPanel

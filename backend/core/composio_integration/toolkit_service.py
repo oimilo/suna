@@ -17,8 +17,6 @@ class ToolkitInfo(BaseModel):
     tags: List[str] = []
     auth_schemes: List[str] = []
     categories: List[str] = []
-    managed_auth_schemes: List[str] = []
-    supports_managed_auth: bool = False
 
 
 class AuthConfigField(BaseModel):
@@ -44,8 +42,6 @@ class DetailedToolkitInfo(BaseModel):
     logo: Optional[str] = None
     tags: List[str] = []
     auth_schemes: List[str] = []
-    managed_auth_schemes: List[str] = []
-    supports_managed_auth: bool = False
     categories: List[str] = []
     auth_config_details: List[AuthConfigDetails] = []
     connected_account_initiation_fields: Optional[Dict[str, List[AuthConfigField]]] = None
@@ -130,24 +126,6 @@ class ToolkitService:
                 response_data = toolkits_response
             
             items = response_data.get('items', [])
-
-            try:
-                sample_slugs = []
-                for idx, raw_item in enumerate(items):
-                    slug = getattr(raw_item, 'slug', None)
-                    if slug:
-                        sample_slugs.append(slug)
-                    elif isinstance(raw_item, dict):
-                        sample_slugs.append(raw_item.get('slug'))
-                    if idx >= 9:
-                        break
-                logger.debug(
-                    "Composio returned %d raw toolkits (sample: %s)",
-                    len(items),
-                    sample_slugs,
-                )
-            except Exception as log_err:
-                logger.debug("Failed to log toolkit sample: %s", log_err)
             
             toolkits = []
             for item in items:
@@ -158,22 +136,10 @@ class ToolkitService:
                 else:
                     toolkit_data = item
                 
-                raw_auth_schemes = toolkit_data.get("auth_schemes", []) or []
-                raw_managed_auth_schemes = toolkit_data.get("composio_managed_auth_schemes", []) or []
+                auth_schemes = toolkit_data.get("auth_schemes", [])
+                composio_managed_auth_schemes = toolkit_data.get("composio_managed_auth_schemes", [])
 
-                normalized_auth_schemes = [scheme.upper() for scheme in raw_auth_schemes if scheme]
-                normalized_managed_schemes = [scheme.upper() for scheme in raw_managed_auth_schemes if scheme]
-
-                supports_oauth = "OAUTH2" in normalized_auth_schemes
-                supports_managed_oauth = "OAUTH2" in normalized_managed_schemes
-
-                if not normalized_auth_schemes and not normalized_managed_schemes:
-                    logger.debug(
-                        "Skipping toolkit %s: no auth schemes defined (raw auth=%s managed=%s)",
-                        toolkit_data.get("slug"),
-                        raw_auth_schemes,
-                        raw_managed_auth_schemes,
-                    )
+                if "OAUTH2" not in auth_schemes or "OAUTH2" not in composio_managed_auth_schemes:
                     continue
                 
                 logo_url = None
@@ -217,10 +183,8 @@ class ToolkitService:
                     description=description,
                     logo=logo_url,
                     tags=tags,
-                    auth_schemes=normalized_auth_schemes or raw_auth_schemes,
-                    categories=categories,
-                    managed_auth_schemes=normalized_managed_schemes,
-                    supports_managed_auth=supports_managed_oauth
+                    auth_schemes=auth_schemes,
+                    categories=categories
                 )
                 toolkits.append(toolkit)
             
@@ -326,21 +290,13 @@ class ToolkitService:
             if hasattr(meta, '__dict__'):
                 meta = meta.__dict__
             
-            raw_auth_schemes = toolkit_dict.get('auth_schemes', []) or []
-            raw_managed_auth_schemes = toolkit_dict.get('composio_managed_auth_schemes', []) or []
-            normalized_auth_schemes = [scheme.upper() for scheme in raw_auth_schemes if scheme]
-            normalized_managed_schemes = [scheme.upper() for scheme in raw_managed_auth_schemes if scheme]
-            supports_managed_oauth = "OAUTH2" in normalized_managed_schemes
-
             detailed_toolkit = DetailedToolkitInfo(
                 slug=toolkit_dict.get('slug', ''),
                 name=toolkit_dict.get('name', ''),
                 description=meta.get('description', '') if isinstance(meta, dict) else getattr(meta, 'description', ''),
                 logo=meta.get('logo') if isinstance(meta, dict) else getattr(meta, 'logo', None),
                 tags=[],
-                auth_schemes=normalized_auth_schemes or raw_auth_schemes,
-                managed_auth_schemes=normalized_managed_schemes,
-                supports_managed_auth=supports_managed_oauth,
+                auth_schemes=toolkit_dict.get('composio_managed_auth_schemes', []),
                 categories=[],
                 base_url=toolkit_dict.get('base_url')
             )

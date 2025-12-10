@@ -1,34 +1,19 @@
 from typing import Dict, Optional
 from datetime import datetime
-import stripe
+import stripe # type: ignore
 from core.services.supabase import DBConnection
 from core.utils.config import config
 from core.utils.logger import logger
 from core.utils.distributed_lock import DistributedLock
-from core.utils.user_locale import get_user_locale
 from ..shared.config import FREE_TIER_INITIAL_CREDITS
-from dateutil.relativedelta import relativedelta
-
-
-def locale_to_currency(locale: str) -> str:
-    """Map user locale to Stripe currency. pt = BRL, others = USD."""
-    return 'brl' if locale == 'pt' else 'usd'
-
+from dateutil.relativedelta import relativedelta # type: ignore
 
 class FreeTierService:
     def __init__(self):
         self.stripe = stripe
         stripe.api_key = config.STRIPE_SECRET_KEY
         
-    async def auto_subscribe_to_free_tier(self, account_id: str, email: Optional[str] = None, currency: Optional[str] = None) -> Dict:
-        """
-        Auto-subscribe a user to the free tier.
-        
-        Args:
-            account_id: The user's account ID
-            email: Optional email (will be fetched if not provided)
-            currency: Optional currency override. If not provided, auto-detects from user locale.
-        """
+    async def auto_subscribe_to_free_tier(self, account_id: str, email: Optional[str] = None) -> Dict:
         lock_key = f"free_tier_setup:{account_id}"
         lock = DistributedLock(lock_key, timeout_seconds=60)
         
@@ -82,45 +67,30 @@ class FreeTierService:
                     else:
                         raise
             
-            # Get the user_id from account - we'll need it for email and locale
-            user_id = None
-            account_result = await client.schema('basejump').from_('accounts').select(
-                'primary_owner_user_id'
-            ).eq('id', account_id).execute()
-            
-            if account_result.data and len(account_result.data) > 0:
-                user_id = account_result.data[0]['primary_owner_user_id']
-            
-            if not email and user_id:
-                try:
-                    user_result = await client.auth.admin.get_user_by_id(user_id)
-                    email = user_result.user.email if user_result and user_result.user else None
-                except:
-                    pass
+            if not email:
+                account_result = await client.schema('basejump').from_('accounts').select(
+                    'primary_owner_user_id'
+                ).eq('id', account_id).execute()
                 
-                if not email:
+                if account_result.data and len(account_result.data) > 0:
+                    user_id = account_result.data[0]['primary_owner_user_id']
                     try:
-                        email_result = await client.rpc('get_user_email', {'user_id': user_id}).execute()
-                        if email_result.data:
-                            email = email_result.data
+                        user_result = await client.auth.admin.get_user_by_id(user_id)
+                        email = user_result.user.email if user_result and user_result.user else None
                     except:
                         pass
+                    
+                    if not email:
+                        try:
+                            email_result = await client.rpc('get_user_email', {'user_id': user_id}).execute()
+                            if email_result.data:
+                                email = email_result.data
+                        except:
+                            pass
             
             if not email:
                 logger.error(f"[FREE TIER] Could not get email for account {account_id}")
                 return {'success': False, 'error': 'Email not found'}
-            
-            # Auto-detect currency from user locale if not provided
-            if not currency and user_id:
-                try:
-                    locale = await get_user_locale(user_id, client)
-                    currency = locale_to_currency(locale)
-                    logger.info(f"[FREE TIER] Auto-detected currency {currency.upper()} from locale {locale} for {account_id}")
-                except Exception as e:
-                    logger.warning(f"[FREE TIER] Could not detect locale for {account_id}, defaulting to USD: {e}")
-                    currency = 'usd'
-            elif not currency:
-                currency = 'usd'  # Default to USD if no user_id available
             
             if not stripe_customer_id:
                 logger.info(f"[FREE TIER] Creating Stripe customer for {account_id}")
@@ -139,11 +109,10 @@ class FreeTierService:
                     'email': email
                 }).execute()
             
-            logger.info(f"[FREE TIER] Creating $0/month subscription for {account_id} in {currency.upper()}")
+            logger.info(f"[FREE TIER] Creating $0/month subscription for {account_id}")
             subscription = await self.stripe.Subscription.create_async(
                 customer=stripe_customer_id,
                 items=[{'price': config.STRIPE_FREE_TIER_ID}],
-                currency=currency.lower(),  # Use detected local currency (pt=BRL, others=USD)
                 collection_method='charge_automatically',
                 days_until_due=None,
                 metadata={
@@ -157,6 +126,13 @@ class FreeTierService:
                 'stripe_subscription_id': subscription.id,
                 'last_grant_date': datetime.now().isoformat()
             }).eq('account_id', account_id).execute()
+            
+            from core.credits import credit_service
+            refreshed, amount = await credit_service.check_and_refresh_daily_credits(account_id)
+            if refreshed:
+                logger.info(f"[FREE TIER] ✅ Triggered initial daily refresh: ${amount} credits granted to {account_id}")
+            else:
+                logger.warning(f"[FREE TIER] Daily refresh did not grant credits on signup for {account_id}")
             
             current_balance = await client.from_('credit_accounts').select('balance').eq('account_id', account_id).execute()
             
@@ -195,4 +171,3 @@ class FreeTierService:
             logger.info(f"[FREE TIER] Released lock for {account_id}")
 
 free_tier_service = FreeTierService()
-
