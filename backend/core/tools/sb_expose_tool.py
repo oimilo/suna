@@ -1,6 +1,7 @@
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
+from core.utils.config import config
 import asyncio
 import time
 
@@ -26,7 +27,6 @@ import time
 
 **URL FORMAT CRITICAL:**
 - When main file is index.html: MUST include /index.html in URL
-- Example: https://8080-xxx.proxy.daytona.works/index.html
 - DO NOT provide base URLs without file path - causes "File not found" errors
 """
 )
@@ -81,7 +81,19 @@ class SandboxExposeTool(SandboxToolsBase):
             preview_link = await self.sandbox.get_preview_link(port)
             
             # Extract the actual URL from the preview link object
-            url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            daytona_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
+            
+            # [PROPHET CUSTOM] Use proxy URL if DAYTONA_PREVIEW_BASE is configured
+            # This routes preview traffic through our backend proxy instead of direct Daytona URLs
+            if config.DAYTONA_PREVIEW_BASE:
+                # Build proxy URL: {base}/{sandbox_id}/?port={port} or {base}/{sandbox_id}/ for port 8080
+                proxy_base = config.DAYTONA_PREVIEW_BASE.rstrip('/')
+                if port == 8080:
+                    url = f"{proxy_base}/{self.sandbox_id}/"
+                else:
+                    url = f"{proxy_base}/{self.sandbox_id}/?port={port}"
+            else:
+                url = daytona_url
             
             return self.success_response({
                 "url": url,

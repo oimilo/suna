@@ -33,7 +33,16 @@ export function constructVncPreviewUrl(
   
   // Use proxy if configured
   if (PREVIEW_PROXY_BASE && sandboxId) {
-    return `${PREVIEW_PROXY_BASE}/${sandboxId}/vnc_lite.html?password=${password}&autoconnect=true&scale=local`;
+    // Extract the path from the proxy base URL for websocket routing
+    // e.g., https://api.prophet.build/v1/preview -> path = v1/preview/{sandboxId}/websockify
+    try {
+      const proxyUrl = new URL(PREVIEW_PROXY_BASE);
+      const wsPath = `${proxyUrl.pathname.replace(/^\//, '')}/${sandboxId}/websockify`;
+      return `${PREVIEW_PROXY_BASE}/${sandboxId}/vnc_lite.html?password=${password}&autoconnect=true&scale=local&path=${encodeURIComponent(wsPath)}`;
+    } catch {
+      // Fallback without path parameter
+      return `${PREVIEW_PROXY_BASE}/${sandboxId}/vnc_lite.html?password=${password}&autoconnect=true&scale=local`;
+    }
   }
 
   // Fallback to direct URL (will show Daytona warning)
